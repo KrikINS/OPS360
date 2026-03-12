@@ -93,7 +93,7 @@ export default function LoginPage() {
       } else if (result?.success) {
         router.push('/')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "An unexpected error occurred")
       setLoading(false)
     }

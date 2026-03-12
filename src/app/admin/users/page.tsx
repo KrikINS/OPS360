@@ -225,7 +225,7 @@ export default function UserManagementPage() {
                           checked={selected.has(p.id)}
                           onChange={e => {
                             const next = new Set(selected)
-                            e.target.checked ? next.add(p.id) : next.delete(p.id)
+                            if (e.target.checked) next.add(p.id); else next.delete(p.id)
                             setSelected(next)
                           }}
                         />

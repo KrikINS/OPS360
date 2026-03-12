@@ -101,7 +101,7 @@ export async function PATCH(request: Request) {
   const { id, status } = await request.json()
   if (!id || !status) return NextResponse.json({ error: "Vendor ID and status are required" }, { status: 400 })
 
-  const updateData: any = { status }
+  const updateData: { status: string; approved_by?: string } = { status }
   if (status === 'approved') {
     updateData.approved_by = user.id
   }
