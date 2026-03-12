@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { getGstRateFromHsn } from "@/utils/compliance"
 import { ShoppingCart, Printer, Plus, Search, Tag } from "lucide-react"
 
@@ -34,22 +33,12 @@ export default function POSPage() {
     })
   }
 
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(i => i.product.id !== productId))
-  }
-
   // Invoice calculations
-  let subtotal = 0
-  let totalGstAmount = 0
-
   const invoiceLines = cart.map(item => {
     const lineTotal = item.product.price * item.qty
     const gstRateDec = getGstRateFromHsn(item.product.hsnCode)
     const lineGstAmount = lineTotal * gstRateDec
     
-    subtotal += lineTotal
-    totalGstAmount += lineGstAmount
-
     return {
       ...item,
       lineTotal,
@@ -59,6 +48,8 @@ export default function POSPage() {
     }
   })
 
+  const subtotal = invoiceLines.reduce((sum, line) => sum + line.lineTotal, 0)
+  const totalGstAmount = invoiceLines.reduce((sum, line) => sum + line.lineGstAmount, 0)
   const grandTotal = subtotal + totalGstAmount
 
   return (
@@ -73,9 +64,9 @@ export default function POSPage() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-12 gap-6">
+      <div className="grid lg:grid-cols-12 gap-6">
         {/* Product Catalog Column */}
-        <div className="md:col-span-5 space-y-4">
+        <div className="lg:col-span-5 space-y-4">
           <Card className="shadow-sm border-t-4 border-t-primary">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -103,8 +94,8 @@ export default function POSPage() {
         </div>
 
         {/* Invoice / Cart Column */}
-        <div className="md:col-span-7">
-          <Card className="shadow-md h-full flex flex-col pt-2">
+        <div className="lg:col-span-7">
+          <Card className="shadow-md flex flex-col pt-2">
             <CardHeader className="border-b bg-muted/10 pb-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -117,68 +108,78 @@ export default function POSPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-auto">
+            <CardContent className="overflow-x-auto h-[350px] lg:h-[calc(100vh-480px)] min-h-[200px] border-b">
               {cart.length === 0 ? (
-                <div className="h-48 flex flex-col items-center justify-center text-muted-foreground">
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8">
                   <Tag className="h-10 w-10 opacity-20 mb-3" />
-                  <p>Cart is empty. Add products to generate invoice.</p>
+                  <p className="text-sm">Cart is empty. Add products to generate invoice.</p>
                 </div>
               ) : (
+                <div className="min-w-[500px]">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50 border-b">
-                      <TableHead>Item</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Rate</TableHead>
-                      <TableHead>GST Slabs</TableHead>
-                      <TableHead className="text-right">Amount (Inc. Tax)</TableHead>
+                    <TableRow className="bg-[#001529] hover:bg-[#001529] border-b sticky top-0 z-10">
+                      <TableHead className="text-white font-semibold text-xs uppercase tracking-wider h-10">Item</TableHead>
+                      <TableHead className="text-white font-semibold text-xs uppercase tracking-wider h-10">Qty</TableHead>
+                      <TableHead className="text-white font-semibold text-xs uppercase tracking-wider h-10">Rate</TableHead>
+                      <TableHead className="text-white font-semibold text-xs uppercase tracking-wider h-10">GST</TableHead>
+                      <TableHead className="text-white font-semibold text-xs uppercase tracking-wider text-right h-10">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {invoiceLines.map((line) => (
-                      <TableRow key={line.product.id} className="group cursor-pointer">
-                        <TableCell>
-                          <div className="font-medium text-sm">{line.product.name}</div>
-                          <div className="text-[10px] text-muted-foreground">HSN: {line.product.hsnCode}</div>
+                      <TableRow key={line.product.id} className="group cursor-pointer border-b border-border/40 hover:bg-muted/30">
+                        <TableCell className="py-2">
+                          <div className="font-medium text-sm leading-snug">{line.product.name}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">HSN: {line.product.hsnCode}</div>
                         </TableCell>
-                        <TableCell className="font-medium">{line.qty}</TableCell>
-                        <TableCell className="text-sm">₹{line.product.price.toLocaleString('en-IN')}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[10px] font-mono bg-blue-50/50 text-blue-700 border-blue-200">
-                            {line.gstRate}% (₹{line.lineGstAmount.toLocaleString('en-IN')})
-                          </Badge>
+                        <TableCell className="py-2 font-medium">{line.qty}</TableCell>
+                        <TableCell className="py-2 text-sm font-mono">₹{line.product.price.toLocaleString('en-IN')}</TableCell>
+                        <TableCell className="py-2">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
+                            {line.gstRate}% · ₹{Math.round(line.lineGstAmount).toLocaleString('en-IN')}
+                          </span>
                         </TableCell>
-                        <TableCell className="text-right font-bold">
-                          ₹{line.finalAmount.toLocaleString('en-IN')}
+                        <TableCell className="py-2 text-right font-bold text-sm font-mono">
+                          ₹{Math.round(line.finalAmount).toLocaleString('en-IN')}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
             
-            <CardFooter className="bg-muted/30 border-t flex flex-col p-6 gap-4">
-              <div className="w-full space-y-2 text-sm">
+            <CardFooter className="bg-muted/50 flex flex-col p-4 sm:p-6 gap-3 shrink-0">
+              <div className="w-full space-y-1.5 text-xs sm:text-sm">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal (Exclusive of Tax)</span>
-                  <span className="font-medium">₹{subtotal.toLocaleString('en-IN')}</span>
+                  <span>Subtotal (Excl. Tax)</span>
+                  <span className="font-medium font-mono">₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Total GST Applied</span>
-                  <span className="font-medium">₹{totalGstAmount.toLocaleString('en-IN')}</span>
+                  <span className="font-medium font-mono">₹{totalGstAmount.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                  <span className="text-lg font-bold">Grand Total</span>
-                  <span className="text-2xl font-black text-primary">₹{grandTotal.toLocaleString('en-IN')}</span>
+                <div className="border-t border-border/60 pt-2 mt-1 flex justify-between items-center">
+                  <span className="text-base sm:text-lg font-bold">Grand Total</span>
+                  <span className="text-xl sm:text-2xl font-black text-[#001529]">₹{grandTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
               
-              <div className="w-full flex gap-3 pt-2">
-                <Button variant="outline" className="w-full" disabled={cart.length === 0} onClick={() => setCart([])}>
+              <div className="w-full flex flex-col sm:flex-row gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full sm:flex-1 h-11 border-border/60 hover:bg-red-50 hover:text-red-600 transition-colors" 
+                  disabled={cart.length === 0} 
+                  onClick={() => setCart([])}
+                >
                   Clear Cart
                 </Button>
-                <Button className="w-full gap-2" disabled={cart.length === 0}>
+                <Button 
+                  className="w-full sm:flex-1 h-11 gap-2 bg-[#001529] hover:bg-[#002a52] text-white shadow-lg transition-all" 
+                  disabled={cart.length === 0}
+                >
                   <Printer className="h-4 w-4" /> Print GST Invoice
                 </Button>
               </div>

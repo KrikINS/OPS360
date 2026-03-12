@@ -54,11 +54,18 @@ export async function updateSession(request: NextRequest) {
     // Fetch profile to get role
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, force_password_change')
       .eq('id', user.id)
       .single()
 
     const role = profile?.role || 'sales'
+
+    // Enforce forced password change on first login
+    const isChangePwRoute = url.pathname.startsWith('/change-password')
+    if (profile?.force_password_change && !isChangePwRoute) {
+      url.pathname = '/change-password'
+      return NextResponse.redirect(url)
+    }
 
     // Route Guards
     const path = url.pathname
@@ -78,6 +85,13 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (path.startsWith('/pos')) {
+      if (role !== 'admin' && role !== 'manager' && role !== 'sales') {
+        url.pathname = '/unauthorized'
+        return NextResponse.redirect(url)
+      }
+    }
+
+    if (path.startsWith('/vendors')) {
       if (role !== 'admin' && role !== 'manager' && role !== 'sales') {
         url.pathname = '/unauthorized'
         return NextResponse.redirect(url)

@@ -53,7 +53,7 @@ export default function InterBranchTransferPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">From Branch:</label>
                   <Select defaultValue="B-MUM-01">
-                    <SelectTrigger defaultValue="B-MUM-01">
+                    <SelectTrigger>
                       <SelectValue placeholder="Select Source" />
                     </SelectTrigger>
                     <SelectContent>
@@ -70,7 +70,7 @@ export default function InterBranchTransferPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">To Branch:</label>
                   <Select defaultValue="B-BLR-03">
-                    <SelectTrigger defaultValue="B-BLR-03">
+                    <SelectTrigger>
                       <SelectValue placeholder="Select Destination" />
                     </SelectTrigger>
                     <SelectContent>
