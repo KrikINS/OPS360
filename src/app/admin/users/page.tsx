@@ -306,7 +306,7 @@ export default function UserManagementPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Role</label>
-                <Select value={addForm.role} onValueChange={v => setAddForm({...addForm, role: v})}>
+                <Select value={addForm.role} onValueChange={v => setAddForm({...addForm, role: v as string})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {["sales","technician","manager","admin"].map(r => <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>)}
@@ -315,7 +315,7 @@ export default function UserManagementPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Branch</label>
-                <Select value={addForm.branchId} onValueChange={v => setAddForm({...addForm, branchId: v})}>
+                <Select value={addForm.branchId} onValueChange={v => setAddForm({...addForm, branchId: v as string})}>
                   <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
                   <SelectContent>
                     {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
@@ -370,7 +370,7 @@ export default function UserManagementPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Role</label>
-                    <Select value={detailForm.role || "sales"} onValueChange={v => setDetailForm({...detailForm, role: v})}>
+                    <Select value={detailForm.role || "sales"} onValueChange={v => setDetailForm({...detailForm, role: v as string})}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {["sales","technician","manager","admin"].map(r => <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>)}
@@ -379,7 +379,7 @@ export default function UserManagementPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Branch</label>
-                    <Select value={detailForm.branch_id || ""} onValueChange={v => setDetailForm({...detailForm, branch_id: v})}>
+                    <Select value={detailForm.branch_id || ""} onValueChange={v => setDetailForm({...detailForm, branch_id: v as string})}>
                       <SelectTrigger><SelectValue placeholder="No branch" /></SelectTrigger>
                       <SelectContent>
                         {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
