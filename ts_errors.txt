@@ -1,0 +1,10 @@
+src/app/(dashboard)/procurement/page.tsx(114,25): error TS2322: Type '(vendorId: string) => void' is not assignable to type '(value: string | null, eventDetails: SelectRootChangeEventDetails) => void'.
+  Types of parameters 'vendorId' and 'value' are incompatible.
+    Type 'string | null' is not assignable to type 'string'.
+      Type 'null' is not assignable to type 'string'.
+src/app/(dashboard)/vendors/client.tsx(281,105): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/(dashboard)/vendors/client.tsx(339,107): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/(dashboard)/vendors/client.tsx(388,112): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.

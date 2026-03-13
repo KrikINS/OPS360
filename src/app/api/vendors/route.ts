@@ -45,7 +45,12 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  const { name, contact_person, email, phone, address } = body
+  const { 
+    name, trade_name, gstin, pan_number, 
+    contact_person, email, phone, address, 
+    state_code, bank_details, payment_terms, 
+    credit_limit, category 
+  } = body
 
   if (!name) return NextResponse.json({ error: "Vendor name is required" }, { status: 400 })
 
@@ -53,11 +58,20 @@ export async function POST(request: Request) {
     .from('vendors')
     .insert({
       name,
+      trade_name,
+      gstin,
+      pan_number,
       contact_person,
       email,
       phone,
       address,
+      state_code,
+      bank_details,
+      payment_terms,
+      credit_limit: credit_limit ? parseFloat(credit_limit) : 0,
+      category,
       status: 'awaiting_approval',
+      compliance_status: 'Pending',
       created_by: user.id
     })
     .select()

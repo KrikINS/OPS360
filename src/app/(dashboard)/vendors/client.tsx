@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { supabase } from "@/lib/supabase"
 import { 
   Table, 
   TableBody, 
@@ -32,8 +31,6 @@ import { Badge } from "@/components/ui/badge"
 import { 
   Plus, 
   Building2, 
-  Mail, 
-  Phone, 
   MapPin, 
   CheckCircle2, 
   XCircle, 
@@ -56,6 +53,18 @@ type Vendor = {
   email: string
   phone: string
   address: string
+  gstin?: string
+  pan_number?: string
+  bank_details?: {
+    account_name?: string
+    account_number?: string
+    ifsc?: string
+    bank_name?: string
+  }
+  payment_terms?: string
+  state_code?: string
+  category?: string
+  compliance_status?: 'Verified' | 'Pending' | 'Blacklisted'
   status: 'awaiting_approval' | 'approved' | 'deactivated'
   created_at: string
 }
@@ -71,13 +80,27 @@ export default function VendorsClient({
   const [isLoading, setIsLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [formStep, setFormStep] = useState(1)
   
   const [formData, setFormData] = useState({
     name: "",
+    trade_name: "",
+    gstin: "",
+    pan_number: "",
     contact_person: "",
     email: "",
     phone: "",
-    address: ""
+    address: "",
+    state_code: "",
+    bank_details: {
+      account_name: "",
+      account_number: "",
+      ifsc: "",
+      bank_name: ""
+    },
+    payment_terms: "",
+    credit_limit: "",
+    category: ""
   })
 
   const fetchVendors = useCallback(async () => {
@@ -114,7 +137,13 @@ export default function VendorsClient({
       if (res.ok) {
         alert("Success: Vendor created and awaiting approval.")
         setIsModalOpen(false)
-        setFormData({ name: "", contact_person: "", email: "", phone: "", address: "" })
+        setFormStep(1)
+        setFormData({ 
+          name: "", trade_name: "", gstin: "", pan_number: "",
+          contact_person: "", email: "", phone: "", address: "", state_code: "",
+          bank_details: { account_name: "", account_number: "", ifsc: "", bank_name: "" },
+          payment_terms: "", credit_limit: "", category: ""
+        })
         fetchVendors()
       } else {
         alert("Error: " + data.error)
@@ -160,6 +189,13 @@ export default function VendorsClient({
     }
   }
 
+  const getComplianceBadge = (vendor: Vendor) => {
+    if (vendor.gstin) {
+      return <Badge className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50 ml-2">Verified</Badge>
+    }
+    return null
+  }
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -169,13 +205,16 @@ export default function VendorsClient({
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-[#001529]">Vendor Management</h1>
-            <p className="text-muted-foreground mt-1">Manage suppliers, track compliance, and handle approvals.</p>
+            <p className="text-muted-foreground mt-1">Manage suppliers, track compliance, and handle procurement integration.</p>
           </div>
         </div>
 
         {(userRole === 'admin' || userRole === 'manager' || userRole === 'sales') && (
           <Button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setFormStep(1)
+              setIsModalOpen(true)
+            }}
             className="bg-[#001529] hover:bg-[#002a52] text-white gap-2 shadow-lg"
           >
             <Plus className="h-4 w-4" /> Create New Vendor
@@ -183,68 +222,213 @@ export default function VendorsClient({
         )}
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[600px]">
             <form onSubmit={handleCreateVendor}>
               <DialogHeader>
-                <DialogTitle>Register New Vendor</DialogTitle>
+                <DialogTitle>Register New Vendor - Step {formStep} of 3</DialogTitle>
                 <DialogDescription>
-                  Enter vendor details. Upon creation, it will be sent for Approval.
+                  {formStep === 1 && "Identity: Legal and tax registration details."}
+                  {formStep === 2 && "Contact & Address: Communication and billing info."}
+                  {formStep === 3 && "Commercials: Banking and payment terms."}
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Vendor Company Name *</Label>
-                  <Input 
-                    id="name" 
-                    placeholder="e.g. Ethan Logistics Ltd." 
-                    required 
-                    value={formData.name}
-                    onChange={e => setFormData({...formData, name: e.target.value})}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+
+              {formStep === 1 && (
+                <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="contact">Contact Person</Label>
+                    <Label htmlFor="name">Legal Company Name *</Label>
                     <Input 
-                      id="contact" 
-                      placeholder="Name" 
-                      value={formData.contact_person}
-                      onChange={e => setFormData({...formData, contact_person: e.target.value})}
+                      id="name" 
+                      placeholder="e.g. Ethan Logistics Ltd." 
+                      required 
+                      value={formData.name}
+                      onChange={e => setFormData({...formData, name: e.target.value})}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="trade_name">Trade Name / Brand</Label>
                     <Input 
-                      id="phone" 
-                      placeholder="+91..." 
-                      value={formData.phone}
-                      onChange={e => setFormData({...formData, phone: e.target.value})}
+                      id="trade_name" 
+                      placeholder="e.g. Ethan Home Appliances" 
+                      value={formData.trade_name}
+                      onChange={e => setFormData({...formData, trade_name: e.target.value})}
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="gstin">GSTIN (15 chars) *</Label>
+                      <Input 
+                        id="gstin" 
+                        placeholder="27AAAAA0000A1Z5" 
+                        maxLength={15}
+                        required
+                        value={formData.gstin}
+                        onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="pan">PAN Number</Label>
+                      <Input 
+                        id="pan" 
+                        placeholder="ABCDE1234F" 
+                        value={formData.pan_number}
+                        onChange={e => setFormData({...formData, pan_number: e.target.value.toUpperCase()})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="category">Primary Category</Label>
+                    <Select value={formData.category} onValueChange={(val) => setFormData({...formData, category: val || ""})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="logistics">Logistics</SelectItem>
+                        <SelectItem value="electronics">Electronics</SelectItem>
+                        <SelectItem value="raw_materials">Raw Materials</SelectItem>
+                        <SelectItem value="services">Services</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="vendor@example.com" 
-                    value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})}
-                  />
+              )}
+
+              {formStep === 2 && (
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="contact">Contact Person</Label>
+                      <Input 
+                        id="contact" 
+                        placeholder="Name" 
+                        value={formData.contact_person}
+                        onChange={e => setFormData({...formData, contact_person: e.target.value})}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input 
+                        id="phone" 
+                        placeholder="+91..." 
+                        value={formData.phone}
+                        onChange={e => setFormData({...formData, phone: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="vendor@example.com" 
+                      value={formData.email}
+                      onChange={e => setFormData({...formData, email: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="address">Billing Office Address</Label>
+                    <Input 
+                      id="address" 
+                      placeholder="Full street address" 
+                      value={formData.address}
+                      onChange={e => setFormData({...formData, address: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="state">State / Province</Label>
+                    <Select value={formData.state_code} onValueChange={(val) => setFormData({...formData, state_code: val || ""})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select State" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MH">Maharashtra (27)</SelectItem>
+                        <SelectItem value="DL">Delhi (07)</SelectItem>
+                        <SelectItem value="KA">Karnataka (29)</SelectItem>
+                        <SelectItem value="TN">Tamil Nadu (33)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="address">Office Address</Label>
-                  <Input 
-                    id="address" 
-                    placeholder="Full street address" 
-                    value={formData.address}
-                    onChange={e => setFormData({...formData, address: e.target.value})}
-                  />
+              )}
+
+              {formStep === 3 && (
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="bank_name">Bank Name</Label>
+                      <Input 
+                        id="bank_name" 
+                        placeholder="HDFC, SBI, etc." 
+                        value={formData.bank_details.bank_name}
+                        onChange={e => setFormData({...formData, bank_details: {...formData.bank_details, bank_name: e.target.value}})}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="ifsc">IFSC Code</Label>
+                      <Input 
+                        id="ifsc" 
+                        placeholder="HDFC0001234" 
+                        value={formData.bank_details.ifsc}
+                        onChange={e => setFormData({...formData, bank_details: {...formData.bank_details, ifsc: e.target.value.toUpperCase()}})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="acc_num">Account Number</Label>
+                    <Input 
+                      id="acc_num" 
+                      placeholder="000123456789" 
+                      value={formData.bank_details.account_number}
+                      onChange={e => setFormData({...formData, bank_details: {...formData.bank_details, account_number: e.target.value}})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="terms">Payment Terms</Label>
+                      <Select value={formData.payment_terms} onValueChange={(val) => setFormData({...formData, payment_terms: val || ""})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Terms" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Immediate">Immediate</SelectItem>
+                          <SelectItem value="Net 15">Net 15</SelectItem>
+                          <SelectItem value="Net 30">Net 30</SelectItem>
+                          <SelectItem value="Net 60">Net 60</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="credit">Credit Limit</Label>
+                      <Input 
+                        id="credit" 
+                        type="number" 
+                        placeholder="500000" 
+                        value={formData.credit_limit}
+                        onChange={e => setFormData({...formData, credit_limit: e.target.value})}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-[#001529]">Submit for Approval</Button>
+              )}
+
+              <DialogFooter className="flex justify-between items-center sm:justify-between">
+                <div>
+                  {formStep > 1 && (
+                    <Button type="button" variant="outline" onClick={() => setFormStep(v => v - 1)}>
+                      Previous
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                  {formStep < 3 ? (
+                    <Button type="button" className="bg-[#001529]" onClick={() => setFormStep(v => v + 1)}>
+                      Next Step
+                    </Button>
+                  ) : (
+                    <Button type="submit" className="bg-[#001529]">Complete Registration</Button>
+                  )}
+                </div>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -255,7 +439,7 @@ export default function VendorsClient({
         <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg">Supplier Directory</CardTitle>
-            <CardDescription>Browse and manage all registered vendors.</CardDescription>
+            <CardDescription>Browse and manage all registered vendors with compliance status.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
@@ -278,7 +462,8 @@ export default function VendorsClient({
               <TableRow className="bg-muted/30">
                 <TableHead className="w-[120px] font-bold">Code</TableHead>
                 <TableHead className="font-bold">Vendor Name</TableHead>
-                <TableHead className="font-bold">Contact</TableHead>
+                <TableHead className="font-bold">GSTIN</TableHead>
+                <TableHead className="font-bold">Category</TableHead>
                 <TableHead className="font-bold">Status</TableHead>
                 <TableHead className="text-right font-bold pr-6">Management</TableHead>
               </TableRow>
@@ -286,11 +471,11 @@ export default function VendorsClient({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">Loading vendors...</TableCell>
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">Loading vendors...</TableCell>
                 </TableRow>
               ) : filteredVendors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground flex flex-col items-center justify-center">
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground flex flex-col items-center justify-center">
                     <AlertCircle className="h-8 w-8 opacity-20 mb-2" />
                     No vendors found matching criteria.
                   </TableCell>
@@ -300,16 +485,19 @@ export default function VendorsClient({
                   <TableRow key={vendor.id} className="hover:bg-muted/20 transition-colors group">
                     <TableCell className="font-mono font-semibold text-primary">{vendor.vendor_code}</TableCell>
                     <TableCell>
-                      <div className="font-medium">{vendor.name}</div>
+                      <div className="flex items-center">
+                        <div className="font-medium">{vendor.name}</div>
+                        {getComplianceBadge(vendor)}
+                      </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <MapPin className="h-3 w-3" /> {vendor.address || 'No address provided'}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-xs space-y-1">
-                        <div className="flex items-center gap-1.5"><Mail className="h-3 w-3 opacity-60" /> {vendor.email || '--'}</div>
-                        <div className="flex items-center gap-1.5"><Phone className="h-3 w-3 opacity-60" /> {vendor.phone || '--'}</div>
-                      </div>
+                      <div className="text-xs font-mono">{vendor.gstin || 'Not Provided'}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">{vendor.category || 'General'}</Badge>
                     </TableCell>
                     <TableCell>{getStatusBadge(vendor.status)}</TableCell>
                     <TableCell className="text-right pr-6">
@@ -360,7 +548,7 @@ export default function VendorsClient({
           <h4 className="font-semibold text-sm">Compliance Note</h4>
           <p className="text-xs text-muted-foreground leading-relaxed">
             All vendors must undergo identity verification as per standard operating procedures before approval. 
-            Sequential codes are generated automatically upon successful registration.
+            GSTIN-verified vendors (Sky Blue badge) are eligible for PO creation.
           </p>
         </div>
       </div>
