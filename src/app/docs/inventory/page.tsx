@@ -1,3 +1,5 @@
+import { ChevronRight } from "lucide-react"
+
 export default function InventoryDocs() {
   return (
     <div className="space-y-6">
@@ -42,7 +44,7 @@ export default function InventoryDocs() {
             Stock Aging Protocols
           </h3>
           <p className="text-sm text-slate-600 mb-4">
-            To maintain healthy liquidity, the system automatically tracks asset age from the inward date.
+            The system automatically tracks asset age from the inward date. Use the **Inventory Dashboard** to search and sort items based on these aging tiers.
           </p>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-2 bg-slate-50 rounded border">
@@ -54,10 +56,37 @@ export default function InventoryDocs() {
               <span className="text-xs font-bold text-amber-700">Review Required</span>
             </div>
             <div className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-100">
-              <span className="text-xs font-bold uppercase tracking-wider text-red-600">Crimson ({">"}60d)</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-red-600">Crimson (&gt;60d)</span>
               <span className="text-xs font-bold text-red-700">Slow Mover Protocol</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="bg-white border rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
+            <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <span className="text-blue-600">03</span>
+            </div>
+            Advanced Search & Sort
+          </h3>
+          <p className="text-sm text-slate-600 mb-4">
+            New refinements allow for multi-dimensional inventory filtering:
+          </p>
+          <ul className="space-y-2 text-sm text-slate-600">
+            <li className="flex items-start gap-2">
+              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
+              <span><strong>Metadata Joining:</strong> View product information (HSN, Model) directly within the inventory register.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
+              <span><strong>Age Sorting:</strong> Instantly identify the oldest stock to prioritize for liquidation or inter-branch transfer.</span>
+            </li>
+          </ul>
+        </div>
+        <div className="bg-slate-50 border border-dashed rounded-xl p-6 flex flex-col justify-center text-center">
+            <p className="text-sm font-medium text-slate-500 italic">Integrating Real-time Stock Analytics...</p>
         </div>
       </div>
 

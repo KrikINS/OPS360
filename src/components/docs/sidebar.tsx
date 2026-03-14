@@ -84,6 +84,12 @@ const docsNavigation = [
     ],
   },
   {
+    title: "Engineering",
+    items: [
+      { title: "Developer Guide", href: "/docs/developer-guide", icon: BookOpen },
+    ],
+  },
+  {
     title: "Administration",
     items: [
       { title: "Admin Center", href: "/docs/admin", icon: ShieldAlert },
