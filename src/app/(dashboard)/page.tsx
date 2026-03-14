@@ -83,7 +83,7 @@ export default function InventoryDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Inventory Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-1">Real-time stock monitoring across all Ethan branches.</p>
+          <p className="text-muted-foreground text-sm mt-1">Real-time stock monitoring across all Ops360 branches.</p>
         </div>
 
         <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-lg border shadow-sm">

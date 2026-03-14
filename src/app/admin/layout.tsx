@@ -43,7 +43,7 @@ export default async function AdminLayout({
           <div className="flex items-center gap-3">
             <div className="h-2 w-2 rounded-full bg-[#7FD1E3] animate-pulse" />
             <span className="text-sm font-semibold text-[#001529]">Admin Control Center</span>
-            <span className="text-xs text-muted-foreground font-normal">— Ethan Home Appliances</span>
+            <span className="text-xs text-muted-foreground font-normal">— Administration Portal</span>
           </div>
           <UserNav profile={profileWithBranch} />
         </header>

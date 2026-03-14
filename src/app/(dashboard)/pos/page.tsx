@@ -36,20 +36,26 @@ export default function POSPage() {
   // Invoice calculations
   const invoiceLines = cart.map(item => {
     const lineTotal = item.product.price * item.qty
-    const gstRateDec = getGstRateFromHsn(item.product.hsnCode)
-    const lineGstAmount = lineTotal * gstRateDec
+    const totalGstRate = getGstRateFromHsn(item.product.hsnCode)
+    const totalGstAmount = lineTotal * totalGstRate
     
     return {
       ...item,
       lineTotal,
-      gstRate: gstRateDec * 100,
-      lineGstAmount,
-      finalAmount: lineTotal + lineGstAmount
+      gstRate: totalGstRate * 100,
+      cgstRate: (totalGstRate / 2) * 100,
+      sgstRate: (totalGstRate / 2) * 100,
+      cgstAmount: totalGstAmount / 2,
+      sgstAmount: totalGstAmount / 2,
+      lineGstAmount: totalGstAmount,
+      finalAmount: lineTotal + totalGstAmount
     }
   })
 
   const subtotal = invoiceLines.reduce((sum, line) => sum + line.lineTotal, 0)
-  const totalGstAmount = invoiceLines.reduce((sum, line) => sum + line.lineGstAmount, 0)
+  const totalCgst = invoiceLines.reduce((sum, line) => sum + line.cgstAmount, 0)
+  const totalSgst = invoiceLines.reduce((sum, line) => sum + line.sgstAmount, 0)
+  const totalGstAmount = totalCgst + totalSgst
   const grandTotal = subtotal + totalGstAmount
 
   return (
@@ -152,20 +158,24 @@ export default function POSPage() {
             </CardContent>
             
             <CardFooter className="bg-muted/50 flex flex-col p-4 sm:p-6 gap-3 shrink-0">
-              <div className="w-full space-y-1.5 text-xs sm:text-sm">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal (Excl. Tax)</span>
-                  <span className="font-medium font-mono">₹{subtotal.toLocaleString('en-IN')}</span>
+                <div className="w-full space-y-2 pt-2 text-xs sm:text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span className="font-medium font-mono">₹{subtotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground italic pl-2">
+                    <span>CGST (9%/14%)</span>
+                    <span className="font-medium font-mono">₹{totalCgst.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground italic pl-2">
+                    <span>SGST (9%/14%)</span>
+                    <span className="font-medium font-mono">₹{totalSgst.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t text-[#001529]">
+                    <span>Grand Total</span>
+                    <span className="text-xl sm:text-2xl font-black text-[#001529]">₹{grandTotal.toLocaleString('en-IN')}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Total GST Applied</span>
-                  <span className="font-medium font-mono">₹{totalGstAmount.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="border-t border-border/60 pt-2 mt-1 flex justify-between items-center">
-                  <span className="text-base sm:text-lg font-bold">Grand Total</span>
-                  <span className="text-xl sm:text-2xl font-black text-[#001529]">₹{grandTotal.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
               
               <div className="w-full flex flex-col sm:flex-row gap-2">
                 <Button 

@@ -33,9 +33,16 @@ import {
   Building2, 
   MapPin, 
   CheckCircle2, 
-  XCircle, 
   AlertCircle,
-  Filter
+  Filter,
+  FileText,
+  History,
+  TrendingUp,
+  Upload,
+  BarChart3,
+  Clock,
+  CheckSquare,
+  ShieldCheck
 } from "lucide-react"
 import { 
   Select, 
@@ -44,11 +51,21 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs"
+import { supabase } from "@/lib/supabase"
+import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
 
 type Vendor = {
   id: string
   vendor_code: string
   name: string
+  trade_name?: string
   contact_person: string
   email: string
   phone: string
@@ -64,9 +81,31 @@ type Vendor = {
   payment_terms?: string
   state_code?: string
   category?: string
-  compliance_status?: 'Verified' | 'Pending' | 'Blacklisted'
+  credit_limit?: number
+  compliance_status: 'Verified' | 'Pending' | 'Blacklisted'
   status: 'awaiting_approval' | 'approved' | 'deactivated'
   created_at: string
+}
+
+interface VendorDocument {
+  name: string
+  id: string
+  created_at: string
+  metadata: {
+    size: number
+    mimetype: string
+  }
+}
+
+interface AuditLog {
+  id: string
+  created_at: string
+  field_name: string
+  old_value: string
+  new_value: string
+  profiles?: {
+    full_name: string
+  }
 }
 
 export default function VendorsClient({ 
@@ -79,8 +118,13 @@ export default function VendorsClient({
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors)
   const [isLoading, setIsLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [formStep, setFormStep] = useState(1)
+  const [documents, setDocuments] = useState<VendorDocument[]>([])
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
+  const [isUploading, setIsUploading] = useState(false)
   
   const [formData, setFormData] = useState({
     name: "",
@@ -120,9 +164,110 @@ export default function VendorsClient({
     }
   }, [])
 
+  const fetchVendorDocuments = useCallback(async (vendorId: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('vendor-documents')
+        .list(vendorId)
+      
+      if (error) throw error
+      
+      const formattedDocs: VendorDocument[] = (data || []).map(file => ({
+        name: file.name,
+        id: file.id || '',
+        created_at: file.created_at || new Date().toISOString(),
+        metadata: {
+          size: file.metadata?.size || 0,
+          mimetype: file.metadata?.mimetype || 'application/octet-stream'
+        }
+      }))
+      
+      setDocuments(formattedDocs)
+    } catch (err) {
+      console.error("Error fetching documents:", err)
+    }
+  }, [])
+
+  const fetchAuditLogs = useCallback(async (vendorId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('vendor_audit_log')
+        .select(`
+          id,
+          created_at,
+          field_name,
+          old_value,
+          new_value,
+          profiles!inner(full_name)
+        `)
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      
+      const formattedLogs: AuditLog[] = (data || []).map((log: {
+        id: string;
+        created_at: string;
+        field_name: string;
+        old_value: string;
+        new_value: string;
+        profiles: { full_name: string } | { full_name: string }[] | null;
+      }) => ({
+        id: log.id,
+        created_at: log.created_at,
+        field_name: log.field_name,
+        old_value: log.old_value,
+        new_value: log.new_value,
+        profiles: Array.isArray(log.profiles) ? log.profiles[0] : (log.profiles || undefined)
+      }))
+      
+      setAuditLogs(formattedLogs)
+    } catch (err) {
+      console.error("Error fetching audit logs:", err)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedVendor && isDetailOpen) {
+      fetchVendorDocuments(selectedVendor.id)
+      fetchAuditLogs(selectedVendor.id)
+    }
+  }, [selectedVendor, isDetailOpen, fetchVendorDocuments, fetchAuditLogs])
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !selectedVendor) return
+
+    setIsUploading(true)
+    try {
+      const fileName = `${Date.now()}-${file.name}`
+      const filePath = `${selectedVendor.id}/${fileName}`
+
+      const { error } = await supabase.storage
+        .from('vendor-documents')
+        .upload(filePath, file)
+
+      if (error) throw error
+
+      alert("File uploaded successfully")
+      fetchVendorDocuments(selectedVendor.id)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      alert("Error uploading file: " + errorMessage)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const getFileUrl = (path: string) => {
+    const { data } = supabase.storage
+      .from('vendor-documents')
+      .getPublicUrl(`${selectedVendor?.id}/${path}`)
+    return data.publicUrl
+  }
+
   useEffect(() => {
     // Only fetch if we don't have initial vendors or to keep it updated
-    // fetchVendors()
   }, [])
 
   const handleCreateVendor = async (e: React.FormEvent) => {
@@ -153,17 +298,24 @@ export default function VendorsClient({
     }
   }
 
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
+  const handleUpdateStatus = async (id: string, newStatus?: string, newCompliance?: string) => {
     try {
+      const body: Record<string, string> = { id }
+      if (newStatus) body.status = newStatus
+      if (newCompliance) body.compliance_status = newCompliance
+
       const res = await fetch('/api/vendors', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus })
+        body: JSON.stringify(body)
       })
       const data = await res.json()
       if (res.ok) {
-        alert("Updated: Vendor set to " + newStatus)
+        alert("Updated successfully.")
         fetchVendors()
+        if (selectedVendor && selectedVendor.id === id) {
+          setSelectedVendor(data)
+        }
       } else {
         alert("Error: " + data.error)
       }
@@ -189,11 +341,15 @@ export default function VendorsClient({
     }
   }
 
-  const getComplianceBadge = (vendor: Vendor) => {
-    if (vendor.gstin) {
-      return <Badge className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50 ml-2">Verified</Badge>
+  const getComplianceBadge = (status: string) => {
+    switch (status) {
+      case 'Verified':
+        return <Badge className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50 ml-2">Verified</Badge>
+      case 'Blacklisted':
+        return <Badge variant="destructive" className="ml-2">Blacklisted</Badge>
+      default:
+        return <Badge variant="outline" className="ml-2 text-muted-foreground">{status}</Badge>
     }
-    return null
   }
 
   return (
@@ -239,7 +395,7 @@ export default function VendorsClient({
                     <Label htmlFor="name">Legal Company Name *</Label>
                     <Input 
                       id="name" 
-                      placeholder="e.g. Ethan Logistics Ltd." 
+                      placeholder="e.g. Global Logistics Ltd." 
                       required 
                       value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
@@ -249,7 +405,7 @@ export default function VendorsClient({
                     <Label htmlFor="trade_name">Trade Name / Brand</Label>
                     <Input 
                       id="trade_name" 
-                      placeholder="e.g. Ethan Home Appliances" 
+                      placeholder="e.g. Quality Supplies" 
                       value={formData.trade_name}
                       onChange={e => setFormData({...formData, trade_name: e.target.value})}
                     />
@@ -465,29 +621,35 @@ export default function VendorsClient({
                 <TableHead className="font-bold">GSTIN</TableHead>
                 <TableHead className="font-bold">Category</TableHead>
                 <TableHead className="font-bold">Status</TableHead>
-                <TableHead className="text-right font-bold pr-6">Management</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">Loading vendors...</TableCell>
+                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">Loading vendors...</TableCell>
                 </TableRow>
               ) : filteredVendors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground flex flex-col items-center justify-center">
+                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground flex flex-col items-center justify-center">
                     <AlertCircle className="h-8 w-8 opacity-20 mb-2" />
                     No vendors found matching criteria.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredVendors.map((vendor) => (
-                  <TableRow key={vendor.id} className="hover:bg-muted/20 transition-colors group">
+                  <TableRow 
+                    key={vendor.id} 
+                    className="hover:bg-muted/20 transition-colors group cursor-pointer"
+                    onClick={() => {
+                      setSelectedVendor(vendor)
+                      setIsDetailOpen(true)
+                    }}
+                  >
                     <TableCell className="font-mono font-semibold text-primary">{vendor.vendor_code}</TableCell>
                     <TableCell>
                       <div className="flex items-center">
                         <div className="font-medium">{vendor.name}</div>
-                        {getComplianceBadge(vendor)}
+                        {getComplianceBadge(vendor.compliance_status)}
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <MapPin className="h-3 w-3" /> {vendor.address || 'No address provided'}
@@ -500,40 +662,6 @@ export default function VendorsClient({
                       <Badge variant="outline" className="capitalize">{vendor.category || 'General'}</Badge>
                     </TableCell>
                     <TableCell>{getStatusBadge(vendor.status)}</TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {(userRole === 'admin' || userRole === 'manager') && vendor.status === 'awaiting_approval' && (
-                          <Button 
-                            size="sm" 
-                            variant="secondary" 
-                            className="h-8 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
-                            onClick={() => handleUpdateStatus(vendor.id, 'approved')}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve
-                          </Button>
-                        )}
-                        {(userRole === 'admin' || userRole === 'manager') && vendor.status === 'approved' && (
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleUpdateStatus(vendor.id, 'deactivated')}
-                          >
-                            <XCircle className="h-3.5 w-3.5 mr-1" /> Deactivate
-                          </Button>
-                        )}
-                        {(userRole === 'admin' || userRole === 'manager') && vendor.status === 'deactivated' && (
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                            onClick={() => handleUpdateStatus(vendor.id, 'approved')}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Reactivate
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -541,6 +669,241 @@ export default function VendorsClient({
           </Table>
         </CardContent>
       </Card>
+
+      {/* Vendor Detail Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0 overflow-hidden">
+          {selectedVendor && (
+            <>
+              <DialogHeader className="p-6 border-b bg-muted/20">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white rounded-xl shadow-sm border">
+                      <Building2 className="h-8 w-8 text-[#001529]" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-2xl font-bold">{selectedVendor.name}</DialogTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-mono text-muted-foreground">{selectedVendor.vendor_code}</span>
+                        {getStatusBadge(selectedVendor.status)}
+                        {getComplianceBadge(selectedVendor.compliance_status)}
+                      </div>
+                    </div>
+                  </div>
+                  {(userRole === 'admin' || userRole === 'manager') && (
+                    <Select 
+                      value={selectedVendor.compliance_status || undefined} 
+                      onValueChange={(val: string | null) => {
+                        if (val) handleUpdateStatus(selectedVendor.id, undefined, val)
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px] h-9">
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pending">Mark Pending</SelectItem>
+                        <SelectItem value="Verified">Verify Vendor</SelectItem>
+                        <SelectItem value="Blacklisted">Blacklist</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <Tabs defaultValue="details" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 mb-6">
+                    <TabsTrigger value="details" className="gap-2">
+                      <FileText className="h-4 w-4" /> Details
+                    </TabsTrigger>
+                    <TabsTrigger value="documents" className="gap-2">
+                      <Upload className="h-4 w-4" /> Documents
+                    </TabsTrigger>
+                    <TabsTrigger value="performance" className="gap-2">
+                      <TrendingUp className="h-4 w-4" /> Performance
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="details" className="space-y-6 animate-in fade-in duration-300">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">General Info</h4>
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">Trade Name</Label>
+                          <p className="text-sm font-medium">{selectedVendor.trade_name || 'N/A'}</p>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">Primary Category</Label>
+                          <p className="text-sm font-medium capitalize">{selectedVendor.category || 'General'}</p>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">GSTIN</Label>
+                          <p className="text-sm font-mono">{selectedVendor.gstin || 'Missing'}</p>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">PAN Number</Label>
+                          <p className="text-sm font-mono">{selectedVendor.pan_number || 'Missing'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Commercials</h4>
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">Bank Name</Label>
+                          <p className="text-sm font-medium">{selectedVendor.bank_details?.bank_name || 'N/A'}</p>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">Account Number</Label>
+                          <p className="text-sm font-mono">{selectedVendor.bank_details?.account_number || 'N/A'}</p>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">Payment Terms</Label>
+                          <p className="text-sm font-medium">{selectedVendor.payment_terms || 'Immediate'}</p>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs text-muted-foreground">Credit Limit</Label>
+                          <p className="text-sm font-medium">₹{Number(selectedVendor.credit_limit || 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="documents" className="space-y-6 animate-in fade-in duration-300">
+                    <div className="border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center bg-muted/10 relative">
+                      <input 
+                        type="file" 
+                        id="file-upload" 
+                        title="Document upload"
+                        className="hidden" 
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      <Upload className={`h-10 w-10 text-muted-foreground mb-4 ${isUploading ? 'animate-pulse text-primary' : 'opacity-20'}`} />
+                      <p className="text-sm font-medium">{isUploading ? 'Uploading...' : 'Upload Compliance Documents'}</p>
+                      <p className="text-xs text-muted-foreground mt-1 mb-4">PDF, JPG up to 5MB (GST Cert, Canceled Cheque)</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-2" 
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                        disabled={isUploading}
+                      >
+                        <Plus className="h-4 w-4" /> {isUploading ? 'Uploading...' : 'Select Files'}
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold">Attached Files ({documents.length})</h4>
+                      <div className="rounded-lg border divide-y bg-white max-h-[250px] overflow-y-auto">
+                        {documents.length === 0 ? (
+                          <div className="p-8 text-center text-muted-foreground text-xs italic">
+                            No documents uploaded yet.
+                          </div>
+                        ) : (
+                          documents.map((doc) => (
+                            <div key={doc.id} className="p-3 flex items-center justify-between hover:bg-muted/5 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <FileText className="h-5 w-5 text-red-500" />
+                                <div>
+                                  <p className="text-sm font-medium">{doc.name}</p>
+                                  <p className="text-[10px] text-muted-foreground uppercase">
+                                    {(doc.metadata?.size / 1024).toFixed(1)} KB • {new Date(doc.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <a 
+                                href={getFileUrl(doc.name)} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                              >
+                                View
+                              </a>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="performance" className="space-y-8 animate-in fade-in duration-300">
+                    <div className="grid grid-cols-3 gap-4">
+                      <Card className="bg-primary/[0.02] border-primary/10">
+                        <CardContent className="pt-6">
+                          <div className="flex items-center gap-2 mb-2 text-primary">
+                            <Clock className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase">Avg. Lead Time</span>
+                          </div>
+                          <p className="text-2xl font-bold">4.2 Days</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Based on last 10 GRNs</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-primary/[0.02] border-primary/10">
+                        <CardContent className="pt-6">
+                          <div className="flex items-center gap-2 mb-2 text-primary">
+                            <CheckSquare className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase">Fulfillment %</span>
+                          </div>
+                          <p className="text-2xl font-bold">98.5%</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Order accuracy rate</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-primary/[0.02] border-primary/10">
+                        <CardContent className="pt-6">
+                          <div className="flex items-center gap-2 mb-2 text-primary">
+                            <BarChart3 className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase">Active POs</span>
+                          </div>
+                          <p className="text-2xl font-bold">12</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Currently open orders</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <History className="h-4 w-4 text-primary" /> Compliance Audit Trail
+                      </h4>
+                      <div className="rounded-xl border bg-muted/5 divide-y max-h-[250px] overflow-y-auto">
+                        {auditLogs.length === 0 ? (
+                          <div className="text-[11px] p-6 text-muted-foreground italic text-center">
+                            No compliance changes recorded yet.
+                          </div>
+                        ) : (
+                          auditLogs.map((log) => (
+                            <div key={log.id} className="p-3 text-[11px] space-y-1 hover:bg-muted/10 transition-colors">
+                              <div className="flex justify-between items-center">
+                                <span className="font-semibold text-primary uppercase">{log.field_name.replace('_', ' ')}</span>
+                                <span className="text-muted-foreground">{new Date(log.created_at).toLocaleString()}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="px-1 text-[9px] h-4">{log.old_value}</Badge>
+                                <Plus className="h-3 w-3 text-muted-foreground" />
+                                <Badge className="px-1 text-[9px] h-4 bg-emerald-500">{log.new_value}</Badge>
+                              </div>
+                              <p className="text-muted-foreground pt-1">Changed by: {log.profiles?.full_name || 'System'}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              <DialogFooter className="p-4 border-t bg-muted/5 flex justify-between">
+                <Button variant="ghost" onClick={() => setIsDetailOpen(false)}>Close Overview</Button>
+                {selectedVendor.status === 'awaiting_approval' && (userRole === 'admin' || userRole === 'manager') && (
+                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" onClick={() => handleUpdateStatus(selectedVendor.id, 'approved')}>
+                    <CheckCircle2 className="h-4 w-4" /> Approve Supplier
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
       
       <div className="bg-muted/30 rounded-xl p-6 border flex items-start gap-4">
         <AlertCircle className="h-6 w-6 text-primary mt-1" />

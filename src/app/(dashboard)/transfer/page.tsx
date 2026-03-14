@@ -1,18 +1,48 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowRightLeft, Send, Search, CheckCircle2 } from "lucide-react"
+import { ArrowRightLeft, Send, Search, CheckCircle2, Loader2 } from "lucide-react"
+import { createClient } from "@/utils/supabase/client"
+
+type Branch = {
+  id: string
+  name: string
+  code: string
+}
 
 export default function InterBranchTransferPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [loadingBranches, setLoadingBranches] = useState(true)
   
+  const [sourceBranch, setSourceBranch] = useState<string>("")
+  const [destBranch, setDestBranch] = useState<string>("")
+
+  useEffect(() => {
+    async function fetchBranches() {
+      const supabase = createClient()
+      const { data } = await supabase.from('branches').select('id, name, code')
+      if (data) setBranches(data)
+      setLoadingBranches(false)
+    }
+    fetchBranches()
+  }, [])
+
   const handleTransfer = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!sourceBranch || !destBranch) {
+      alert("Please select both source and destination branches.")
+      return
+    }
+    if (sourceBranch === destBranch) {
+      alert("Source and Destination branches cannot be the same.")
+      return
+    }
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
@@ -52,13 +82,14 @@ export default function InterBranchTransferPage() {
                 <h3 className="text-sm font-semibold uppercase text-muted-foreground">Source Warehouse</h3>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">From Branch:</label>
-                  <Select defaultValue="B-MUM-01">
+                  <Select value={sourceBranch} onValueChange={(val) => setSourceBranch(val || "")}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select Source" />
+                      <SelectValue placeholder={loadingBranches ? "Loading..." : "Select Source"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="B-MUM-01">Mumbai Main Hub</SelectItem>
-                      <SelectItem value="B-DEL-02">Delhi Regional</SelectItem>
+                      {branches.map(branch => (
+                        <SelectItem key={branch.id} value={branch.id}>{branch.name} ({branch.code})</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -69,13 +100,14 @@ export default function InterBranchTransferPage() {
                 <h3 className="text-sm font-semibold uppercase text-primary">Destination Branch</h3>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">To Branch:</label>
-                  <Select defaultValue="B-BLR-03">
+                  <Select value={destBranch} onValueChange={(val) => setDestBranch(val || "")}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select Destination" />
+                      <SelectValue placeholder={loadingBranches ? "Loading..." : "Select Destination"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="B-BLR-03">Bangalore South</SelectItem>
-                      <SelectItem value="B-HYD-04">Hyderabad East</SelectItem>
+                      {branches.map(branch => (
+                        <SelectItem key={branch.id} value={branch.id}>{branch.name} ({branch.code})</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -98,17 +130,14 @@ export default function InterBranchTransferPage() {
               <label className="text-sm font-semibold">E-Way Bill Remarks / Reason</label>
               <Input placeholder="E.g. Relocation due to excess demand in Bangalore." />
             </div>
-
           </CardContent>
-          <CardFooter className="bg-muted/30 border-t p-6 flex justify-end">
-            <Button type="submit" disabled={loading} className="px-8 flex items-center gap-2">
-              {loading ? (
-                <span>Processing...</span>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" /> Initiate Transfer
-                </>
-              )}
+          <CardFooter className="bg-muted/10 border-t p-6 flex justify-between items-center">
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <Send className="h-3 w-3" /> System will auto-generate Waybill upon submission.
+            </div>
+            <Button type="submit" disabled={loading} className="gap-2">
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Initiate Transfer
             </Button>
           </CardFooter>
         </form>

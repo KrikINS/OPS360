@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
+/**
+ * GET /api/vendors
+ * Fetches all vendors ordered by creation date.
+ */
 export async function GET() {
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -24,6 +28,10 @@ export async function GET() {
   return NextResponse.json(data)
 }
 
+/**
+ * POST /api/vendors
+ * Creates a new vendor in 'awaiting_approval' status.
+ */
 export async function POST(request: Request) {
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -81,6 +89,11 @@ export async function POST(request: Request) {
   return NextResponse.json(data, { status: 201 })
 }
 
+/**
+ * PATCH /api/vendors
+ * Updates vendor status or compliance status with audit logging.
+ * Permissions: Admin or Manager only.
+ */
 export async function PATCH(request: Request) {
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -109,16 +122,27 @@ export async function PATCH(request: Request) {
     .single()
 
   if (profile?.role !== 'admin' && profile?.role !== 'manager') {
-    return NextResponse.json({ error: "Insufficient permissions to approve or deactivate vendors" }, { status: 403 })
+    return NextResponse.json({ error: "Insufficient permissions to update vendors" }, { status: 403 })
   }
 
-  const { id, status } = await request.json()
-  if (!id || !status) return NextResponse.json({ error: "Vendor ID and status are required" }, { status: 400 })
+  const body = await request.json()
+  const { id, status, compliance_status } = body
 
-  const updateData: { status: string; approved_by?: string } = { status }
-  if (status === 'approved') {
-    updateData.approved_by = user.id
+  if (!id) return NextResponse.json({ error: "Vendor ID is required" }, { status: 400 })
+
+  // Fetch current vendor data for audit logging
+  const { data: currentVendor } = await supabase
+    .from('vendors')
+    .select('status, compliance_status')
+    .eq('id', id)
+    .single()
+
+  const updateData: Record<string, string | number> = {}
+  if (status) {
+    updateData.status = status
+    if (status === 'approved') updateData.approved_by = user.id
   }
+  if (compliance_status) updateData.compliance_status = compliance_status
 
   const { data, error } = await supabase
     .from('vendors')
@@ -128,5 +152,25 @@ export async function PATCH(request: Request) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Log audit if compliance_status changed
+  if (compliance_status && currentVendor && currentVendor.compliance_status !== compliance_status) {
+    await supabase.from('vendor_audit_log').insert({
+      vendor_id: id,
+      changed_by: user.id,
+      field_name: 'compliance_status',
+      old_value: currentVendor.compliance_status,
+      new_value: compliance_status
+    })
+  } else if (status && currentVendor && currentVendor.status !== status) {
+    await supabase.from('vendor_audit_log').insert({
+      vendor_id: id,
+      changed_by: user.id,
+      field_name: 'status',
+      old_value: currentVendor.status,
+      new_value: status
+    })
+  }
+
   return NextResponse.json(data)
 }

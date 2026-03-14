@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { calculateLandedCost } from "@/utils/compliance"
-import { Calculator, Truck, FileText, CheckCircle2, Plus, AlertTriangle, ShieldCheck } from "lucide-react"
+import { Truck, FileText, Plus, Loader2 } from "lucide-react"
 import { 
   Select, 
   SelectContent, 
@@ -16,61 +16,135 @@ import {
   SelectValue 
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { createClient } from "@/utils/supabase/client"
 
-// Type for Vendor
+// Types
 type Vendor = {
   id: string
   name: string
   gstin?: string
   payment_terms?: string
+  state?: string
   status: string
 }
 
-// Mock PO Data
-const MOCK_PO = {
-  id: "PO-2026-8942",
-  vendor: "Samsung Electronics India",
-  items: [
-    { id: "1", name: "1.5 Ton Inverter AC", hsnCode: "84151010", orderedQty: 50, price: 32000 },
-    { id: "2", name: "320L Double Door Fridge", hsnCode: "84182100", orderedQty: 30, price: 24500 },
-    { id: "3", name: "Fully Auto Washing Machine", hsnCode: "84501100", orderedQty: 40, price: 18000 }
-  ]
+type Product = {
+  id: string
+  model_name: string
+  brand: string
+  hsn_code: string
+  base_price: number
+}
+
+type POItem = {
+  product_id: string
+  quantity: number
+  unit_price: number
+  tax_rate: number
+  total_item_cost: number
+  model_name: string
+  hsn_code: string
+}
+
+type Branch = {
+  id: string
+  name: string
+}
+
+type PurchaseOrder = {
+  id: string
+  po_number: string
+  vendor_id: string
+  branch_id: string
+  status: 'draft' | 'pending_approval' | 'approved' | 'received' | 'cancelled'
+  total_amount: number
+  created_at: string
+  vendor: { name: string }
+  branch?: { name: string }
+  requester_name?: string
+  approver_name?: string
+  items: {
+    id: string
+    product_id: string
+    quantity: number
+    unit_price: number
+    tax_rate: number
+    total_item_cost: number
+    product: { model_name: string, hsn_code: string }
+  }[]
 }
 
 export default function ProcurementGRNPage() {
-  const [freightCharges, setFreightCharges] = useState<Record<string, number>>({})
-  const [receivedQty, setReceivedQty] = useState<Record<string, number>>({})
   const [isCreatingPO, setIsCreatingPO] = useState(false)
   const [vendors, setVendors] = useState<Vendor[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [activePOs, setActivePOs] = useState<PurchaseOrder[]>([])
+  const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
+  
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
   const [poTerms, setPoTerms] = useState({ gstin: "", terms: "" })
+  const [expectedDelivery, setExpectedDelivery] = useState("")
+  const [poItems, setPoItems] = useState<POItem[]>([])
+  const [freightCharges, setFreightCharges] = useState<Record<string, number>>({})
+  const [serialNumbers, setSerialNumbers] = useState<Record<string, string[]>>({})
+  
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [isProcessingGRN, setIsProcessingGRN] = useState(false)
 
   useEffect(() => {
-    // Fetch approved vendors for PO creation
-    const fetchVendors = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/vendors')
-        const data = await res.json()
-        if (res.ok) {
-          setVendors(data.filter((v: Vendor) => v.status === 'approved'))
+        setLoading(true)
+        // 1. Fetch User Role
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+          setUserRole(profile?.role || 'sales')
         }
+
+        // 2. Fetch Vendors
+        const vendorRes = await fetch('/api/vendors')
+        const vendorData = await vendorRes.json()
+        setVendors(vendorData.filter((v: Vendor) => v.status === 'approved'))
+
+        // 3. Fetch Products
+        const productRes = await fetch('/api/products')
+        const productData = await productRes.json()
+        setProducts(productData)
+
+        // 4. Fetch Active POs
+        const poRes = await fetch('/api/procurement/purchase-orders')
+        const poData = await poRes.json()
+        setActivePOs(poData)
+
+        // 5. Fetch Branches
+        const { data: branchData } = await supabase.from('branches').select('id, name').order('name')
+        if (branchData) setBranches(branchData)
       } catch (err) {
-        console.error("Failed to fetch vendors", err)
+        console.error("Failed to load data", err)
+      } finally {
+        setLoading(false)
       }
     }
-    fetchVendors()
+    fetchData()
   }, [])
 
   const handleVendorSelect = (vendorId: string | null) => {
     if (!vendorId) {
-      setSelectedVendor(null)
-      setPoTerms({ gstin: "", terms: "" })
-      return
+      setSelectedVendor(null);
+      setPoTerms({ gstin: "", terms: "" });
+      return;
     }
     const vendor = vendors.find(v => v.id === vendorId)
     if (vendor) {
       setSelectedVendor(vendor)
-      // Auto-pull GSTIN and Payment Terms (Procurement Integration Hook)
       setPoTerms({
         gstin: vendor.gstin || "",
         terms: vendor.payment_terms || "Immediate"
@@ -78,15 +152,166 @@ export default function ProcurementGRNPage() {
     }
   }
 
-  const handleFreightChange = (id: string, value: string) => {
-    setFreightCharges(prev => ({ ...prev, [id]: Number(value) }))
+  const getVisibleBranches = () => {
+    return branches;
+  };
+
+  const addPOItem = (productId: string | null) => {
+    if (!productId) return
+    const product = products.find(p => p.id === productId)
+    if (product && !poItems.find(i => i.product_id === productId)) {
+      // Calculate tax and total using compliance utility, passing vendor state
+      const costDetails = calculateLandedCost(
+        product.base_price, 
+        0, 
+        product.hsn_code, 
+        selectedVendor?.state // Uses Kerala default if vendor state is missing
+      )
+      
+      setPoItems([...poItems, {
+        product_id: product.id,
+        model_name: product.model_name,
+        hsn_code: product.hsn_code,
+        quantity: 1,
+        unit_price: product.base_price,
+        tax_rate: costDetails.gstRate,
+        total_item_cost: costDetails.totalLandedCost
+      }])
+    }
   }
 
-  const handleQtyChange = (id: string, value: string) => {
-    setReceivedQty(prev => ({ ...prev, [id]: Number(value) }))
+  const resetForm = () => {
+    setIsCreatingPO(false)
+    setSelectedVendor(null)
+    setSelectedBranch(null)
+    setPoTerms({ gstin: "", terms: "" })
+    setExpectedDelivery("")
+    setPoItems([])
   }
 
-  const isComplianceValid = selectedVendor && poTerms.gstin.length === 15
+  const handleGeneratePO = async () => {
+    if (!selectedVendor || !selectedBranch || poItems.length === 0) return
+    setIsGenerating(true)
+    
+    try {
+      const res = await fetch('/api/procurement/purchase-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor_id: selectedVendor.id,
+          branch_id: selectedBranch,
+          expected_delivery: expectedDelivery || null,
+          items: poItems.map(item => ({
+            ...item,
+            total_item_cost: (item.unit_price * item.quantity) * (1 + item.tax_rate / 100)
+          })),
+          status: 'pending_approval'
+        })
+      })
+      
+      if (res.ok) {
+        setIsCreatingPO(false)
+        setPoItems([])
+        setSelectedVendor(null)
+        setSelectedBranch(null)
+        setExpectedDelivery("")
+        // Refresh POs
+        const poRes = await fetch('/api/procurement/purchase-orders')
+        setActivePOs(await poRes.json())
+      } else {
+        const error = await res.json()
+        console.error(error.error || "Failed to create PO")
+      }
+    } catch (err) {
+      console.error("Connection error", err)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleCancelPO = async (poId: string) => {
+    setCancellingId(poId)
+    try {
+      const res = await fetch('/api/procurement/purchase-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: poId, status: 'cancelled' })
+      })
+      
+      if (res.ok) {
+        const poRes = await fetch('/api/procurement/purchase-orders')
+        setActivePOs(await poRes.json())
+      }
+    } catch (err) {
+      console.error("Failed to cancel PO", err)
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
+  const handleApprovePO = async (poId: string) => {
+    setApprovingId(poId)
+    try {
+      const res = await fetch('/api/procurement/purchase-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: poId, status: 'approved' })
+      })
+      
+      if (res.ok) {
+        const poRes = await fetch('/api/procurement/purchase-orders')
+        setActivePOs(await poRes.json())
+      }
+    } catch (err) {
+      console.error("Failed to approve PO", err)
+    } finally {
+      setApprovingId(null)
+    }
+  }
+
+  const handleProcessGRN = async () => {
+    if (!selectedPO) return
+    setIsProcessingGRN(true)
+
+    // Validate serial numbers
+    const grnItems = selectedPO.items.map(item => ({
+      product_id: item.product_id,
+      unit_price: item.unit_price,
+      hsn_code: item.product.hsn_code,
+      freight: freightCharges[item.id] || 0,
+      serial_numbers: serialNumbers[item.id] || []
+    }))
+
+    for (const item of grnItems) {
+      const poItem = selectedPO.items.find(i => i.product_id === item.product_id)
+      if (item.serial_numbers.length !== poItem?.quantity) {
+        setIsProcessingGRN(false)
+        return
+      }
+    }
+
+    try {
+      const res = await fetch('/api/procurement/inventory-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ po_id: selectedPO.id, items: grnItems })
+      })
+      
+      if (res.ok) {
+        setSelectedPO(null)
+        const poRes = await fetch('/api/procurement/purchase-orders')
+        setActivePOs(await poRes.json())
+      }
+    } catch (err) {
+      console.error("GRN processing failed", err)
+    } finally {
+      setIsProcessingGRN(false)
+    }
+  }
+
+  if (loading) {
+    return <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -99,10 +324,17 @@ export default function ProcurementGRNPage() {
           <p className="text-muted-foreground mt-1">Handle Purchase Orders (PO) and Goods Receipt Notes (GRN).</p>
         </div>
         <Button 
-          onClick={() => setIsCreatingPO(!isCreatingPO)}
+          onClick={() => { 
+            if (isCreatingPO) {
+              resetForm()
+            } else {
+              setIsCreatingPO(true)
+              setSelectedPO(null)
+            }
+          }}
           className="bg-[#001529] hover:bg-[#002a52] text-white gap-2 shadow-lg"
         >
-          {isCreatingPO ? "View Active POs" : <><Plus className="h-4 w-4" /> Create New PO</>}
+          {isCreatingPO ? "View PO Registry" : <><Plus className="h-4 w-4" /> Create New PO</>}
         </Button>
       </div>
 
@@ -110,15 +342,17 @@ export default function ProcurementGRNPage() {
         <Card className="shadow-md border-t-4 border-t-[#001529]">
           <CardHeader>
             <CardTitle>Draft Purchase Order</CardTitle>
-            <CardDescription>Select a vendor to populate compliance and commercial terms.</CardDescription>
+            <CardDescription>Select a vendor and add products to generate a PO.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <Label>Select Supplier *</Label>
                 <Select onValueChange={handleVendorSelect}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choose a registered vendor" />
+                  <SelectTrigger className="w-full h-10">
+                    <SelectValue placeholder="Choose a registered vendor">
+                      {selectedVendor ? selectedVendor.name : "Choose a registered vendor"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {vendors.map(v => (
@@ -128,143 +362,172 @@ export default function ProcurementGRNPage() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Vendor GSTIN</Label>
-                  <Input 
-                    value={poTerms.gstin} 
-                    placeholder="Auto-populated" 
-                    readOnly 
-                    className="bg-muted/50 font-mono text-xs"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Payment Terms</Label>
-                  <Input 
-                    value={poTerms.terms} 
-                    placeholder="Auto-populated" 
-                    readOnly 
-                    className="bg-muted/50"
-                  />
-                </div>
+              <div className="space-y-4">
+                <Label>Destination Branch *</Label>
+                <Select onValueChange={setSelectedBranch}>
+                  <SelectTrigger className="w-full h-10">
+                    <SelectValue placeholder="Select destination branch">
+                      {getVisibleBranches().find(b => b.id === selectedBranch)?.name || "Select destination branch"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getVisibleBranches().map(b => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            {selectedVendor && !poTerms.gstin && (
-              <div className="bg-destructive/10 text-destructive p-4 rounded-lg flex items-center gap-3 border border-destructive/20">
-                <AlertTriangle className="h-5 w-5 shrink-0" />
-                <p className="text-sm font-medium">
-                  Compliance Alert: This vendor is missing a valid GSTIN. PO creation is locked until identity is verified.
-                </p>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="space-y-4">
+                <Label>Vendor GSTIN</Label>
+                <Input value={poTerms.gstin} readOnly className="bg-muted/50 font-mono text-sm h-10" />
               </div>
-            )}
-
-            {selectedVendor && poTerms.gstin && (
-              <div className="bg-sky-50 text-sky-700 p-4 rounded-lg flex items-center gap-3 border border-sky-200">
-                <ShieldCheck className="h-5 w-5 shrink-0" />
-                <p className="text-sm font-medium">
-                  Compliance Verified: GSTIN detected and mapped for internal tax clearing.
-                </p>
+              <div className="space-y-4">
+                <Label>Payment Terms</Label>
+                <Input value={poTerms.terms} readOnly className="bg-muted/50 h-10" />
               </div>
-            )}
-
-            <div className="border rounded-lg bg-muted/20 p-8 text-center text-muted-foreground italic">
-              Item selection and pricing hook placeholder...
+              <div className="space-y-4">
+                <Label>Expected Delivery</Label>
+                <Input 
+                  type="date" 
+                  value={expectedDelivery} 
+                  onChange={(e) => setExpectedDelivery(e.target.value)} 
+                  className="w-full h-10"
+                />
+              </div>
             </div>
+
+            {selectedVendor && (
+              <div className="pt-4 border-t space-y-4">
+                <div className="space-y-4">
+                  <Label className="text-lg">Add Items</Label>
+                  <Select onValueChange={addPOItem}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Search products..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.model_name} (₹{p.base_price})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {poItems.length > 0 && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>HSN</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Unit Price</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {poItems.map((item, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell>{item.model_name}</TableCell>
+                          <TableCell className="font-mono text-xs">{item.hsn_code}</TableCell>
+                          <TableCell>
+                            <Input 
+                              type="number" 
+                              className="w-20" 
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newItems = [...poItems];
+                                newItems[idx].quantity = Number(e.target.value);
+                                setPoItems(newItems);
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">₹{(item.unit_price * item.quantity).toLocaleString()}</TableCell>
+                          <TableCell>
+                             <Button variant="ghost" size="sm" onClick={() => setPoItems(poItems.filter((_, i: number) => i !== idx))}>Remove</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            )}
           </CardContent>
           <CardFooter className="justify-end gap-3 border-t bg-muted/30">
-            <Button variant="ghost" onClick={() => setIsCreatingPO(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={resetForm}>Cancel</Button>
             <Button 
               className="bg-[#001529]" 
-              disabled={!isComplianceValid}
+              disabled={!selectedVendor || poItems.length === 0 || poTerms.gstin.length !== 15 || isGenerating}
+              onClick={handleGeneratePO}
             >
+              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Generate Purchase Order
             </Button>
           </CardFooter>
         </Card>
-      ) : (
-        <Card className="shadow-md">
-          <CardHeader className="bg-muted/30 border-b">
-            <div className="flex justify-between items-start">
+      ) : selectedPO ? (
+        <Card className="shadow-md border-t-4 border-t-primary">
+          <CardHeader>
+            <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Active PO for GRN: {MOCK_PO.id}
-                </CardTitle>
-                <CardDescription className="mt-1">Vendor: {MOCK_PO.vendor}</CardDescription>
+                <CardTitle>Process GRN: {selectedPO.po_number}</CardTitle>
+                <CardDescription>Vendor: {selectedPO.vendor.name}</CardDescription>
               </div>
-              <Badge variant="outline" className="text-sm font-medium">In Transit</Badge>
+              <Button variant="outline" onClick={() => setSelectedPO(null)}>Close</Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Item</TableHead>
                   <TableHead>HSN Code</TableHead>
                   <TableHead>Ordered</TableHead>
                   <TableHead>Base Price</TableHead>
-                  <TableHead>Received Qty</TableHead>
+                  <TableHead>Serial Numbers (Comma Separated)</TableHead>
                   <TableHead>Freight / Item</TableHead>
-                  <TableHead className="text-right">Landed Cost (Per Item)</TableHead>
+                  <TableHead className="text-right">Landed Cost</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_PO.items.map((item) => {
-                  const qty = receivedQty[item.id] || 0
+                {selectedPO.items.map((item) => {
                   const freight = freightCharges[item.id] || 0
-                  const costDetails = calculateLandedCost(item.price, freight, item.hsnCode)
+                  const costDetails = calculateLandedCost(item.unit_price, freight, item.product.hsn_code)
                   
-                  const isComplete = qty === item.orderedQty
-                  const isPartial = qty > 0 && qty < item.orderedQty
-
                   return (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{item.hsnCode}</TableCell>
-                      <TableCell>{item.orderedQty}</TableCell>
-                      <TableCell>₹{item.price.toLocaleString('en-IN')}</TableCell>
-                      
-                      {/* Inputs for GRN processing */}
+                      <TableCell className="font-medium">{item.product.model_name}</TableCell>
+                      <TableCell className="font-mono text-xs">{item.product.hsn_code}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>₹{item.unit_price.toLocaleString('en-IN')}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Input 
-                            type="number" 
-                            min="0"
-                            max={item.orderedQty}
-                            placeholder="0"
-                            className={`w-20 ${isComplete ? 'border-green-500 focus-visible:ring-green-500' : isPartial ? 'border-amber-500 focus-visible:ring-amber-500' : ''}`}
-                            onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                          />
-                          {isComplete && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                        </div>
+                        <Input 
+                          placeholder="SN1, SN2..."
+                          className="w-full text-xs"
+                          onChange={(e) => {
+                            const sns = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                            setSerialNumbers(prev => ({ ...prev, [item.id]: sns }));
+                          }}
+                        />
                       </TableCell>
-                      
                       <TableCell>
                         <Input 
                           type="number" 
                           min="0"
                           placeholder="₹0"
                           className="w-24"
-                          onChange={(e) => handleFreightChange(item.id, e.target.value)}
+                          onChange={(e) => setFreightCharges(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
                         />
                       </TableCell>
-                      
-                      {/* Landed Cost Result */}
                       <TableCell className="text-right">
-                        {qty > 0 ? (
-                          <div className="flex flex-col items-end">
-                            <span className="font-bold text-lg text-primary">
-                              ₹{costDetails.totalLandedCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                            </span>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calculator className="h-3 w-3" />
-                              Includes {costDetails.gstRate}% GST (₹{costDetails.gstAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })})
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        <div className="flex flex-col items-end">
+                          <span className="font-bold">₹{costDetails.totalLandedCost.toLocaleString('en-IN')}</span>
+                          <span className="text-[10px] text-muted-foreground">{costDetails.gstRate}% GST Incl.</span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -272,12 +535,102 @@ export default function ProcurementGRNPage() {
               </TableBody>
             </Table>
           </CardContent>
-          <CardFooter className="justify-end p-4 border-t bg-muted/10">
-            <Button className="bg-primary text-primary-foreground shadow-sm">
-              Process GRN to Inventory
-            </Button>
+          <CardFooter className="justify-end gap-3 border-t bg-muted/10 p-4">
+               <Button onClick={handleProcessGRN} className="bg-primary" disabled={isProcessingGRN}>
+                 {isProcessingGRN ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                 Sync to Inventory & Finalize GRN
+               </Button>
           </CardFooter>
         </Card>
+      ) : (
+        <div className="grid gap-6">
+          <Card className="shadow-md">
+            <CardHeader className="bg-muted/30 border-b">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Active Purchase Orders
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>PO Number</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Requester</TableHead>
+                    <TableHead>Approver</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activePOs.map((po) => (
+                    <TableRow key={po.id}>
+                      <TableCell className="font-bold text-primary">{po.po_number}</TableCell>
+                      <TableCell>{po.vendor?.name}</TableCell>
+                      <TableCell>{po.branch?.name || 'N/A'}</TableCell>
+                      <TableCell className="text-xs">{po.requester_name || 'System'}</TableCell>
+                      <TableCell className="text-xs">{po.approver_name || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={po.status === 'received' ? 'default' : po.status === 'approved' ? 'destructive' : 'outline'}>
+                          {po.status.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>₹{po.total_amount.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(po.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        {po.status === 'pending_approval' && userRole === 'admin' && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleApprovePO(po.id)} 
+                            className="bg-green-600 hover:bg-green-700"
+                            disabled={approvingId === po.id}
+                          >
+                            {approvingId === po.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                            Approve
+                          </Button>
+                        )}
+                        {(po.status === 'draft' || po.status === 'pending_approval') && (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleCancelPO(po.id)} 
+                            className="text-destructive hover:bg-destructive/10"
+                            disabled={cancellingId === po.id}
+                          >
+                            {cancellingId === po.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                            Cancel
+                          </Button>
+                        )}
+                        {po.status === 'approved' && (
+                          <Button size="sm" variant="default" onClick={() => setSelectedPO(po)}>Process GRN</Button>
+                        )}
+                        {po.status === 'received' && (
+                          <span className="text-xs text-green-600 font-medium">Completed</span>
+                        )}
+                        {po.status === 'cancelled' && (
+                          <span className="text-xs text-muted-foreground italic">Cancelled</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {activePOs.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-12 text-muted-foreground italic">
+                        No active purchase orders found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

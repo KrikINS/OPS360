@@ -3,6 +3,8 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { UserNav } from "@/components/user-nav"
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
+import Link from "next/link"
+import { HelpCircle } from "lucide-react"
 
 export default async function DashboardLayout({
   children,
@@ -47,10 +49,19 @@ export default async function DashboardLayout({
             <SidebarTrigger className="text-slate-500 hover:text-primary transition-colors" />
             <div className="h-5 w-[1px] bg-border" />
             <div className="font-semibold text-sm text-foreground tracking-tight">
-              Ethan Ops360 <span className="text-muted-foreground font-normal">— Manager Dashboard</span>
+              Ops360 <span className="text-muted-foreground font-normal">- {rawProfile.role.charAt(0).toUpperCase() + rawProfile.role.slice(1)} Dashboard</span>
             </div>
           </div>
-          <UserNav profile={profileWithBranchName} />
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/docs" 
+              className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all"
+              title="Help & Documentation"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </Link>
+            <UserNav profile={profileWithBranchName} />
+          </div>
         </header>
         <div className="flex-1 overflow-auto" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" }}>
           {children}

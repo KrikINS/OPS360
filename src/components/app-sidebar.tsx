@@ -23,6 +23,7 @@ import {
   ArrowRightLeft,
   ShieldAlert,
   BarChart3,
+  BookOpen,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -120,10 +121,24 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
+      {/* ── Knowledge Base ── */}
+      <div className="px-2 pb-2">
+        <Link
+          href="/docs"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
+            "text-slate-400 hover:text-white hover:bg-[#002244] border-l-[3px] border-l-transparent"
+          )}
+        >
+          <BookOpen className="h-4 w-4 shrink-0 text-slate-500" />
+          <span>OPS360 Knowledge Base</span>
+        </Link>
+      </div>
+
       {/* ── Footer branding ── */}
       <div className="mt-auto px-4 py-3 border-t border-sidebar-border">
         <p className="text-[10px] text-slate-600 text-center">
-          © 2025 Ethan Home Appliances
+          © {new Date().getFullYear()} Ethan Home Appliances
         </p>
       </div>
     </Sidebar>

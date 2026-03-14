@@ -50,7 +50,7 @@ export default async function AdminDashboardPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Admin Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">System overview and organisational health for Ethan Home Appliances.</p>
+        <p className="text-muted-foreground text-sm mt-1">System overview and organisational health for Ops360 ERP.</p>
       </div>
 
       {/* KPI strip */}
