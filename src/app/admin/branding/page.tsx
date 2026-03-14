@@ -1,4 +1,4 @@
-"use client"
+"use client"; // Standardized for client use
 
 import { LogoUploader } from "@/components/logo-uploader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

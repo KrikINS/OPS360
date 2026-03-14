@@ -3,7 +3,20 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { BookOpen, Users, ShieldCheck, CreditCard, ChevronRight } from "lucide-react"
+import { 
+  BookOpen, 
+  Package, 
+  Truck, 
+  ShoppingCart, 
+  ArrowRightLeft, 
+  Calculator, 
+  Users, 
+  Wrench, 
+  BarChart3, 
+  ShieldAlert, 
+  ChevronRight,
+  ShieldCheck,
+} from "lucide-react"
 
 const docsNavigation = [
   {
@@ -13,16 +26,64 @@ const docsNavigation = [
     ],
   },
   {
-    title: "Administration",
+    title: "Inventory",
     items: [
-      { title: "Branch Setup", href: "/docs/branch-management", icon: Users },
-      { title: "Staff Roles", href: "/docs/staff", icon: ShieldCheck },
+      { title: "Dashboard Overview", href: "/docs/inventory", icon: Package },
     ],
   },
   {
-    title: "Finance",
+    title: "Procurement",
     items: [
-      { title: "Payment Terms", href: "/docs/payments", icon: CreditCard },
+      { title: "Purchase Orders", href: "/docs/procurement", icon: Truck },
+    ],
+  },
+  {
+    title: "Vendors",
+    items: [
+      { title: "Vendor Management", href: "/docs/vendor-management", icon: ShoppingCart },
+      { title: "Compliance Status", href: "/docs/compliance", icon: ShieldCheck },
+    ],
+  },
+  {
+    title: "POS",
+    items: [
+      { title: "Sales & Billing", href: "/docs/pos", icon: ShoppingCart },
+    ],
+  },
+  {
+    title: "Inter-Branch Transfer",
+    items: [
+      { title: "Branch Operations", href: "/docs/branch-management", icon: ArrowRightLeft },
+    ],
+  },
+  {
+    title: "Accounting",
+    items: [
+      { title: "Payments & Invoicing", href: "/docs/accounting", icon: Calculator },
+    ],
+  },
+  {
+    title: "Staff",
+    items: [
+      { title: "Staff Roles", href: "/docs/staff", icon: Users },
+    ],
+  },
+  {
+    title: "Service",
+    items: [
+      { title: "Service Module", href: "/docs/service", icon: Wrench },
+    ],
+  },
+  {
+    title: "Analytics",
+    items: [
+      { title: "Reports Overview", href: "/docs/analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Administration",
+    items: [
+      { title: "Admin Center", href: "/docs/admin", icon: ShieldAlert },
     ],
   },
 ]
