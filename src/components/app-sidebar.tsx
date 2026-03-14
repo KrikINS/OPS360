@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils"
 const items = [
   { title: "Inventory",             url: "/",              icon: Package },
   { title: "Procurement",           url: "/procurement",   icon: Truck },
+  { title: "Discrepancy Report",     url: "/discrepancy-report", icon: ShieldAlert },
   { title: "POS",                   url: "/pos",           icon: ShoppingCart },
   { title: "Inter-Branch Transfer", url: "/transfer",      icon: ArrowRightLeft },
   { title: "Accounting",            url: "/accounting",    icon: Calculator },

@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       landed_cost: number;
       status: string;
       branch_id: string;
+      source_po_id: string;
     };
     const inventoryItems: InventoryItemInsert[] = []
     
@@ -73,7 +74,8 @@ export async function POST(request: Request) {
           price: unit_price,
           landed_cost: costDetails.totalLandedCost, // This is now unit landed cost
           status: 'Available',
-          branch_id: po.branch_id
+          branch_id: po.branch_id,
+          source_po_id: po_id
         })
       })
 

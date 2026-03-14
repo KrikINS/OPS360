@@ -139,14 +139,16 @@ export async function POST(request: Request) {
     quantity: number, 
     unit_price: number,
     tax_rate: number,
-    total_item_cost: number
+    total_item_cost: number,
+    override_reason?: string
   }) => ({
     po_id: po.id,
     product_id: item.product_id,
     quantity: item.quantity,
     unit_price: item.unit_price,
     tax_rate: item.tax_rate,
-    total_item_cost: item.total_item_cost
+    total_item_cost: item.total_item_cost,
+    override_reason: item.override_reason
   }))
 
   const { error: itemsError } = await supabase

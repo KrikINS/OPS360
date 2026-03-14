@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/utils/supabase/client"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Clock, AlertCircle, CheckCircle2, PackageSearch } from "lucide-react"
 
 // Types
 type Vendor = {
@@ -45,6 +47,7 @@ type POItem = {
   received_quantity: number
   model_name: string
   hsn_code: string
+  override_reason?: string
 }
 
 type Branch = {
@@ -99,6 +102,7 @@ export default function ProcurementGRNPage() {
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [isProcessingGRN, setIsProcessingGRN] = useState(false)
   const [managerOverride, setManagerOverride] = useState<Record<number, boolean>>({})
+  const [overrideReasons, setOverrideReasons] = useState<Record<number, string>>({})
 
   useEffect(() => {
     const fetchData = async () => {
@@ -205,8 +209,9 @@ export default function ProcurementGRNPage() {
           vendor_id: selectedVendor.id,
           branch_id: selectedBranch,
           expected_delivery: expectedDelivery || null,
-          items: poItems.map(item => ({
+          items: poItems.map((item, idx) => ({
             ...item,
+            override_reason: overrideReasons[idx] || null,
             total_item_cost: (item.unit_price * item.quantity) * (1 + item.tax_rate / 100)
           })),
           status: 'pending_approval'
@@ -477,10 +482,28 @@ export default function ProcurementGRNPage() {
                                  <input 
                                    type="checkbox" 
                                    checked={!!managerOverride[idx]} 
-                                   onChange={(e) => setManagerOverride(prev => ({ ...prev, [idx]: e.target.checked }))}
+                                   onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setManagerOverride(prev => ({ ...prev, [idx]: checked }));
+                                      if (!checked) {
+                                         setOverrideReasons(prev => {
+                                            const updated = { ...prev };
+                                            delete updated[idx];
+                                            return updated;
+                                         });
+                                      }
+                                   }}
                                  />
                                  Override GST
                                </label>
+                               {managerOverride[idx] && (
+                                 <Input 
+                                   placeholder="Reason for change..."
+                                   className="text-[10px] h-6 mt-1 border-amber-200 bg-amber-50"
+                                   value={overrideReasons[idx] || ""}
+                                   onChange={(e) => setOverrideReasons(prev => ({ ...prev, [idx]: e.target.value }))}
+                                 />
+                               )}
                              </div>
                           </TableCell>
                           <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
@@ -611,92 +634,199 @@ export default function ProcurementGRNPage() {
         </Card>
       ) : (
         <div className="grid gap-6">
-          <Card className="shadow-md">
-            <CardHeader className="bg-muted/30 border-b">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Active Purchase Orders
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>PO Number</TableHead>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Branch</TableHead>
-                    <TableHead>Requester</TableHead>
-                    <TableHead>Approver</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activePOs.map((po) => (
-                    <TableRow key={po.id}>
-                      <TableCell className="font-bold text-primary">{po.po_number}</TableCell>
-                      <TableCell>{po.vendor?.name}</TableCell>
-                      <TableCell>{po.branch?.name || 'N/A'}</TableCell>
-                      <TableCell className="text-xs">{po.requester_name || 'System'}</TableCell>
-                      <TableCell className="text-xs">{po.approver_name || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={po.status === 'received' ? 'default' : po.status === 'approved' ? 'destructive' : 'outline'}>
-                          {po.status.toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>₹{po.total_amount.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(po.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        {po.status === 'pending_approval' && userRole === 'admin' && (
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleApprovePO(po.id)} 
-                            className="bg-green-600 hover:bg-green-700"
-                            disabled={approvingId === po.id}
-                          >
-                            {approvingId === po.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
-                            Approve
-                          </Button>
-                        )}
-                        {(po.status === 'draft' || po.status === 'pending_approval') && (
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleCancelPO(po.id)} 
-                            className="text-destructive hover:bg-destructive/10"
-                            disabled={cancellingId === po.id}
-                          >
-                            {cancellingId === po.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
-                            Cancel
-                          </Button>
-                        )}
-                        {(po.status === 'approved' || po.status === 'partially_received') && (
-                          <Button size="sm" variant="default" onClick={() => setSelectedPO(po)}>Process GRN</Button>
-                        )}
-                        {po.status === 'received' && (
-                          <span className="text-xs text-green-600 font-medium">Completed</span>
-                        )}
-                        {po.status === 'cancelled' && (
-                          <span className="text-xs text-muted-foreground italic">Cancelled</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {activePOs.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12 text-muted-foreground italic">
-                        No active purchase orders found.
-                      </TableCell>
-                    </TableRow>
+          <Tabs defaultValue="all" className="w-full">
+            <div className="flex items-center justify-between mb-4">
+              <TabsList className="bg-slate-100 p-1 rounded-xl">
+                <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                  PO Registry
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all relative">
+                  Pending Fulfilment
+                  {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                      {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length}
+                    </span>
                   )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="all" className="animate-in slide-in-from-left-2 duration-300">
+              <Card className="shadow-sm border-slate-200">
+                <CardHeader className="bg-slate-50/50 border-b py-4">
+                  <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
+                    <FileText className="h-5 w-5 text-[#001529]" />
+                    All Purchase Orders
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="font-bold">PO Number</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>Branch</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activePOs.map((po) => (
+                        <TableRow key={po.id} className="hover:bg-slate-50/50 transition-colors">
+                          <TableCell className="font-bold text-[#001529] font-mono">{po.po_number}</TableCell>
+                          <TableCell className="font-medium">{po.vendor?.name}</TableCell>
+                          <TableCell className="text-slate-600">{po.branch?.name || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              po.status === 'received' ? "bg-green-100 text-green-700 hover:bg-green-200" :
+                              po.status === 'approved' ? "bg-blue-100 text-blue-700 hover:bg-blue-200" :
+                              po.status === 'partially_received' ? "bg-amber-100 text-amber-700 hover:bg-amber-200" :
+                              "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            }>
+                              {po.status === 'partially_received' ? 'PARTIAL' : po.status.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold text-slate-700">₹{po.total_amount.toLocaleString()}</TableCell>
+                          <TableCell className="text-xs text-slate-500">
+                            {new Date(po.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
+                            {po.status === 'pending_approval' && userRole === 'admin' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleApprovePO(po.id)} 
+                                className="bg-green-600 hover:bg-green-700 h-8 shadow-sm"
+                                disabled={approvingId === po.id}
+                              >
+                                {approvingId === po.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                                Approve
+                              </Button>
+                            )}
+                            {(po.status === 'approved' || po.status === 'partially_received') && (
+                              <Button size="sm" variant="default" className="bg-[#001529] h-8 shadow-sm" onClick={() => setSelectedPO(po)}>Process GRN</Button>
+                            )}
+                            {po.status === 'received' && (
+                              <CheckCircle2 className="h-5 w-5 text-green-500 ml-auto" />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {activePOs.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-16">
+                             <div className="flex flex-col items-center gap-2 grayscale opacity-50">
+                               <PackageSearch className="h-12 w-12" />
+                               <p className="text-slate-500">No purchase orders found</p>
+                             </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="pending" className="animate-in slide-in-from-right-2 duration-300">
+              <Card className="shadow-sm border-slate-200 overflow-hidden">
+                <CardHeader className="bg-slate-50/50 border-b py-4">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
+                       <Clock className="h-5 w-5 text-amber-500" />
+                       Pending Fulfilment
+                    </CardTitle>
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Unfulfilled Stock
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="font-bold">PO Number</TableHead>
+                        <TableHead>Delayed By</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead className="w-[300px]">Item Progress</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activePOs
+                        .filter(p => p.status === 'approved' || p.status === 'partially_received')
+                        .map((po) => {
+                          const daysOutstanding = Math.floor((new Date().getTime() - new Date(po.created_at).getTime()) / (1000 * 3600 * 24));
+                          return (
+                            <TableRow key={po.id} className="hover:bg-slate-50/50 transition-colors group">
+                              <TableCell>
+                                <div className="font-bold text-[#001529] font-mono">{po.po_number}</div>
+                                <div className="text-[10px] text-slate-400 font-medium">{po.branch?.name}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5">
+                                   <div className={`h-2 w-2 rounded-full ${daysOutstanding > 5 ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
+                                   <span className={`font-bold ${daysOutstanding > 5 ? 'text-red-600' : 'text-slate-700'}`}>
+                                     {daysOutstanding} Days
+                                   </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium text-slate-600">
+                                {po.vendor?.name}
+                              </TableCell>
+                              <TableCell className="py-4">
+                                <div className="space-y-3">
+                                  {po.items.map((item) => {
+                                    const progress = (item.received_quantity / item.quantity) * 100;
+                                    return (
+                                      <div key={item.id} className="space-y-1">
+                                        <div className="flex justify-between text-[10px] font-medium text-slate-500">
+                                          <span className="truncate max-w-[150px]">{item.product.model_name}</span>
+                                          <span className={progress === 100 ? "text-green-600 font-bold" : "text-slate-900"}>
+                                            {item.received_quantity} / {item.quantity}
+                                          </span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner">
+                                          <div 
+                                            className={`h-full transition-all duration-700 ${progress === 100 ? 'bg-green-500' : 'bg-[#7FD1E3]'}`} 
+                                            style={{ width: `${progress}%` }} 
+                                          />
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button size="sm" variant="default" className="bg-[#001529] h-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setSelectedPO(po)}>
+                                  Process GRN
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-20">
+                             <div className="flex flex-col items-center gap-3">
+                               <div className="h-16 w-16 bg-green-50 rounded-full flex items-center justify-center text-green-600">
+                                  <CheckCircle2 className="h-8 w-8" />
+                               </div>
+                               <div className="space-y-1">
+                                 <p className="text-lg font-bold text-slate-900">All shipments fulfilled</p>
+                                 <p className="text-sm text-slate-500">There are no pending deliveries at this time.</p>
+                               </div>
+                             </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       )}
     </div>
