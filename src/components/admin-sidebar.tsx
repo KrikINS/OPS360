@@ -9,6 +9,8 @@ import {
   ImageIcon,
   ArrowLeftCircle,
   ChevronRight,
+  Building2,
+  FolderTree,
 } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
@@ -20,6 +22,18 @@ const adminNavItems = [
     url: "/admin",
     icon: LayoutDashboard,
     description: "Overview & system health",
+  },
+  {
+    title: "Organization Registry",
+    url: "/admin/organization",
+    icon: Building2,
+    description: "Branches & locations",
+  },
+  {
+    title: "Global Masters",
+    url: "/admin/masters",
+    icon: FolderTree,
+    description: "Brands & categories",
   },
   {
     title: "User Management",
