@@ -1,13 +1,4 @@
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
-} from "@/components/ui/accordion"
-import { CopyButton } from "@/components/docs/copy-button"
-import { Feedback } from "@/components/docs/feedback"
-import { Info, ShieldCheck, ChevronRight, FileText, BarChart2, History } from "lucide-react"
-import Image from "next/image"
+import { ShieldCheck, ChevronRight, FileText, BarChart2, History } from "lucide-react"
 
 export default function VendorManagementDocs() {
   return (
@@ -127,8 +118,10 @@ export default function VendorManagementDocs() {
         </div>
       </section>
 
-      <div className="mt-8">
-        <Feedback />
+      <div className="mt-8 pt-6 border-t">
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+          Ops360 Documentation • Confidential Information
+        </p>
       </div>
     </div>
   )

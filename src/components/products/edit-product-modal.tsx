@@ -45,9 +45,18 @@ const TRACKING_TYPES = [
   { value: "Legacy", label: "Legacy" }
 ]
 
+interface FormState {
+  model_name: string
+  base_price: string
+  hsn_code: string
+  min_stock_level: string
+  tracking_type: string
+  description: string
+}
+
 export function EditProductModal({ open, onOpenChange, onSuccess, product }: EditProductModalProps) {
   const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormState>({
     model_name: product?.model_name || "",
     base_price: product?.base_price?.toString() || "0",
     hsn_code: product?.hsn_code || "",
@@ -74,6 +83,8 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
     setLoading(true)
 
     try {
+      if (!product) throw new Error("No product context provided")
+      
       const supabase = createClient()
       const { error } = await supabase
         .from("products")
@@ -91,8 +102,8 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
 
       onSuccess()
       onOpenChange(false)
-    } catch (error: any) {
-      alert("Error: " + error.message)
+    } catch (error) {
+      alert("Error: " + (error as Error).message)
     } finally {
       setLoading(false)
     }
@@ -141,7 +152,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
             <div className="space-y-2">
               <Label htmlFor="edit-tracking">Tracking Type</Label>
               <Select 
-                onValueChange={(v) => setFormData({ ...formData, tracking_type: v })}
+                onValueChange={(v) => setFormData({ ...formData, tracking_type: v || "Stocked" })}
                 value={formData.tracking_type}
               >
                 <SelectTrigger>

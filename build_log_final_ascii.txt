@@ -1,0 +1,99 @@
+
+> tmp-app@0.1.0 build
+> next build
+
+??? Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+node.exe : ??? The 
+"middleware" file 
+convention is 
+deprecated. Please 
+use "proxy" 
+instead. Learn 
+more: https://nextjs
+.org/docs/messages/m
+iddleware-to-proxy
+At line:1 char:1
++ & "C:\Program File
+s\nodejs/node.exe" 
+"C:\Program Files\no
+dejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (???    
+ The "middle...l    
+eware-to-proxy:    
+String) [], Rem    
+oteException
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+  Creating an optimized production build ...
+??? Compiled successfully in 4.2s
+  Running TypeScript ...
+Failed to compile.
+
+./src/components/pro
+ducts/edit-product-m
+odal.tsx:146:66
+Type error: Type 
+'string | null' is 
+not assignable to 
+type 'string'.
+  Type 'null' is 
+not assignable to 
+type 'string'.
+
+[0m [90m 144 
+|[39m              
+ [33m<[39m[33mLab
+el[39m htmlFor[33m
+=[39m[32m"edit-tra
+cking"[39m[33m>[3
+9m[33mTracking[39m
+ [33mType[39m[33m
+<[39m[33m/[39m[3
+3mLabel[39m[33m>[
+39m
+ [90m 145 |[39m   
+            [33m<[
+39m[33mSelect[39m 
+[31m[1m>[22m[39m
+[90m 146 |[39m    
+             onValue
+Change[33m=[39m{(v
+) [33m=>[39m 
+setFormData({ [33m.
+..[39mformData[33m
+,[39m tracking_type
+[33m:[39m v })}
+ [90m     |[39m   
+                    
+                    
+                    
+   
+[31m[1m^[22m[39m
+ [90m 147 |[39m   
+              value
+[33m=[39m{formData
+[33m.[39mtracking_t
+ype [33m||[39m 
+[32m"Stocked"[39m}
+ [90m 148 |[39m   
+            
+[33m>[39m
+ [90m 149 |[39m   
+              [33m<
+[39m[33mSelectTrig
+ger[39m[33m>[39m
+[0m
+Next.js build 
+worker exited with 
+code: 1 and signal: 
+null
