@@ -10,10 +10,10 @@ export const COMPANY_STATE_CODE = '32';
  * Resolves the GST slab (12%, 18%, or 28%) based on the HSN Code.
  */
 export function getGstRateFromHsn(hsnCode: string): number {
-  if (hsnCode.startsWith('8415') || hsnCode.startsWith('8418')) return 0.28;
-  if (hsnCode.startsWith('8450')) return 0.18;
-  if (hsnCode.startsWith('8509') || hsnCode.startsWith('8414')) return 0.12;
-  return 0.18;
+  if (hsnCode.startsWith('8415') || hsnCode.startsWith('8418')) return 0.28; // AC & Refrigerator
+  if (hsnCode.startsWith('8450')) return 0.18; // Washing Machine
+  if (hsnCode.startsWith('8414')) return 0.12; // Fans & Small Appliances
+  return 0.18; // Default
 }
 
 /**
@@ -25,23 +25,30 @@ export function getGstType(vendorState: string): 'LOCAL' | 'INTERSTATE' {
 }
 
 /**
- * Calculates landed cost for GRN/PO: Base Price + Freight + specific GST applied.
+ * Calculates landed cost for GRN/PO: (Base Price + Freight) + specific GST applied.
  * Automatically handles CGST/SGST/IGST split based on vendor location.
+ * compliant with Composite Supply rules: GST is applied on (Price + Freight).
  */
 export function calculateLandedCost(
   basePrice: number, 
   freight: number, 
   hsnCode: string, 
-  vendorState: string = COMPANY_STATE
+  vendorState: string = COMPANY_STATE,
+  quantity: number = 1
 ) {
   const gstRate = getGstRateFromHsn(hsnCode);
   const gstType = getGstType(vendorState);
-  const totalGstAmount = basePrice * gstRate;
+  
+  // Taxable Value includes base price and freight (Composite Supply)
+  const taxableValue = basePrice + freight;
+  const totalGstAmount = taxableValue * gstRate;
+  const totalCostWithGst = taxableValue + totalGstAmount;
 
   if (gstType === 'LOCAL') {
     return {
       basePrice,
       freight,
+      taxableValue,
       gstRate: gstRate * 100,
       cgstRate: (gstRate / 2) * 100,
       sgstRate: (gstRate / 2) * 100,
@@ -49,7 +56,8 @@ export function calculateLandedCost(
       sgstAmount: totalGstAmount / 2,
       igstAmount: 0,
       totalGstAmount,
-      totalLandedCost: basePrice + freight + totalGstAmount,
+      totalLandedCost: totalCostWithGst / quantity, // Unit landed cost
+      totalBatchCost: totalCostWithGst,
       gstType
     };
   }
@@ -57,12 +65,14 @@ export function calculateLandedCost(
   return {
     basePrice,
     freight,
+    taxableValue,
     gstRate: gstRate * 100,
     cgstAmount: 0,
     sgstAmount: 0,
     igstAmount: totalGstAmount,
     totalGstAmount,
-    totalLandedCost: basePrice + freight + totalGstAmount,
+    totalLandedCost: totalCostWithGst / quantity, // Unit landed cost
+    totalBatchCost: totalCostWithGst,
     gstType
   };
 }

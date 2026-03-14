@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -74,25 +75,47 @@ export async function POST(request: Request) {
   const currentYear = new Date().getFullYear().toString()
   const poPrefix = `PO-${currentYear}-`
 
-  // Get the latest PO for this year to determine the next sequence number
-  const { data: latestPO, error: fetchError } = await supabase
+  // Use admin client for sequence check to be safe
+  const adminSupabase = createAdminClient()
+
+  // Get all POs for this year to find the true numeric maximum
+  const { data: allPOs, error: fetchError } = await adminSupabase
     .from('purchase_orders')
     .select('po_number')
     .like('po_number', `${poPrefix}%`)
-    .order('po_number', { ascending: false })
-    .limit(1)
-    .single()
 
-  let sequenceNumber = 1
-  if (latestPO && latestPO.po_number && !fetchError) {
-    const lastSequenceStr = latestPO.po_number.split('-')[2]
-    const lastSequenceNum = parseInt(lastSequenceStr, 10)
-    if (!isNaN(lastSequenceNum)) {
-      sequenceNumber = lastSequenceNum + 1
-    }
+  let maxSequence = 0
+  if (allPOs && allPOs.length > 0) {
+    allPOs.forEach(po => {
+      const parts = po.po_number.split('-')
+      if (parts.length === 3) {
+        const num = parseInt(parts[2], 10)
+        if (!isNaN(num) && num > maxSequence) {
+          maxSequence = num
+        }
+      }
+    })
   }
 
-  const po_number = `${poPrefix}${sequenceNumber.toString().padStart(4, '0')}`
+  let finalSequence = maxSequence + 1
+  let po_number = `${poPrefix}${finalSequence.toString().padStart(4, '0')}`
+
+  // Double check collision (highly unlikely after fix but safe)
+  const { data: existingCheck } = await adminSupabase
+    .from('purchase_orders')
+    .select('id')
+    .eq('po_number', po_number)
+    .single()
+
+  if (existingCheck) {
+    // If somehow a collision still exists (race condition?), skip until free
+    // This is a last resort to prevent 500s
+    console.warn(`[PO-Generation] Manual collision detected for ${po_number}, trying next...`)
+    finalSequence++
+    po_number = `${poPrefix}${finalSequence.toString().padStart(4, '0')}`
+  }
+
+  console.log(`[PO-Generation] Generated: ${po_number} (Max found: ${maxSequence})`)
 
   // 1. Create Purchase Order
   const { data: po, error: poError } = await supabase

@@ -35,6 +35,7 @@ const docsNavigation = [
     title: "Procurement",
     items: [
       { title: "Purchase Orders", href: "/docs/procurement", icon: Truck },
+      { title: "Discrepancy Handling", href: "/docs/procurement/discrepancies", icon:ShieldAlert },
     ],
   },
   {

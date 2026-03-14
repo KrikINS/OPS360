@@ -42,6 +42,7 @@ type POItem = {
   unit_price: number
   tax_rate: number
   total_item_cost: number
+  received_quantity: number
   model_name: string
   hsn_code: string
 }
@@ -56,17 +57,18 @@ type PurchaseOrder = {
   po_number: string
   vendor_id: string
   branch_id: string
-  status: 'draft' | 'pending_approval' | 'approved' | 'received' | 'cancelled'
+  status: 'draft' | 'pending_approval' | 'approved' | 'received' | 'partially_received' | 'cancelled'
   total_amount: number
   created_at: string
-  vendor: { name: string }
-  branch?: { name: string }
+  vendor: { name: string, state: string }
+  branch: { name: string }
   requester_name?: string
   approver_name?: string
   items: {
     id: string
     product_id: string
     quantity: number
+    received_quantity: number
     unit_price: number
     tax_rate: number
     total_item_cost: number
@@ -96,6 +98,7 @@ export default function ProcurementGRNPage() {
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [isProcessingGRN, setIsProcessingGRN] = useState(false)
+  const [managerOverride, setManagerOverride] = useState<Record<number, boolean>>({})
 
   useEffect(() => {
     const fetchData = async () => {
@@ -174,8 +177,9 @@ export default function ProcurementGRNPage() {
         hsn_code: product.hsn_code,
         quantity: 1,
         unit_price: product.base_price,
+        received_quantity: 0,
         tax_rate: costDetails.gstRate,
-        total_item_cost: costDetails.totalLandedCost
+        total_item_cost: costDetails.totalBatchCost // Total cost for the draft
       }])
     }
   }
@@ -273,19 +277,30 @@ export default function ProcurementGRNPage() {
     if (!selectedPO) return
     setIsProcessingGRN(true)
 
-    // Validate serial numbers
-    const grnItems = selectedPO.items.map(item => ({
-      product_id: item.product_id,
-      unit_price: item.unit_price,
-      hsn_code: item.product.hsn_code,
-      freight: freightCharges[item.id] || 0,
-      serial_numbers: serialNumbers[item.id] || []
-    }))
+    // Validate serial numbers and construct items for sync
+    const grnItems = selectedPO.items
+      .map(item => ({
+        product_id: item.product_id,
+        unit_price: item.unit_price,
+        hsn_code: item.product.hsn_code,
+        freight: freightCharges[item.id] || 0,
+        serial_numbers: serialNumbers[item.id] || []
+      }))
+      .filter(item => item.serial_numbers.length > 0) // Only send items being received
 
+    if (grnItems.length === 0) {
+      setIsProcessingGRN(false)
+      alert("Please enter at least one serial number to process GRN.")
+      return
+    }
+
+    // Validation: current SNS + alreadyReceived <= quantity
     for (const item of grnItems) {
       const poItem = selectedPO.items.find(i => i.product_id === item.product_id)
-      if (item.serial_numbers.length !== poItem?.quantity) {
+      const alreadyReceived = poItem?.received_quantity || 0
+      if (item.serial_numbers.length + alreadyReceived > (poItem?.quantity || 0)) {
         setIsProcessingGRN(false)
+        alert(`Serial numbers count exceeds remaining quantity for ${poItem?.product.model_name}`)
         return
       }
     }
@@ -437,12 +452,36 @@ export default function ProcurementGRNPage() {
                               type="number" 
                               className="w-20" 
                               value={item.quantity}
+                              min="1"
                               onChange={(e) => {
                                 const newItems = [...poItems];
-                                newItems[idx].quantity = Number(e.target.value);
+                                newItems[idx].quantity = Math.max(1, Number(e.target.value));
                                 setPoItems(newItems);
                               }}
                             />
+                          </TableCell>
+                          <TableCell>
+                             <div className="flex flex-col gap-1">
+                               <Input 
+                                 type="number" 
+                                 className="w-24 h-8" 
+                                 value={item.tax_rate}
+                                 disabled={!managerOverride[idx]}
+                                 onChange={(e) => {
+                                   const newItems = [...poItems];
+                                   newItems[idx].tax_rate = Number(e.target.value);
+                                   setPoItems(newItems);
+                                 }}
+                               />
+                               <label className="flex items-center gap-1 text-[10px] cursor-pointer">
+                                 <input 
+                                   type="checkbox" 
+                                   checked={!!managerOverride[idx]} 
+                                   onChange={(e) => setManagerOverride(prev => ({ ...prev, [idx]: e.target.checked }))}
+                                 />
+                                 Override GST
+                               </label>
+                             </div>
                           </TableCell>
                           <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
                           <TableCell className="text-right">₹{(item.unit_price * item.quantity).toLocaleString()}</TableCell>
@@ -485,31 +524,58 @@ export default function ProcurementGRNPage() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Item</TableHead>
-                  <TableHead>HSN Code</TableHead>
-                  <TableHead>Ordered</TableHead>
+                  <TableHead className="text-center">Ordered</TableHead>
+                  <TableHead className="text-center">Received</TableHead>
+                  <TableHead className="text-center">Remaining</TableHead>
                   <TableHead>Base Price</TableHead>
-                  <TableHead>Serial Numbers (Comma Separated)</TableHead>
+                  <TableHead>Serials (Current GRN)</TableHead>
                   <TableHead>Freight / Item</TableHead>
-                  <TableHead className="text-right">Landed Cost</TableHead>
+                  <TableHead className="text-right">Unit Landed Cost</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {selectedPO.items.map((item) => {
+                  const alreadyReceived = item.received_quantity || 0
+                  const remaining = item.quantity - alreadyReceived
                   const freight = freightCharges[item.id] || 0
-                  const costDetails = calculateLandedCost(item.unit_price, freight, item.product.hsn_code)
+                  const currentSns = serialNumbers[item.id] || []
+                  
+                  // Refined composite supply calculation
+                  const costDetails = calculateLandedCost(
+                    item.unit_price, 
+                    freight, 
+                    item.product.hsn_code,
+                    selectedPO.vendor?.state || 'Kerala',
+                    currentSns.length || 1
+                  )
                   
                   return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.product.model_name}</TableCell>
-                      <TableCell className="font-mono text-xs">{item.product.hsn_code}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>₹{item.unit_price.toLocaleString('en-IN')}</TableCell>
+                    <TableRow key={item.id} className={remaining === 0 ? "opacity-40 bg-muted/20" : ""}>
+                      <TableCell className="py-3">
+                        <div className="font-bold">{item.product.model_name}</div>
+                        <div className="font-mono text-[10px] text-muted-foreground uppercase">{item.product.hsn_code}</div>
+                      </TableCell>
+                      <TableCell className="font-semibold text-center">{item.quantity}</TableCell>
+                      <TableCell className="text-blue-600 font-medium text-center">{alreadyReceived}</TableCell>
+                      <TableCell className="text-orange-600 font-bold text-center">
+                        {remaining}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">₹{item.unit_price.toLocaleString('en-IN')}</TableCell>
                       <TableCell>
                         <Input 
                           placeholder="SN1, SN2..."
-                          className="w-full text-xs"
+                          className="w-full text-xs font-mono"
+                          disabled={remaining <= 0}
                           onChange={(e) => {
                             const sns = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                            if (sns.length > remaining && remaining > 0) {
+                               alert(`Only ${remaining} units remaining for this item.`);
+                               return;
+                            }
+                            if (remaining <= 0) {
+                               alert("This item has already been fully received.");
+                               return;
+                            }
                             setSerialNumbers(prev => ({ ...prev, [item.id]: sns }));
                           }}
                         />
@@ -519,14 +585,15 @@ export default function ProcurementGRNPage() {
                           type="number" 
                           min="0"
                           placeholder="₹0"
-                          className="w-24"
+                          className="w-20 h-8"
+                          disabled={remaining <= 0}
                           onChange={(e) => setFreightCharges(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
                         />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex flex-col items-end">
-                          <span className="font-bold">₹{costDetails.totalLandedCost.toLocaleString('en-IN')}</span>
-                          <span className="text-[10px] text-muted-foreground">{costDetails.gstRate}% GST Incl.</span>
+                          <span className="font-bold text-primary">₹{costDetails.totalLandedCost.toLocaleString('en-IN')}</span>
+                          <span className="text-[10px] bg-primary/10 px-1 rounded text-primary font-bold">{costDetails.gstRate}% GST Incl.</span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -607,7 +674,7 @@ export default function ProcurementGRNPage() {
                             Cancel
                           </Button>
                         )}
-                        {po.status === 'approved' && (
+                        {(po.status === 'approved' || po.status === 'partially_received') && (
                           <Button size="sm" variant="default" onClick={() => setSelectedPO(po)}>Process GRN</Button>
                         )}
                         {po.status === 'received' && (
