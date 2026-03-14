@@ -1,5 +1,7 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+"use client"
+
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
 import { 
   Table, 
   TableBody, 
@@ -10,40 +12,44 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ShieldAlert, User, FileText, Scale } from "lucide-react"
+import { ShieldAlert, User, FileText, Scale, Loader2 } from "lucide-react"
 
-export default async function DiscrepancyReportPage() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll() {}
-      },
+export default function DiscrepancyReportPage() {
+  const [discrepancies, setDiscrepancies] = useState<any[]>([])
+  const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map())
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      // Fetch PO items where override_reason is not null
+      const { data: discrepanciesData } = await supabase
+        .from('purchase_order_items')
+        .select(`
+          id,
+          tax_rate,
+          override_reason,
+          product:products(model_name),
+          po:purchase_orders(
+            po_number,
+            created_at,
+            approved_by
+          )
+        `)
+        .not('override_reason', 'is', null)
+
+      if (discrepanciesData) {
+        setDiscrepancies(discrepanciesData)
+      }
+
+      // Fetch profiles to map approved_by
+      const { data: profiles } = await supabase.from('profiles').select('id, full_name, email')
+      if (profiles) {
+        setProfileMap(new Map(profiles.map(p => [p.id, p.full_name || p.email])))
+      }
+      setLoading(false)
     }
-  )
-  
-  // Fetch PO items where override_reason is not null
-  const { data: discrepancies } = await supabase
-    .from('purchase_order_items')
-    .select(`
-      id,
-      tax_rate,
-      override_reason,
-      product:products(model_name),
-      po:purchase_orders(
-        po_number,
-        created_at,
-        approved_by
-      )
-    `)
-    .not('override_reason', 'is', null)
-
-  // Fetch profiles to map approved_by
-  const { data: profiles } = await supabase.from('profiles').select('id, full_name, email')
-  const profileMap = new Map(profiles?.map(p => [p.id, p.full_name || p.email]) || [])
+    fetchData()
+  }, [])
 
   return (
     <div className="p-8 space-y-8 bg-slate-50 min-h-screen">

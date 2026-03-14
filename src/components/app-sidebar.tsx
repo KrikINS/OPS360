@@ -24,15 +24,17 @@ import {
   ShieldAlert,
   BarChart3,
   BookOpen,
+  RotateCcw,
+  Archive,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
 const items = [
+  { title: "Product Master",        url: "/products",      icon: Archive },
   { title: "Inventory",             url: "/",              icon: Package },
   { title: "Procurement",           url: "/procurement",   icon: Truck },
-  { title: "Discrepancy Report",     url: "/discrepancy-report", icon: ShieldAlert },
   { title: "POS",                   url: "/pos",           icon: ShoppingCart },
   { title: "Inter-Branch Transfer", url: "/transfer",      icon: ArrowRightLeft },
   { title: "Accounting",            url: "/accounting",    icon: Calculator },

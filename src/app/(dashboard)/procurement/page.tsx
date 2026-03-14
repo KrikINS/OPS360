@@ -7,7 +7,21 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { calculateLandedCost } from "@/utils/compliance"
-import { Truck, FileText, Plus, Loader2 } from "lucide-react"
+import { 
+  Truck, 
+  FileText, 
+  Plus, 
+  Loader2, 
+  FileUp, 
+  Scale, 
+  ShieldAlert, 
+  ShieldCheck, 
+  CheckCircle2, 
+  Clock, 
+  RotateCcw, 
+  AlertOctagon,
+  PackageSearch
+} from "lucide-react"
 import { 
   Select, 
   SelectContent, 
@@ -18,7 +32,8 @@ import {
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/utils/supabase/client"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Clock, AlertCircle, CheckCircle2, PackageSearch } from "lucide-react"
+import ProcessReturns from "./return/page"
+import DiscrepancyReportPage from "../discrepancy-report/page"
 
 // Types
 type Vendor = {
@@ -36,6 +51,7 @@ type Product = {
   brand: string
   hsn_code: string
   base_price: number
+  product_code: string
 }
 
 type POItem = {
@@ -65,6 +81,8 @@ type PurchaseOrder = {
   created_at: string
   vendor: { name: string, state: string }
   branch: { name: string }
+  invoice_url?: string
+  vendor_bill_amount?: number
   requester_name?: string
   approver_name?: string
   items: {
@@ -75,7 +93,7 @@ type PurchaseOrder = {
     unit_price: number
     tax_rate: number
     total_item_cost: number
-    product: { model_name: string, hsn_code: string }
+    product: { model_name: string, hsn_code: string, product_code: string }
   }[]
 }
 
@@ -103,6 +121,56 @@ export default function ProcurementGRNPage() {
   const [isProcessingGRN, setIsProcessingGRN] = useState(false)
   const [managerOverride, setManagerOverride] = useState<Record<number, boolean>>({})
   const [overrideReasons, setOverrideReasons] = useState<Record<number, string>>({})
+  const [isUploading, setIsUploading] = useState<string | null>(null)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, poId: string) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploading(poId)
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("po_id", poId)
+
+    try {
+      const res = await fetch('/api/procurement/upload', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        const poRes = await fetch('/api/procurement/purchase-orders')
+        setActivePOs(await poRes.json())
+      } else {
+        alert(data.error || "Upload failed")
+      }
+    } catch (err) {
+      console.error("Upload error", err)
+      alert("An error occurred during upload")
+    } finally {
+      setIsUploading(null)
+      e.target.value = ""
+    }
+  }
+
+  const handleReconcile = async (poId: string, amount: number) => {
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({ vendor_bill_amount: amount })
+        .eq('id', poId)
+      
+      if (error) throw error
+      
+      // Refresh local state
+      setActivePOs(prev => prev.map(po => po.id === poId ? { ...po, vendor_bill_amount: amount } : po))
+    } catch (err) {
+      console.error("Reconciliation failed", err)
+      alert("Failed to update bill amount.")
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -429,7 +497,10 @@ export default function ProcurementGRNPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {products.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.model_name} (₹{p.base_price})</SelectItem>
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="font-mono text-xs font-bold mr-2 text-blue-600">[{p.product_code}]</span>
+                          {p.model_name} (₹{p.base_price.toLocaleString()})
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -648,6 +719,15 @@ export default function ProcurementGRNPage() {
                     </span>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="reconciliation" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                  3-Way Match Audit
+                </TabsTrigger>
+                <TabsTrigger value="returns" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                  Purchase Returns
+                </TabsTrigger>
+                <TabsTrigger value="discrepancy" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                  Discrepancy Report
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -709,6 +789,25 @@ export default function ProcurementGRNPage() {
                             )}
                             {po.status === 'received' && (
                               <CheckCircle2 className="h-5 w-5 text-green-500 ml-auto" />
+                            )}
+                            {(po.status === 'received' || po.status === 'partially_received' || po.status === 'approved') && (
+                              <div className="relative inline-block ml-2 group tooltip-container">
+                                <Input
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                  disabled={isUploading === po.id}
+                                  onChange={(e) => handleFileUpload(e, po.id)}
+                                />
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-8 shadow-sm border-dashed"
+                                  disabled={isUploading === po.id}
+                                >
+                                  {isUploading === po.id ? <Loader2 className="h-4 w-4 animate-spin text-slate-500" /> : <FileUp className="h-4 w-4 text-slate-500" />}
+                                </Button>
+                              </div>
                             )}
                           </TableCell>
                         </TableRow>
@@ -825,6 +924,106 @@ export default function ProcurementGRNPage() {
                   </Table>
                 </CardContent>
               </Card>
+            </TabsContent>
+            <TabsContent value="reconciliation" className="animate-in slide-in-from-right-2 duration-300">
+              <Card className="shadow-sm border-slate-200">
+                <CardHeader className="bg-[#001529] text-white py-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        <Scale className="h-6 w-6 text-[#7FD1E3]" />
+                        3-Way Match Verification
+                      </CardTitle>
+                      <CardDescription className="text-slate-300">
+                        Auditing Purchase Agreements vs. Receiving Reality vs. Vendor Demand
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="font-bold">PO Reference</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>1. Agreement (PO)</TableHead>
+                        <TableHead>2. Reality (GRN)</TableHead>
+                        <TableHead>3. Demand (Bill)</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-right px-8">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activePOs
+                        .filter(p => p.status === 'received' || p.status === 'partially_received')
+                        .map((po) => {
+                          const poTotal = po.total_amount;
+                          const grnTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity) * (1 + item.tax_rate/100), 0);
+                          const billAmount = po.vendor_bill_amount || 0;
+                          
+                          const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
+                          const hasBill = billAmount > 0;
+
+                          return (
+                            <TableRow key={po.id} className="hover:bg-slate-50/50 transition-colors">
+                              <TableCell className="font-bold font-mono text-[#001529]">{po.po_number}</TableCell>
+                              <TableCell className="text-sm font-medium">{po.vendor?.name}</TableCell>
+                              <TableCell className="font-semibold text-slate-600">₹{poTotal.toLocaleString()}</TableCell>
+                              <TableCell className="font-semibold text-blue-600">₹{grnTotal.toLocaleString()}</TableCell>
+                              <TableCell className="font-semibold text-amber-600">
+                                {hasBill ? `₹${billAmount.toLocaleString()}` : "Awaiting Bill"}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {hasBill ? (
+                                  isMatch ? (
+                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+                                      <ShieldCheck className="h-3 w-3 mr-1" /> FULL MATCH
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200 animate-pulse">
+                                      <ShieldAlert className="h-3 w-3 mr-1" /> VARIANCE
+                                    </Badge>
+                                  )
+                                ) : (
+                                  <Badge variant="outline" className="text-slate-400">PENDING</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right px-8">
+                                <div className="flex justify-end gap-2">
+                                  {po.invoice_url ? (
+                                    <Button variant="ghost" size="sm" className="h-8 text-blue-600" onClick={() => window.open(po.invoice_url, '_blank')}>
+                                      <FileText className="h-4 w-4 mr-1" /> View Doc
+                                    </Button>
+                                  ) : (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="h-8 border-dashed border-slate-300 text-slate-500 hover:text-blue-600"
+                                      onClick={() => {
+                                        const bill = prompt("Enter Vendor Bill Amount:");
+                                        if (bill) {
+                                          handleReconcile(po.id, Number(bill));
+                                        }
+                                      }}
+                                    >
+                                      <FileUp className="h-4 w-4 mr-1" /> Reconcile
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="returns" className="animate-in slide-in-from-right-2 duration-300">
+               <ProcessReturns />
+            </TabsContent>
+            <TabsContent value="discrepancy" className="animate-in slide-in-from-right-2 duration-300">
+               <DiscrepancyReportPage />
             </TabsContent>
           </Tabs>
         </div>

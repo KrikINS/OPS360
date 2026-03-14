@@ -50,6 +50,7 @@ export async function POST(request: Request) {
 
     // 2. Prepare inventory insertions and update quantities
     type InventoryItemInsert = {
+      product_id: string;
       serial_number: string;
       hsn_code: string;
       price: number;
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
       
       serial_numbers.forEach((sn: string) => {
         inventoryItems.push({
+          product_id: product_id,
           serial_number: sn,
           hsn_code: hsn_code,
           price: unit_price,

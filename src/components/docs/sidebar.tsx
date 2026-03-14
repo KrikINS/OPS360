@@ -37,6 +37,7 @@ const docsNavigation = [
       { title: "Purchase Orders", href: "/docs/procurement", icon: Truck },
       { title: "Landed Costs & Performance", href: "/docs/procurement/landed-costs", icon: Calculator },
       { title: "Discrepancy Handling", href: "/docs/procurement/discrepancies", icon:ShieldAlert },
+      { title: "Document Retention & Returns", href: "/docs/procurement/returns", icon: Truck },
     ],
   },
   {
