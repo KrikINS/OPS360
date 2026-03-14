@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { logout } from "@/app/login/actions"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/utils/supabase/client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -50,6 +50,7 @@ export function UserNav({ profile }: UserNavProps) {
     setErrorMsg("")
 
     try {
+      const supabase = createClient()
       // Users are only permitted to explicitly update their own display name.
       // Roles, Emails, and Branch IDs are locked and managed strictly by Admins.
       const { error } = await supabase

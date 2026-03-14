@@ -17,7 +17,8 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('products')
-    .select('id, model_name, brand, category, hsn_code, base_price, description, product_code')
+    .select('id, model_name, brand, category, hsn_code, base_price, description, product_code, min_stock_level, tracking_type, is_archived')
+    .eq('is_archived', false)
     .order('model_name', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -49,7 +50,8 @@ export async function POST(request: Request) {
       base_price: body.base_price,
       description: body.description,
       product_code: body.product_code,
-      min_stock_level: body.min_stock_level || 0
+      min_stock_level: body.min_stock_level || 0,
+      tracking_type: body.tracking_type || 'Stocked'
     }])
     .select()
     .single()

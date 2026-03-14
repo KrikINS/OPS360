@@ -1,18 +1,10 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll() {}
-      },
-    }
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   try {
@@ -32,23 +24,34 @@ export async function POST(request: Request) {
     if (branchesRes.error) throw branchesRes.error
     if (poRes.error) throw new Error("Legacy Import PO not found. Please initialize the database.")
 
+    const ALLOWED_BRANCHES = ["Test Main Branch", "Test Branch 1", "Test Branch 2"]
     const productsMap = new Map(productsRes.data.map(p => [p.model_name.toLowerCase(), p]))
-    const branchesMap = new Map(branchesRes.data.map(b => [b.name.toLowerCase(), b.id]))
+    const branchesMap = new Map(
+      branchesRes.data
+        .filter(b => ALLOWED_BRANCHES.includes(b.name))
+        .map(b => [b.name.toLowerCase(), b.id])
+    )
     const legacyPoId = poRes.data.id
 
     // 2. Process and Smart Match
     const inventoryData = items.map((item: any) => {
       const productName = (item["Item Name"] || "").toLowerCase().trim()
-      const branchName = (item["Branch"] || "").toLowerCase().trim()
+      const branchNameInput = (item["Branch"] || "").trim()
+      const branchNameLower = branchNameInput.toLowerCase()
       
       const product = productsMap.get(productName)
-      const branchId = branchesMap.get(branchName)
+      const branchId = branchesMap.get(branchNameLower)
 
       if (!product) {
         throw new Error(`Product not found in Master: ${item["Item Name"]}`)
       }
+      
+      if (!ALLOWED_BRANCHES.includes(branchNameInput)) {
+         throw new Error(`Forbidden Branch: "${branchNameInput}". Only Test Main Branch, Test Branch 1, and Test Branch 2 are allowed.`)
+      }
+
       if (!branchId) {
-        throw new Error(`Branch not found: ${item["Branch"]}`)
+        throw new Error(`Branch name exists but ID not found in database: ${branchNameInput}`)
       }
 
       return {
@@ -59,7 +62,8 @@ export async function POST(request: Request) {
         price: parseFloat(item["Estimated Cost"] || "0"),
         landed_cost: parseFloat(item["Estimated Cost"] || "0"),
         source_po_id: legacyPoId,
-        product_id: product.id
+        product_id: product.id,
+        ...(item["Inward Date"] ? { created_at: item["Inward Date"] } : {})
       }
     })
 

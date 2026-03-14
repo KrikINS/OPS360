@@ -24,14 +24,18 @@ import {
   ShieldAlert,
   BarChart3,
   BookOpen,
-  RotateCcw,
   Archive,
+  Building2,
+  FolderTree,
+  Palette,
+  UserCog,
+  ArrowLeft
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-const items = [
+const erpItems = [
   { title: "Product Master",        url: "/products",      icon: Archive },
   { title: "Inventory",             url: "/",              icon: Package },
   { title: "Procurement",           url: "/procurement",   icon: Truck },
@@ -45,9 +49,20 @@ const items = [
   { title: "Admin Center",          url: "/admin",         icon: ShieldAlert },
 ]
 
+const adminItems = [
+  { title: "Admin Dashboard",       url: "/admin",         icon: ShieldAlert },
+  { title: "User Management",       url: "/admin/users",   icon: UserCog },
+  { title: "Organization",          url: "/admin/organization", icon: Building2 },
+  { title: "Global Masters",        url: "/admin/masters",      icon: FolderTree },
+  { title: "Branding",              url: "/admin/branding",     icon: Palette },
+]
+
 export function AppSidebar() {
   const pathname = usePathname()
   const [logoUrl, setLogoUrl] = useState("/ethan-logo.png")
+
+  // Check if we are in admin section
+  const isAdminMode = pathname.startsWith("/admin")
 
   useEffect(() => {
     supabase
@@ -60,12 +75,14 @@ export function AppSidebar() {
       })
   }, [])
 
+  const currentItems = isAdminMode ? adminItems : erpItems
+  const groupLabel = isAdminMode ? "Admin Functions" : "Core Modules"
+
   return (
     <Sidebar className="border-r-0">
       {/* ── Logo Header ── */}
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          {/* Logo frame — fixed 40x40, scales to fit any logo */}
           <div className="relative h-10 w-10 bg-white rounded-lg shadow-sm shrink-0 overflow-hidden">
             <Image
               src={logoUrl}
@@ -86,15 +103,15 @@ export function AppSidebar() {
       <SidebarContent className="px-2 py-3">
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold px-3 mb-1">
-            Core Modules
+            {groupLabel}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
-              {items.map((item) => {
+              {currentItems.map((item) => {
                 const isActive =
                   item.url === "/"
                     ? pathname === "/"
-                    : pathname.startsWith(item.url)
+                    : pathname === item.url || (item.url !== "/admin" && pathname.startsWith(item.url))
 
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -124,8 +141,21 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* ── Knowledge Base ── */}
-      <div className="px-2 pb-2">
+      {/* ── Context Specific Footer ── */}
+      <div className="px-2 pb-2 space-y-1">
+        {isAdminMode && (
+          <Link
+            href="/"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-bold transition-all duration-150",
+              "bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border border-emerald-600/20"
+            )}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            <span>Return to ERP</span>
+          </Link>
+        )}
+        
         <Link
           href="/docs"
           className={cn(

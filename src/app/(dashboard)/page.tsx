@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/utils/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -36,11 +36,14 @@ type Branch = {
 }
 
 type ProductMetadata = {
+  id: string
   brand: string
   model_name: string
   category: string
   description: string
   product_code: string
+  min_stock_level: number
+  tracking_type: string
 }
 
 type InventoryItem = {
@@ -49,6 +52,7 @@ type InventoryItem = {
   hsn_code: string
   status: string
   branch_id: string
+  product_id: string
   price: number
   landed_cost: number
   created_at: string
@@ -65,28 +69,35 @@ export default function InventoryDashboard() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
 
   useEffect(() => {
+    const supabase = createClient()
     const fetchData = async () => {
       setLoading(true)
       
-      const { data: dbBranches, error: branchErr } = await supabase.from("branches").select("*")
-      if (!branchErr && dbBranches) {
+      const branchRes = await fetch("/api/branches")
+      if (branchRes.ok) {
+        const dbBranches = await branchRes.json()
         setBranches(dbBranches)
       }
 
       // Fetch Inventory with Product join
       let query = supabase
-        .from("inventory")
+        .from('inventory')
         .select(`
           *,
           product:products (
+            id,
             brand,
             model_name,
             category,
             description,
-            product_code
-          )
+            product_code,
+            min_stock_level,
+            tracking_type
+          ),
+          branch:branches!left (*)
         `)
       
+      // Condition branch filtering
       if (selectedBranch !== "all") {
         query = query.eq("branch_id", selectedBranch)
       }
@@ -122,11 +133,25 @@ export default function InventoryDashboard() {
     return Math.floor(diffTime / (1000 * 3600 * 24))
   }
 
-  const getAgingColor = (days: number) => {
-    if (days > 60) return "text-[#DC2626] font-bold"
+   const getAgingColor = (days: number) => {
+    if (days > 60) return "text-[#DC143C] font-black" // Crimson for Critical Aging
     if (days >= 30) return "text-[#D97706] font-semibold"
     return "text-slate-600"
   }
+
+  // Calculate Low Stock with tracking_type filter
+  const lowStockCount = inventory.reduce((acc, item) => {
+    // Only count as low stock if it's a Stocked item
+    if (item.product?.tracking_type !== 'Stocked') return acc;
+    
+    const branchItems = inventory.filter(i => 
+      i.product_id === item.product_id && 
+      i.branch_id === item.branch_id && 
+      i.status === "Available"
+    ).length
+    if (branchItems < (item.product?.min_stock_level ?? 0)) return acc + 1
+    return acc
+  }, 0)
 
   const filteredInventory = inventory.filter(item => {
     const brand = item.product?.brand?.toLowerCase() || ""
@@ -168,10 +193,12 @@ export default function InventoryDashboard() {
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Branch</span>
             <Select value={selectedBranch} onValueChange={(val) => { if (val) setSelectedBranch(val) }}>
               <SelectTrigger className="w-[180px] border-none shadow-none focus:ring-0 text-sm font-semibold h-8 p-0">
-                <SelectValue placeholder="All Branches" />
+                <SelectValue>
+                  {selectedBranch === "all" ? "All Branches" : branches.find(b => b.id === selectedBranch)?.name}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Global Network</SelectItem>
+                <SelectItem value="all">All Branches</SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {b.name}
