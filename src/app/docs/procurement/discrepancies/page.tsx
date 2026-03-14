@@ -1,56 +1,107 @@
+import { ShieldAlert, PackageCheck, Truck, Scale, BadgeCheck, Loader2 } from "lucide-react"
+
 export default function ProcurementDiscrepancyPage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Handling Discrepancies & Partial Deliveries</h1>
-      
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">1. Partial Receipts (GRN)</h2>
-        <p className="text-muted-foreground">
-          Ops360 now supports multi-stage Goods Receipt Notes (GRN). This allows you to receive items as they arrive, 
-          rather than waiting for the entire Purchase Order to be fulfilled.
+    <div className="max-w-4xl space-y-10 pb-12">
+      {/* ── Header ── */}
+      <div className="border-b pb-6">
+        <div className="flex items-center gap-3 text-red-600 mb-2">
+          <ShieldAlert className="h-5 w-5" />
+          <span className="text-xs font-bold uppercase tracking-widest">Advanced Handling</span>
+        </div>
+        <h1 className="text-4xl font-extrabold tracking-tight text-[#001529]">Discrepancies & Partial Receipts</h1>
+        <p className="text-slate-500 mt-3 text-lg">
+          Managing incomplete shipments, over-receipts, and manual tax overrides with Logistics Flex.
         </p>
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-          <p className="text-sm font-medium text-blue-800">Workflow:</p>
-          <ul className="list-disc list-inside text-sm text-blue-700 mt-2 space-y-1">
-            <li>Select an approved PO from the Procurement dashboard.</li>
-            <li>Enter only the serial numbers received in the current delivery.</li>
-            <li>The system will calculate the remaining quantity automatically.</li>
-            <li>Status transitions to <strong>PARTIALLY_RECEIVED</strong>.</li>
-            <li>Repeat for subsequent deliveries until the PO is fully <strong>RECEIVED</strong>.</li>
-          </ul>
+      </div>
+
+      {/* ── Logistics Flex (Partial Receipts) ── */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-3 text-[#7FD1E3]">
+          <Truck className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-slate-900">Logistics Flex (Partial Receipts)</h2>
+        </div>
+        
+        <p className="text-slate-600 leading-relaxed">
+          Ops360 uses a state-of-the-art <strong>Incremental Sync</strong> engine. This allows your team to receive items as they arrive at the warehouse gate, even if the vendor fulfills a single Purchase Order across multiple shipments.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-slate-50 border rounded-2xl p-6 space-y-3">
+             <div className="bg-[#7FD1E3]/10 h-10 w-10 rounded-lg flex items-center justify-center text-[#7FD1E3]">
+                <PackageCheck className="h-5 w-5" />
+             </div>
+             <h4 className="font-bold text-[#001529]">Automatic Calculation</h4>
+             <p className="text-sm text-slate-500">The system tracks <code>Received</code> vs <code>Ordered</code> quantities per item. You only enter serial numbers for what is physically in front of you.</p>
+          </div>
+          <div className="bg-slate-50 border rounded-2xl p-6 space-y-3">
+             <div className="bg-[#7FD1E3]/10 h-10 w-10 rounded-lg flex items-center justify-center text-[#7FD1E3]">
+                <Loader2 className="h-5 w-5" />
+             </div>
+             <h4 className="font-bold text-[#001529]">Status Progression</h4>
+             <p className="text-sm text-slate-500">As soon as the first unit is recorded, the PO status shifts to <strong>Partially Received</strong>, keeping the procurement cycle active for the remainder.</p>
+          </div>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">2. GST & Landed Cost Compliance</h2>
-        <p className="text-muted-foreground">
-          Landed cost is now calculated using the <strong>Composite Supply</strong> rule. GST is applied to the combined 
-          total of the Base Price and Freight Charges.
-        </p>
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
-          <p className="text-sm font-medium text-amber-800">Formula:</p>
-          <code className="block mt-2 font-mono text-xs">
-            Landed Cost = ((Base Price + Freight) * (1 + GST Rate)) / Quantity
-          </code>
+      {/* ── Conflict Resolution ── */}
+      <section className="bg-[#001529] text-white rounded-3xl p-8 space-y-6 shadow-xl">
+        <div className="flex items-center gap-3 text-[#7FD1E3]">
+          <BadgeCheck className="h-6 w-6" />
+          <h2 className="text-2xl font-bold">Conflict Resolution & Guards</h2>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex gap-4 border-b border-white/10 pb-4">
+            <div className="mt-1 font-bold text-[#7FD1E3]">01</div>
+            <div>
+              <h4 className="font-semibold text-white">Serial Number Uniqueness</h4>
+              <p className="text-sm text-white/60">The system validates every serial number globally. Duplicate serials are blocked immediately during synchronization.</p>
+            </div>
+          </div>
+          <div className="flex gap-4 border-b border-white/10 pb-4">
+            <div className="mt-1 font-bold text-[#7FD1E3]">02</div>
+            <div>
+              <h4 className="font-semibold text-white">Over-Receipt Prevention</h4>
+              <p className="text-sm text-white/60">You cannot receive more units than ordered. The GRN interface disables inputs once the target quantity is met.</p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="mt-1 font-bold text-[#7FD1E3]">03</div>
+            <div>
+              <h4 className="font-semibold text-white">Landed Cost Adjustments</h4>
+              <p className="text-sm text-white/60">Freight is applied per shipment. The system intelligently amortizes these costs to maintain accurate per-unit valuation in the Inventory Register.</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">3. HSN Slab Protection</h2>
-        <p className="text-muted-foreground">
-          To ensure tax compliance, HSN codes are locked to specific GST slabs:
+      {/* ── Manual Overrides ── */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-3 text-red-600">
+          <Scale className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-slate-900">Manual Tax Overrides</h2>
+        </div>
+
+        <p className="text-slate-600">
+          While HSN slab protection is active by default, certain fiscal scenarios require manual adjustment.
         </p>
-        <ul className="list-disc list-inside space-y-1 text-sm">
-          <li><strong>28%:</strong> Air Conditioners (8415), Refrigerators (8418)</li>
-          <li><strong>18%:</strong> Washing Machines (8450)</li>
-          <li><strong>12%:</strong> Fans & Small Appliances (8414)</li>
-        </ul>
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-          <p className="text-sm font-medium text-red-800">Manager Override:</p>
-          <p className="text-xs text-red-700 mt-1">
-            If a manual change is required, the <strong>Manual Override</strong> checkbox must be enabled. 
-            This action is logged for audit purposes.
-          </p>
+
+        <div className="flex flex-col md:flex-row gap-6">
+           <div className="flex-1 bg-red-50 border border-red-100 rounded-2xl p-6">
+              <h4 className="text-red-900 font-bold mb-2">When to use Override?</h4>
+              <ul className="text-sm text-red-800 space-y-2 list-inside list-disc">
+                <li>Non-standard GST rates due to specific schemes</li>
+                <li>Items with fluctuating HSN tax classifications</li>
+                <li>Imported goods with customized duty structures</li>
+              </ul>
+           </div>
+           <div className="flex-1 bg-slate-50 border rounded-2xl p-6 border-dashed border-slate-300">
+              <h4 className="text-slate-900 font-bold mb-2 text-sm uppercase tracking-widest">Audit Trail</h4>
+              <p className="text-xs text-slate-500 leading-relaxed italic">
+                &quot;Every manual override is electronically signed by the manager&apos;s profile ID and timestamped. This log is immutable and available for administrative review during quarterly audits.&quot;
+              </p>
+           </div>
         </div>
       </section>
     </div>
