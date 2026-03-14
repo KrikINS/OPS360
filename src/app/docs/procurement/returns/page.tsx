@@ -1,10 +1,8 @@
-import { DocsLayout } from "@/components/docs/layout"
 import { Badge } from "@/components/ui/badge"
 import { FileUp, ShieldCheck, Scale, RotateCcw, AlertCircle } from "lucide-react"
 
 export default function DocumentRetentionReturnsDoc() {
   return (
-    <DocsLayout>
       <div className="max-w-4xl mx-auto space-y-10">
         <div>
           <Badge className="bg-[#7FD1E3] text-[#001529] font-black uppercase tracking-widest mb-4 hover:bg-[#68bdcf]">
@@ -64,7 +62,7 @@ export default function DocumentRetentionReturnsDoc() {
                 <div>
                   <h4 className="font-bold text-slate-800">Secure Access</h4>
                   <p className="text-sm text-slate-600 mt-1">
-                    Once uploaded, the document can be viewed via the "View Doc" button located in the 3-Way Match Audit tab. Access is controlled via short-lived signed URLs generated on-demand.
+                    Once uploaded, the document can be viewed via the &quot;View Doc&quot; button located in the 3-Way Match Audit tab. Access is controlled via short-lived signed URLs generated on-demand.
                   </p>
                 </div>
               </li>
@@ -122,7 +120,7 @@ export default function DocumentRetentionReturnsDoc() {
           </div>
 
           <p className="text-slate-600 font-medium">
-            Handling defective units or mis-shipments requires precise financial reversal to maintain compliance. The dedicated Returns interface explicitly pulls the item's historical pedigree to ensure accurate ledger reversal.
+            Handling defective units or mis-shipments requires precise financial reversal to maintain compliance. The dedicated Returns interface explicitly pulls the item&apos;s historical pedigree to ensure accurate ledger reversal.
           </p>
 
           <div className="bg-white border-2 border-slate-100 rounded-xl overflow-hidden shadow-md">
@@ -136,27 +134,26 @@ export default function DocumentRetentionReturnsDoc() {
                 <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center shrink-0">1</div>
                 <div>
                   <h4 className="font-bold text-slate-800">Scan Serial</h4>
-                  <p className="text-sm text-slate-600 mt-1">Input the exact serial number of the unit to return. The system will retrieve the unit's entire pedigree, including the origin Vendor, Source PO, and the exactly calculated Investment Value (Landed Cost).</p>
+                  <p className="text-sm text-slate-600 mt-1">Input the exact serial number of the unit to return. The system will retrieve the unit&apos;s entire pedigree, including the origin Vendor, Source PO, and the exactly calculated Investment Value (Landed Cost).</p>
                 </div>
               </div>
               <div className="flex gap-6 items-start">
                 <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center shrink-0">2</div>
                 <div>
                   <h4 className="font-bold text-slate-800">Statement of Reason</h4>
-                  <p className="text-sm text-slate-600 mt-1">Provide an immutable justification for the return (e.g., "Transit Damage" or "Functional Defect").</p>
+                  <p className="text-sm text-slate-600 mt-1">Provide an immutable justification for the return (e.g., &quot;Transit Damage&quot; or &quot;Functional Defect&quot;).</p>
                 </div>
               </div>
               <div className="flex gap-6 items-start">
                 <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-black flex items-center justify-center shrink-0">3</div>
                 <div>
                   <h4 className="font-bold text-slate-800 text-amber-900">Execute Reversal</h4>
-                  <p className="text-sm text-slate-600 mt-1">The system automatically flags the unit's status as <code>Returned</code> and generates a Debit Note corresponding precisely to the item's Landed Cost. This action is irreversible.</p>
+                  <p className="text-sm text-slate-600 mt-1">The system automatically flags the unit&apos;s status as <code>Returned</code> and generates a Debit Note corresponding precisely to the item&apos;s Landed Cost. This action is irreversible.</p>
                 </div>
               </div>
             </div>
           </div>
         </section>
       </div>
-    </DocsLayout>
   )
 }

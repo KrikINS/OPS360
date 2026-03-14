@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Plus } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { generateProductCode, getNextSequence } from "@/lib/product-coding"
 import { createClient } from "@/utils/supabase/client"
 
@@ -59,7 +59,6 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     description: "",
   })
   const [generatedCode, setGeneratedCode] = useState("")
-  const [sequence, setSequence] = useState(1)
 
   const supabase = createClient()
 
@@ -68,14 +67,14 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     async function updateCode() {
       if (formData.category && formData.brand) {
         const nextSeq = await getNextSequence(supabase, formData.category, formData.brand)
-        setSequence(nextSeq)
+        // setSequence(nextSeq)
         setGeneratedCode(generateProductCode(formData.category, formData.brand, nextSeq))
       } else {
         setGeneratedCode("")
       }
     }
     updateCode()
-  }, [formData.category, formData.brand])
+  }, [formData.category, formData.brand, supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,7 +124,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
             <div className="space-y-2">
               <Label htmlFor="brand">Brand *</Label>
               <Select 
-                onValueChange={(v) => setFormData({ ...formData, brand: v })}
+                onValueChange={(v) => setFormData({ ...formData, brand: v || "" })}
                 value={formData.brand}
               >
                 <SelectTrigger>
@@ -139,7 +138,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
               <Select 
-                onValueChange={(v) => setFormData({ ...formData, category: v })}
+                onValueChange={(v) => setFormData({ ...formData, category: v || "" })}
                 value={formData.category}
               >
                 <SelectTrigger>
