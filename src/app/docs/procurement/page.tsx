@@ -1,4 +1,4 @@
-import { Truck, ShieldCheck, Calculator, Hash, AlertTriangle } from "lucide-react"
+import { Truck, ShieldCheck, Calculator, Hash, AlertTriangle, Download } from "lucide-react"
 
 export default function ProcurementDocs() {
   return (
@@ -101,7 +101,30 @@ export default function ProcurementDocs() {
         </div>
       </section>
 
-      {/* ── Reliable Sequencing ── */}
+      {/* ── Reliable PO PDF Generation ── */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-3 text-[#7FD1E3]">
+          <Download className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-[#001529]">Reliable PO PDF Generation</h2>
+        </div>
+        <div className="bg-slate-50 border rounded-xl p-6 shadow-sm">
+          <p className="text-sm text-slate-600 leading-relaxed mb-4">
+            The PO Download system uses <code>html2canvas</code> and <code>jsPDF</code>. To ensure high-fidelity downloads:
+          </p>
+          <ul className="space-y-2 text-sm text-slate-600">
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• Browser Compatibility:</span>
+              <span>The system aggressively sanitizes modern CSS colors (like <code>lab()</code> or <code>oklch()</code>) before generation to prevent parsing errors.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• Color Scheme:</span>
+              <span>PDF templates are forced to <code>light</code> color scheme to avoid UI leakage from system dark mode.</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {/* ── Intelligent PO Sequencing ── */}
       <section className="space-y-4">
         <div className="flex items-center gap-3 text-[#7FD1E3]">
           <Hash className="h-6 w-6" />

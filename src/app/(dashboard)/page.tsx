@@ -134,7 +134,7 @@ export default function InventoryDashboard() {
   }
 
    const getAgingColor = (days: number) => {
-    if (days > 60) return "text-[#DC143C] font-black" // Crimson for Critical Aging
+    if (days > 60) return "text-[#DC143C] font-bold" // Crimson for Critical Aging
     if (days >= 30) return "text-[#D97706] font-semibold"
     return "text-slate-600"
   }
@@ -174,8 +174,8 @@ export default function InventoryDashboard() {
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#001529]">Inventory Register</h1>
-          <p className="text-slate-500 font-medium mt-1">Real-time assets & aging protocols across the network.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-[#001529]">Inventory Register</h1>
+          <p className="text-slate-500 mt-1">Real-time assets & aging protocols across the network.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -190,7 +190,7 @@ export default function InventoryDashboard() {
           </div>
 
           <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-lg border shadow-sm">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Branch</span>
+            <span className="text-[10px] font-bold tracking-wider text-slate-400">Branch</span>
             <Select value={selectedBranch} onValueChange={(val) => { if (val) setSelectedBranch(val) }}>
               <SelectTrigger className="w-[180px] border-none shadow-none focus:ring-0 text-sm font-semibold h-8 p-0">
                 <SelectValue>
@@ -221,11 +221,11 @@ export default function InventoryDashboard() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-t-4 border-t-[#7FD1E3] shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest">Available Units</CardTitle>
+            <CardTitle className="text-xs font-bold text-slate-500 tracking-wider">Available Units</CardTitle>
             <Package className="h-4 w-4 text-[#7FD1E3]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-[#001529]">
+            <div className="text-3xl font-bold text-[#001529]">
               {loading ? <Loader2 className="animate-spin h-6 w-6" /> : availableStock}
             </div>
           </CardContent>
@@ -233,11 +233,11 @@ export default function InventoryDashboard() {
 
         <Card className="border-t-4 border-t-[#D4860A] shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest">Network Movement</CardTitle>
+            <CardTitle className="text-xs font-bold text-slate-500 tracking-wider">Network Movement</CardTitle>
             <TrendingUp className="h-4 w-4 text-[#D4860A]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-[#001529]">
+            <div className="text-3xl font-bold text-[#001529]">
               {loading ? <Loader2 className="animate-spin h-6 w-6" /> : inTransit}
             </div>
           </CardContent>
@@ -245,11 +245,11 @@ export default function InventoryDashboard() {
 
         <Card className="border-t-4 border-t-[#5A9E78] shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest">Disposition (Sold)</CardTitle>
+            <CardTitle className="text-xs font-bold text-slate-500 tracking-wider">Disposition (Sold)</CardTitle>
             <AlertCircle className="h-4 w-4 text-[#5A9E78]" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-[#001529]">
+            <div className="text-3xl font-bold text-[#001529]">
               {loading ? <Loader2 className="animate-spin h-6 w-6" /> : soldStock}
             </div>
           </CardContent>
@@ -273,7 +273,7 @@ export default function InventoryDashboard() {
                 <ArrowUpDown className="h-3 w-3" />
                 Sort by Age ({sortOrder === 'oldest' ? 'Oldest First' : 'Newest First'})
               </Button>
-              <Badge variant="outline" className="border-white/20 text-white/60 text-[10px] uppercase font-bold px-3">
+              <Badge variant="outline" className="border-white/20 text-white/60 text-[10px] font-bold px-3">
                 {filteredInventory.length} Tracking
               </Badge>
             </div>
@@ -284,15 +284,15 @@ export default function InventoryDashboard() {
           <Table>
             <TableHeader className="bg-slate-50 border-b">
               <TableRow>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Brand</TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">EHA Code</TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Item Name & Specification</TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Serial Number</TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest text-center">Category</TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Branch</TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest text-center">Status</TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">Landed Cost</TableHead>
-                <TableHead className="font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Aging</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Brand</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">EHA Code</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Item Name & Specification</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Serial Number</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider text-center">Category</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Branch</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider text-center">Status</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Landed Cost</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider text-right">Aging</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -301,7 +301,7 @@ export default function InventoryDashboard() {
                   <TableCell colSpan={9} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Hydrating Registry...</p>
+                      <p className="text-xs font-bold text-slate-400 tracking-wider">Hydrating Registry...</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -326,7 +326,7 @@ export default function InventoryDashboard() {
                     </TableCell>
                     <TableCell className="py-4">
                       <div className="flex flex-col">
-                        <span className="font-bold text-[#001529] uppercase tracking-tight">{item.product?.model_name || "Unknown Item"}</span>
+                        <span className="font-bold text-[#001529] tracking-tight">{item.product?.model_name || "Unknown Item"}</span>
                         <span className="text-[11px] text-slate-400 font-medium group-hover:text-slate-500 line-clamp-1">{item.product?.description || "No specs available"}</span>
                       </div>
                     </TableCell>
@@ -336,7 +336,7 @@ export default function InventoryDashboard() {
                       </code>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold text-[10px] uppercase">{item.product?.category || "Misc"}</Badge>
+                      <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold text-[10px]">{item.product?.category || "Misc"}</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 font-medium text-slate-600">
@@ -347,10 +347,10 @@ export default function InventoryDashboard() {
                     <TableCell className="text-center">
                       <span className={
                         item.status === "Available"
-                          ? "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black bg-green-50 text-[#5A9E78] border border-green-100 uppercase tracking-wider"
+                          ? "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-green-50 text-[#5A9E78] border border-green-100 tracking-wider"
                           : item.status === "In-Transit"
-                          ? "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black bg-amber-50 text-[#D4860A] border border-amber-100 uppercase tracking-wider"
-                          : "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black bg-red-50 text-[#C0392B] border border-red-100 uppercase tracking-wider"
+                          ? "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-[#D4860A] border border-amber-100 tracking-wider"
+                          : "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-red-50 text-[#C0392B] border border-red-100 tracking-wider"
                       }>
                         {item.status}
                       </span>

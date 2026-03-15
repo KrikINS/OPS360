@@ -83,6 +83,10 @@ export default function InventoryDocs() {
               <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
               <span><strong>Age Sorting:</strong> Instantly identify the oldest stock to prioritize for liquidation or inter-branch transfer.</span>
             </li>
+            <li className="flex items-start gap-2">
+              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
+              <span><strong>Visual Accessibility:</strong> UI elements use standardized bold weights and mixed casing to ensure readability in high-density data environments.</span>
+            </li>
           </ul>
         </div>
         <div className="bg-slate-50 border border-dashed rounded-xl p-6 flex flex-col justify-center text-center">

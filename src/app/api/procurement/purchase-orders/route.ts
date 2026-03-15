@@ -79,7 +79,7 @@ export async function POST(request: Request) {
   const adminSupabase = createAdminClient()
 
   // Get all POs for this year to find the true numeric maximum
-  const { data: allPOs, error: fetchError } = await adminSupabase
+  const { data: allPOs } = await adminSupabase
     .from('purchase_orders')
     .select('po_number')
     .like('po_number', `${poPrefix}%`)
@@ -185,7 +185,7 @@ export async function PATCH(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  const { id, status } = body
+  const { id, status, vendor_id, branch_id, items, total_amount, cancellation_reason } = body
 
   if (!id || !status) return NextResponse.json({ error: "ID and status are required" }, { status: 400 })
 
@@ -202,8 +202,45 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const updateData: { status: string, approved_by?: string } = { status }
+  const updateData: Record<string, string | number | null> = { status }
   if (status === 'approved') updateData.approved_by = user.id
+  if (vendor_id) updateData.vendor_id = vendor_id
+  if (branch_id) updateData.branch_id = branch_id
+  if (total_amount) updateData.total_amount = total_amount
+  if (cancellation_reason) updateData.cancellation_reason = cancellation_reason
+
+  // If items are provided, we need to update items (Revise & Approve flow)
+  if (items && items.length > 0) {
+    const adminSupabase = createAdminClient()
+    
+    // 1. Delete existing items
+    const { error: deleteError } = await adminSupabase
+      .from('purchase_order_items')
+      .delete()
+      .eq('purchase_order_id', id)
+    
+    if (deleteError) return NextResponse.json({ error: "Failed to clear existing items" }, { status: 500 })
+
+    // 2. Insert new items
+    const { error: insertError } = await adminSupabase
+      .from('purchase_order_items')
+      .insert(items.map((item: { product_id: string, quantity: number, unit_price: number, tax_rate: number, total_item_cost: number, override_reason?: string }) => ({
+        purchase_order_id: id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        tax_rate: item.tax_rate,
+        total_item_cost: item.total_item_cost,
+        override_reason: item.override_reason
+      })))
+
+    if (insertError) return NextResponse.json({ error: "Failed to update items" }, { status: 500 })
+    
+    // Recalculate total if not provided explicitly
+    if (!total_amount) {
+      updateData.total_amount = items.reduce((acc: number, item: any) => acc + item.total_item_cost, 0)
+    }
+  }
 
   const { data, error } = await supabase
     .from('purchase_orders')

@@ -3,8 +3,7 @@ import {
   Layout, 
   Terminal, 
   CheckCircle2, 
-  AlertCircle,
-  ChevronRight
+  AlertCircle
 } from "lucide-react"
 
 export default function DeveloperGuide() {
@@ -32,6 +31,10 @@ export default function DeveloperGuide() {
             <li className="flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
               <span><strong>Constraint Safety:</strong> Always use the `asChild` prop on Radix-based components (like Tooltips and Buttons) to avoid hydration errors from nested button structures.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>CSS Sanitization (PDFs):</strong> When using `html2canvas`, always sanitize the DOM to remove modern CSS functions (`lab`, `oklch`) and force a light color scheme to ensure reliable PDF output.</span>
             </li>
           </ul>
         </div>
