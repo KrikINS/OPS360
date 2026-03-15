@@ -118,15 +118,15 @@ export default function ProductsPage() {
             <table className="w-full text-xs min-w-[1200px]">
               <thead className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm border-b">
                 <tr>
-                  <th className="text-left py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Model Name</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Brand</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Category</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA Code</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">HSN Code</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Price</th>
-                  <th className="text-center py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Min Stock</th>
-                  <th className="text-center py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tracking</th>
-                  <th className="text-right py-4 px-6 font-bold text-slate-400 tracking-wider text-[9px] w-20">Actions</th>
+                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Model Name</th>
+                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Brand</th>
+                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Category</th>
+                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA Code</th>
+                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">HSN Code</th>
+                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Price</th>
+                  <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Min Stock</th>
+                  <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tracking</th>
+                  <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] w-20">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -151,22 +151,22 @@ export default function ProductsPage() {
                       "group hover:bg-slate-50 transition-all cursor-default",
                       i % 2 === 0 ? "bg-white" : "bg-slate-50/30"
                     )}>
-                      <td className="py-4 px-6 font-bold text-slate-900 truncate max-w-[200px]">{p.model_name}</td>
-                      <td className="py-4 px-6 font-bold text-slate-500 tracking-tight">{p.brand}</td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold tracking-tighter">{p.category}</span>
+                      <td className="py-2 px-4 font-semibold text-slate-900 truncate max-w-[200px]">{p.model_name}</td>
+                      <td className="py-2 px-4 font-semibold text-slate-500 tracking-tight">{p.brand}</td>
+                      <td className="py-2 px-4">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold tracking-tighter">{p.category}</span>
                       </td>
-                      <td className="py-4 px-6">
-                        <code className="text-[11px] font-mono font-bold text-[#001529] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">{p.product_code || "---"}</code>
+                      <td className="py-2 px-4">
+                        <code className="text-[10px] font-mono font-semibold text-[#001529] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{p.product_code || "---"}</code>
                       </td>
-                      <td className="py-4 px-6 text-slate-400 font-bold">{p.hsn_code || "---"}</td>
-                      <td className="py-4 px-6 font-bold text-[#001529] text-[13px]">₹{p.base_price.toLocaleString("en-IN")}</td>
-                      <td className="py-4 px-6 text-center">
-                        <span className="font-bold text-slate-900 border border-slate-200 px-2 py-1 rounded bg-slate-50">{p.min_stock_level || 0}</span>
+                      <td className="py-2 px-4 text-slate-400 font-semibold">{p.hsn_code || "---"}</td>
+                      <td className="py-2 px-4 font-bold text-[#001529] text-xs">₹{p.base_price.toLocaleString("en-IN")}</td>
+                      <td className="py-2 px-4 text-center">
+                        <span className="font-semibold text-slate-900 border border-slate-100 px-1.5 py-0.5 rounded bg-slate-50">{p.min_stock_level || 0}</span>
                       </td>
-                      <td className="py-4 px-6 text-center">
+                      <td className="py-2 px-4 text-center">
                         <div className={cn(
-                          "inline-flex items-center px-3 py-1 rounded-full text-[9px] font-bold tracking-wider border",
+                          "inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-wider border",
                           p.tracking_type === 'Stocked' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                           p.tracking_type === 'On-Demand' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                           'bg-slate-50 text-slate-600 border-slate-200'
@@ -174,7 +174,7 @@ export default function ProductsPage() {
                           {p.tracking_type}
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-2 px-4 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger render={
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-slate-100 transition-colors" />

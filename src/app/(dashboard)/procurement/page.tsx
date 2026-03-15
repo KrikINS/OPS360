@@ -23,7 +23,9 @@ import {
   RotateCcw,
   AlertOctagon,
   PackageSearch,
-  Download
+  Download,
+  Building2,
+  LayoutGrid
 } from "lucide-react"
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -92,6 +94,7 @@ type PurchaseOrder = {
   requester_name?: string
   approver_name?: string
   cancellation_reason?: string
+  terms_content?: string
   items: {
     id: string
     product_id: string
@@ -132,9 +135,12 @@ export default function ProcurementGRNPage() {
   const [isUploading, setIsUploading] = useState<string | null>(null)
   const [revisionPO, setRevisionPO] = useState<PurchaseOrder | null>(null)
   const [viewingPO, setViewingPO] = useState<PurchaseOrder | null>(null)
+  const [editingTerms, setEditingTerms] = useState<string>("")
+  const [isUpdatingTerms, setIsUpdatingTerms] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [branchFilter, setBranchFilter] = useState<string>("all")
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const [creationTerms, setCreationTerms] = useState<string>("")
 
   const handleDownloadPDF = async (po: PurchaseOrder) => {
     setIsDownloading(po.id);
@@ -323,6 +329,19 @@ export default function ProcurementGRNPage() {
         gstin: vendor.gstin || "",
         terms: vendor.payment_terms || "Immediate"
       })
+
+      // Fetch default PO terms template if creating a new PO
+      if (isCreatingPO && !revisionPO) {
+        const supabase = createClient()
+        supabase
+          .from('po_terms_templates')
+          .select('content')
+          .eq('is_default', true)
+          .single()
+          .then(({ data }) => {
+            if (data?.content) setCreationTerms(data.content)
+          })
+      }
     }
   }
 
@@ -363,6 +382,7 @@ export default function ProcurementGRNPage() {
     setExpectedDelivery("")
     setPoItems([])
     setRevisionPO(null)
+    setCreationTerms("")
   }
 
   const handleGeneratePO = async () => {
@@ -384,7 +404,8 @@ export default function ProcurementGRNPage() {
           override_reason: overrideReasons[idx] || item.override_reason || null,
           total_item_cost: (item.unit_price * item.quantity) * (1 + item.tax_rate / 100)
         })),
-        status: isRevision ? 'draft' : 'pending_approval' // "sending it back to the draft state"
+        status: isRevision ? 'draft' : 'pending_approval',
+        terms_content: creationTerms
       };
 
       const res = await fetch(url, {
@@ -701,6 +722,22 @@ export default function ProcurementGRNPage() {
                     </TableBody>
                   </Table>
                 )}
+
+                <div className="space-y-4 pt-6">
+                  <Label className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-blue-600" /> Contractual Terms & Conditions
+                  </Label>
+                  <Textarea 
+                    placeholder="These terms will be printed on the official PO PDF..."
+                    value={creationTerms}
+                    onChange={(e) => setCreationTerms(e.target.value)}
+                    rows={6}
+                    className="font-medium text-sm leading-relaxed border-slate-200 focus:ring-blue-500"
+                  />
+                  <p className="text-[10px] text-slate-400 italic">
+                    Pre-filled from Global Masters. You can modify these specifically for this order.
+                  </p>
+                </div>
               </div>
             )}
           </CardContent>
@@ -1242,122 +1279,220 @@ export default function ProcurementGRNPage() {
       )}
       {/* PO Detail View Modal */}
       {viewingPO && (
-        <Dialog open={!!viewingPO} onOpenChange={(open) => !open && setViewingPO(null)}>
-          <DialogContent className="max-w-[50vw] w-[50vw] sm:max-w-[50vw] md:max-w-[50vw] lg:max-w-[50vw] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0">
-            <DialogHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                    <FileText className="h-6 w-6 text-primary" />
-                    {viewingPO.po_number}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Purchase Order Details & History
-                  </DialogDescription>
+        <Dialog open={!!viewingPO} onOpenChange={(open) => {
+          if (!open) {
+            setViewingPO(null);
+            setEditingTerms("");
+          }
+        }}>
+          <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto p-0 gap-0 border-none shadow-2xl">
+            <DialogHeader className="bg-[#001529] p-6 text-white rounded-t-lg">
+              <div className="flex justify-between items-center w-full">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-[#002a52] rounded-xl border border-[#003a6d]">
+                    <FileText className="h-8 w-8 text-[#7FD1E3]" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <DialogTitle className="text-3xl font-bold tracking-tight">
+                        {viewingPO.po_number}
+                      </DialogTitle>
+                      <Badge className={
+                        viewingPO.status === 'received' ? "bg-green-500/20 text-green-400 border-green-500/30" :
+                          viewingPO.status === 'approved' ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
+                            viewingPO.status === 'cancelled' ? "bg-red-500/20 text-red-400 border-red-500/30" :
+                              "bg-slate-500/20 text-slate-400 border-slate-500/30"
+                      }>
+                        {viewingPO.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <DialogDescription className="text-slate-400 font-medium">
+                      Generated on {new Date(viewingPO.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </DialogDescription>
+                  </div>
                 </div>
-                <Badge className={
-                  viewingPO.status === 'received' ? "bg-green-100 text-green-700" :
-                    viewingPO.status === 'approved' ? "bg-blue-100 text-blue-700" :
-                      viewingPO.status === 'cancelled' ? "bg-red-100 text-red-700" :
-                        "bg-slate-100 text-slate-700"
-                }>
-                  {viewingPO.status.toUpperCase()}
-                </Badge>
+                <div className="text-right hidden md:block">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#7FD1E3] font-bold">Total Amount</p>
+                  <p className="text-3xl font-black text-white">₹{viewingPO.total_amount.toLocaleString()}</p>
+                </div>
               </div>
             </DialogHeader>
 
-            <div className="grid md:grid-cols-3 gap-6 py-6 border-y">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Vendor</Label>
-                <p className="font-bold">{viewingPO.vendor.name}</p>
-                <p className="text-sm text-muted-foreground">{viewingPO.vendor.state}</p>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Ship To</Label>
-                <p className="font-bold">{viewingPO.branch.name}</p>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">PO Summary</Label>
-                <p className="font-bold">Items: {viewingPO.items.length}</p>
-                <p className="text-lg font-bold text-[#001529]">₹{viewingPO.total_amount.toLocaleString()}</p>
-              </div>
-            </div>
-
-            <div className="py-4 space-y-4">
-              <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Audit Trail</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border">
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground uppercase">Created By</Label>
-                  <p className="text-sm font-semibold">{viewingPO.requester_name || 'System'}</p>
-                  <p className="text-[10px] text-slate-400">{new Date(viewingPO.created_at).toLocaleString()}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground uppercase">Approved By</Label>
-                  <p className="text-sm font-semibold">{viewingPO.approver_name || '---'}</p>
-                </div>
-                {viewingPO.status === 'cancelled' && (
-                  <div className="col-span-2 space-y-1 border-l pl-4">
-                    <Label className="text-[10px] text-red-600 font-bold uppercase">Cancellation Reason</Label>
-                    <p className="text-sm text-red-700 italic">&quot;{viewingPO.cancellation_reason || 'No reason provided'}&quot;</p>
+            <div className="p-8 space-y-8 bg-white">
+              {/* 3-Column Metadata Grid */}
+              <div className="grid md:grid-cols-3 gap-8 p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-[#001529]">
+                    <Truck className="h-4 w-4" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Vendor Partner</Label>
                   </div>
-                )}
-              </div>
-            </div>
+                  <div className="pl-6 border-l-2 border-slate-200">
+                    <p className="font-bold text-lg text-slate-900">{viewingPO.vendor.name}</p>
+                    <p className="text-xs text-slate-500 font-medium">{viewingPO.vendor.state}</p>
+                    <p className="text-[10px] font-mono mt-1 text-slate-400">GSTIN: {vendors.find(v => v.id === viewingPO.vendor_id)?.gstin || 'Awaiting Verification'}</p>
+                  </div>
+                </div>
 
-            <div className="space-y-4 py-4">
-              <h4 className="font-bold text-sm">Item Details</h4>
-              <div className="border rounded-xl overflow-hidden shadow-sm">
-                <Table>
-                  <TableHeader className="bg-slate-50/50">
-                    <TableRow>
-                      <TableHead className="w-[80px]">#</TableHead>
-                      <TableHead className="min-w-[200px]">Item & Description</TableHead>
-                      <TableHead>HSN/SAC</TableHead>
-                      <TableHead className="text-center">Quantity</TableHead>
-                      <TableHead className="text-right">Unit Price</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {viewingPO.items.map((item: PurchaseOrder['items'][0], idx: number) => (
-                      <TableRow key={idx} className="hover:bg-slate-50/30 transition-colors">
-                        <TableCell className="font-medium text-slate-500">{idx + 1}</TableCell>
-                        <TableCell>
-                          <div className="font-semibold text-slate-900 break-words whitespace-normal">
-                            {item.product?.model_name || 'Item'}
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            {item.product?.product_code}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-slate-600 font-mono text-xs">{item.product?.hsn_code || '---'}</TableCell>
-                        <TableCell className="text-center font-medium">{item.quantity}</TableCell>
-                        <TableCell className="text-right text-slate-600">₹{item.unit_price.toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-bold text-slate-900">₹{item.total_item_cost.toLocaleString()}</TableCell>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-[#001529]">
+                    <Building2 className="h-4 w-4" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Ship-To Destination</Label>
+                  </div>
+                  <div className="pl-6 border-l-2 border-slate-200">
+                    <p className="font-bold text-lg text-slate-900">{viewingPO.branch.name}</p>
+                    <p className="text-xs text-slate-500 font-medium">Company Logistics Center</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-[#001529]">
+                    <Scale className="h-4 w-4" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Financial Summary</Label>
+                  </div>
+                  <div className="pl-6 border-l-2 border-slate-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500">Base Items</span>
+                      <span className="font-bold">{viewingPO.items.length} Units</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-slate-500">PO Status</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700">{viewingPO.status.replace('_', ' ').toUpperCase()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms & Conditions Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4" />
+                    Contractual Terms & Conditions
+                  </h4>
+                  {viewingPO.status === 'pending_approval' && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-[10px] font-black uppercase tracking-tighter text-blue-600 hover:bg-blue-50"
+                      onClick={async () => {
+                        const supabase = createClient();
+                        setIsUpdatingTerms(true);
+                        const { error } = await supabase
+                          .from('purchase_orders')
+                          .update({ terms_content: editingTerms || viewingPO.terms_content })
+                          .eq('id', viewingPO.id);
+                        
+                        if (!error) {
+                          setViewingPO(prev => prev ? { ...prev, terms_content: editingTerms || viewingPO.terms_content } : null);
+                          alert("Terms updated successfully.");
+                        } else {
+                          alert("Error updating terms: " + error.message);
+                        }
+                        setIsUpdatingTerms(false);
+                      }}
+                      disabled={isUpdatingTerms}
+                    >
+                      {isUpdatingTerms ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                      Persist Changes
+                    </Button>
+                  )}
+                </div>
+                <div className="relative group">
+                  <Textarea
+                    className="min-h-[120px] bg-slate-50 border-slate-200 text-xs leading-relaxed focus:bg-white transition-all resize-none font-medium text-slate-700"
+                    placeholder="Enter specific PO terms..."
+                    defaultValue={viewingPO.terms_content || "1. Supply as per agreed specifications and delivery schedule.\n2. Invoices must mention the PO Number and GSTIN of both parties.\n3. Subject to Bengaluru Jurisdiction."}
+                    onChange={(e) => setEditingTerms(e.target.value)}
+                  />
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Badge variant="outline" className="bg-white/80 backdrop-blur-sm text-[8px] uppercase">Editable Document View</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-black text-sm uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                  <LayoutGrid className="h-4 w-4" />
+                  Line Item Breakdown
+                </h4>
+                <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                  <Table>
+                    <TableHeader className="bg-slate-50/50">
+                      <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                        <TableHead className="w-[60px] text-center font-black uppercase text-[10px] tracking-widest">#</TableHead>
+                        <TableHead className="min-w-[200px] font-black uppercase text-[10px] tracking-widest">Model Specification</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest">HSN/SAC</TableHead>
+                        <TableHead className="text-center font-black uppercase text-[10px] tracking-widest">Qty</TableHead>
+                        <TableHead className="text-right font-black uppercase text-[10px] tracking-widest">Net Rate</TableHead>
+                        <TableHead className="text-right font-black uppercase text-[10px] tracking-widest">Subtotal</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {viewingPO.items.map((item: any, idx: number) => (
+                        <TableRow key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                          <TableCell className="text-center font-bold text-slate-400 text-xs">{idx + 1}</TableCell>
+                          <TableCell>
+                            <div className="font-bold text-slate-900">{item.product?.model_name || 'Item'}</div>
+                            <div className="text-[10px] font-bold text-blue-500 uppercase tracking-tighter">SKU: {item.product?.product_code}</div>
+                          </TableCell>
+                          <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter">{item.product?.hsn_code || '---'}</TableCell>
+                          <TableCell className="text-center font-black text-slate-900 text-sm">{item.quantity}</TableCell>
+                          <TableCell className="text-right font-bold text-slate-600">₹{item.unit_price.toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-black text-[#001529]">₹{item.total_item_cost.toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Audit Trail */}
+              <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                  <ShieldCheck className="h-24 w-24" />
+                </div>
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#7FD1E3] mb-6">Security & Audit Compliance</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                  <div className="space-y-1 relative z-10">
+                    <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Originator</Label>
+                    <p className="text-sm font-bold tracking-tight">{viewingPO.requester_name || 'System Auto-Gen'}</p>
+                    <p className="text-[10px] text-slate-500 font-mono">{new Date(viewingPO.created_at).toLocaleTimeString()}</p>
+                  </div>
+                  <div className="space-y-1 relative z-10">
+                    <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Certification</Label>
+                    <p className="text-sm font-bold tracking-tight text-green-400 flex items-center gap-1">
+                      <ShieldCheck className="h-3 w-3" />
+                      {viewingPO.approver_name ? 'Certified Approved' : 'Awaiting Review'}
+                    </p>
+                    <p className="text-[10px] text-slate-500">{viewingPO.approver_name || 'Workflow In-Progress'}</p>
+                  </div>
+                  {viewingPO.status === 'cancelled' && (
+                    <div className="col-span-2 space-y-1 border-l border-white/10 pl-8 relative z-10">
+                      <Label className="text-[9px] text-red-400 font-bold uppercase tracking-widest">Revocation Protocol</Label>
+                      <p className="text-sm text-red-100 italic font-medium leading-relaxed">&quot;{viewingPO.cancellation_reason || 'Administrative revocation'}&quot;</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="border-t pt-4">
-              <div className="flex gap-2">
-                {viewingPO.status === 'approved' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
-                    onClick={() => handleDownloadPDF(viewingPO)}
-                    disabled={isDownloading === viewingPO.id}
-                  >
-                    {isDownloading === viewingPO.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                    Download PDF
-                  </Button>
-                )}
-                <Button variant="ghost" size="sm" onClick={() => setViewingPO(null)}>
-                  ✕
+            <DialogFooter className="bg-slate-50 p-6 rounded-b-lg border-t border-slate-200">
+              <div className="flex justify-between items-center w-full">
+                <Button variant="ghost" className="text-slate-500 hover:text-slate-900 font-bold text-xs uppercase" onClick={() => setViewingPO(null)}>
+                  Close Portal
                 </Button>
+                <div className="flex gap-4">
+                  {(viewingPO.status === 'approved' || viewingPO.status === 'received' || viewingPO.status === 'partially_received') && (
+                    <Button
+                      className="bg-[#001529] hover:bg-[#002a52] text-white px-8 h-12 rounded-xl shadow-lg shadow-[#001529]/20 transition-all active:scale-95 flex gap-2 font-bold"
+                      onClick={() => handleDownloadPDF(viewingPO)}
+                      disabled={isDownloading === viewingPO.id}
+                    >
+                      {isDownloading === viewingPO.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+                      Generate Enterprise PDF
+                    </Button>
+                  )}
+                </div>
               </div>
             </DialogFooter>
           </DialogContent>

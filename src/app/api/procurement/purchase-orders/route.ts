@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  const { vendor_id, branch_id, items, status = 'draft' } = body
+  const { vendor_id, branch_id, items, terms_content, status = 'draft' } = body
 
   if (!vendor_id || !branch_id || !items || items.length === 0) {
     return NextResponse.json({ error: "Vendor, branch, and items are required" }, { status: 400 })
@@ -126,6 +126,7 @@ export async function POST(request: Request) {
       branch_id,
       status,
       created_by: user.id,
+      terms_content,
       total_amount: items.reduce((acc: number, item: { total_item_cost: number }) => acc + item.total_item_cost, 0)
     })
     .select()
@@ -185,7 +186,7 @@ export async function PATCH(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  const { id, status, vendor_id, branch_id, items, total_amount, cancellation_reason } = body
+  const { id, status, vendor_id, branch_id, items, terms_content, total_amount, cancellation_reason } = body
 
   if (!id || !status) return NextResponse.json({ error: "ID and status are required" }, { status: 400 })
 
@@ -207,6 +208,7 @@ export async function PATCH(request: Request) {
   if (vendor_id) updateData.vendor_id = vendor_id
   if (branch_id) updateData.branch_id = branch_id
   if (total_amount) updateData.total_amount = total_amount
+  if (terms_content) updateData.terms_content = terms_content
   if (cancellation_reason) updateData.cancellation_reason = cancellation_reason
 
   // If items are provided, we need to update items (Revise & Approve flow)

@@ -8,131 +8,188 @@ interface POPrintTemplateProps {
 }
 
 export const POPrintTemplate: React.FC<POPrintTemplateProps> = ({ po, vendor, branch }) => {
-  const cgst = po.total_amount * 0.09;
-  const sgst = po.total_amount * 0.09;
-  const totalWithTax = po.total_amount + cgst + sgst;
+  // Financial Calculations
+  const taxableValue = po.items.reduce((acc: number, item: any) => acc + (item.unit_price * item.quantity), 0);
+  const cgst = taxableValue * 0.09;
+  const sgst = taxableValue * 0.09;
+  const grandTotal = taxableValue + cgst + sgst;
+  const systemTimestamp = new Date().toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 
   return (
-    <div id="po-print-template" className="p-10 font-sans border" style={{ width: '800px', margin: '0 auto', backgroundColor: '#ffffff', color: '#1e293b', borderColor: '#f1f5f9' }}>
-      {/* Header */}
-      <div className="flex justify-between items-start border-b-2 border-[#001529] pb-6 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-[#001529] tracking-tight">PURCHASE ORDER</h1>
-          <p className="mt-1 font-medium" style={{ color: '#64748b' }}>#{po.po_number}</p>
+    <div 
+      id="po-print-template" 
+      className="bg-white text-[#1e293b] flex flex-col"
+      style={{ 
+        width: '210mm', 
+        minHeight: '297mm', 
+        padding: '15mm', 
+        margin: '0 auto', 
+        fontFamily: "'Inter', system-ui, sans-serif",
+        boxSizing: 'border-box',
+        position: 'relative'
+      }}
+    >
+      {/* Header Section */}
+      <div className="flex justify-between items-start border-b-4 border-[#001529] pb-8 mb-8">
+        <div className="space-y-2">
+          <div className="inline-block px-3 py-1 bg-[#001529] text-white text-[10px] font-black tracking-widest uppercase rounded">
+            Official Purchase Order
+          </div>
+          <h1 className="text-4xl font-black text-[#001529] tracking-tighter">ETHAN</h1>
+          <p className="text-xs font-bold text-slate-400 font-mono">Control ID: {po.po_number}</p>
         </div>
-        <div className="text-right">
-          <div className="text-xl font-bold text-[#001529]">ETHAN</div>
-          <p className="text-xs max-w-[200px] leading-relaxed" style={{ color: '#64748b' }}>
-            Corporate Office: 123 Tech Park, Phase II, Bengaluru - 560100
+        <div className="text-right space-y-1">
+          <p className="text-sm font-black text-[#001529] uppercase">Corporate Headquarters</p>
+          <p className="text-[10px] text-slate-500 leading-tight max-w-[200px]">
+            123 Tech Park, Phase II, Industrial Area, Bengaluru, Karnataka - 560100
           </p>
-          <p className="text-xs font-semibold mt-1" style={{ color: '#334155' }}>GSTIN: 29AAACE1234F1Z5</p>
+          <p className="text-[10px] font-black text-[#001529] pt-2">GSTIN: 29AAACE1234F1Z5</p>
         </div>
       </div>
 
-      {/* Address Grid */}
-      <div className="grid grid-cols-2 gap-12 mb-10">
-        <div>
-          <h3 className="text-[#001529] font-bold text-xs uppercase tracking-widest mb-3">Vendor Details</h3>
-          <div className="p-4 rounded border min-h-[120px]" style={{ backgroundColor: '#f8fafc', borderColor: '#f1f5f9' }}>
-            <p className="font-bold mb-1" style={{ color: '#0f172a' }}>{vendor.name}</p>
-            <p className="text-xs leading-relaxed italic" style={{ color: '#475569' }}>{vendor.address || 'Address not listed'}</p>
-            <p className="text-xs font-semibold text-[#001529] mt-3">GSTIN: {vendor.gstin || '---'}</p>
-          </div>
-        </div>
-        <div>
-          <h3 className="text-[#001529] font-bold text-xs uppercase tracking-widest mb-3">Ship To / Billing</h3>
-          <div className="p-4 rounded border min-h-[120px]" style={{ backgroundColor: '#f8fafc', borderColor: '#f1f5f9' }}>
-            <p className="font-bold mb-1" style={{ color: '#0f172a' }}>Ethan - {branch?.name || 'Main Branch'}</p>
-            <p className="text-xs leading-relaxed italic" style={{ color: '#475569' }}>
-              {branch?.address || 'Site delivery address as per internal log'}
+      {/* Entity Details Grid */}
+      <div className="grid grid-cols-2 gap-10 mb-10">
+        <div className="space-y-3">
+          <h3 className="text-[#001529] font-black text-[10px] uppercase tracking-[0.2em] border-l-4 border-[#001529] pl-3">Vendor Partner</h3>
+          <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/50 min-h-[140px]">
+            <p className="font-extrabold text-slate-900 text-sm mb-1">{vendor.name}</p>
+            <p className="text-[10px] text-slate-500 leading-relaxed italic mb-4">
+              {vendor.address || 'Standard Registered Address'}
             </p>
-            <p className="text-xs font-semibold mt-3" style={{ color: '#334155' }}>PO Date: {new Date(po.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-            <p className="text-xs font-semibold mt-1" style={{ color: '#334155' }}>Payment Terms: {vendor.payment_terms || 'Immediate'}</p>
+            <p className="text-[10px] font-black text-[#001529] bg-white border inline-block px-2 py-1 rounded shadow-sm">
+              GSTIN: {vendor.gstin || 'UNREGISTERED'}
+            </p>
           </div>
         </div>
-      </div>
-
-      {/* Items Table */}
-      <table className="w-full border-collapse mb-8">
-        <thead>
-          <tr className="bg-[#001529] text-white text-xs uppercase tracking-wider">
-            <th className="p-3 text-left w-12 border border-[#001529]">#</th>
-            <th className="p-3 text-left border border-[#001529]">Item Description</th>
-            <th className="p-3 text-center w-24 border border-[#001529]">HSN</th>
-            <th className="p-3 text-center w-20 border border-[#001529]">Qty</th>
-            <th className="p-3 text-right w-24 border border-[#001529]">Rate</th>
-            <th className="p-3 text-right w-32 border border-[#001529]">Net Amount</th>
-          </tr>
-        </thead>
-        <tbody className="text-xs">
-          {po.items.map((item: any, idx: number) => (
-            <tr key={idx} className="border-b" style={{ borderColor: '#f1f5f9' }}>
-              <td className="p-3 text-center font-medium" style={{ color: '#94a3b8' }}>{idx + 1}</td>
-              <td className="p-3">
-                <div className="font-bold" style={{ color: '#0f172a' }}>{item.product?.model_name || item.model_name}</div>
-                <div className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>{item.product?.brand || 'Premium Series'}</div>
-              </td>
-              <td className="p-3 text-center font-mono" style={{ color: '#475569' }}>{item.product?.hsn_code || item.hsn_code || '---'}</td>
-              <td className="p-3 text-center font-bold" style={{ color: '#0f172a' }}>{item.quantity}</td>
-              <td className="p-3 text-right">₹{item.unit_price.toLocaleString('en-IN')}</td>
-              <td className="p-3 text-right font-bold" style={{ color: '#0f172a' }}>₹{item.total_item_cost.toLocaleString('en-IN')}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Totals Section */}
-      <div className="flex justify-end mb-10">
-        <div className="w-1/2">
-          <div className="flex justify-between py-2 text-xs border-b" style={{ borderColor: '#f8fafc' }}>
-            <span className="font-medium tracking-wide" style={{ color: '#64748b' }}>Net Taxable Value</span>
-            <span className="font-bold" style={{ color: '#334155' }}>₹{po.total_amount.toLocaleString('en-IN')}</span>
-          </div>
-          <div className="flex justify-between py-2 text-xs border-b" style={{ borderColor: '#f8fafc' }}>
-            <span style={{ color: '#64748b' }}>CGST (9%)</span>
-            <span className="font-semibold" style={{ color: '#334155' }}>₹{cgst.toLocaleString('en-IN')}</span>
-          </div>
-          <div className="flex justify-between py-2 text-xs border-b" style={{ borderColor: '#f1f5f9' }}>
-            <span style={{ color: '#64748b' }}>SGST (9%)</span>
-            <span className="font-semibold" style={{ color: '#334155' }}>₹{sgst.toLocaleString('en-IN')}</span>
-          </div>
-          <div className="flex justify-between py-4 text-sm font-bold bg-[#001529] text-white px-4 rounded-b mt-1">
-            <span className="uppercase tracking-widest">Grand Total</span>
-            <span>₹{totalWithTax.toLocaleString('en-IN')}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Words & Terms */}
-      <div className="mb-12">
-        <div className="text-xs mb-1 uppercase font-bold tracking-widest" style={{ color: '#64748b' }}>Total Amount in Words</div>
-        <div className="text-xs p-3 border rounded italic font-bold text-[#001529]" style={{ backgroundColor: '#f8fafc', borderColor: '#f1f5f9' }}>
-          {numberToWords(totalWithTax)}
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-20 flex justify-between items-end border-t pt-8" style={{ borderColor: '#f1f5f9' }}>
-        <div className="text-[10px] leading-relaxed max-w-[400px]" style={{ color: '#94a3b8' }}>
-          <p className="font-bold mb-1 uppercase tracking-tighter" style={{ color: '#64748b' }}>Terms & Conditions</p>
-          <ol className="list-decimal pl-4 space-y-0.5">
-            <li>Supply as per agreed specifications and delivery schedule.</li>
-            <li>Invoices must mention the PO Number and GSTIN of both parties.</li>
-            <li>Subject to Bengaluru Jurisdiction.</li>
-          </ol>
-        </div>
-        <div className="text-center w-64">
-          <div className="h-20 flex items-center justify-center opacity-40 mb-2">
-            <div className="w-20 h-20 border-4 rounded-full flex items-center justify-center -rotate-12 border-dashed" style={{ borderColor: '#e2e8f0' }}>
-              <span className="text-[10px] font-black uppercase text-center leading-[10px]" style={{ color: '#e2e8f0' }}>ETHAN<br/>OFFICIAL<br/>STAMP</span>
+        <div className="space-y-3">
+          <h3 className="text-[#001529] font-black text-[10px] uppercase tracking-[0.2em] border-l-4 border-[#001529] pl-3">Ship-To / Logistics</h3>
+          <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/50 min-h-[140px]">
+            <p className="font-extrabold text-slate-900 text-sm mb-1">Ethan - {branch?.name || 'Central Hub'}</p>
+            <p className="text-[10px] text-slate-500 leading-relaxed italic mb-4">
+              {branch?.address || 'Site delivery as per instruction'}
+            </p>
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200/50">
+              <div>
+                <p className="text-[8px] uppercase font-bold text-slate-400">Date Issued</p>
+                <p className="text-[10px] font-black text-slate-700">{new Date(po.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+              </div>
+              <div>
+                <p className="text-[8px] uppercase font-bold text-slate-400">Payment Link</p>
+                <p className="text-[10px] font-black text-slate-700">{vendor.payment_terms || 'Standard 30 Days'}</p>
+              </div>
             </div>
           </div>
-          <div className="border-t border-slate-900 pt-2">
-            <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Authorized Signatory</p>
-            <p className="text-[8px]" style={{ color: '#94a3b8' }}>Digitally Generated Document</p>
+        </div>
+      </div>
+
+      {/* Line Item Table */}
+      <div className="flex-grow">
+        <table className="w-full border-collapse rounded-xl overflow-hidden shadow-sm">
+          <thead>
+            <tr className="bg-[#001529] text-white text-[9px] uppercase tracking-widest font-black">
+              <th className="p-4 text-left w-10">#</th>
+              <th className="p-4 text-left">SKU & Model Name</th>
+              <th className="p-4 text-center w-24">HSN/SAC</th>
+              <th className="p-4 text-center w-16">Qty</th>
+              <th className="p-4 text-right w-28">Net Rate</th>
+              <th className="p-4 text-right w-32">Taxable Val</th>
+            </tr>
+          </thead>
+          <tbody className="text-[10px]">
+            {po.items.map((item: any, idx: number) => (
+              <tr key={idx} className="border-b border-slate-100 odd:bg-slate-50/30">
+                <td className="p-4 text-center font-bold text-slate-400">{idx + 1}</td>
+                <td className="p-4">
+                  <div className="font-extrabold text-slate-900">{item.product?.model_name || item.model_name}</div>
+                  <div className="text-[8px] font-black text-blue-500 mt-0.5 uppercase tracking-tighter">Brand: {item.product?.brand || 'Premium'}</div>
+                </td>
+                <td className="p-4 text-center font-mono font-bold text-slate-600 tracking-tighter">{item.product?.hsn_code || item.hsn_code || '---'}</td>
+                <td className="p-4 text-center font-black text-slate-900">{item.quantity}</td>
+                <td className="p-4 text-right font-bold text-slate-600">₹{item.unit_price.toLocaleString('en-IN')}</td>
+                <td className="p-4 text-right font-black text-[#001529]">₹{(item.unit_price * item.quantity).toLocaleString('en-IN')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Bottom Section: Totals & Terms */}
+      <div className="mt-10 flex flex-col md:flex-row gap-10">
+        <div className="flex-1 space-y-6">
+          <div className="space-y-2">
+            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-[#001529] border-b pb-1">Contractual Terms & Conditions</h4>
+            <div className="text-[9px] text-slate-600 leading-relaxed font-medium whitespace-pre-wrap">
+              {po.terms_content || "1. Supply as per agreed specifications and delivery schedule.\n2. Invoices must mention the PO Number and GSTIN of both parties.\n3. Subject to Bengaluru Jurisdiction."}
+            </div>
           </div>
+          <div className="space-y-2">
+            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-[#001529] border-b pb-1">Total Value in Words</h4>
+            <div className="text-[10px] p-4 rounded-xl border border-slate-100 bg-slate-50 italic font-black text-[#001529] shadow-inner">
+              {numberToWords(grandTotal)}
+            </div>
+          </div>
+        </div>
+        
+        <div className="w-full md:w-1/3">
+          <div className="space-y-1 p-6 rounded-2xl bg-[#001529] text-white shadow-xl shadow-[#001529]/10">
+            <div className="flex justify-between py-2 border-b border-white/10">
+              <span className="text-[9px] uppercase font-bold opacity-60">Net Taxable Value</span>
+              <span className="text-sm font-bold">₹{taxableValue.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-white/10">
+              <span className="text-[9px] uppercase font-bold opacity-60">CGST (9%)</span>
+              <span className="text-sm font-bold">₹{cgst.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-white/10">
+              <span className="text-[9px] uppercase font-bold opacity-60">SGST (9%)</span>
+              <span className="text-sm font-bold">₹{sgst.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between py-4">
+              <span className="text-[10px] uppercase font-black tracking-widest">Grand Total</span>
+              <span className="text-xl font-black text-[#7FD1E3]">₹{grandTotal.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Signature Area */}
+      <div className="mt-16 flex justify-end">
+        <div className="text-center w-64 space-y-4">
+          <div className="h-20 flex items-center justify-center opacity-10">
+             <div className="w-24 h-24 border-8 border-[#001529] rounded-full flex items-center justify-center -rotate-12 border-double">
+                <span className="text-[12px] font-black uppercase text-center leading-[12px] text-[#001529]">ETHAN PO<br/>VALIDATED</span>
+             </div>
+          </div>
+          <div className="border-t-2 border-[#001529] pt-4">
+            <p className="text-[11px] font-black text-[#001529] uppercase tracking-[0.3em]">Authorized Signatory</p>
+            <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">This is a computer generated document. No physical signature required.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Corporate Footer (A4 Positioned) */}
+      <div 
+        className="mt-auto pt-10 border-t border-slate-100 flex justify-between items-end text-[8px] font-bold text-slate-400 uppercase tracking-widest"
+        style={{ position: 'absolute', bottom: '15mm', width: 'calc(210mm - 30mm)', left: '15mm' }}
+      >
+        <div className="max-w-[150px]">
+          CONFIDENTIAL – FOR AUTHORIZED VENDOR USE ONLY
+        </div>
+        <div className="text-center">
+          Digitally Generated via Ethan Systems
+        </div>
+        <div className="text-right">
+          Generated: {systemTimestamp}
         </div>
       </div>
     </div>
   );
 };
+

@@ -29,7 +29,8 @@ import {
   FolderTree,
   Palette,
   UserCog,
-  ArrowLeft
+  ArrowLeft,
+  Loader2
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -60,9 +61,18 @@ const adminItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const [logoUrl, setLogoUrl] = useState("/ethan-logo.png")
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+  const [prevPathname, setPrevPathname] = useState(pathname)
+
+  // Reset loading state when navigation completes
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname)
+    setNavigatingTo(null)
+  }
 
   // Check if we are in admin section
   const isAdminMode = pathname.startsWith("/admin")
+
 
   useEffect(() => {
     supabase
@@ -117,21 +127,27 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.title}>
                     <Link
                       href={item.url}
+                      onClick={() => setNavigatingTo(item.url)}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
                         "sidebar-item",
                         isActive
                           ? "bg-[#002a52] text-white border-l-[3px] border-l-[#7FD1E3] pl-[9px]"
-                          : "text-slate-400 hover:text-white hover:bg-[#002244] border-l-[3px] border-l-transparent"
+                          : "text-slate-400 hover:text-white hover:bg-[#002244] border-l-[3px] border-l-transparent",
+                        navigatingTo === item.url && "opacity-70"
                       )}
                     >
-                      <item.icon
-                        className={cn(
-                          "h-4 w-4 shrink-0",
-                          isActive ? "text-[#7FD1E3]" : "text-slate-500"
-                        )}
-                      />
-                      <span>{item.title}</span>
+                      {navigatingTo === item.url ? (
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#7FD1E3]" />
+                      ) : (
+                        <item.icon
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            isActive ? "text-[#7FD1E3]" : "text-slate-500"
+                          )}
+                        />
+                      )}
+                      <span className={cn(navigatingTo === item.url && "animate-pulse")}>{item.title}</span>
                     </Link>
                   </SidebarMenuItem>
                 )
@@ -146,25 +162,37 @@ export function AppSidebar() {
         {isAdminMode && (
           <Link
             href="/"
+            onClick={() => setNavigatingTo("/")}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-bold transition-all duration-150",
-              "bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border border-emerald-600/20"
+              "bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border border-emerald-600/20",
+              navigatingTo === "/" && "opacity-70"
             )}
           >
-            <ArrowLeft className="h-4 w-4 shrink-0" />
-            <span>Return to ERP</span>
+            {navigatingTo === "/" ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-400" />
+            ) : (
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+            )}
+            <span className={cn(navigatingTo === "/" && "animate-pulse")}>Return to ERP</span>
           </Link>
         )}
         
         <Link
           href="/docs"
+          onClick={() => setNavigatingTo("/docs")}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
-            "text-slate-400 hover:text-white hover:bg-[#002244] border-l-[3px] border-l-transparent"
+            "text-slate-400 hover:text-white hover:bg-[#002244] border-l-[3px] border-l-transparent",
+            navigatingTo === "/docs" && "opacity-70"
           )}
         >
-          <BookOpen className="h-4 w-4 shrink-0 text-slate-500" />
-          <span>OPS360 Knowledge Base</span>
+          {navigatingTo === "/docs" ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-400" />
+          ) : (
+            <BookOpen className="h-4 w-4 shrink-0 text-slate-500" />
+          )}
+          <span className={cn(navigatingTo === "/docs" && "animate-pulse")}>OPS360 Knowledge Base</span>
         </Link>
       </div>
 
