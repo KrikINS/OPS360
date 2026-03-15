@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AddProductModal } from "@/components/products/add-product-modal"
 import { EditProductModal } from "@/components/products/edit-product-modal"
 import { cn } from "@/lib/utils"
@@ -44,6 +45,9 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [selectedBrand, setSelectedBrand] = useState<string>("all")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
 
   const supabase = createClient()
 
@@ -71,11 +75,20 @@ export default function ProductsPage() {
     else fetchProducts()
   }
 
-  const filteredProducts = products.filter(p => 
-    p.model_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.product_code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.brand.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const uniqueBrands = Array.from(new Set(products.map(p => p.brand).filter(Boolean))).sort()
+  const uniqueCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort()
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = 
+      p.model_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.product_code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.brand.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesBrand = selectedBrand === "all" || p.brand === selectedBrand
+    const matchesCategory = selectedCategory === "all" || p.category === selectedCategory
+
+    return matchesSearch && matchesBrand && matchesCategory
+  })
 
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
@@ -85,7 +98,14 @@ export default function ProductsPage() {
           <p className="text-slate-500 text-xs mt-1">Centralized EHA Protocol & Global Stock Assets</p>
         </div>
         <div className="flex items-center gap-3">
-           <Button variant="outline" className="h-10 border-slate-200 border-dashed gap-2 text-xs font-bold">
+          <Button 
+            variant={showFilters ? "default" : "outline"} 
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "h-10 border-slate-200 border-dashed gap-2 text-xs font-bold",
+              showFilters && "bg-[#001529] text-white"
+            )}
+          >
             <Filter className="h-3.5 w-3.5" /> Advance Filters
           </Button>
           <Button onClick={() => setIsAddOpen(true)} className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs">
@@ -112,6 +132,56 @@ export default function ProductsPage() {
               </div>
             </div>
           </div>
+
+          {showFilters && (
+            <div className="flex flex-wrap items-center gap-4 pt-4 mt-4 border-t border-white/10 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Brand</span>
+                <Select value={selectedBrand} onValueChange={(val) => { if (val) setSelectedBrand(val) }}>
+                  <SelectTrigger className="w-[120px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                    <SelectValue placeholder="All Brands" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#001529] border-white/10 text-white">
+                    <SelectItem value="all">All Brands</SelectItem>
+                    {uniqueBrands.map((brand) => (
+                      <SelectItem key={brand} value={brand} className="focus:bg-white/10 focus:text-[#7FD1E3]">
+                        {brand}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Category</span>
+                <Select value={selectedCategory} onValueChange={(val) => { if (val) setSelectedCategory(val) }}>
+                  <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#001529] border-white/10 text-white">
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {uniqueCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat} className="focus:bg-white/10 focus:text-[#7FD1E3]">
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setSelectedBrand("all")
+                  setSelectedCategory("all")
+                  setSearchTerm("")
+                }}
+                className="text-white/40 hover:text-white hover:bg-white/5 text-[9px] font-bold uppercase tracking-widest h-7"
+              >
+                Clear All
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">

@@ -17,7 +17,8 @@ import {
   ArrowUpDown,
   History,
   AlertOctagon,
-  Clock
+  Clock,
+  Filter
 } from "lucide-react"
 import { 
   Tooltip,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Upload } from "lucide-react"
 import { ImportStockModal } from "@/components/inventory/import-stock-modal"
+import { cn } from "@/lib/utils"
 
 type Branch = {
   id: string
@@ -68,6 +70,7 @@ export default function InventoryDashboard() {
   const [loading, setLoading] = useState(true)
   const [sortOrder, setSortOrder] = useState<'oldest' | 'newest'>('oldest')
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -173,13 +176,7 @@ export default function InventoryDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button 
-            onClick={() => setIsImportModalOpen(true)}
-            variant="outline"
-            className="h-10 border-dashed border-slate-300 hover:border-blue-500 hover:text-blue-600 font-bold gap-2 shadow-sm"
-          >
-            <Upload className="h-4 w-4" /> Import Opening Stock
-          </Button>
+          {/* Header remains clean */}
         </div>
       </div>
 
@@ -221,6 +218,27 @@ export default function InventoryDashboard() {
         </Card>
       </div>
 
+      <div className="flex items-center justify-end gap-3">
+        <Button 
+          variant={showFilters ? "default" : "outline"}
+          onClick={() => setShowFilters(!showFilters)}
+          className={cn(
+            "h-10 border-slate-200 border-dashed gap-2 text-xs font-bold transition-all bg-white",
+            showFilters && "bg-[#001529] text-white border-none"
+          )}
+        >
+          <Filter className="h-3.5 w-3.5" /> Advance Filters
+        </Button>
+
+        <Button 
+          onClick={() => setIsImportModalOpen(true)}
+          variant="outline"
+          className="h-10 border-dashed border-slate-300 hover:border-blue-500 hover:text-blue-600 font-bold gap-2 shadow-sm bg-white"
+        >
+          <Upload className="h-4 w-4" /> Import Opening Stock
+        </Button>
+      </div>
+
       <Card className="border-slate-200 shadow-xl overflow-hidden rounded-xl">
         <CardHeader className="bg-[#001529] text-white py-4">
           <div className="flex flex-col space-y-4">
@@ -245,55 +263,69 @@ export default function InventoryDashboard() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-white/10">
-              <div className="relative group flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40 group-focus-within:text-[#7FD1E3] transition-colors" />
-                <Input 
-                  placeholder="Search Brand, Item or SN..." 
-                  className="pl-9 h-9 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/40 rounded-lg text-xs"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+            {showFilters && (
+              <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-white/10 animate-in fade-in slide-in-from-top-2">
+                <div className="relative group flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40 group-focus-within:text-[#7FD1E3] transition-colors" />
+                  <Input 
+                    placeholder="Search Brand, Item or SN..." 
+                    className="pl-9 h-9 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/40 rounded-lg text-xs"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
 
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
-                <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Brand</span>
-                <Select value={selectedBrand} onValueChange={(val) => { if (val) setSelectedBrand(val) }}>
-                  <SelectTrigger className="w-[120px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
-                    <SelectValue>
-                      {selectedBrand === "all" ? "All Brands" : selectedBrand}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#001529] border-white/10 text-white">
-                    <SelectItem value="all">All Brands</SelectItem>
-                    {uniqueBrands.map((brand) => (
-                      <SelectItem key={brand} value={brand!} className="focus:bg-white/10 focus:text-[#7FD1E3]">
-                        {brand}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                  <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Brand</span>
+                  <Select value={selectedBrand} onValueChange={(val) => { if (val) setSelectedBrand(val) }}>
+                    <SelectTrigger className="w-[120px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                      <SelectValue>
+                        {selectedBrand === "all" ? "All Brands" : selectedBrand}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#001529] border-white/10 text-white">
+                      <SelectItem value="all">All Brands</SelectItem>
+                      {uniqueBrands.map((brand) => (
+                        <SelectItem key={brand} value={brand!} className="focus:bg-white/10 focus:text-[#7FD1E3]">
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
-                <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Branch</span>
-                <Select value={selectedBranch} onValueChange={(val) => { if (val) setSelectedBranch(val) }}>
-                  <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
-                    <SelectValue>
-                      {selectedBranch === "all" ? "All Branches" : branches.find(b => b.id === selectedBranch)?.name}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#001529] border-white/10 text-white">
-                    <SelectItem value="all">All Branches</SelectItem>
-                    {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id} className="focus:bg-white/10 focus:text-[#7FD1E3]">
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                  <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Branch</span>
+                  <Select value={selectedBranch} onValueChange={(val) => { if (val) setSelectedBranch(val) }}>
+                    <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                      <SelectValue>
+                        {selectedBranch === "all" ? "All Branches" : branches.find(b => b.id === selectedBranch)?.name}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#001529] border-white/10 text-white">
+                      <SelectItem value="all">All Branches</SelectItem>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={b.id} className="focus:bg-white/10 focus:text-[#7FD1E3]">
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setSelectedBrand("all")
+                    setSelectedBranch("all")
+                    setSearchQuery("")
+                  }}
+                  className="text-white/40 hover:text-white hover:bg-white/5 text-[9px] font-bold uppercase tracking-widest h-7 ml-auto"
+                >
+                  Clear All
+                </Button>
               </div>
-            </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -301,15 +333,15 @@ export default function InventoryDashboard() {
           <Table>
             <TableHeader className="bg-slate-50 border-b">
               <TableRow>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Brand</TableHead>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">EHA Code</TableHead>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Item Name & Specification</TableHead>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Serial Number</TableHead>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider text-center">Category</TableHead>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Branch</TableHead>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider text-center">Status</TableHead>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider">Landed Cost</TableHead>
-                <TableHead className="font-bold text-slate-500 text-[10px] tracking-wider text-right">Aging</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Brand</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA Code</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name & Specification</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Serial Number</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Category</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Branch</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Landed Cost</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Aging</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -334,46 +366,46 @@ export default function InventoryDashboard() {
               ) : filteredInventory.map((item) => {
                 const days = calculateDaysInStock(item.created_at)
                 return (
-                  <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0">
-                    <TableCell className="font-bold text-slate-400 group-hover:text-slate-900 transition-colors">{item.product?.brand || "Generic"}</TableCell>
-                    <TableCell>
-                      <code className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-mono font-bold">
+                  <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs">
+                    <TableCell className="py-2 px-4 font-semibold text-slate-500 tracking-tight group-hover:text-slate-900 transition-colors">{item.product?.brand || "Generic"}</TableCell>
+                    <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                      <code className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-bold">
                         {item.product?.product_code || '---'}
                       </code>
                     </TableCell>
-                    <TableCell className="py-4">
+                    <TableCell className="py-2 px-4 border-r border-slate-100/50">
                       <div className="flex flex-col">
-                        <span className="font-bold text-[#001529] tracking-tight">{item.product?.model_name || "Unknown Item"}</span>
-                        <span className="text-[11px] text-slate-400 font-medium group-hover:text-slate-500 line-clamp-1">{item.product?.description || "No specs available"}</span>
+                        <span className="font-semibold text-[#001529] tracking-tight">{item.product?.model_name || "Unknown Item"}</span>
+                        <span className="text-[10px] text-slate-400 font-medium group-hover:text-slate-500 line-clamp-1">{item.product?.description || "No specs available"}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <code className="bg-slate-100 text-[#001529] px-2 py-0.5 rounded font-mono text-sm font-bold border border-slate-200">
+                    <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                      <code className="bg-slate-100 text-[#001529] px-2 py-0.5 rounded font-mono text-[11px] font-bold border border-slate-200">
                         {item.serial_number}
                       </code>
                     </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold text-[10px]">{item.product?.category || "Misc"}</Badge>
+                    <TableCell className="py-2 px-4 text-center border-r border-slate-100/50">
+                      <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-semibold text-[9px] px-1.5 py-0">{item.product?.category || "Misc"}</Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 font-medium text-slate-600">
+                    <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                      <div className="flex items-center gap-1.5 font-semibold text-slate-600 text-[11px]">
                         <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
                         {branches.find(b => b.id === item.branch_id)?.name || "—"}
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="py-2 px-4 text-center border-r border-slate-100/50">
                       <span className={
                         item.status === "Available"
-                          ? "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-green-50 text-[#5A9E78] border border-green-100 tracking-wider"
+                          ? "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold bg-green-50 text-[#5A9E78] border border-green-100 tracking-wider"
                           : item.status === "In-Transit"
-                          ? "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-[#D4860A] border border-amber-100 tracking-wider"
-                          : "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-red-50 text-[#C0392B] border border-red-100 tracking-wider"
+                          ? "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-[#D4860A] border border-amber-100 tracking-wider"
+                          : "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold bg-red-50 text-[#C0392B] border border-red-100 tracking-wider"
                       }>
                         {item.status}
                       </span>
                     </TableCell>
-                    <TableCell className="font-bold text-[#001529]">₹{(item.landed_cost || item.price).toLocaleString("en-IN")}</TableCell>
-                    <TableCell className="text-right pr-6">
+                    <TableCell className="py-2 px-4 font-bold text-[#001529] text-xs border-r border-slate-100/50">₹{(item.landed_cost || item.price).toLocaleString("en-IN")}</TableCell>
+                    <TableCell className="py-2 px-4 text-right pr-6">
                       <Tooltip>
                         <TooltipTrigger>
                           <div className={`flex items-center justify-end gap-1.5 cursor-default ${getAgingColor(days)}`}>
