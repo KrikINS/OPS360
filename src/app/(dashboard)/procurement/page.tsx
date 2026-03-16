@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { calculateLandedCost } from "@/utils/compliance"
+import { cn } from "@/lib/utils"
 import {
   Truck,
   FileText,
@@ -25,7 +26,10 @@ import {
   PackageSearch,
   Download,
   Building2,
-  LayoutGrid
+  LayoutGrid,
+  Search,
+  Settings2,
+  X
 } from "lucide-react"
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -139,6 +143,8 @@ export default function ProcurementGRNPage() {
   const [isUpdatingTerms, setIsUpdatingTerms] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [branchFilter, setBranchFilter] = useState<string>("all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [creationTerms, setCreationTerms] = useState<string>("")
 
@@ -529,7 +535,10 @@ export default function ProcurementGRNPage() {
   const filteredPOs = activePOs.filter(po => {
     const statusMatch = statusFilter === "all" || po.status === statusFilter
     const branchMatch = branchFilter === "all" || po.branch_id === branchFilter
-    return statusMatch && branchMatch
+    const searchMatch = !searchTerm || 
+      po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      po.vendor?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    return statusMatch && branchMatch && searchMatch
   })
 
   if (loading) {
@@ -546,20 +555,96 @@ export default function ProcurementGRNPage() {
           </h1>
           <p className="text-muted-foreground mt-1">Handle Purchase Orders (PO) and Goods Receipt Notes (GRN).</p>
         </div>
-        <Button
-          onClick={() => {
-            if (isCreatingPO) {
-              resetForm()
-            } else {
-              setIsCreatingPO(true)
-              setSelectedPO(null)
-            }
-          }}
-          className="bg-[#001529] hover:bg-[#002a52] text-white gap-2 shadow-lg"
-        >
-          {isCreatingPO ? "View PO Registry" : <><Plus className="h-4 w-4" /> Create New PO</>}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "gap-2 border-slate-200 h-10 shadow-sm transition-all",
+              showFilters && "bg-slate-100 border-slate-300"
+            )}
+          >
+            <Settings2 className="h-4 w-4" />
+            {showFilters ? "Hide Filters" : "Advance Filters"}
+          </Button>
+
+          <Button
+            onClick={() => {
+              if (isCreatingPO) {
+                resetForm()
+              } else {
+                setIsCreatingPO(true)
+                setSelectedPO(null)
+              }
+            }}
+            className="bg-[#001529] hover:bg-[#002a52] text-white gap-2 shadow-lg h-10"
+          >
+            {isCreatingPO ? "View PO Registry" : <><Plus className="h-4 w-4" /> Create New PO</>}
+          </Button>
+        </div>
       </div>
+
+      {showFilters && !isCreatingPO && !selectedPO && (
+        <div className="bg-white border p-4 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-300 flex flex-wrap items-center gap-4 border-slate-100">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search PO Number or Vendor..."
+              className="pl-9 h-9 border-slate-200 focus:ring-blue-500 bg-slate-50/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Ship To</span>
+              <Select value={branchFilter} onValueChange={(v) => setBranchFilter(v || "all")}>
+                <SelectTrigger className="w-[180px] h-9 text-xs border-slate-200 bg-white">
+                  <SelectValue placeholder="All Branches" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Status</span>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || "all")}>
+              <SelectTrigger className="w-[150px] h-9 text-xs border-slate-200 bg-white">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="partially_received">Partial</SelectItem>
+                <SelectItem value="received">Received</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(searchTerm || statusFilter !== "all" || branchFilter !== "all") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("")
+                setStatusFilter("all")
+                setBranchFilter("all")
+              }}
+              className="h-9 px-3 text-red-500 hover:text-red-600 hover:bg-red-50 gap-2 border border-transparent hover:border-red-100"
+            >
+              <X className="h-3 w-3" />
+              Clear All
+            </Button>
+          )}
+        </div>
+      )}
 
       {isCreatingPO ? (
         <Card className="shadow-md border-t-4 border-t-[#001529]">
@@ -891,49 +976,22 @@ export default function ProcurementGRNPage() {
                       Purchase Order Registry
                     </CardTitle>
                     <div className="flex gap-4 items-center">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500 whitespace-nowrap">Ship To:</span>
-                        <Select value={branchFilter} onValueChange={(v) => setBranchFilter(v || "all")}>
-                          <SelectTrigger className="w-[180px] h-8 text-xs">
-                            <SelectValue placeholder="All Branches" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Branches</SelectItem>
-                            {branches.map(b => (
-                              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Label className="text-xs text-slate-500">Filter Status:</Label>
-                        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || "all")}>
-                          <SelectTrigger className="w-[150px] h-8 text-xs">
-                            <SelectValue placeholder="All Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                            <SelectItem value="approved">Approved</SelectItem>
-                            <SelectItem value="received">Received</SelectItem>
-                            <SelectItem value="partially_received">Partially Received</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-slate-400 border-slate-200">
+                        Corporate Archive
+                      </Badge>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader className="bg-slate-50">
+                    <TableHeader className="bg-slate-50 border-b">
                       <TableRow>
-                        <TableHead className="font-bold">PO Number</TableHead>
-                        <TableHead>Vendor</TableHead>
-                        <TableHead>Ship To</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Total Amount</TableHead>
-                        <TableHead className="text-left font-bold text-slate-900 border-b">Actions</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Ship To</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -941,28 +999,28 @@ export default function ProcurementGRNPage() {
                         .map((po) => (
                           <TableRow
                             key={po.id}
-                            className="hover:bg-slate-50/50 transition-colors"
+                            className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs"
                           >
                             <TableCell
-                              className="font-bold text-[#001529] font-mono cursor-pointer hover:underline"
+                              className="py-2 px-4 font-bold text-[#001529] font-mono cursor-pointer hover:underline border-r border-slate-100/50"
                               onClick={() => setViewingPO(po)}
                             >
                               {po.po_number}
                             </TableCell>
-                            <TableCell className="font-medium">{po.vendor?.name}</TableCell>
-                            <TableCell className="text-slate-600">{po.branch?.name || 'N/A'}</TableCell>
-                            <TableCell>
+                            <TableCell className="py-2 px-4 font-semibold text-slate-600 border-r border-slate-100/50">{po.vendor?.name}</TableCell>
+                            <TableCell className="py-2 px-4 text-slate-500 border-r border-slate-100/50">{po.branch?.name || '---'}</TableCell>
+                            <TableCell className="py-2 px-4 border-r border-slate-100/50">
                               <Badge className={
-                                po.status === 'received' ? "bg-green-100 text-green-700 hover:bg-green-200" :
-                                  po.status === 'approved' ? "bg-blue-100 text-blue-700 hover:bg-blue-200" :
-                                    po.status === 'cancelled' ? "bg-red-100 text-red-700 hover:bg-red-200" :
-                                      po.status === 'partially_received' ? "bg-amber-100 text-amber-700 hover:bg-amber-200" :
-                                        "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                po.status === 'received' ? "bg-green-100 text-green-700 hover:bg-green-200 text-[9px] px-1.5 py-0 font-bold" :
+                                  po.status === 'approved' ? "bg-blue-100 text-blue-700 hover:bg-blue-200 text-[9px] px-1.5 py-0 font-bold" :
+                                    po.status === 'cancelled' ? "bg-red-100 text-red-700 hover:bg-red-200 text-[9px] px-1.5 py-0 font-bold" :
+                                      po.status === 'partially_received' ? "bg-amber-100 text-amber-700 hover:bg-amber-200 text-[9px] px-1.5 py-0 font-bold" :
+                                        "bg-slate-100 text-slate-700 hover:bg-slate-200 text-[9px] px-1.5 py-0 font-bold"
                               }>
                                 {po.status === 'partially_received' ? 'PARTIAL' : po.status.toUpperCase()}
                               </Badge>
                             </TableCell>
-                            <TableCell className="font-semibold text-slate-700">₹{po.total_amount.toLocaleString()}</TableCell>
+                            <TableCell className="py-2 px-4 font-bold text-[#001529] border-r border-slate-100/50">₹{po.total_amount.toLocaleString()}</TableCell>
                             <TableCell className="text-left space-x-1 py-4">
                               <div className="flex items-center gap-2">
                                 {po.status === 'pending_approval' && (
@@ -1092,13 +1150,13 @@ export default function ProcurementGRNPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader className="bg-slate-50">
+                    <TableHeader className="bg-slate-50 border-b">
                       <TableRow>
-                        <TableHead className="font-bold">PO Number</TableHead>
-                        <TableHead>Delayed By</TableHead>
-                        <TableHead>Vendor</TableHead>
-                        <TableHead className="w-[300px]">Item Progress</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Delayed By</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-[300px]">Item Progress</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1107,12 +1165,12 @@ export default function ProcurementGRNPage() {
                         .map((po) => {
                           const daysOutstanding = Math.floor((new Date().getTime() - new Date(po.created_at).getTime()) / (1000 * 3600 * 24));
                           return (
-                            <TableRow key={po.id} className="hover:bg-slate-50/50 transition-colors group">
-                              <TableCell>
+                            <TableRow key={po.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs text-xs">
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50">
                                 <div className="font-bold text-[#001529] font-mono">{po.po_number}</div>
                                 <div className="text-[10px] text-slate-400 font-medium">{po.branch?.name}</div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50">
                                 <div className="flex items-center gap-1.5">
                                   <div className={`h-2 w-2 rounded-full ${daysOutstanding > 5 ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
                                   <span className={`font-bold ${daysOutstanding > 5 ? 'text-red-600' : 'text-slate-700'}`}>
@@ -1120,7 +1178,7 @@ export default function ProcurementGRNPage() {
                                   </span>
                                 </div>
                               </TableCell>
-                              <TableCell className="font-medium text-slate-600">
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-semibold text-slate-600">
                                 {po.vendor?.name}
                               </TableCell>
                               <TableCell className="py-4">
@@ -1191,15 +1249,15 @@ export default function ProcurementGRNPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader className="bg-slate-50">
+                    <TableHeader className="bg-slate-50 border-b">
                       <TableRow>
-                        <TableHead className="font-bold">PO Reference</TableHead>
-                        <TableHead>Vendor</TableHead>
-                        <TableHead>1. Agreement (PO)</TableHead>
-                        <TableHead>2. Reality (GRN)</TableHead>
-                        <TableHead>3. Demand (Bill)</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right px-8">Actions</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">1. Agreement (PO)</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">2. Reality (GRN)</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">3. Demand (Bill)</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1214,12 +1272,12 @@ export default function ProcurementGRNPage() {
                           const hasBill = billAmount > 0;
 
                           return (
-                            <TableRow key={po.id} className="hover:bg-slate-50/50 transition-colors">
-                              <TableCell className="font-bold font-mono text-[#001529]">{po.po_number}</TableCell>
-                              <TableCell className="text-sm font-medium">{po.vendor?.name}</TableCell>
-                              <TableCell className="font-semibold text-slate-600">₹{poTotal.toLocaleString()}</TableCell>
-                              <TableCell className="font-semibold text-blue-600">₹{grnTotal.toLocaleString()}</TableCell>
-                              <TableCell className="font-semibold text-amber-600">
+                            <TableRow key={po.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs">
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold font-mono text-[#001529]">{po.po_number}</TableCell>
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-semibold text-slate-600">{po.vendor?.name}</TableCell>
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-slate-500">₹{poTotal.toLocaleString()}</TableCell>
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-blue-600">₹{grnTotal.toLocaleString()}</TableCell>
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-amber-600">
                                 {hasBill ? `₹${billAmount.toLocaleString()}` : "Awaiting Bill"}
                               </TableCell>
                               <TableCell className="text-center">
