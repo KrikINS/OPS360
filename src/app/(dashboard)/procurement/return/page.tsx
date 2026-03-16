@@ -5,19 +5,20 @@ import { createClient } from "@/utils/supabase/client"
 import { 
   Search, 
   RotateCcw, 
-  Package, 
-  FileText, 
-  Truck, 
-  Calendar, 
+  ArrowLeft,
+  Settings2,
   AlertCircle,
-  ShieldCheck,
-  ArrowLeft
+  Package,
+  Truck,
+  FileText,
+  Calendar,
+  ShieldCheck
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 
 export default function PurchaseReturn() {
@@ -27,6 +28,7 @@ export default function PurchaseReturn() {
   const [error, setError] = useState<string | null>(null)
   const [returnLoading, setReturnLoading] = useState(false)
   const [reason, setReason] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const supabase = createClient()
 
   async function handleSearch() {
@@ -98,47 +100,56 @@ export default function PurchaseReturn() {
   }
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6 max-w-5xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Link href="/procurement" className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h2 className="text-3xl font-black tracking-tighter text-[#001529] uppercase">Purchase Returns</h2>
-          <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
-            Inventory-Vendor Reversal & Debit Note Issuance
-          </p>
-        </div>
-      </div>
+    <div className="flex-1 space-y-8 mt-0">
+      <Card className="shadow-md border-slate-200 border-t-0 rounded-t-none overflow-hidden py-0">
+        <CardHeader className="bg-[#001529] text-white pt-4 pb-2 px-6 border-b-0 space-y-0 rounded-t-none">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <CardTitle className="text-lg flex items-center gap-2 text-white">
+              <RotateCcw className="h-5 w-5 text-orange-400" />
+              Stock Return Portal
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(
+                  "gap-2 border-white/20 h-8 shadow-sm transition-all text-xs bg-white/5 text-white hover:bg-orange-400 hover:text-[#001529] hover:border-orange-400 font-bold group",
+                  showFilters && "bg-orange-400 text-[#001529] border-orange-400"
+                )}
+              >
+                <Settings2 className={cn("h-3.5 w-3.5 transition-colors", showFilters ? "text-[#001529]" : "text-white group-hover:text-[#001529]")} />
+                {showFilters ? "Hide Search" : "Advance Probe"}
+              </Button>
 
-      <Card className="border-2 border-slate-100 shadow-xl overflow-hidden rounded-2xl">
-        <CardHeader className="bg-[#001529] text-white py-10">
-          <CardTitle className="flex items-center gap-3 text-2xl font-black tracking-tighter uppercase italic">
-            <RotateCcw className="h-8 w-8 text-[#7FD1E3]" />
-            Stock Return Portal
-          </CardTitle>
-          <CardDescription className="text-[#7FD1E3] font-bold uppercase text-[11px] tracking-[0.2em] opacity-80">
-            Scanning units back to vendor pedigree
-          </CardDescription>
-          <div className="pt-6">
-            <div className="relative max-w-2xl">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input 
-                placeholder="PROBE SERIAL NUMBER (e.g. WH-XXXXX)..." 
-                className="pl-12 py-7 bg-white/10 border-white/20 text-white placeholder:text-white/40 font-mono text-lg rounded-xl focus-visible:ring-[#7FD1E3]"
-                value={serial}
-                onChange={(e) => setSerial(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
+              <div className="w-px h-6 bg-white/10 mx-2 hidden md:block" />
+
+              <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-white/40 border-white/10">
+                Reverse Logistics
+              </Badge>
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="flex flex-wrap items-center gap-4 pt-4 mt-4 border-t border-white/10 animate-in fade-in slide-in-from-top-2">
+              <div className="relative flex-1 min-w-[300px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                <Input 
+                  placeholder="PROBE SERIAL NUMBER (e.g. WH-XXXXX)..." 
+                  className="pl-9 h-10 bg-white/10 border-white/20 text-white placeholder:text-white/40 font-mono text-xs rounded-lg focus-visible:ring-[#7FD1E3]"
+                  value={serial}
+                  onChange={(e) => setSerial(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                />
+              </div>
               <Button 
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#7FD1E3] text-[#001529] font-black hover:bg-[#68C0D1]"
+                className="bg-[#7FD1E3] text-[#001529] font-black hover:bg-[#68C0D1] h-10 text-xs px-6"
                 onClick={handleSearch}
                 disabled={loading}
               >
                 {loading ? "SEARCHING..." : "PULL PEDIGREE"}
               </Button>
             </div>
-          </div>
+          )}
         </CardHeader>
 
         {error && (

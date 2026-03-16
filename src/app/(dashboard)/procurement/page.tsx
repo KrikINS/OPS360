@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { numberToWords } from "@/lib/number-to-words"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -23,16 +24,16 @@ import {
   Clock,
   RotateCcw,
   AlertOctagon,
-  PackageSearch,
   Download,
+  PackageSearch,
   Building2,
   LayoutGrid,
   Search,
   Settings2,
   X
 } from "lucide-react"
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+import { useReactToPrint } from 'react-to-print'
+import { useRef } from 'react'
 import { POPrintTemplate } from "@/components/procurement/POPrintTemplate"
 import {
   Select,
@@ -44,6 +45,14 @@ import {
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/utils/supabase/client"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown } from "lucide-react"
 import ProcessReturns from "./return/page"
 import DiscrepancyReportPage from "../discrepancy-report/page"
 
@@ -67,20 +76,26 @@ type Product = {
 }
 
 type POItem = {
+  id: string
   product_id: string
   quantity: number
   unit_price: number
   tax_rate: number
   total_item_cost: number
   received_quantity: number
-  model_name: string
-  hsn_code: string
   override_reason?: string
+  product?: {
+    model_name: string
+    product_code: string
+    hsn_code: string
+  }
 }
 
 type Branch = {
   id: string
   name: string
+  full_address?: string
+  gstin?: string
 }
 
 type PurchaseOrder = {
@@ -145,90 +160,36 @@ export default function ProcurementGRNPage() {
   const [branchFilter, setBranchFilter] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [showFilters, setShowFilters] = useState(false)
+  const [showPendingFilters, setShowPendingFilters] = useState(false)
+  const [showAuditFilters, setShowAuditFilters] = useState(false)
+  
+  const [pendingSearch, setPendingSearch] = useState("")
+  const [pendingBranchFilter, setPendingBranchFilter] = useState("all")
+  const [auditSearch, setAuditSearch] = useState("")
+  const [auditMatchFilter, setAuditMatchFilter] = useState("all")
+
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [creationTerms, setCreationTerms] = useState<string>("")
+  const printRef = useRef<HTMLDivElement>(null)
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `PO_${viewingPO?.po_number || 'Document'}`,
+    onAfterPrint: () => setIsDownloading(null),
+    onBeforePrint: async () => {
+      // Small delay to ensure render
+      await new Promise(resolve => setTimeout(resolve, 100));
+    },
+  })
 
   const handleDownloadPDF = async (po: PurchaseOrder) => {
     setIsDownloading(po.id);
     try {
-      // Find the specific vendor for this PO
-      const vendor = vendors.find(v => v.id === po.vendor_id);
-      
-      // Ensure the template is rendered. We add a tiny delay to allow React to mount the component in the hidden container
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const element = document.getElementById('po-print-container');
-      if (!element) throw new Error('Print container not found');
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-          const el = clonedDoc.getElementById('po-print-template');
-          if (el) {
-            // Force light color scheme to avoid system-inherited dark mode variables
-            el.style.colorScheme = 'light';
-            
-            // Aggressively clear any modern color variables that might exist in the root or container
-            // and specifically look for 'lab' or 'oklch' in the computed style and replace them
-            const items = clonedDoc.querySelectorAll('*');
-            items.forEach((item) => {
-              const htmlItem = item as HTMLElement;
-              const style = htmlItem.style;
-              if (style) {
-                // Remove all CSS variables as they often contain modern colors in Tailwind v4
-                for (let i = 0; i < style.length; i++) {
-                  const prop = style[i];
-                  if (prop.startsWith('--')) {
-                    htmlItem.style.removeProperty(prop);
-                  }
-                }
-              }
-            });
-
-            // Handle global style sheets that might contain lab()
-            for (let i = 0; i < clonedDoc.styleSheets.length; i++) {
-              try {
-                const sheet = clonedDoc.styleSheets[i];
-                const rules = sheet.cssRules || sheet.rules;
-                if (rules) {
-                  for (let j = rules.length - 1; j >= 0; j--) {
-                    if (rules[j].cssText.includes('lab(') || rules[j].cssText.includes('oklch(')) {
-                      sheet.deleteRule(j);
-                    }
-                  }
-                }
-              } catch {
-                // Ignore cross-origin stylesheet errors
-              }
-            }
-          }
-        }
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      if (!imgData || imgData === 'data:,') throw new Error('Failed to generate image data');
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      // Explicitly specify format as 'PNG'
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-      pdf.save(`PO_${po.po_number}_${vendor?.name.replace(/\s+/g, '_') || 'Vendor'}.pdf`);
+      // Trigger the print logic
+      handlePrint();
     } catch (error) {
       console.error('PDF Generation Error:', error);
       alert('Could not generate PDF. Please try again.');
-    } finally {
       setIsDownloading(null);
     }
   };
@@ -312,7 +273,7 @@ export default function ProcurementGRNPage() {
         setActivePOs(poData)
 
         // 5. Fetch Branches
-        const { data: branchData } = await supabase.from('branches').select('id, name').order('name')
+        const { data: branchData } = await supabase.from('branches').select('id, name, full_address, gstin').order('name')
         if (branchData) setBranches(branchData)
       } catch (err) {
         console.error("Failed to load data", err)
@@ -854,56 +815,56 @@ export default function ProcurementGRNPage() {
           </CardFooter>
         </Card>
       ) : (
-        <div className="grid gap-6">
-          <Tabs defaultValue="all" className="w-full">
-            <div className="flex items-center justify-between mb-4">
-              <TabsList className="bg-slate-100/80 border border-slate-200/60 p-1.5 rounded-2xl backdrop-blur-sm shadow-inner gap-1 h-auto flex-wrap md:flex-nowrap">
-                <TabsTrigger 
-                  value="all" 
-                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group"
-                >
-                  <FileText className="h-3.5 w-3.5 group-data-[state=active]:text-[#7FD1E3] transition-colors" />
-                  PO Registry
-                </TabsTrigger>
+      /* Registry with Tabs Integration */
+      <Tabs defaultValue="all" className="w-full gap-0">
+      <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1">
+        <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
+          <TabsTrigger 
+            value="all" 
+            className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
+          >
+            <FileText className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
+            PO Registry
+          </TabsTrigger>
                 <TabsTrigger 
                   value="pending" 
-                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group relative"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group relative border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
                 >
-                  <Clock className="h-3.5 w-3.5 group-data-[state=active]:text-amber-400 transition-colors" />
+                  <Clock className="h-3.5 w-3.5 group-data-active:text-amber-400 transition-colors" />
                   Pending Fulfilment
                   {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[9px] font-black h-4 w-4 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse">
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[8px] font-black h-3.5 w-3.5 rounded-full flex items-center justify-center border border-white shadow-sm">
                       {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length}
                     </span>
                   )}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="reconciliation" 
-                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
                 >
-                  <Scale className="h-3.5 w-3.5 group-data-[state=active]:text-[#7FD1E3] transition-colors" />
+                  <Scale className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
                   3-Way Match Audit
                 </TabsTrigger>
                 <TabsTrigger 
                   value="returns" 
-                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
                 >
-                  <RotateCcw className="h-3.5 w-3.5 group-data-[state=active]:text-orange-400 transition-colors" />
+                  <RotateCcw className="h-3.5 w-3.5 group-data-active:text-orange-400 transition-colors" />
                   Purchase Returns
                 </TabsTrigger>
                 <TabsTrigger 
                   value="discrepancy" 
-                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 border border-slate-200"
                 >
-                  <ShieldAlert className="h-3.5 w-3.5 group-data-[state=active]:text-red-400 transition-colors" />
+                  <ShieldAlert className="h-3.5 w-3.5 group-data-active:text-red-400 transition-colors" />
                   Discrepancy Report
                 </TabsTrigger>
-              </TabsList>
-            </div>
+        </TabsList>
+      </div>
 
-            <TabsContent value="all" className="animate-in slide-in-from-left-2 duration-300">
-              <Card className="shadow-sm border-slate-200">
-                <CardHeader className="bg-[#001529] text-white py-4 px-6 border-b-0 space-y-0">
+        <TabsContent value="all" className="animate-in slide-in-from-left-2 duration-300 mt-0">
+          <Card className="shadow-md border-slate-200 border-t-0 rounded-t-none py-0">
+            <CardHeader className="bg-[#001529] text-white pt-4 pb-2 px-6 border-b-0 space-y-0 rounded-t-none">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <CardTitle className="text-lg flex items-center gap-2 text-white">
                       <FileText className="h-5 w-5 text-white" />
@@ -1005,7 +966,6 @@ export default function ProcurementGRNPage() {
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  {/* Local Filter Bar removed as it is now part of the navy CardHeader */}
                   <Table>
                     <TableHeader className="bg-slate-50 border-b">
                       <TableRow>
@@ -1044,100 +1004,97 @@ export default function ProcurementGRNPage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="py-2 px-4 font-bold text-[#001529] border-r border-slate-100/50">₹{po.total_amount.toLocaleString()}</TableCell>
-                            <TableCell className="text-left space-x-1 py-4">
+                            <TableCell className="text-left py-4">
                               <div className="flex items-center gap-2">
-                                {po.status === 'pending_approval' && (
-                                  <>
-                                    {userRole === 'admin' && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger render={
+                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95" />
+                                  }>
+                                    Actions <ChevronDown className="h-3 w-3" />
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-56">
+                                    {po.status === 'pending_approval' && (
                                       <>
-                                        <Button
-                                          size="sm"
-                                          onClick={() => handleApprovePO(po.id)}
-                                          className="bg-green-600 hover:bg-green-700 h-8 shadow-sm px-3 gap-2"
-                                          disabled={approvingId === po.id}
+                                        {userRole === 'admin' && (
+                                          <>
+                                            <DropdownMenuItem 
+                                              onClick={() => handleApprovePO(po.id)}
+                                              className="text-green-600 focus:text-green-600 cursor-pointer font-medium"
+                                              disabled={approvingId === po.id}
+                                            >
+                                              <CheckCircle2 className="h-4 w-4 mr-2" /> Approve PO
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem 
+                                              onClick={() => {
+                                                setRevisionPO(po);
+                                                const vendor = vendors.find(v => v.id === po.vendor_id);
+                                                if (vendor) {
+                                                  setSelectedVendor(vendor);
+                                                  setPoTerms({ gstin: vendor.gstin || "", terms: vendor.payment_terms || "Immediate" });
+                                                }
+                                                setSelectedBranch(po.branch_id);
+                                                setPoItems(po.items.map(item => ({
+                                                  product_id: item.product_id,
+                                                  model_name: item.product.model_name,
+                                                  hsn_code: item.product.hsn_code,
+                                                  quantity: item.quantity,
+                                                  unit_price: item.unit_price,
+                                                  received_quantity: item.received_quantity,
+                                                  tax_rate: item.tax_rate,
+                                                  total_item_cost: item.total_item_cost,
+                                                  override_reason: item.override_reason
+                                                })));
+                                                setIsCreatingPO(true);
+                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                              }}
+                                              className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                            >
+                                              <RotateCcw className="h-4 w-4 mr-2" /> Revise & Approve
+                                            </DropdownMenuItem>
+                                          </>
+                                        )}
+                                        <DropdownMenuItem 
+                                          onClick={() => { setCancelModalId(po.id); setCancelReason(""); }}
+                                          className="text-red-500 focus:text-red-500 cursor-pointer font-medium"
+                                          disabled={cancellingId === po.id}
                                         >
-                                          {approvingId === po.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                                          <span className="text-xs font-semibold">Approve</span>
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => {
-                                            setRevisionPO(po);
-                                            const vendor = vendors.find(v => v.id === po.vendor_id);
-                                            if (vendor) {
-                                              setSelectedVendor(vendor);
-                                              setPoTerms({ gstin: vendor.gstin || "", terms: vendor.payment_terms || "Immediate" });
-                                            }
-                                            setSelectedBranch(po.branch_id);
-                                            setPoItems(po.items.map(item => ({
-                                              product_id: item.product_id,
-                                              model_name: item.product.model_name,
-                                              hsn_code: item.product.hsn_code,
-                                              quantity: item.quantity,
-                                              unit_price: item.unit_price,
-                                              received_quantity: item.received_quantity,
-                                              tax_rate: item.tax_rate,
-                                              total_item_cost: item.total_item_cost,
-                                              override_reason: item.override_reason
-                                            })));
-                                            setIsCreatingPO(true);
-                                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                                          }}
-                                          className="h-8 shadow-sm px-2 border-blue-200 text-blue-700 hover:bg-blue-50"
-                                          title="Revise & Approve"
-                                        >
-                                          <RotateCcw className="h-3 w-3 mr-1" />
-                                          Revise
-                                        </Button>
+                                          <AlertOctagon className="h-4 w-4 mr-2" /> Cancel PO
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
                                       </>
                                     )}
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => { setCancelModalId(po.id); setCancelReason(""); }}
-                                      className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 px-3 gap-2 border border-red-100"
-                                      disabled={cancellingId === po.id}
-                                    >
-                                      {cancellingId === po.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertOctagon className="h-3 w-3" />}
-                                      <span className="text-xs font-semibold">Cancel</span>
-                                    </Button>
-                                  </>
-                                )}
-                                {(po.status === 'approved' || po.status === 'partially_received') && (
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    className="bg-[#001529] h-8 shadow-sm px-3 gap-2"
-                                    onClick={(e) => { e.stopPropagation(); setSelectedPO(po); }}
-                                  >
-                                    <Truck className="h-3 w-3" />
-                                    <span className="text-xs font-semibold whitespace-nowrap">Process GRN</span>
-                                  </Button>
-                                )}
-                                {(po.status === 'received' || po.status === 'partially_received' || po.status === 'approved') && (
-                                  <div
-                                    className="relative inline-block group tooltip-container"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Input
-                                      type="file"
-                                      accept=".pdf,.jpg,.jpeg,.png"
-                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                      disabled={isUploading === po.id}
-                                      onChange={(e) => handleFileUpload(e, po.id)}
-                                    />
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-slate-600 hover:text-blue-600 hover:bg-blue-50 gap-2 border border-blue-100"
-                                      disabled={isUploading === po.id}
-                                    >
-                                      {isUploading === po.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileUp className="h-3 w-3" />}
-                                      <span className="text-xs font-semibold">{po.invoice_url ? "Update Bill" : "Upload Bill"}</span>
-                                    </Button>
-                                  </div>
-                                )}
+
+                                    {(po.status === 'approved' || po.status === 'partially_received') && (
+                                      <DropdownMenuItem 
+                                        onClick={(e) => { e.stopPropagation(); setSelectedPO(po); }}
+                                        className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
+                                      >
+                                        <Truck className="h-4 w-4 mr-2" /> Process GRN
+                                      </DropdownMenuItem>
+                                    )}
+
+                                    {(po.status === 'received' || po.status === 'partially_received' || po.status === 'approved') && (
+                                      <DropdownMenuItem className="p-0">
+                                        <label className="flex items-center w-full px-2 py-1.5 cursor-pointer text-slate-600 focus:text-blue-600 font-medium h-full">
+                                          <input
+                                            type="file"
+                                            accept=".pdf,.jpg,.jpeg,.png"
+                                            className="hidden"
+                                            disabled={isUploading === po.id}
+                                            onChange={(e) => handleFileUpload(e, po.id)}
+                                          />
+                                          {isUploading === po.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileUp className="h-4 w-4 mr-2" />}
+                                          <span>{po.invoice_url ? "Update Bill" : "Upload Bill"}</span>
+                                        </label>
+                                      </DropdownMenuItem>
+                                    )}
+                                    
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
+                                      <FileText className="h-4 w-4 mr-2" /> View Audit Trail
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1158,18 +1115,78 @@ export default function ProcurementGRNPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="pending" className="animate-in slide-in-from-right-2 duration-300">
-              <Card className="shadow-sm border-slate-200 overflow-hidden">
-                <CardHeader className="bg-[#001529] text-white py-4 px-6 border-b-0 space-y-0">
-                  <div className="flex justify-between items-center">
+        <TabsContent value="pending" className="animate-in slide-in-from-right-2 duration-300 mt-0">
+          <Card className="shadow-md border-slate-200 border-t-0 rounded-t-none overflow-hidden text-xs py-0">
+            <CardHeader className="bg-[#001529] text-white pt-4 pb-2 px-6 border-b-0 space-y-0 rounded-t-none">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <CardTitle className="text-lg flex items-center gap-2 text-white">
                       <Clock className="h-5 w-5 text-amber-400" />
-                      Pending Fulfilment
+                      Pending Fulfilment Registry
                     </CardTitle>
-                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-white/40 border-white/10">
-                      Unfulfilled Stock
-                    </Badge>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowPendingFilters(!showPendingFilters)}
+                        className={cn(
+                          "gap-2 border-white/20 h-8 shadow-sm transition-all text-xs bg-white/5 text-white hover:bg-amber-400 hover:text-[#001529] hover:border-amber-400 font-bold group",
+                          showPendingFilters && "bg-amber-400 text-[#001529] border-amber-400"
+                        )}
+                      >
+                        <Settings2 className={cn("h-3.5 w-3.5 transition-colors", showPendingFilters ? "text-[#001529]" : "text-white group-hover:text-[#001529]")} />
+                        {showPendingFilters ? "Hide Filters" : "Advance Filters"}
+                      </Button>
+
+                      <div className="w-px h-6 bg-white/10 mx-2 hidden md:block" />
+
+                      <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-wider text-white/40 border-white/10">
+                        Unfulfilled Stock
+                      </Badge>
+                    </div>
                   </div>
+
+                  {showPendingFilters && (
+                    <div className="flex flex-wrap items-center gap-4 pt-4 mt-4 border-t border-white/10 animate-in fade-in slide-in-from-top-2">
+                      <div className="relative flex-1 min-w-[240px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                        <Input
+                          placeholder="Search PO Number or Vendor..."
+                          className="pl-9 h-8 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/30 rounded-lg text-xs"
+                          value={pendingSearch}
+                          onChange={(e) => setPendingSearch(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                        <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Branch</span>
+                        <Select value={pendingBranchFilter} onValueChange={(v) => setPendingBranchFilter(v || "all")}>
+                          <SelectTrigger className="w-[120px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                            <SelectValue placeholder="All Branches" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#001529] border-white/10 text-white">
+                            <SelectItem value="all">All Branches</SelectItem>
+                            {branches.map(b => (
+                              <SelectItem key={b.id} value={b.id} className="focus:bg-white/10 focus:text-[#7FD1E3]">{b.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {(pendingSearch || pendingBranchFilter !== "all") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setPendingSearch("")
+                            setPendingBranchFilter("all")
+                          }}
+                          className="h-7 text-white/40 hover:text-white hover:bg-white/5 text-[9px] font-bold uppercase tracking-widest ml-auto gap-2"
+                        >
+                          <X className="h-3 w-3" />
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
@@ -1184,7 +1201,14 @@ export default function ProcurementGRNPage() {
                     </TableHeader>
                     <TableBody>
                       {activePOs
-                        .filter(p => p.status === 'approved' || p.status === 'partially_received')
+                        .filter(p => (p.status === 'approved' || p.status === 'partially_received'))
+                        .filter(p => {
+                          const branchMatch = pendingBranchFilter === "all" || p.branch_id === pendingBranchFilter;
+                          const searchMatch = !pendingSearch || 
+                            p.po_number.toLowerCase().includes(pendingSearch.toLowerCase()) || 
+                            p.vendor?.name?.toLowerCase().includes(pendingSearch.toLowerCase());
+                          return branchMatch && searchMatch;
+                        })
                         .map((po) => {
                           const daysOutstanding = Math.floor((new Date().getTime() - new Date(po.created_at).getTime()) / (1000 * 3600 * 24));
                           return (
@@ -1231,9 +1255,24 @@ export default function ProcurementGRNPage() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-right">
-                                <Button size="sm" variant="default" className="bg-[#001529] h-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setSelectedPO(po)}>
-                                  Process GRN
-                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger render={
+                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95 opacity-0 group-hover:opacity-100" />
+                                  }>
+                                    Actions <ChevronDown className="h-3 w-3" />
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem 
+                                      onClick={() => setSelectedPO(po)}
+                                      className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
+                                    >
+                                      <Truck className="h-4 w-4 mr-2" /> Process GRN
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
+                                      <FileText className="h-4 w-4 mr-2" /> View Audit Trail
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </TableCell>
                             </TableRow>
                           )
@@ -1258,10 +1297,10 @@ export default function ProcurementGRNPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="reconciliation" className="animate-in slide-in-from-right-2 duration-300">
-              <Card className="shadow-sm border-slate-200">
-                <CardHeader className="bg-[#001529] text-white py-4 px-6 border-b-0 space-y-0">
-                  <div className="flex justify-between items-center">
+        <TabsContent value="reconciliation" className="animate-in slide-in-from-right-2 duration-300 mt-0">
+          <Card className="shadow-md border-slate-200 border-t-0 rounded-t-none py-0">
+            <CardHeader className="bg-[#001529] text-white pt-4 pb-2 px-6 border-b-0 space-y-0 rounded-t-none">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <CardTitle className="text-lg flex items-center gap-2 text-white">
                         <Scale className="h-5 w-5 text-[#7FD1E3]" />
@@ -1271,7 +1310,70 @@ export default function ProcurementGRNPage() {
                         Auditing Purchase Agreements vs. Receiving Reality vs. Vendor Demand
                       </CardDescription>
                     </div>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAuditFilters(!showAuditFilters)}
+                        className={cn(
+                          "gap-2 border-white/20 h-8 shadow-sm transition-all text-xs bg-white/5 text-white hover:bg-[#7FD1E3] hover:text-[#001529] hover:border-[#7FD1E3] font-bold group",
+                          showAuditFilters && "bg-[#7FD1E3] text-[#001529] border-[#7FD1E3]"
+                        )}
+                      >
+                        <Settings2 className={cn("h-3.5 w-3.5 transition-colors", showAuditFilters ? "text-[#001529]" : "text-white group-hover:text-[#001529]")} />
+                        {showAuditFilters ? "Hide Filters" : "Advance Filters"}
+                      </Button>
+
+                      <div className="w-px h-6 bg-white/10 mx-2 hidden md:block" />
+
+                      <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-wider text-white/40 border-white/10">
+                        Oversight Engine
+                      </Badge>
+                    </div>
                   </div>
+
+                  {showAuditFilters && (
+                    <div className="flex flex-wrap items-center gap-4 pt-4 mt-4 border-t border-white/10 animate-in fade-in slide-in-from-top-2">
+                      <div className="relative flex-1 min-w-[240px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                        <Input
+                          placeholder="Search PO Reference..."
+                          className="pl-9 h-8 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/30 rounded-lg text-xs"
+                          value={auditSearch}
+                          onChange={(e) => setAuditSearch(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                        <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Match Status</span>
+                        <Select value={auditMatchFilter} onValueChange={(v) => setAuditMatchFilter(v || "all")}>
+                          <SelectTrigger className="w-[120px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                            <SelectValue placeholder="All Results" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#001529] border-white/10 text-white">
+                            <SelectItem value="all">All Results</SelectItem>
+                            <SelectItem value="match" className="focus:bg-white/10 focus:text-[#7FD1E3]">Full Match</SelectItem>
+                            <SelectItem value="variance" className="focus:bg-white/10 focus:text-[#7FD1E3]">Variance</SelectItem>
+                            <SelectItem value="pending" className="focus:bg-white/10 focus:text-[#7FD1E3]">Pending Bill</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {(auditSearch || auditMatchFilter !== "all") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setAuditSearch("")
+                            setAuditMatchFilter("all")
+                          }}
+                          className="h-7 text-white/40 hover:text-white hover:bg-white/5 text-[9px] font-bold uppercase tracking-widest ml-auto gap-2"
+                        >
+                          <X className="h-3 w-3" />
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
@@ -1289,6 +1391,23 @@ export default function ProcurementGRNPage() {
                     <TableBody>
                       {activePOs
                         .filter(p => p.status === 'received' || p.status === 'partially_received')
+                        .filter(p => {
+                          const searchMatch = !auditSearch || p.po_number.toLowerCase().includes(auditSearch.toLowerCase()) || p.vendor?.name?.toLowerCase().includes(auditSearch.toLowerCase());
+                          
+                          if (auditMatchFilter === "all") return searchMatch;
+                          
+                          const poTotal = p.total_amount;
+                          const grnTotal = p.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity) * (1 + item.tax_rate / 100), 0);
+                          const billAmount = p.vendor_bill_amount || 0;
+                          const hasBill = billAmount > 0;
+                          const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
+
+                          if (auditMatchFilter === "match") return searchMatch && hasBill && isMatch;
+                          if (auditMatchFilter === "variance") return searchMatch && hasBill && !isMatch;
+                          if (auditMatchFilter === "pending") return searchMatch && !hasBill;
+                          
+                          return searchMatch;
+                        })
                         .map((po) => {
                           const poTotal = po.total_amount;
                           const grnTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity) * (1 + item.tax_rate / 100), 0);
@@ -1323,25 +1442,38 @@ export default function ProcurementGRNPage() {
                               </TableCell>
                               <TableCell className="text-right px-8">
                                 <div className="flex justify-end gap-2">
-                                  {po.invoice_url ? (
-                                    <Button variant="ghost" size="sm" className="h-8 text-blue-600" onClick={() => window.open(po.invoice_url, '_blank')}>
-                                      <FileText className="h-4 w-4 mr-1" /> View Doc
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 border-dashed border-slate-300 text-slate-500 hover:text-blue-600"
-                                      onClick={() => {
-                                        const bill = prompt("Enter Vendor Bill Amount:");
-                                        if (bill) {
-                                          handleReconcile(po.id, Number(bill));
-                                        }
-                                      }}
-                                    >
-                                      <FileUp className="h-4 w-4 mr-1" /> Reconcile
-                                    </Button>
-                                  )}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger render={
+                                      <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95" />
+                                    }>
+                                      Actions <ChevronDown className="h-3 w-3" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      {po.invoice_url ? (
+                                        <DropdownMenuItem 
+                                          onClick={() => window.open(po.invoice_url, '_blank')}
+                                          className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                        >
+                                          <FileText className="h-4 w-4 mr-2" /> View Doc
+                                        </DropdownMenuItem>
+                                      ) : (
+                                        <DropdownMenuItem 
+                                          onClick={() => {
+                                            const bill = prompt("Enter Vendor Bill Amount:");
+                                            if (bill) {
+                                              handleReconcile(po.id, Number(bill));
+                                            }
+                                          }}
+                                          className="text-amber-600 focus:text-amber-600 cursor-pointer font-medium"
+                                        >
+                                          <FileUp className="h-4 w-4 mr-2" /> Reconcile
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
+                                        <Scale className="h-4 w-4 mr-2" /> Audit Trail
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -1352,15 +1484,15 @@ export default function ProcurementGRNPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="returns" className="animate-in slide-in-from-right-2 duration-300">
-              <ProcessReturns />
-            </TabsContent>
-            <TabsContent value="discrepancy" className="animate-in slide-in-from-right-2 duration-300">
-              <DiscrepancyReportPage />
-            </TabsContent>
-          </Tabs>
-        </div>
+        <TabsContent value="returns" className="animate-in slide-in-from-right-2 duration-300 mt-0">
+          <ProcessReturns />
+        </TabsContent>
+        <TabsContent value="discrepancy" className="animate-in slide-in-from-right-2 duration-300 mt-0">
+          <DiscrepancyReportPage />
+        </TabsContent>
+      </Tabs>
       )}
+
       {/* PO Detail View Modal */}
       {viewingPO && (
         <Dialog open={!!viewingPO} onOpenChange={(open) => {
@@ -1369,42 +1501,87 @@ export default function ProcurementGRNPage() {
             setEditingTerms("");
           }
         }}>
-          <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto p-0 gap-0 border-none shadow-2xl">
-            <DialogHeader className="bg-[#001529] p-6 text-white rounded-t-lg">
-              <div className="flex justify-between items-center w-full">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-[#002a52] rounded-xl border border-[#003a6d]">
-                    <FileText className="h-8 w-8 text-[#7FD1E3]" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <DialogTitle className="text-3xl font-bold tracking-tight">
-                        {viewingPO.po_number}
-                      </DialogTitle>
-                      <Badge className={
-                        viewingPO.status === 'received' ? "bg-green-500/20 text-green-400 border-green-500/30" :
-                          viewingPO.status === 'approved' ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
-                            viewingPO.status === 'cancelled' ? "bg-red-500/20 text-red-400 border-red-500/30" :
-                              "bg-slate-500/20 text-slate-400 border-slate-500/30"
-                      }>
-                        {viewingPO.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                    <DialogDescription className="text-slate-400 font-medium">
-                      Generated on {new Date(viewingPO.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
+          <DialogContent className="w-[90vw] max-w-[1200px] sm:max-w-none h-[85vh] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl">
+            <DialogHeader className="bg-[#111827] p-8 text-white rounded-t-lg shrink-0">
+              <div className="flex justify-between items-start w-full">
+                {/* Left Side: PO Reference and Date */}
+                <div className="space-y-4">
+                  <h1 className="text-4xl font-black tracking-tighter text-white m-0 leading-none">
+                    Purchase Order
+                  </h1>
+                  <div className="space-y-1">
+                    <p className="text-xl font-bold m-0 flex items-center gap-2">
+                      <span className="opacity-60 text-sm uppercase tracking-widest font-black">Ref:</span>
+                      {viewingPO.po_number}
+                    </p>
+                    <DialogDescription className="text-slate-400 font-medium m-0">
+                      <span className="opacity-60 text-[10px] uppercase tracking-widest font-black mr-2">Date:</span>
+                      {new Date(viewingPO.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </DialogDescription>
                   </div>
                 </div>
-                <div className="text-right hidden md:block">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#7FD1E3] font-bold">Total Amount</p>
-                  <p className="text-3xl font-black text-white">₹{viewingPO.total_amount.toLocaleString()}</p>
+
+                {/* Right Side: Logo and Company Info */}
+                <div className="text-right flex flex-col items-end gap-3">
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-xl font-black text-white m-0 uppercase tracking-tighter">Ethan Home Appliances</p>
+                      <p style={{ color: '#7FD1E3' }} className="text-[10px] uppercase tracking-[0.3em] font-black m-0">Ops360 Enterprise ERP</p>
+                    </div>
+                    <div className="bg-white p-2 rounded-lg">
+                       <img src="/ethan-logo.png" alt="Ethan Logo" className="h-10 w-auto object-contain" />
+                    </div>
+                  </div>
+                  
+                  {(() => {
+                    const corporateHQ = branches.find(b => b.name === "Corporate Headquarters") || branches[0];
+                    return (
+                      <div className="text-[10px] text-slate-400 font-bold max-w-[280px] leading-tight mt-1 italic">
+                        <p className="m-0 uppercase tracking-widest text-[#7FD1E3] mb-0.5">Corporate Headquarters</p>
+                        <p className="m-0 mb-0.5 whitespace-nowrap">{corporateHQ?.full_address || 'Building 42, Innovation Hub, Kochi, Kerala'}</p>
+                        <p className="m-0 uppercase tracking-widest font-black">GSTIN: {corporateHQ?.gstin || '32AAAAA0000A1Z5'}</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </DialogHeader>
 
-            <div className="p-8 space-y-8 bg-white">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-8 space-y-8 bg-white">
               {/* 3-Column Metadata Grid */}
               <div className="grid md:grid-cols-3 gap-8 p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-[#001529]">
+                    <Building2 className="h-4 w-4" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Ship-To Destination</Label>
+                  </div>
+                  <div className="pl-6 border-l-2 border-slate-200">
+                    {(() => {
+                      const branch = branches.find(b => b.id === viewingPO.branch_id);
+                      return (
+                        <>
+                          <p className="font-bold text-lg text-slate-900 leading-none">{branch?.name || viewingPO.branch.name}</p>
+                          <p className="text-xs text-slate-500 font-medium mt-1">Branch Logistics Registry</p>
+                          <p className="text-[10px] text-slate-400 mt-1 italic">{branch?.full_address || 'Address pending verification'}</p>
+                          <p className="text-[10px] font-black text-slate-500 mt-1 uppercase tracking-wider">GSTIN: {branch?.gstin || '32BBBBB0000B1Z5'}</p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-[#001529]">
+                    <Building2 className="h-4 w-4" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Corporate Headquarters</Label>
+                  </div>
+                  <div className="pl-6 border-l-2 border-slate-200">
+                    <p className="font-bold text-lg text-slate-900">Ethan Home Appliances</p>
+                    <p className="text-xs text-slate-500 font-medium">Ops360 Governance Hub</p>
+                    <p className="text-[10px] text-slate-400 mt-1 italic">Authorized Central Registry</p>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-[#001529]">
                     <Truck className="h-4 w-4" />
@@ -1416,34 +1593,6 @@ export default function ProcurementGRNPage() {
                     <p className="text-[10px] font-mono mt-1 text-slate-400">GSTIN: {vendors.find(v => v.id === viewingPO.vendor_id)?.gstin || 'Awaiting Verification'}</p>
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-[#001529]">
-                    <Building2 className="h-4 w-4" />
-                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Ship-To Destination</Label>
-                  </div>
-                  <div className="pl-6 border-l-2 border-slate-200">
-                    <p className="font-bold text-lg text-slate-900">{viewingPO.branch.name}</p>
-                    <p className="text-xs text-slate-500 font-medium">Company Logistics Center</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-[#001529]">
-                    <Scale className="h-4 w-4" />
-                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Financial Summary</Label>
-                  </div>
-                  <div className="pl-6 border-l-2 border-slate-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-500">Base Items</span>
-                      <span className="font-bold">{viewingPO.items.length} Units</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-xs text-slate-500">PO Status</span>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700">{viewingPO.status.replace('_', ' ').toUpperCase()}</span>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Terms & Conditions Section */}
@@ -1453,33 +1602,6 @@ export default function ProcurementGRNPage() {
                     <ShieldAlert className="h-4 w-4" />
                     Contractual Terms & Conditions
                   </h4>
-                  {viewingPO.status === 'pending_approval' && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-[10px] font-black uppercase tracking-tighter text-blue-600 hover:bg-blue-50"
-                      onClick={async () => {
-                        const supabase = createClient();
-                        setIsUpdatingTerms(true);
-                        const { error } = await supabase
-                          .from('purchase_orders')
-                          .update({ terms_content: editingTerms || viewingPO.terms_content })
-                          .eq('id', viewingPO.id);
-                        
-                        if (!error) {
-                          setViewingPO(prev => prev ? { ...prev, terms_content: editingTerms || viewingPO.terms_content } : null);
-                          alert("Terms updated successfully.");
-                        } else {
-                          alert("Error updating terms: " + error.message);
-                        }
-                        setIsUpdatingTerms(false);
-                      }}
-                      disabled={isUpdatingTerms}
-                    >
-                      {isUpdatingTerms ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                      Persist Changes
-                    </Button>
-                  )}
                 </div>
                 <div className="relative group">
                   <Textarea
@@ -1512,11 +1634,11 @@ export default function ProcurementGRNPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingPO.items.map((item: any, idx) => (
+                      {viewingPO.items.map((item: POItem, idx) => (
                         <TableRow key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
                           <TableCell className="text-center font-bold text-slate-400 text-xs">{idx + 1}</TableCell>
                           <TableCell>
-                            <div className="font-bold text-slate-900">{item.product?.model_name || 'Item'}</div>
+                            <div className="font-bold text-slate-900 text-sm">{item.product?.model_name || 'Item'}</div>
                             <div className="text-[10px] font-bold text-blue-500 uppercase tracking-tighter">SKU: {item.product?.product_code}</div>
                           </TableCell>
                           <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter">{item.product?.hsn_code || '---'}</TableCell>
@@ -1527,6 +1649,48 @@ export default function ProcurementGRNPage() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+
+                {/* Lead Architect: Financial Flow & Totals */}
+                <div className="flex justify-end pt-4">
+                  <div className="w-[340px] space-y-2 p-6 rounded-2xl bg-[#001529]/5 border border-[#001529]/10 animate-in fade-in slide-in-from-right-4">
+                    {(() => {
+                      const netTaxableValue = viewingPO.items.reduce((acc: number, item: any) => acc + item.total_item_cost, 0);
+                      const cgst = netTaxableValue * 0.09;
+                      const sgst = netTaxableValue * 0.09;
+                      const grandTotal = netTaxableValue + cgst + sgst;
+                      
+                      return (
+                        <>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-500 uppercase tracking-tight">Net Taxable Value</span>
+                            <span className="font-black text-slate-900">₹{netTaxableValue.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-500 uppercase tracking-tight">CGST (9%)</span>
+                            <span className="font-black text-slate-900">₹{cgst.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200">
+                            <span className="font-bold text-slate-500 uppercase tracking-tight">SGST (9%)</span>
+                            <span className="font-black text-slate-900">₹{sgst.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex justify-between items-center pt-2">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black text-[#001529] uppercase tracking-tighter leading-none">Grand Total</span>
+                              <span className="text-[10px] text-blue-600 font-bold uppercase mt-1 px-2 p-0.5 rounded bg-blue-50 w-fit">{viewingPO.status.replace('_', ' ')}</span>
+                            </div>
+                            <span className="text-2xl font-black text-[#001529]">₹{grandTotal.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="mt-4 pt-4 border-t border-dashed border-slate-300">
+                             <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Total Value in Words</Label>
+                             <p className="text-[10px] font-black text-[#001529] italic leading-tight">
+                                {numberToWords(Math.round(grandTotal))} Only.
+                             </p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
 
@@ -1560,13 +1724,39 @@ export default function ProcurementGRNPage() {
               </div>
             </div>
 
-            <DialogFooter className="bg-slate-50 p-6 rounded-b-lg border-t border-slate-200">
+            <DialogFooter className="bg-slate-50 p-6 rounded-b-lg border-t border-slate-200 shrink-0">
               <div className="flex justify-between items-center w-full">
                 <Button variant="ghost" className="text-slate-500 hover:text-slate-900 font-bold text-xs uppercase" onClick={() => setViewingPO(null)}>
                   Close Portal
                 </Button>
                 <div className="flex gap-4">
-                  {(viewingPO.status === 'approved' || viewingPO.status === 'received' || viewingPO.status === 'partially_received') && (
+                  {viewingPO.status === 'pending_approval' && (
+                    <Button 
+                      variant="outline"
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50 font-bold text-xs uppercase gap-2 h-12 px-8 rounded-xl"
+                      onClick={async () => {
+                        const supabase = createClient();
+                        setIsUpdatingTerms(true);
+                        const { error } = await supabase
+                          .from('purchase_orders')
+                          .update({ terms_content: editingTerms || viewingPO.terms_content })
+                          .eq('id', viewingPO.id);
+                        
+                        if (!error) {
+                          setViewingPO(prev => prev ? { ...prev, terms_content: editingTerms || viewingPO.terms_content } : null);
+                          alert("Terms updated successfully.");
+                        } else {
+                          alert("Error updating terms: " + error.message);
+                        }
+                        setIsUpdatingTerms(false);
+                      }}
+                      disabled={isUpdatingTerms}
+                    >
+                      {isUpdatingTerms ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      Persist Changes
+                    </Button>
+                  )}
+                  {(viewingPO.status === 'approved' || viewingPO.status === 'received' || viewingPO.status === 'partially_received' || viewingPO.status === 'pending_approval') && (
                     <Button
                       className="bg-[#001529] hover:bg-[#002a52] text-white px-8 h-12 rounded-xl shadow-lg shadow-[#001529]/20 transition-all active:scale-95 flex gap-2 font-bold"
                       onClick={() => handleDownloadPDF(viewingPO)}
@@ -1625,13 +1815,24 @@ export default function ProcurementGRNPage() {
         <div id="po-print-container">
           {/* We'll use a local state to pass the PO being downloaded if needed, 
               but since html2canvas takes a snapshot, we can render it on demand or keep it in sync */}
-          {activePOs.find(p => p.id === isDownloading) && (
-            <POPrintTemplate 
-              po={activePOs.find(p => p.id === isDownloading)}
-              vendor={vendors.find(v => v.id === activePOs.find(p => p.id === isDownloading)?.vendor_id)}
-              branch={branches.find(b => b.id === activePOs.find(p => p.id === isDownloading)?.branch_id)}
-            />
-          )}
+          {(() => {
+            const po = activePOs.find(p => p.id === isDownloading);
+            if (!po) return null;
+            const vendor = vendors.find(v => v.id === po.vendor_id);
+            const branch = branches.find(b => b.id === po.branch_id);
+            const corporateHQ = branches.find(b => b.name === "Corporate Headquarters") || branches[0];
+            if (!vendor || !branch) return null;
+            
+            return (
+              <POPrintTemplate 
+                ref={printRef}
+                po={po}
+                vendor={vendor}
+                branch={branch}
+                corporateHQ={corporateHQ}
+              />
+            );
+          })()}
         </div>
       </div>
     </div>

@@ -713,17 +713,19 @@ export default function VendorsClient({
 
               <div className="flex-1 overflow-y-auto p-6">
                 <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 mb-6">
-                    <TabsTrigger value="details" className="gap-2">
-                      <FileText className="h-4 w-4" /> Details
-                    </TabsTrigger>
-                    <TabsTrigger value="documents" className="gap-2">
-                      <Upload className="h-4 w-4" /> Documents
-                    </TabsTrigger>
-                    <TabsTrigger value="performance" className="gap-2">
-                      <TrendingUp className="h-4 w-4" /> Performance
-                    </TabsTrigger>
-                  </TabsList>
+                  <div className="overflow-x-auto pb-1 scrollbar-hide">
+                    <TabsList className="inline-flex w-auto min-w-full mb-6">
+                      <TabsTrigger value="details" className="gap-2 px-6">
+                        <FileText className="h-4 w-4" /> Details
+                      </TabsTrigger>
+                      <TabsTrigger value="documents" className="gap-2 px-6">
+                        <Upload className="h-4 w-4" /> Documents
+                      </TabsTrigger>
+                      <TabsTrigger value="performance" className="gap-2 px-6">
+                        <TrendingUp className="h-4 w-4" /> Performance
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
 
                   <TabsContent value="details" className="space-y-6 animate-in fade-in duration-300">
                     <div className="grid grid-cols-2 gap-6">

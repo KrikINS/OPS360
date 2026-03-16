@@ -18,7 +18,7 @@ import {
   History,
   AlertOctagon,
   Clock,
-  Filter
+  Settings2
 } from "lucide-react"
 import { 
   Tooltip,
@@ -176,7 +176,12 @@ export default function InventoryDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Header remains clean */}
+          <Button 
+            onClick={() => setIsImportModalOpen(true)}
+            className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs"
+          >
+            <Upload className="h-4 w-4" /> Import Opening Stock
+          </Button>
         </div>
       </div>
 
@@ -218,29 +223,9 @@ export default function InventoryDashboard() {
         </Card>
       </div>
 
-      <div className="flex items-center justify-end gap-3">
-        <Button 
-          variant={showFilters ? "default" : "outline"}
-          onClick={() => setShowFilters(!showFilters)}
-          className={cn(
-            "h-10 border-slate-200 border-dashed gap-2 text-xs font-bold transition-all bg-white",
-            showFilters && "bg-[#001529] text-white border-none"
-          )}
-        >
-          <Filter className="h-3.5 w-3.5" /> Advance Filters
-        </Button>
 
-        <Button 
-          onClick={() => setIsImportModalOpen(true)}
-          variant="outline"
-          className="h-10 border-dashed border-slate-300 hover:border-blue-500 hover:text-blue-600 font-bold gap-2 shadow-sm bg-white"
-        >
-          <Upload className="h-4 w-4" /> Import Opening Stock
-        </Button>
-      </div>
-
-      <Card className="border-slate-200 shadow-xl overflow-hidden rounded-xl">
-        <CardHeader className="bg-[#001529] text-white py-4">
+      <Card className="border-slate-200 shadow-xl overflow-hidden rounded-xl border-t-0 py-0">
+        <CardHeader className="bg-[#001529] text-white pt-4 pb-2 mb-0 rounded-t-none">
           <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -251,7 +236,18 @@ export default function InventoryDashboard() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-white hover:bg-white/10 text-xs font-bold gap-2"
+                  className={cn(
+                    "text-white hover:bg-white/10 text-xs font-bold gap-2 hover:text-[#7FD1E3] transition-colors",
+                    showFilters && "text-[#7FD1E3] bg-white/5 h-8"
+                  )}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Settings2 className="h-3.5 w-3.5" /> Advance Filters
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-white hover:bg-white/10 text-xs font-bold gap-2 h-8"
                   onClick={() => setSortOrder(sortOrder === 'oldest' ? 'newest' : 'oldest')}
                 >
                   <ArrowUpDown className="h-3 w-3" />
@@ -269,7 +265,7 @@ export default function InventoryDashboard() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40 group-focus-within:text-[#7FD1E3] transition-colors" />
                   <Input 
                     placeholder="Search Brand, Item or SN..." 
-                    className="pl-9 h-9 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/40 rounded-lg text-xs"
+                    className="pl-9 h-8 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/40 rounded-lg text-xs"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />

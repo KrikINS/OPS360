@@ -9,7 +9,7 @@ import {
   Edit2, 
   Archive, 
   Loader2,
-  Filter
+  Settings2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -98,35 +98,36 @@ export default function ProductsPage() {
           <p className="text-slate-500 text-xs mt-1">Centralized EHA Protocol & Global Stock Assets</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            variant={showFilters ? "default" : "outline"} 
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              "h-10 border-slate-200 border-dashed gap-2 text-xs font-bold",
-              showFilters && "bg-[#001529] text-white"
-            )}
-          >
-            <Filter className="h-3.5 w-3.5" /> Advance Filters
-          </Button>
           <Button onClick={() => setIsAddOpen(true)} className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs">
             <Plus className="h-4 w-4" /> Add New Asset
           </Button>
         </div>
       </div>
 
-      <Card className="border-slate-200 shadow-xl overflow-hidden rounded-xl">
-        <CardHeader className="bg-[#001529] text-white py-4 px-6 border-b-0 space-y-0">
+      <Card className="border-slate-200 shadow-xl overflow-hidden rounded-xl py-0">
+        <CardHeader className="bg-[#001529] text-white pt-4 pb-2 px-6 border-b-0 space-y-0 rounded-t-none">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
              <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input 
                 placeholder="Search Protocol ID, Model or Brand..." 
-                className="pl-10 h-10 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/30 rounded-lg text-xs"
+                className="pl-10 h-8 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/30 rounded-lg text-xs"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(
+                  "text-white hover:bg-white/10 text-xs font-bold gap-2 hover:text-[#7FD1E3] transition-colors",
+                  showFilters && "text-[#7FD1E3] bg-white/5 h-8"
+                )}
+              >
+                <Settings2 className="h-3.5 w-3.5" /> Advance Filters
+              </Button>
               <div className="text-[10px] font-bold text-white/40 tracking-wider">
                 Live Sync: {filteredProducts.length} Entries
               </div>
