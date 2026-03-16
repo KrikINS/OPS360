@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   CheckCircle2
 } from "lucide-react";
+import Image from "next/image";
 import { Label } from "@/components/ui/label";
 
 interface Branch {
@@ -68,19 +69,8 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
       <div 
         ref={ref}
         id="po-print-template" 
-        className="bg-white text-[#1e293b] flex flex-col overflow-hidden"
-        style={{ 
-          width: '210mm', 
-          minHeight: '297mm', 
-          padding: '0', 
-          margin: '0 auto', 
-          fontFamily: "'Inter', system-ui, sans-serif",
-          boxSizing: 'border-box',
-          position: 'relative',
-          colorScheme: 'light',
-          printColorAdjust: 'exact',
-          WebkitPrintColorAdjust: 'exact',
-        } as React.CSSProperties}
+        className="bg-white text-[#1e293b] flex flex-col overflow-hidden w-[210mm] min-h-[297mm] p-0 mx-auto font-sans relative [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
+        
       >
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
@@ -102,8 +92,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
 
         {/* Lead Architect: Header Re-Alignment */}
         <div 
-          style={{ backgroundColor: '#111827' }} 
-          className="p-10 text-white flex justify-between items-start w-full shrink-0"
+          className="p-10 text-white flex justify-between items-start w-full shrink-0 bg-[#111827]"
         >
           {/* Left Side: PO Reference and Date */}
           <div className="space-y-4">
@@ -127,10 +116,10 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-2xl font-black text-white m-0 uppercase tracking-tighter">Ethan Home Appliances</p>
-                <p style={{ color: '#7FD1E3' }} className="text-[10px] uppercase tracking-[0.3em] font-black m-0">Ops360 Enterprise ERP</p>
+                <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
               </div>
               <div className="bg-white p-2 rounded-lg">
-                 <img src="/ethan-logo.png" alt="Ethan Logo" className="h-12 w-auto object-contain" />
+                 <Image src="/ethan-logo.png" alt="Ethan Logo" width={48} height={48} className="h-12 w-auto object-contain" />
               </div>
             </div>
             
@@ -147,7 +136,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
           {/* Metadata Grid (Ship-To and Vendor) */}
           <div className="grid grid-cols-2 gap-8 p-8 rounded-2xl bg-slate-50 border border-slate-100">
             <div className="space-y-3">
-              <div style={{ color: '#001529' }} className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-[#001529]">
                 <Building2 className="h-5 w-5" />
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Ship-To Destination</Label>
               </div>
@@ -163,7 +152,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
             </div>
 
             <div className="space-y-3">
-              <div style={{ color: '#001529' }} className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-[#001529]">
                 <Truck className="h-5 w-5" />
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Vendor Partner</Label>
               </div>
@@ -207,11 +196,11 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                       <td className="p-4 text-slate-500 font-mono text-[10px] font-bold tracking-tighter">
                         {item.product?.hsn_code || '---'}
                       </td>
-                      <td className="p-4 text-center font-black text-slate-100 font-mono" style={{ backgroundColor: '#001529', color: 'white', borderRadius: '4px' }}>
+                      <td className="p-4 text-center font-black text-white font-mono bg-[#001529] rounded-[4px]">
                         {item.quantity}
                       </td>
                       <td className="p-4 text-right font-bold text-slate-600">₹{item.unit_price.toLocaleString('en-IN')}</td>
-                      <td style={{ color: '#001529' }} className="p-4 text-right font-black">₹{item.total_item_cost.toLocaleString('en-IN')}</td>
+                      <td className="p-4 text-right font-black text-[#001529]">₹{item.total_item_cost.toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -253,16 +242,16 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </div>
               <div className="space-y-1">
                  <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Total Value in Words</Label>
-                 <p style={{ color: '#001529' }} className="text-[10px] font-black italic m-0 underline decoration-slate-300 underline-offset-4">{numberToWords(Math.round(grandTotal))} Only.</p>
+                 <p className="text-[10px] font-black italic m-0 underline decoration-slate-300 underline-offset-4 text-[#001529]">{numberToWords(Math.round(grandTotal))} Only.</p>
               </div>
             </div>
 
             <div className="space-y-6">
-              <div style={{ backgroundColor: '#0f172a' }} className="rounded-2xl p-6 text-white relative overflow-hidden">
+              <div className="rounded-2xl p-6 text-white relative overflow-hidden bg-[#0f172a]">
                  <div className="absolute top-0 right-0 p-4 opacity-5">
                    <ShieldCheck className="h-16 w-16" />
                  </div>
-                 <h4 style={{ color: '#7FD1E3' }} className="text-[9px] font-black uppercase tracking-[0.2em] mb-4 m-0">Security Compliance Audit</h4>
+                 <h4 className="text-[9px] font-black uppercase tracking-[0.2em] mb-4 m-0 text-[#7FD1E3]">Security Compliance Audit</h4>
                  <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-0.5">
                      <p className="text-[8px] text-slate-400 font-bold uppercase m-0">Originator</p>
@@ -278,8 +267,8 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </div>
 
               <div className="flex justify-end pt-4">
-                <div style={{ borderColor: '#001529' }} className="text-center w-full max-w-[200px] border-t-2 pt-4">
-                  <p style={{ color: '#001529' }} className="text-[10px] font-black uppercase tracking-[0.2em] m-0">Authorized Signatory</p>
+                <div className="text-center w-full max-w-[200px] border-t-2 pt-4 border-[#001529]">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] m-0 text-[#001529]">Authorized Signatory</p>
                   <p className="text-[7px] font-bold text-slate-400 mt-1 uppercase m-0 tracking-widest">Validated Digital Document</p>
                 </div>
               </div>
@@ -289,8 +278,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
 
         {/* Lead Architect: PDF Specs (A4) Footer */}
         <div 
-          className="w-full px-10 py-6 border-t border-slate-100 flex justify-between items-end text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0 bg-white"
-          style={{ position: 'absolute', bottom: '0', left: '0', width: '210mm' }}
+          className="w-[210mm] px-10 py-6 border-t border-slate-100 flex justify-between items-end text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0 bg-white absolute bottom-0 left-0"
         >
           <div className="flex flex-col gap-1">
             <p className="m-0 text-[#001529]/80 font-black">CLASSIFICATION: CONFIDENTIAL – AUTHORIZED VENDOR USE ONLY</p>
@@ -301,7 +289,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
           </div>
           <div className="text-right flex flex-col gap-1">
             <p className="m-0 uppercase tracking-tighter">Timestamp: {systemTimestamp}</p>
-            <p style={{ color: '#3b82f6' }} className="text-[7px] opacity-70 m-0 uppercase flex items-center gap-1 justify-end font-black underline underline-offset-2">
+            <p className="text-[7px] opacity-70 m-0 uppercase flex items-center gap-1 justify-end font-black underline underline-offset-2 text-[#3b82f6]">
                <CheckCircle2 className="h-2 w-2" /> Verified Digital Asset
             </p>
           </div>

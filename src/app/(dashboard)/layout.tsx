@@ -63,7 +63,7 @@ export default async function DashboardLayout({
             <UserNav profile={profileWithBranchName} />
           </div>
         </header>
-        <div className="flex-1 overflow-auto" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" }}>
+        <div className="flex-1 overflow-auto bg-[linear-gradient(135deg,#f8fafc_0%,#f1f5f9_100%)]">
           {children}
         </div>
       </main>

@@ -118,6 +118,8 @@ export function LogoUploader({ currentLogoUrl, onSuccess }: LogoUploaderProps) {
               {file.name}
               <button
                 type="button"
+                aria-label="Remove uploaded file"
+                title="Remove uploaded file"
                 className="text-muted-foreground hover:text-destructive"
                 onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null) }}
               >
@@ -125,8 +127,15 @@ export function LogoUploader({ currentLogoUrl, onSuccess }: LogoUploaderProps) {
               </button>
             </div>
           )}
-          <input ref={fileRef} type="file" accept="image/*" className="sr-only"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+          <input 
+            ref={fileRef} 
+            type="file" 
+            accept="image/*" 
+            className="sr-only"
+            aria-label="Upload company logo"
+            title="Upload company logo"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} 
+          />
         </div>
 
         {error && (

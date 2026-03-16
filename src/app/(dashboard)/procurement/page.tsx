@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -330,14 +331,18 @@ export default function ProcurementGRNPage() {
       )
 
       setPoItems([...poItems, {
+        id: `draft-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         product_id: product.id,
-        model_name: product.model_name,
-        hsn_code: product.hsn_code,
         quantity: 1,
         unit_price: product.base_price,
         received_quantity: 0,
         tax_rate: costDetails.gstRate,
-        total_item_cost: costDetails.totalBatchCost // Total cost for the draft
+        total_item_cost: costDetails.totalBatchCost,
+        product: {
+          model_name: product.model_name,
+          product_code: product.product_code,
+          hsn_code: product.hsn_code
+        }
       }])
     }
   }
@@ -615,9 +620,9 @@ export default function ProcurementGRNPage() {
                     </TableHeader>
                     <TableBody>
                       {poItems.map((item, idx: number) => (
-                        <TableRow key={idx}>
-                          <TableCell>{item.model_name}</TableCell>
-                          <TableCell className="font-mono text-xs">{item.hsn_code}</TableCell>
+                        <TableRow key={item.id || idx}>
+                          <TableCell>{item.product?.model_name || 'Item'}</TableCell>
+                          <TableCell className="font-mono text-xs">{item.product?.hsn_code || '---'}</TableCell>
                           <TableCell>
                             <Input
                               type="number"
@@ -1033,16 +1038,20 @@ export default function ProcurementGRNPage() {
                                                   setPoTerms({ gstin: vendor.gstin || "", terms: vendor.payment_terms || "Immediate" });
                                                 }
                                                 setSelectedBranch(po.branch_id);
-                                                setPoItems(po.items.map(item => ({
+                                                setPoItems(po.items.map((item) => ({
+                                                  id: item.id || `rev-${Date.now()}-${Math.random()}`,
                                                   product_id: item.product_id,
-                                                  model_name: item.product.model_name,
-                                                  hsn_code: item.product.hsn_code,
                                                   quantity: item.quantity,
                                                   unit_price: item.unit_price,
                                                   received_quantity: item.received_quantity,
                                                   tax_rate: item.tax_rate,
                                                   total_item_cost: item.total_item_cost,
-                                                  override_reason: item.override_reason
+                                                  override_reason: item.override_reason,
+                                                  product: {
+                                                    model_name: item.product?.model_name || 'Item',
+                                                    product_code: item.product?.product_code || '',
+                                                    hsn_code: item.product?.hsn_code || '---'
+                                                  }
                                                 })));
                                                 setIsCreatingPO(true);
                                                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1244,9 +1253,9 @@ export default function ProcurementGRNPage() {
                                           <div
                                             className={cn(
                                               "h-full transition-all duration-700",
-                                              progress === 100 ? "bg-green-500" : "bg-[#7FD1E3]"
+                                              progress === 100 ? "bg-green-500" : "bg-[#7FD1E3]",
+                                              `w-[${progress}%]`
                                             )}
-                                            style={{ width: `${progress}%` }}
                                           />
                                         </div>
                                       </div>
@@ -1526,10 +1535,10 @@ export default function ProcurementGRNPage() {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-xl font-black text-white m-0 uppercase tracking-tighter">Ethan Home Appliances</p>
-                      <p style={{ color: '#7FD1E3' }} className="text-[10px] uppercase tracking-[0.3em] font-black m-0">Ops360 Enterprise ERP</p>
+                      <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
                     </div>
                     <div className="bg-white p-2 rounded-lg">
-                       <img src="/ethan-logo.png" alt="Ethan Logo" className="h-10 w-auto object-contain" />
+                       <Image src="/ethan-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
                     </div>
                   </div>
                   
@@ -1655,7 +1664,7 @@ export default function ProcurementGRNPage() {
                 <div className="flex justify-end pt-4">
                   <div className="w-[340px] space-y-2 p-6 rounded-2xl bg-[#001529]/5 border border-[#001529]/10 animate-in fade-in slide-in-from-right-4">
                     {(() => {
-                      const netTaxableValue = viewingPO.items.reduce((acc: number, item: any) => acc + item.total_item_cost, 0);
+                      const netTaxableValue = viewingPO.items.reduce((acc: number, item: POItem) => acc + item.total_item_cost, 0);
                       const cgst = netTaxableValue * 0.09;
                       const sgst = netTaxableValue * 0.09;
                       const grandTotal = netTaxableValue + cgst + sgst;
