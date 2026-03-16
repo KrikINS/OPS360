@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  console.log('[InventorySync] Request Body:', JSON.stringify(body, null, 2))
+  // console.log('[InventorySync] Request Body:', JSON.stringify(body, null, 2))
   const { po_id, items } = body // items: { product_id, serial_numbers: [], unit_price, hsn_code, freight }[]
 
   if (!po_id || !items || items.length === 0) {

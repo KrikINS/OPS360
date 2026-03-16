@@ -4,10 +4,17 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 
 export async function GET() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.json({ error: "System configuration error: Missing environment variables" }, { status: 500 })
+  }
+
   const cookieStore = await cookies()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() { return cookieStore.getAll() },
@@ -115,7 +122,7 @@ export async function POST(request: Request) {
     po_number = `${poPrefix}${finalSequence.toString().padStart(4, '0')}`
   }
 
-  console.log(`[PO-Generation] Generated: ${po_number} (Max found: ${maxSequence})`)
+  // console.log(`[PO-Generation] Generated: ${po_number} (Max found: ${maxSequence})`)
 
   // 1. Create Purchase Order
   const { data: po, error: poError } = await supabase
@@ -239,9 +246,7 @@ export async function PATCH(request: Request) {
     if (insertError) return NextResponse.json({ error: "Failed to update items" }, { status: 500 })
     
     // Recalculate total if not provided explicitly
-    if (!total_amount) {
-      updateData.total_amount = items.reduce((acc: number, item: any) => acc + item.total_item_cost, 0)
-    }
+      updateData.total_amount = items.reduce((acc: number, item: { total_item_cost: number }) => acc + item.total_item_cost, 0)
   }
 
   const { data, error } = await supabase

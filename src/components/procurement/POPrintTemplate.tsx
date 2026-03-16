@@ -69,23 +69,43 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
       <div 
         ref={ref}
         id="po-print-template" 
-        className="bg-white text-[#1e293b] flex flex-col overflow-hidden w-[210mm] min-h-[297mm] p-0 mx-auto font-sans relative [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
+        className="bg-white text-[#1e293b] flex flex-col w-[210mm] min-h-[297mm] p-0 mx-auto font-sans relative [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
         
       >
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0;
+              margin: 10mm;
             }
             body {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              background: white !important;
             }
             #po-print-template {
-              width: 210mm !important;
-              height: 297mm !important;
-              overflow: hidden !important;
+              width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+            .print-footer {
+              position: fixed;
+              bottom: 0;
+              width: 100%;
+              border-top: 1px solid #f1f5f9;
+              background: white;
+            }
+            .page-number:after {
+              content: "Page " counter(page);
+            }
+            .print-content {
+              margin-bottom: 20mm;
+            }
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
           }
         `}} />
@@ -207,7 +227,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </table>
             </div>
             
-            {/* Financial Summary Block - Lead Architect: Repositioned after table */}
+            {/* Financial Summary Block */}
             <div className="flex justify-end pt-4">
               <div className="w-[320px] space-y-2 p-6 rounded-2xl bg-[#001529]/5 border border-[#001529]/10">
                 <div className="flex justify-between items-center text-xs">
@@ -242,7 +262,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </div>
               <div className="space-y-1">
                  <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Total Value in Words</Label>
-                 <p className="text-[10px] font-black italic m-0 underline decoration-slate-300 underline-offset-4 text-[#001529]">{numberToWords(Math.round(grandTotal))} Only.</p>
+                 <p className="text-[10px] font-black italic m-0 underline decoration-slate-300 underline-offset-4 text-[#001529]">{numberToWords(Math.round(grandTotal))}.</p>
               </div>
             </div>
 
@@ -278,14 +298,14 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
 
         {/* Lead Architect: PDF Specs (A4) Footer */}
         <div 
-          className="w-[210mm] px-10 py-6 border-t border-slate-100 flex justify-between items-end text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0 bg-white absolute bottom-0 left-0"
+          className="w-full px-10 py-6 border-t border-slate-100 flex justify-between items-end text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0 bg-white print-footer"
         >
           <div className="flex flex-col gap-1">
             <p className="m-0 text-[#001529]/80 font-black">CLASSIFICATION: CONFIDENTIAL – AUTHORIZED VENDOR USE ONLY</p>
             <p className="text-[7px] opacity-60 m-0 leading-tight">Subject to Ernakulam/Kochi Jurisdiction. System-generated PO ID: {po.id}</p>
           </div>
           <div className="text-center">
-            <p className="m-0">Page 1 of 1</p>
+            <p className="m-0 page-number"></p>
           </div>
           <div className="text-right flex flex-col gap-1">
             <p className="m-0 uppercase tracking-tighter">Timestamp: {systemTimestamp}</p>

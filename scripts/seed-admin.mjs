@@ -17,59 +17,83 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 })
 
 async function seedAdmin() {
-  console.log("Seeding Overarching Admin Credential: ethanops360@gmail.com")
-  
-  // 1. Create Auth Identity
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email: "ethanops360@gmail.com",
-    password: "#Temp2026",
-    email_confirm: true,
-    user_metadata: { full_name: "Ethan Administrator" }
-  })
+  console.log("--- ADMINISTRATION SEEDING INITIATED ---");
+  let createdAuthUser = null;
 
-  if (authError) {
-     if(authError.message.includes("already been registered") || authError.message.includes("already registered")) {
-        console.log("Admin account already exists in Auth. Resetting password and updating profiles table.")
+  try {
+    console.log("[1/3] Validating overarching admin credential: ethanops360@gmail.com");
+    
+    // 1. Create Auth Identity
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: "ethanops360@gmail.com",
+      password: "#Temp2026",
+      email_confirm: true,
+      user_metadata: { full_name: "Ethan Administrator" }
+    });
+
+    if (authError) {
+      if(authError.message.includes("already been registered") || authError.message.includes("already registered")) {
+        console.log(">>> Admin account already exists in Auth. Synchronizing state...");
         
-        // Fetch users to find the ID
-        const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-        const existingUser = users.find(u => u.email === "ethanops360@gmail.com")
-
+        const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        if (listError) throw new Error(`ListUsers failed: ${listError.message}`);
+        
+        const existingUser = users.find(u => u.email === "ethanops360@gmail.com");
         if (existingUser) {
-             await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password: "#Temp2026" })
-             await updateProfile(existingUser.id)
-             return;
+          console.log(`>>> Existing user ID: ${existingUser.id}. Resetting credential...`);
+          await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password: "#Temp2026" });
+          createdAuthUser = existingUser;
+        } else {
+          throw new Error("User reported as registered but not found in user list.");
         }
-     } else {
-        console.error("Error creating Admin Auth:", authError.message)
-        process.exit(1)
-     }
-  } else {
-     await updateProfile(authData?.user?.id)
+      } else {
+        throw new Error(`Auth creation failed: ${authError.message}`);
+      }
+    } else {
+      console.log(">>> Auth identity created successfully.");
+      createdAuthUser = authData.user;
+    }
+
+    // 2. Data Propagation
+    console.log("[2/3] Propagating RBAC profiles and branch associations...");
+    await updateProfile(createdAuthUser.id);
+
+    console.log("[3/3] FINALIZING...");
+    console.log("SUCCESS: Production Administrator account is fully provisioned and secured.");
+
+  } catch (error) {
+    console.error("!!! CRITICAL SEEDING FAILURE !!!");
+    console.error(`ERROR: ${error.message}`);
+    process.exit(1);
   }
 }
 
 async function updateProfile(userId) {
-     if(!userId) return;
+  if(!userId) throw new Error("No User ID provided for profile update.");
 
-     // Fetch the first available branch dynamically
-     let { data: branchData } = await supabaseAdmin.from("branches").select("id").limit(1).single();
-     if(!branchData) {
-         console.log("No branches found in DB. Automatically seeding 'Headquarters' branch...");
-         const { data: newBranch, error: branchError } = await supabaseAdmin.from("branches").insert({
-             name: "Headquarters",
-             location: "Global Control Center",
-             type: "Main"
-         }).select("id").single()
+  try {
+    // Branch synchronization
+    console.log(">>> Checking for existing operational branches...");
+    let { data: branchData, error: _branchFetchError } = await supabaseAdmin.from("branches").select("id").limit(1).single();
+    
+    if(!branchData) {
+      console.log(">>> DATABASE WARNING: No branches detected. Provisioning HQ Control Center...");
+      const { data: newBranch, error: branchError } = await supabaseAdmin.from("branches").insert({
+        name: "Headquarters",
+        location: "Global Control Center",
+        type: "Main"
+      }).select("id").single();
 
-         if (branchError) {
-            console.error("Failed to seed branch:", branchError.message);
-            process.exit(1);
-         }
-         branchData = newBranch;
-     }
+      if (branchError) throw new Error(`Branch provisioning failed: ${branchError.message}`);
+      branchData = newBranch;
+      console.log(`>>> HQ Provisioned successfully with ID: ${branchData.id}`);
+    } else {
+      console.log(`>>> Operational branch found: ${branchData.id}`);
+    }
 
-     const { error: profileError } = await supabaseAdmin
+    // RBAC Injection
+    console.log(">>> Injecting Admin RBAC rules and profile permissions...");
+    const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .upsert({
         id: userId,
@@ -77,14 +101,16 @@ async function updateProfile(userId) {
         full_name: "Ethan Administrator",
         role: "admin",
         branch_id: branchData.id
-      })
+      });
 
-    if (profileError) {
-      console.error("Error injecting Admin Profile Rights:", profileError.message)
-      process.exit(1)
-    }
+    if (profileError) throw new Error(`Profile RBAC injection failed: ${profileError.message}`);
+    
+    console.log(">>> Profile rights synchronized and authorized.");
 
-    console.log("Success! Admin RBAC rules applied and account is ready.")
+  } catch (err) {
+    console.error(">>> Profile update stage failed.");
+    throw err;
+  }
 }
 
 seedAdmin()

@@ -7,16 +7,27 @@ export async function updateSession(request: NextRequest) {
       request,
     })
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("--- SYSTEM CONFIGURATION ERROR: Missing Supabase Environment Variables ---")
+      return new NextResponse(
+        JSON.stringify({ error: "System configuration error. Please contact administration." }),
+        { status: 500, headers: { 'content-type': 'application/json' } }
+      )
+    }
+
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      supabaseUrl,
+      supabaseAnonKey,
       {
         cookies: {
           getAll() {
             return request.cookies.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
             supabaseResponse = NextResponse.next({
               request,
             })
@@ -101,7 +112,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     return supabaseResponse
-  } catch (err: any) {
+  } catch (_err: unknown) {
     return NextResponse.next({ request });
   }
 }
