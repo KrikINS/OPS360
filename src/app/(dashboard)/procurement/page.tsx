@@ -838,7 +838,7 @@ export default function ProcurementGRNPage() {
                   <Clock className="h-3.5 w-3.5 group-data-active:text-amber-400 transition-colors" />
                   Pending Fulfilment
                   {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[8px] font-black h-3.5 w-3.5 rounded-full flex items-center justify-center border border-white shadow-sm">
+                    <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
                       {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length}
                     </span>
                   )}
