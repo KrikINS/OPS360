@@ -1263,10 +1263,10 @@ export default function ProcurementGRNPage() {
                                   })}
                                 </div>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right py-4 px-4">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger render={
-                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95 opacity-0 group-hover:opacity-100" />
+                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95" />
                                   }>
                                     Actions <ChevronDown className="h-3 w-3" />
                                   </DropdownMenuTrigger>
