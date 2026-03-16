@@ -109,16 +109,20 @@ export default function ProcurementDocs() {
         </div>
         <div className="bg-slate-50 border rounded-xl p-6 shadow-sm">
           <p className="text-sm text-slate-600 leading-relaxed mb-4">
-            The PO Download system uses <code>html2canvas</code> and <code>jsPDF</code>. To ensure high-fidelity downloads:
+            The PO Download system uses <code>html2canvas</code> and <code>jsPDF</code>. The engine is enterprise-hardened for high-volume transactions:
           </p>
-          <ul className="space-y-2 text-sm text-slate-600">
+          <ul className="space-y-3 text-sm text-slate-600">
             <li className="flex gap-2">
-              <span className="font-bold text-[#001529]">• Browser Compatibility:</span>
-              <span>The system aggressively sanitizes modern CSS colors (like <code>lab()</code> or <code>oklch()</code>) before generation to prevent parsing errors.</span>
+              <span className="font-bold text-[#001529]">• Multi-page Stability:</span>
+              <span>Proprietary CSS ensures that POs with 50+ line items break correctly across pages without data clipping.</span>
             </li>
             <li className="flex gap-2">
-              <span className="font-bold text-[#001529]">• Color Scheme:</span>
-              <span>PDF templates are forced to <code>light</code> color scheme to avoid UI leakage from system dark mode.</span>
+              <span className="font-bold text-[#001529]">• Security Classification:</span>
+              <span>Every physical page includes a <strong>fixed</strong> footer (&quot;CONFIDENTIAL&quot;) and dynamic <strong>CSS Page Counters</strong> for auditability.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• Engine Sanitization:</span>
+              <span>Modern CSS functions (<code>lab</code>, <code>oklch</code>) are automatically converted to standard sRGB to ensure cross-browser PDF fidelity.</span>
             </li>
           </ul>
         </div>

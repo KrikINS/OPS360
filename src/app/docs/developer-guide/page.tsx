@@ -3,7 +3,8 @@ import {
   Layout, 
   Terminal, 
   CheckCircle2, 
-  AlertCircle
+  AlertCircle,
+  ShieldAlert
 } from "lucide-react"
 
 export default function DeveloperGuide() {
@@ -64,6 +65,32 @@ export default function DeveloperGuide() {
               Standardize on **Lucide React**. Use consistent sizes (`h-4 w-4` for navigation, `h-6 w-6` for section headers). Ensure appropriate color weights for different statuses (emerald for active, amber for pending).
             </p>
           </div>
+        </div>
+      </section>
+
+      <section className="space-y-6">
+        <h2 className="text-2xl font-bold text-[#001529] border-b pb-3 flex items-center gap-2 text-rose-600">
+          <ShieldAlert className="h-6 w-6" />
+          Production Reliability
+        </h2>
+        <div className="bg-slate-50 border rounded-xl p-6 shadow-sm">
+          <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+            Ops360 enforces strict stability standards to prevent regression and runtime failures in live environments.
+          </p>
+          <ul className="space-y-3 text-sm text-slate-600">
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>Build-Time Enforcements:</strong> The `next.config.ts` is configured to fail production builds on ANY TypeScript or ESLint errors. Bypassing these requires documented architectural approval.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>Script Robustness:</strong> Maintenance and migration scripts must include comprehensive `try-catch` blocks and structured logging for observability.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>Env Variable Safety:</strong> Avoid non-null assertions (`!`) for environment variables in middleware or API routes. Always implement explicit validation with structured 500 error fallbacks.</span>
+            </li>
+          </ul>
         </div>
       </section>
 
