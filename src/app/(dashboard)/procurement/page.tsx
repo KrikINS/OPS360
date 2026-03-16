@@ -174,14 +174,15 @@ export default function ProcurementGRNPage() {
             // Aggressively clear any modern color variables that might exist in the root or container
             // and specifically look for 'lab' or 'oklch' in the computed style and replace them
             const items = clonedDoc.querySelectorAll('*');
-            items.forEach((item: any) => {
-              const style = item.style;
+            items.forEach((item) => {
+              const htmlItem = item as HTMLElement;
+              const style = htmlItem.style;
               if (style) {
                 // Remove all CSS variables as they often contain modern colors in Tailwind v4
                 for (let i = 0; i < style.length; i++) {
                   const prop = style[i];
                   if (prop.startsWith('--')) {
-                    item.style.removeProperty(prop);
+                    htmlItem.style.removeProperty(prop);
                   }
                 }
               }
@@ -199,7 +200,7 @@ export default function ProcurementGRNPage() {
                     }
                   }
                 }
-              } catch (e) {
+              } catch {
                 // Ignore cross-origin stylesheet errors
               }
             }
@@ -555,96 +556,9 @@ export default function ProcurementGRNPage() {
           </h1>
           <p className="text-muted-foreground mt-1">Handle Purchase Orders (PO) and Goods Receipt Notes (GRN).</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              "gap-2 border-slate-200 h-10 shadow-sm transition-all",
-              showFilters && "bg-slate-100 border-slate-300"
-            )}
-          >
-            <Settings2 className="h-4 w-4" />
-            {showFilters ? "Hide Filters" : "Advance Filters"}
-          </Button>
-
-          <Button
-            onClick={() => {
-              if (isCreatingPO) {
-                resetForm()
-              } else {
-                setIsCreatingPO(true)
-                setSelectedPO(null)
-              }
-            }}
-            className="bg-[#001529] hover:bg-[#002a52] text-white gap-2 shadow-lg h-10"
-          >
-            {isCreatingPO ? "View PO Registry" : <><Plus className="h-4 w-4" /> Create New PO</>}
-          </Button>
-        </div>
       </div>
 
-      {showFilters && !isCreatingPO && !selectedPO && (
-        <div className="bg-white border p-4 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-300 flex flex-wrap items-center gap-4 border-slate-100">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search PO Number or Vendor..."
-              className="pl-9 h-9 border-slate-200 focus:ring-blue-500 bg-slate-50/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Ship To</span>
-              <Select value={branchFilter} onValueChange={(v) => setBranchFilter(v || "all")}>
-                <SelectTrigger className="w-[180px] h-9 text-xs border-slate-200 bg-white">
-                  <SelectValue placeholder="All Branches" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Branches</SelectItem>
-                  {branches.map(b => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Status</span>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || "all")}>
-              <SelectTrigger className="w-[150px] h-9 text-xs border-slate-200 bg-white">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="partially_received">Partial</SelectItem>
-                <SelectItem value="received">Received</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {(searchTerm || statusFilter !== "all" || branchFilter !== "all") && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearchTerm("")
-                setStatusFilter("all")
-                setBranchFilter("all")
-              }}
-              className="h-9 px-3 text-red-500 hover:text-red-600 hover:bg-red-50 gap-2 border border-transparent hover:border-red-100"
-            >
-              <X className="h-3 w-3" />
-              Clear All
-            </Button>
-          )}
-        </div>
-      )}
+      {/* Filter Bar moved inside the Registry Card below */}
 
       {isCreatingPO ? (
         <Card className="shadow-md border-t-4 border-t-[#001529]">
@@ -943,25 +857,45 @@ export default function ProcurementGRNPage() {
         <div className="grid gap-6">
           <Tabs defaultValue="all" className="w-full">
             <div className="flex items-center justify-between mb-4">
-              <TabsList className="bg-slate-100 p-1 rounded-xl">
-                <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+              <TabsList className="bg-slate-100/80 border border-slate-200/60 p-1.5 rounded-2xl backdrop-blur-sm shadow-inner gap-1 h-auto flex-wrap md:flex-nowrap">
+                <TabsTrigger 
+                  value="all" 
+                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group"
+                >
+                  <FileText className="h-3.5 w-3.5 group-data-[state=active]:text-[#7FD1E3] transition-colors" />
                   PO Registry
                 </TabsTrigger>
-                <TabsTrigger value="pending" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all relative">
+                <TabsTrigger 
+                  value="pending" 
+                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group relative"
+                >
+                  <Clock className="h-3.5 w-3.5 group-data-[state=active]:text-amber-400 transition-colors" />
                   Pending Fulfilment
                   {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[9px] font-black h-4 w-4 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse">
                       {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length}
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="reconciliation" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                <TabsTrigger 
+                  value="reconciliation" 
+                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group"
+                >
+                  <Scale className="h-3.5 w-3.5 group-data-[state=active]:text-[#7FD1E3] transition-colors" />
                   3-Way Match Audit
                 </TabsTrigger>
-                <TabsTrigger value="returns" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                <TabsTrigger 
+                  value="returns" 
+                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 group-data-[state=active]:text-orange-400 transition-colors" />
                   Purchase Returns
                 </TabsTrigger>
-                <TabsTrigger value="discrepancy" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                <TabsTrigger 
+                  value="discrepancy" 
+                  className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl px-5 py-2.5 transition-all duration-300 gap-2 text-slate-500 font-bold text-[11px] uppercase tracking-wider group"
+                >
+                  <ShieldAlert className="h-3.5 w-3.5 group-data-[state=active]:text-red-400 transition-colors" />
                   Discrepancy Report
                 </TabsTrigger>
               </TabsList>
@@ -969,20 +903,109 @@ export default function ProcurementGRNPage() {
 
             <TabsContent value="all" className="animate-in slide-in-from-left-2 duration-300">
               <Card className="shadow-sm border-slate-200">
-                <CardHeader className="bg-slate-50/50 border-b py-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
-                      <FileText className="h-5 w-5 text-[#001529]" />
+                <CardHeader className="bg-[#001529] text-white py-4 px-6 border-b-0 space-y-0">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <CardTitle className="text-lg flex items-center gap-2 text-white">
+                      <FileText className="h-5 w-5 text-white" />
                       Purchase Order Registry
                     </CardTitle>
-                    <div className="flex gap-4 items-center">
-                      <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-slate-400 border-slate-200">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={cn(
+                          "gap-2 border-white/20 h-8 shadow-sm transition-all text-xs bg-white/5 text-white hover:bg-[#7FD1E3] hover:text-[#001529] hover:border-[#7FD1E3] font-bold group",
+                          showFilters && "bg-[#7FD1E3] text-[#001529] border-[#7FD1E3]"
+                        )}
+                      >
+                        <Settings2 className={cn("h-3.5 w-3.5 transition-colors", showFilters ? "text-[#001529]" : "text-white group-hover:text-[#001529]")} />
+                        {showFilters ? "Hide Filters" : "Advance Filters"}
+                      </Button>
+
+                      <Button
+                        onClick={() => {
+                          setIsCreatingPO(true)
+                          setSelectedPO(null)
+                        }}
+                        size="sm"
+                        className="bg-white text-[#001529] hover:bg-slate-100 gap-2 shadow-md h-8 text-xs px-4 font-bold border-none"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Create New PO
+                      </Button>
+
+                      <div className="w-px h-6 bg-white/10 mx-2 hidden md:block" />
+
+                      <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest text-white/40 border-white/10">
                         Corporate Archive
                       </Badge>
                     </div>
                   </div>
+
+                  {showFilters && (
+                    <div className="flex flex-wrap items-center gap-4 pt-4 mt-4 border-t border-white/10 animate-in fade-in slide-in-from-top-2">
+                      <div className="relative flex-1 min-w-[240px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                        <Input
+                          placeholder="Search PO Number or Vendor..."
+                          className="pl-9 h-8 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/30 rounded-lg text-xs"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                        <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Ship To</span>
+                        <Select value={branchFilter} onValueChange={(v) => setBranchFilter(v || "all")}>
+                          <SelectTrigger className="w-[120px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                            <SelectValue placeholder="All Branches" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#001529] border-white/10 text-white">
+                            <SelectItem value="all">All Branches</SelectItem>
+                            {branches.map(b => (
+                              <SelectItem key={b.id} value={b.id} className="focus:bg-white/10 focus:text-[#7FD1E3]">{b.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                        <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Status</span>
+                        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || "all")}>
+                          <SelectTrigger className="w-[120px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                            <SelectValue placeholder="All Status" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#001529] border-white/10 text-white">
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="pending_approval" className="focus:bg-white/10 focus:text-[#7FD1E3]">Pending</SelectItem>
+                            <SelectItem value="approved" className="focus:bg-white/10 focus:text-[#7FD1E3]">Approved</SelectItem>
+                            <SelectItem value="partially_received" className="focus:bg-white/10 focus:text-[#7FD1E3]">Partial</SelectItem>
+                            <SelectItem value="received" className="focus:bg-white/10 focus:text-[#7FD1E3]">Received</SelectItem>
+                            <SelectItem value="cancelled" className="focus:bg-white/10 focus:text-[#7FD1E3]">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {(searchTerm || statusFilter !== "all" || branchFilter !== "all") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSearchTerm("")
+                            setStatusFilter("all")
+                            setBranchFilter("all")
+                          }}
+                          className="h-7 text-white/40 hover:text-white hover:bg-white/5 text-[9px] font-bold uppercase tracking-widest ml-auto gap-2"
+                        >
+                          <X className="h-3 w-3" />
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="p-0">
+                  {/* Local Filter Bar removed as it is now part of the navy CardHeader */}
                   <Table>
                     <TableHeader className="bg-slate-50 border-b">
                       <TableRow>
@@ -1137,13 +1160,13 @@ export default function ProcurementGRNPage() {
 
             <TabsContent value="pending" className="animate-in slide-in-from-right-2 duration-300">
               <Card className="shadow-sm border-slate-200 overflow-hidden">
-                <CardHeader className="bg-slate-50/50 border-b py-4">
+                <CardHeader className="bg-[#001529] text-white py-4 px-6 border-b-0 space-y-0">
                   <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
-                      <Clock className="h-5 w-5 text-amber-500" />
+                    <CardTitle className="text-lg flex items-center gap-2 text-white">
+                      <Clock className="h-5 w-5 text-amber-400" />
                       Pending Fulfilment
                     </CardTitle>
-                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-white/40 border-white/10">
                       Unfulfilled Stock
                     </Badge>
                   </div>
@@ -1195,7 +1218,10 @@ export default function ProcurementGRNPage() {
                                         </div>
                                         <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner">
                                           <div
-                                            className={`h-full transition-all duration-700 ${progress === 100 ? 'bg-green-500' : 'bg-[#7FD1E3]'}`}
+                                            className={cn(
+                                              "h-full transition-all duration-700",
+                                              progress === 100 ? "bg-green-500" : "bg-[#7FD1E3]"
+                                            )}
                                             style={{ width: `${progress}%` }}
                                           />
                                         </div>
@@ -1234,14 +1260,14 @@ export default function ProcurementGRNPage() {
             </TabsContent>
             <TabsContent value="reconciliation" className="animate-in slide-in-from-right-2 duration-300">
               <Card className="shadow-sm border-slate-200">
-                <CardHeader className="bg-[#001529] text-white py-6">
+                <CardHeader className="bg-[#001529] text-white py-4 px-6 border-b-0 space-y-0">
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        <Scale className="h-6 w-6 text-[#7FD1E3]" />
+                      <CardTitle className="text-lg flex items-center gap-2 text-white">
+                        <Scale className="h-5 w-5 text-[#7FD1E3]" />
                         3-Way Match Verification
                       </CardTitle>
-                      <CardDescription className="text-slate-300">
+                      <CardDescription className="text-white/40 text-[11px] font-medium leading-tight">
                         Auditing Purchase Agreements vs. Receiving Reality vs. Vendor Demand
                       </CardDescription>
                     </div>
@@ -1486,7 +1512,7 @@ export default function ProcurementGRNPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingPO.items.map((item: any, idx: number) => (
+                      {viewingPO.items.map((item: any, idx) => (
                         <TableRow key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
                           <TableCell className="text-center font-bold text-slate-400 text-xs">{idx + 1}</TableCell>
                           <TableCell>
