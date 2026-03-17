@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   const body = await request.json()
   // console.log('[InventorySync] Request Body:', JSON.stringify(body, null, 2))
-  const { po_id, items } = body // items: { product_id, serial_numbers: [], unit_price, hsn_code, freight }[]
+  const { po_id, items, condition_notes } = body // items: { product_id, serial_numbers: [], unit_price, hsn_code, freight }[]
 
   if (!po_id || !items || items.length === 0) {
     console.error('[InventorySync] Validation Failed - Missing po_id or items:', { po_id: !!po_id, itemsCount: items?.length })
@@ -48,90 +48,66 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Only approved or partially received orders can be updated" }, { status: 400 })
     }
 
-    // 2. Prepare inventory insertions and update quantities
-    type InventoryItemInsert = {
+    interface SyncItem {
       product_id: string;
-      serial_number: string;
+      serial_numbers: string[];
+      unit_price: number;
       hsn_code: string;
-      price: number;
-      landed_cost: number;
-      status: string;
-      branch_id: string;
-      source_po_id: string;
-    };
-    const inventoryItems: InventoryItemInsert[] = []
-    
-    for (const item of items) {
-      const { product_id, serial_numbers, unit_price, hsn_code, freight } = item
-      
+      freight: number;
+      item_id: string;
+    }
+
+    const itemsWithLandedCost = (items as SyncItem[]).map((item) => {
+      const { product_id, serial_numbers, unit_price, hsn_code, freight, item_id } = item
       const vendorData = (po.vendor && !Array.isArray(po.vendor)) ? po.vendor as { state: string } : { state: 'Kerala' }
       const vendorState = vendorData.state || 'Kerala'
       const costDetails = calculateLandedCost(unit_price, freight, hsn_code, vendorState, serial_numbers.length)
       
-      serial_numbers.forEach((sn: string) => {
-        inventoryItems.push({
-          product_id: product_id,
-          serial_number: sn,
-          hsn_code: hsn_code,
-          price: unit_price,
-          landed_cost: costDetails.totalLandedCost, // This is now unit landed cost
-          status: 'Available',
-          branch_id: po.branch_id,
-          source_po_id: po_id
-        })
-      })
+      return {
+        product_id,
+        serial_numbers,
+        unit_price,
+        hsn_code,
+        landed_cost: costDetails.totalLandedCost,
+        item_id
+      }
+    })
 
-      // Update the received quantity for this specific PO item (using admin client)
-      const { error: itemUpdateError } = await adminSupabase.rpc('increment_received_quantity', {
-        item_product_id: product_id,
-        item_po_id: po_id,
-        increment_by: serial_numbers.length
-      })
+    // 3. Call Atomic RPC
+    const { data: result, error: rpcError } = await adminSupabase.rpc('process_grn_atomic', {
+      arg_po_id: po_id,
+      arg_originator_id: user.id,
+      arg_items: itemsWithLandedCost,
+      arg_condition_notes: condition_notes || null
+    })
 
-      if (itemUpdateError) throw new Error(`Failed to update item quantity: ${itemUpdateError.message}`)
+    if (rpcError) throw new Error(rpcError.message)
+    
+    // Result is an array like [{success: bool, message: text, grn_id: uuid}]
+    const response = Array.isArray(result) ? result[0] : result
+    
+    if (!response?.success) {
+      const msg = response?.message || "Internal transaction failed"
+      if (msg.includes('DUPLICATE_SERIAL:')) {
+        const serial = msg.split(':')[1]
+        return NextResponse.json({ 
+          error: `The serial number "${serial}" is already in the registry. Please verify and try again.`,
+          code: 'DUPLICATE_SERIAL'
+        }, { status: 400 })
+      }
+      return NextResponse.json({ error: msg }, { status: 400 })
     }
-
-    // 3. Insert into inventory (use admin client to bypass RLS)
-    const { error: inventoryError } = await adminSupabase
-      .from('inventory')
-      .insert(inventoryItems)
-
-    if (inventoryError) throw new Error(inventoryError.message)
-
-    // 4. Determine PO Status
-    // Fetch all items for this PO to compare quantities
-    const { data: poItems, error: itemsError } = await adminSupabase
-      .from('purchase_order_items')
-      .select('quantity, received_quantity')
-      .eq('po_id', po_id)
-
-    if (itemsError) throw new Error(itemsError.message)
-
-    const totalOrdered = poItems.reduce((acc, item) => acc + item.quantity, 0)
-    const totalReceived = poItems.reduce((acc, item) => acc + item.received_quantity, 0)
-
-    let finalStatus = 'partially_received'
-    if (totalReceived >= totalOrdered) {
-      finalStatus = 'received'
-    }
-
-    const { error: updateError } = await adminSupabase
-      .from('purchase_orders')
-      .update({ status: finalStatus })
-      .eq('id', po_id)
-
-    if (updateError) throw new Error(`PO Status Update Failed: ${updateError.message}`)
 
     return NextResponse.json({ 
       success: true, 
-      message: `GRN processed as ${finalStatus}`, 
-      items_added: inventoryItems.length,
-      total_received: totalReceived,
-      total_ordered: totalOrdered
+      message: response.message, 
+      grn_id: response.grn_id,
+      items_added: (items as SyncItem[]).reduce((acc: number, i) => acc + i.serial_numbers.length, 0)
     })
 
   } catch (err) {
     const error = err as Error
+    console.error('[InventorySync] Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

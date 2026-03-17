@@ -40,13 +40,19 @@ export async function GET() {
 
   // Fetch profiles to map created_by and approved_by to human readable names
   const { data: profiles } = await supabase.from('profiles').select('id, full_name, email')
-  const profileMap = new Map(profiles?.map(p => [p.id, p.full_name || p.email]) || [])
+  const profileMap = new Map(profiles?.map(p => [p.id, { name: p.full_name || p.email, email: p.email }]) || [])
 
-  const enrichedData = data.map(po => ({
-    ...po,
-    requester_name: profileMap.get(po.created_by) || 'Unknown',
-    approver_name: po.approved_by ? profileMap.get(po.approved_by) : null
-  }))
+  const enrichedData = data.map(po => {
+    const requester = profileMap.get(po.created_by)
+    const approver = po.approved_by ? profileMap.get(po.approved_by) : null
+    
+    return {
+      ...po,
+      requester_name: requester?.name || 'Unknown',
+      approver_name: approver?.name || null,
+      approver_email: approver?.email || null
+    }
+  })
 
   return NextResponse.json(enrichedData)
 }

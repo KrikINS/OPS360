@@ -34,6 +34,8 @@ export function OrganizationTab() {
   const [loadingBranches, setLoadingBranches] = useState(false)
   const [isAddingBranch, setIsAddingBranch] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
+  const [isViewOpen, setIsViewOpen] = useState(false)
   
   const [formData, setFormData] = useState({
     name: "",
@@ -202,6 +204,115 @@ export function OrganizationTab() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+          <DialogContent className="max-w-3xl border-none shadow-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-xl">
+            {selectedBranch && (
+              <div className="flex flex-col">
+                <div className="p-8 bg-[#001529] text-white space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-blue-400" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-blue-200">Branch Details</span>
+                      </div>
+                      <h2 className="text-3xl font-black tracking-tight">{selectedBranch.name}</h2>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="bg-white/10 px-3 py-1 rounded-full text-xs font-bold tracking-wider border border-white/20">{selectedBranch.code}</span>
+                        <span className="text-white/60 text-xs font-medium">{selectedBranch.city}, {selectedBranch.state}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-8 grid grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <MapPin className="h-3 w-3" /> Location & Address
+                      </h4>
+                      <div className="bg-slate-50 p-4 rounded-xl space-y-3 border border-slate-100">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Full Address</p>
+                          <p className="text-sm font-semibold text-slate-900 leading-relaxed">{selectedBranch.full_address || 'N/A'}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">City</p>
+                            <p className="text-sm font-semibold text-slate-900">{selectedBranch.city || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">Pincode</p>
+                            <p className="text-sm font-semibold text-slate-900">{selectedBranch.pincode || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">State</p>
+                            <p className="text-sm font-semibold text-slate-900">{selectedBranch.state}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">State Code</p>
+                            <p className="text-sm font-semibold text-slate-900">{selectedBranch.state_code}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <User className="h-3 w-3" /> Contact & Legal
+                      </h4>
+                      <div className="bg-slate-50 p-4 rounded-xl space-y-3 border border-slate-100">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Manager</p>
+                          <p className="text-sm font-semibold text-slate-900">{selectedBranch.manager_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">GSTIN</p>
+                          <p className="text-sm font-semibold text-slate-900">{selectedBranch.gstin || 'No GST Record'}</p>
+                        </div>
+                        <div className="pt-2 flex flex-col gap-2">
+                          <div className="flex items-center gap-3 px-3 py-2 bg-white rounded-lg border border-slate-100 shadow-sm">
+                            <Phone className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-bold text-slate-700">{selectedBranch.phone || 'No Phone'}</span>
+                          </div>
+                          <div className="flex items-center gap-3 px-3 py-2 bg-white rounded-lg border border-slate-100 shadow-sm">
+                            <Mail className="h-4 w-4 text-orange-500" />
+                            <span className="text-sm font-bold text-slate-700">{selectedBranch.email || 'No Email'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="px-8 py-4 bg-slate-50 border-t flex justify-end gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="font-bold text-xs px-6"
+                    onClick={() => {
+                      setIsViewOpen(false)
+                      setEditingId(selectedBranch.id)
+                      setFormData({...selectedBranch})
+                      setIsAddingBranch(true)
+                    }}
+                  >
+                    Edit Branch
+                  </Button>
+                  <Button 
+                    className="bg-[#001529] font-bold text-xs px-6"
+                    onClick={() => setIsViewOpen(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent className="p-0">
         <div className="divide-y overflow-hidden">
@@ -212,14 +323,21 @@ export function OrganizationTab() {
           ) : (
             <div className="grid grid-cols-1 divide-y">
               {branches.map(branch => (
-                <div key={branch.id} className="p-5 flex items-center justify-between group hover:bg-slate-50 transition-colors">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2.5 rounded-lg bg-[#001529] text-white shadow-sm">
+                <div 
+                  key={branch.id} 
+                  className="p-5 flex items-center justify-between group hover:bg-slate-50 transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-[#001529]"
+                  onClick={() => {
+                    setSelectedBranch(branch)
+                    setIsViewOpen(true)
+                  }}
+                >
+                  <div className="flex items-start gap-4 pointer-events-none">
+                    <div className="p-2.5 rounded-lg bg-[#001529] text-white shadow-sm transition-transform group-hover:scale-110">
                       <MapPin className="h-4 w-4" />
                     </div>
                     <div>
                       <div className="flex items-center gap-3">
-                        <span className="font-bold text-slate-900">{branch.name}</span>
+                        <span className="font-bold text-slate-900 group-hover:text-[#001529] transition-colors">{branch.name}</span>
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-black border border-blue-100 uppercase tracking-wider">{branch.code}</span>
                       </div>
                       <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-2 font-medium">
@@ -231,8 +349,9 @@ export function OrganizationTab() {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
-                      onClick={() => {
+                      className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50 md:opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:shadow-md"
+                      onClick={(e) => {
+                        e.stopPropagation()
                         setEditingId(branch.id)
                         setFormData({...branch})
                         setIsAddingBranch(true)
@@ -243,8 +362,11 @@ export function OrganizationTab() {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-9 w-9 text-slate-400 hover:text-destructive hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                      onClick={() => deleteBranch(branch.id)}
+                      className="h-9 w-9 text-slate-400 hover:text-destructive hover:bg-red-50 md:opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:shadow-md"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteBranch(branch.id)
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

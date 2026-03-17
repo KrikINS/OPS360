@@ -237,8 +237,8 @@ export default function InventoryDashboard() {
                   variant="ghost" 
                   size="sm" 
                   className={cn(
-                    "text-white hover:bg-white/10 text-xs font-bold gap-2 hover:text-[#7FD1E3] transition-colors",
-                    showFilters && "text-[#7FD1E3] bg-white/5 h-8"
+                    "text-white hover:bg-white/10 text-xs font-bold gap-2 hover:text-[#7FD1E3] transition-colors h-10",
+                    showFilters && "text-[#7FD1E3] bg-white/5"
                   )}
                   onClick={() => setShowFilters(!showFilters)}
                 >
@@ -247,7 +247,7 @@ export default function InventoryDashboard() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-white hover:bg-white/10 text-xs font-bold gap-2 h-8"
+                  className="text-white hover:bg-white/10 text-xs font-bold gap-2 h-10"
                   onClick={() => setSortOrder(sortOrder === 'oldest' ? 'newest' : 'oldest')}
                 >
                   <ArrowUpDown className="h-3 w-3" />
@@ -316,7 +316,7 @@ export default function InventoryDashboard() {
                     setSelectedBranch("all")
                     setSearchQuery("")
                   }}
-                  className="text-white/40 hover:text-white hover:bg-white/5 text-[9px] font-bold uppercase tracking-widest h-7 ml-auto"
+                  className="text-white/40 hover:text-white hover:bg-white/5 text-[9px] font-bold uppercase tracking-widest h-9 ml-auto"
                 >
                   Clear All
                 </Button>

@@ -5,7 +5,6 @@ import {
   Truck, 
   ShieldAlert, 
   LayoutGrid,
-  ShieldCheck,
   CheckCircle2
 } from "lucide-react";
 import Image from "next/image";
@@ -27,6 +26,7 @@ interface POPrintTemplateProps {
     total_amount: number;
     requester_name?: string;
     approver_name?: string;
+    approver_email?: string;
     terms_content?: string;
     items: {
       product?: {
@@ -45,11 +45,10 @@ interface POPrintTemplateProps {
     gstin?: string;
   };
   branch: Branch;
-  corporateHQ: Branch;
 }
 
 export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateProps>(
-  ({ po, vendor, branch, corporateHQ }, ref) => {
+  ({ po, vendor, branch }, ref) => {
     const systemTimestamp = new Date().toLocaleString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -63,13 +62,13 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
     const netTaxableValue = po.items.reduce((acc, item) => acc + item.total_item_cost, 0);
     const cgst = netTaxableValue * 0.09;
     const sgst = netTaxableValue * 0.09;
-    const grandTotal = netTaxableValue + cgst + sgst;
+    const grandTotal = Math.round(netTaxableValue + cgst + sgst);
 
     return (
       <div 
         ref={ref}
         id="po-print-template" 
-        className="bg-white text-[#1e293b] flex flex-col w-[210mm] min-h-[297mm] p-0 mx-auto font-sans relative [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
+        className="bg-white text-[#000000] flex flex-col w-[210mm] min-h-[297mm] p-0 mx-auto font-sans relative [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
         
       >
         <style dangerouslySetInnerHTML={{ __html: `
@@ -82,6 +81,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               background: white !important;
+              counter-reset: page 1;
             }
             #po-print-template {
               width: 100% !important;
@@ -89,12 +89,13 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               overflow: visible !important;
               padding: 0 !important;
               margin: 0 !important;
+              color: #000000 !important;
             }
             .print-footer {
               position: fixed;
               bottom: 0;
               width: 100%;
-              border-top: 1px solid #f1f5f9;
+              border-top: 1px solid #000000;
               background: white;
             }
             .page-number:after {
@@ -107,48 +108,46 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
+            * {
+              color-adjust: exact !important;
+              -webkit-print-color-adjust: exact !important;
+            }
           }
         `}} />
 
-        {/* Lead Architect: Header Re-Alignment */}
         <div 
-          className="p-10 text-white flex justify-between items-start w-full shrink-0 bg-[#111827]"
+          className="px-10 py-2.5 flex justify-between items-baseline w-full shrink-0 border-b-2 border-black"
         >
-          {/* Left Side: PO Reference and Date */}
-          <div className="space-y-4">
-            <h1 className="text-5xl font-black tracking-tighter text-white m-0 leading-none">
-              Purchase Order
-            </h1>
-            <div className="space-y-1">
-              <p className="text-xl font-bold m-0 flex items-center gap-2">
-                <span className="opacity-60 text-sm uppercase tracking-widest font-black">Ref:</span>
-                {po.po_number}
+          {/* Realined Header: Title and Company on same horizontal line */}
+          <h1 className="text-[18pt] font-bold tracking-tighter text-[#000000] m-0 leading-none uppercase">
+            Purchase Order
+          </h1>
+
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-[18pt] font-bold text-[#000000] m-0 uppercase tracking-tight">
+                Ethan Home Appliances
               </p>
-              <p className="text-slate-400 font-medium text-sm m-0">
-                <span className="opacity-60 text-[10px] uppercase tracking-widest font-black mr-2">Date:</span>
-                {new Date(po.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
-              </p>
+              <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-slate-500">Ops360 Enterprise ERP</p>
+            </div>
+            <div className="bg-white p-1 rounded-lg border border-slate-200">
+               <Image src="/ethan-logo.png" alt="Ethan Logo" width={40} height={40} className="h-9 w-auto object-contain" />
             </div>
           </div>
+        </div>
 
-          {/* Right Side: Logo and Company Info */}
-          <div className="text-right flex flex-col items-end gap-3">
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-2xl font-black text-white m-0 uppercase tracking-tighter">Ethan Home Appliances</p>
-                <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
-              </div>
-              <div className="bg-white p-2 rounded-lg">
-                 <Image src="/ethan-logo.png" alt="Ethan Logo" width={48} height={48} className="h-12 w-auto object-contain" />
-              </div>
-            </div>
-            
-            {/* Header Address Mapping: Corporate HQ */}
-            <div className="text-[10px] text-slate-400 font-bold max-w-[280px] leading-tight mt-2 italic">
-               <p className="m-0 uppercase tracking-widest text-[#7FD1E3] mb-1">Corporate Headquarters</p>
-               <p className="m-0 mb-1">{corporateHQ?.full_address || 'Building 42, Innovation Hub, Kochi, Kerala'}</p>
-               <p className="m-0 uppercase tracking-widest font-black">GSTIN: {corporateHQ?.gstin || '32AAAAA0000A1Z5'}</p>
-            </div>
+        {/* Dynamic HQ Mapping Section */}
+        <div className="px-10 py-4 flex justify-between items-start bg-slate-50 border-b border-slate-200">
+          <div className="space-y-0.5 text-[10px] font-bold text-black uppercase tracking-tight">
+            <p className="m-0">Ethan Home Appliances HQ</p>
+            <p className="m-0">Minzta Hotel, Vazhappilly Tower, Koratty</p>
+            <p className="m-0">Thrissur, Kerala</p>
+            <p className="m-0">Contact No: 9747552277 | Email: ethanops360@gmail.com</p>
+          </div>
+          <div className="text-right text-[10px] font-bold text-black">
+            <p className="m-0 uppercase tracking-widest text-slate-500">Reference Number</p>
+            <p className="text-sm font-black m-0">{po.po_number}</p>
+            <p className="m-0 text-slate-500 mt-1">{new Date(po.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
           </div>
         </div>
 
@@ -160,11 +159,11 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                 <Building2 className="h-5 w-5" />
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Ship-To Destination</Label>
               </div>
-              <div className="pl-6 border-l-2 border-slate-200">
-                <p className="font-bold text-lg text-slate-900 m-0">{branch?.name || 'Central Hub'}</p>
-                <p className="text-xs text-slate-500 font-medium m-0">Branch Delivery Registry</p>
-                <p className="text-[10px] text-slate-400 mt-1 italic m-0">{branch?.full_address || 'Site delivery as per instructions'}</p>
-                <p className="text-[9px] font-black text-slate-500 mt-1 m-0 uppercase flex items-center gap-2">
+              <div className="pl-6 border-l-2 border-slate-900">
+                <p className="font-bold text-lg text-black m-0">{branch?.name || 'Central Hub'}</p>
+                <p className="text-xs text-slate-600 font-medium m-0">Branch Delivery Registry</p>
+                <p className="text-[10px] text-black mt-1 m-0">{branch?.full_address || 'Site delivery as per instructions'}</p>
+                <p className="text-[9px] font-black text-black mt-1 m-0 uppercase flex items-center gap-2">
                    <span className="opacity-50 tracking-tighter">GSTIN:</span> 
                    {branch?.gstin || '32BBBBB0000B1Z5'}
                 </p>
@@ -176,10 +175,10 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                 <Truck className="h-5 w-5" />
                 <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Vendor Partner</Label>
               </div>
-              <div className="pl-6 border-l-2 border-slate-200">
-                <p className="font-bold text-lg text-slate-900 m-0">{vendor.name}</p>
-                <p className="text-xs text-slate-500 font-medium m-0">{vendor.state || 'Registered Vendor'}</p>
-                <p className="text-[10px] font-mono mt-1 text-slate-400 font-bold uppercase m-0 flex items-center gap-2">
+              <div className="pl-6 border-l-2 border-slate-900">
+                <p className="font-bold text-lg text-black m-0">{vendor.name}</p>
+                <p className="text-xs text-slate-600 font-medium m-0">{vendor.state || 'Registered Vendor'}</p>
+                <p className="text-[10px] font-mono mt-1 text-black font-bold uppercase m-0 flex items-center gap-2">
                    <span className="opacity-50 tracking-tighter tracking-widest font-sans">GSTIN:</span> 
                    {vendor.gstin || 'Awaiting Verification'}
                 </p>
@@ -195,32 +194,32 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
             </h4>
             <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
               <table className="w-full border-collapse">
-                <thead className="bg-[#001529]/5">
-                  <tr className="border-b border-slate-100">
-                    <th className="p-4 text-center w-[60px] font-black uppercase text-[9px] tracking-widest text-slate-500">#</th>
-                    <th className="p-4 text-left font-black uppercase text-[9px] tracking-widest text-slate-500">Model Specification</th>
-                    <th className="p-4 text-left font-black uppercase text-[9px] tracking-widest text-slate-500">HSN/SAC</th>
-                    <th className="p-4 text-center w-20 font-black uppercase text-[9px] tracking-widest text-slate-500">Qty</th>
-                    <th className="p-4 text-right w-32 font-black uppercase text-[9px] tracking-widest text-slate-500">Net Rate</th>
-                    <th className="p-4 text-right w-32 font-black uppercase text-[9px] tracking-widest text-slate-500">Subtotal</th>
+                <thead className="bg-white">
+                  <tr className="border-b-2 border-black">
+                    <th className="p-4 text-center w-[60px] font-black uppercase text-[9px] tracking-widest text-[#000000]">#</th>
+                    <th className="p-4 text-left font-black uppercase text-[9px] tracking-widest text-[#000000]">Model Specification</th>
+                    <th className="p-4 text-left font-black uppercase text-[9px] tracking-widest text-[#000000]">HSN/SAC</th>
+                    <th className="p-4 text-center w-20 font-black uppercase text-[9px] tracking-widest text-[#000000]">Qty</th>
+                    <th className="p-4 text-right w-32 font-black uppercase text-[9px] tracking-widest text-[#000000]">Net Rate</th>
+                    <th className="p-4 text-right w-32 font-black uppercase text-[9px] tracking-widest text-[#000000]">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="text-[11px]">
+                <tbody className="text-[11px] text-black">
                   {po.items.map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-50 odd:bg-slate-50/20">
-                      <td className="p-4 text-center font-bold text-slate-400">{idx + 1}</td>
+                    <tr key={idx} className="border-b border-slate-100">
+                      <td className="p-4 text-center font-bold text-black border-r border-slate-100">{idx + 1}</td>
                       <td className="p-4">
-                        <div className="font-bold text-slate-900 text-sm">{item.product?.model_name || 'Item'}</div>
-                        <div className="text-[9px] font-bold text-blue-500 uppercase tracking-tighter">SKU: {item.product?.product_code}</div>
+                        <div className="font-bold text-black text-sm">{item.product?.model_name || 'Item'}</div>
+                        <div className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter">SKU: {item.product?.product_code}</div>
                       </td>
-                      <td className="p-4 text-slate-500 font-mono text-[10px] font-bold tracking-tighter">
+                      <td className="p-4 text-black font-mono text-[10px] font-bold tracking-tighter">
                         {item.product?.hsn_code || '---'}
                       </td>
-                      <td className="p-4 text-center font-black text-white font-mono bg-[#001529] rounded-[4px]">
+                      <td className="p-4 text-center font-black text-black font-mono border-x border-slate-100">
                         {item.quantity}
                       </td>
-                      <td className="p-4 text-right font-bold text-slate-600">₹{item.unit_price.toLocaleString('en-IN')}</td>
-                      <td className="p-4 text-right font-black text-[#001529]">₹{item.total_item_cost.toLocaleString('en-IN')}</td>
+                      <td className="p-4 text-right font-bold text-black">₹{item.unit_price.toLocaleString('en-IN')}</td>
+                      <td className="p-4 text-right font-black text-black">₹{item.total_item_cost.toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -229,22 +228,22 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
             
             {/* Financial Summary Block */}
             <div className="flex justify-end pt-4">
-              <div className="w-[320px] space-y-2 p-6 rounded-2xl bg-[#001529]/5 border border-[#001529]/10">
+              <div className="w-[320px] space-y-2 p-6 border-2 border-black">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-500 uppercase tracking-tight">Net Taxable Value</span>
-                  <span className="font-black text-slate-900">₹{netTaxableValue.toLocaleString('en-IN')}</span>
+                  <span className="font-bold text-black uppercase tracking-tight">Net Taxable Value</span>
+                  <span className="font-black text-black">₹{netTaxableValue.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-500 uppercase tracking-tight">CGST (9%)</span>
-                  <span className="font-black text-slate-900">₹{cgst.toLocaleString('en-IN')}</span>
+                  <span className="font-bold text-black uppercase tracking-tight">CGST (9%)</span>
+                  <span className="font-black text-black">₹{cgst.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200">
-                  <span className="font-bold text-slate-500 uppercase tracking-tight">SGST (9%)</span>
-                  <span className="font-black text-slate-900">₹{sgst.toLocaleString('en-IN')}</span>
+                <div className="flex justify-between items-center text-xs pb-2 border-b-2 border-black">
+                  <span className="font-bold text-black uppercase tracking-tight">SGST (9%)</span>
+                  <span className="font-black text-black">₹{sgst.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2">
-                  <span className="text-sm font-black text-[#001529] uppercase tracking-tighter">Grand Total</span>
-                  <span className="text-xl font-black text-[#001529]">₹{grandTotal.toLocaleString('en-IN')}</span>
+                  <span className="text-sm font-black text-black uppercase tracking-tighter">Grand Total</span>
+                  <span className="text-xl font-black text-black">₹{grandTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -261,57 +260,75 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                 {po.terms_content || "1. Supply as per agreed specifications and delivery schedule.\n2. Invoices must mention the PO Number and GSTIN of both parties.\n3. Subject to Ernakulam/Kochi Jurisdiction."}
               </div>
               <div className="space-y-1">
-                 <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Total Value in Words</Label>
-                 <p className="text-[10px] font-black italic m-0 underline decoration-slate-300 underline-offset-4 text-[#001529]">{numberToWords(Math.round(grandTotal))}.</p>
+                 <Label className="text-[9px] text-black font-bold uppercase tracking-widest">Total Value in Words</Label>
+                 <p className="text-[10px] font-black italic m-0 underline decoration-slate-900 underline-offset-4 text-black">{numberToWords(grandTotal)} Only.</p>
               </div>
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl p-6 text-white relative overflow-hidden bg-[#0f172a]">
-                 <div className="absolute top-0 right-0 p-4 opacity-5">
-                   <ShieldCheck className="h-16 w-16" />
-                 </div>
-                 <h4 className="text-[9px] font-black uppercase tracking-[0.2em] mb-4 m-0 text-[#7FD1E3]">Security Compliance Audit</h4>
-                 <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-0.5">
-                     <p className="text-[8px] text-slate-400 font-bold uppercase m-0">Originator</p>
-                     <p className="text-xs font-bold m-0">{po.requester_name || 'System Auto-Gen'}</p>
-                   </div>
-                   <div className="space-y-0.5">
-                     <p className="text-[8px] text-slate-400 font-bold uppercase m-0">Certification</p>
-                     <p className="text-xs font-bold text-green-400 m-0">
-                       {po.approver_name ? 'Certified Approved' : 'Awaiting Review'}
-                     </p>
-                   </div>
-                 </div>
-              </div>
+               <div className="p-6 text-black relative border-2 border-black">
+                  <div className="absolute top-0 right-0 p-2 opacity-10">
+                    <ShieldAlert className="h-20 w-20" />
+                  </div>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 m-0">Security Compliance Audit</h4>
+                  <div className="grid grid-cols-2 gap-4 relative z-10">
+                    <div className="space-y-0.5">
+                      <p className="text-[8px] text-slate-600 font-bold uppercase m-0">Originator</p>
+                      <p className="text-xs font-black m-0">{po.requester_name || 'System Auto-Gen'}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[8px] text-slate-600 font-bold uppercase m-0">Certification</p>
+                      <p className="text-xs font-black text-black m-0">
+                        {po.approver_name ? 'Certified Approved' : 'Awaiting Review'}
+                      </p>
+                      {po.approver_email && (
+                        <p className="text-[8px] font-mono text-slate-600 truncate">{po.approver_email}</p>
+                      )}
+                    </div>
+                  </div>
+               </div>
 
-              <div className="flex justify-end pt-4">
-                <div className="text-center w-full max-w-[200px] border-t-2 pt-4 border-[#001529]">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] m-0 text-[#001529]">Authorized Signatory</p>
-                  <p className="text-[7px] font-bold text-slate-400 mt-1 uppercase m-0 tracking-widest">Validated Digital Document</p>
+               <div className="flex justify-end pt-4">
+                <div className="text-center w-full max-w-[200px] border-t-2 pt-4 border-black">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] m-0 text-black">Authorized Signatory</p>
+                  <p className="text-[7px] font-bold text-slate-600 mt-1 uppercase m-0 tracking-widest">Validated Digital Document</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Lead Architect: PDF Specs (A4) Footer */}
         <div 
-          className="w-full px-10 py-6 border-t border-slate-100 flex justify-between items-end text-[9px] font-bold text-slate-400 uppercase tracking-widest shrink-0 bg-white print-footer"
+          className="w-full px-10 py-6 border-t font-bold text-black uppercase tracking-widest shrink-0 bg-white print-footer"
         >
-          <div className="flex flex-col gap-1">
-            <p className="m-0 text-[#001529]/80 font-black">CLASSIFICATION: CONFIDENTIAL – AUTHORIZED VENDOR USE ONLY</p>
-            <p className="text-[7px] opacity-60 m-0 leading-tight">Subject to Ernakulam/Kochi Jurisdiction. System-generated PO ID: {po.id}</p>
-          </div>
-          <div className="text-center">
-            <p className="m-0 page-number"></p>
-          </div>
-          <div className="text-right flex flex-col gap-1">
-            <p className="m-0 uppercase tracking-tighter">Timestamp: {systemTimestamp}</p>
-            <p className="text-[7px] opacity-70 m-0 uppercase flex items-center gap-1 justify-end font-black underline underline-offset-2 text-[#3b82f6]">
-               <CheckCircle2 className="h-2 w-2" /> Verified Digital Asset
-            </p>
+          <div className="flex justify-between items-end w-full">
+            <div className="w-[45%] flex flex-col gap-1">
+              <p className="m-0 text-black font-black text-[9px]">CLASSIFICATION: CONFIDENTIAL – AUTHORIZED VENDOR USE ONLY</p>
+              <p className="text-[7px] opacity-100 m-0 leading-tight">Subject to Ernakulam/Kochi Jurisdiction. System-generated PO ID: {po.id}</p>
+            </div>
+            
+            <div className="text-center">
+              <p className="m-0 page-number text-[10px]"></p>
+            </div>
+
+            <div className="w-[55%] text-right flex flex-row items-end justify-end gap-6 text-[8px]">
+              <div className="flex flex-col gap-1">
+                <p className="m-0 uppercase tracking-tighter">Generated: {systemTimestamp}</p>
+                <p className="text-[7px] opacity-100 m-0 uppercase flex items-center gap-1 justify-end font-black text-black">
+                   <CheckCircle2 className="h-2 w-2" /> Verified Digital Asset
+                </p>
+              </div>
+              <div className="bg-white p-1 border border-black h-12 w-12 flex items-center justify-center">
+                <Image 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-PO-${po.po_number}-${po.id}`)}`} 
+                  alt="QR Code" 
+                  width={48}
+                  height={48}
+                  unoptimized
+                  className="h-full w-full object-contain grayscale"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -115,7 +115,7 @@ export function GlobalMastersTab() {
                 onChange={e => setNewBrand(e.target.value)} 
                 onKeyDown={e => e.key === "Enter" && addMaster("brands", { name: newBrand })}
               />
-              <Button onClick={() => addMaster("brands", { name: newBrand })} className="bg-[#001529] font-bold shadow-soft">
+              <Button onClick={() => addMaster("brands", { name: newBrand })} className="bg-[#001529] font-bold shadow-soft h-10">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -123,7 +123,7 @@ export function GlobalMastersTab() {
               {brands.map(b => (
                 <div key={b.id} className="p-3 flex items-center justify-between group hover:bg-white transition-colors">
                   <span className="text-sm font-semibold text-slate-700">{b.name}</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => deleteMaster("brands", b.id)}>
+                  <Button variant="ghost" size="icon" className="text-slate-300 hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => deleteMaster("brands", b.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -149,7 +149,7 @@ export function GlobalMastersTab() {
                 onChange={e => setNewCategory(e.target.value)} 
                 onKeyDown={e => e.key === "Enter" && addMaster("categories", { name: newCategory })}
               />
-              <Button onClick={() => addMaster("categories", { name: newCategory })} className="bg-[#001529] font-bold shadow-soft">
+              <Button onClick={() => addMaster("categories", { name: newCategory })} className="bg-[#001529] font-bold shadow-soft h-10">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -157,7 +157,7 @@ export function GlobalMastersTab() {
               {categories.map(c => (
                 <div key={c.id} className="p-3 flex items-center justify-between group hover:bg-white transition-colors">
                   <span className="text-sm font-semibold text-slate-700">{c.name}</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => deleteMaster("categories", c.id)}>
+                  <Button variant="ghost" size="icon" className="text-slate-300 hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => deleteMaster("categories", c.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -242,7 +242,7 @@ export function GlobalMastersTab() {
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className={`h-7 px-2 gap-1.5 rounded-full border ${item.is_default ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'text-slate-300 border-slate-100 hover:bg-slate-100'}`}
+                            className={`h-9 px-3 gap-1.5 rounded-full border ${item.is_default ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'text-slate-300 border-slate-100 hover:bg-slate-100'}`}
                             onClick={() => toggleDefaultTerm(item.id, item.is_default)}
                           >
                             <CheckCircle2 className={`h-3 w-3 ${item.is_default ? 'fill-emerald-600 text-white' : ''}`} />
@@ -253,7 +253,7 @@ export function GlobalMastersTab() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-slate-300 hover:text-destructive opacity-0 group-hover:opacity-100" 
+                            className="text-slate-300 hover:text-destructive opacity-0 group-hover:opacity-100" 
                             onClick={() => deleteMaster("po_terms_templates", item.id)}
                           >
                             <Trash2 className="h-4 w-4" />

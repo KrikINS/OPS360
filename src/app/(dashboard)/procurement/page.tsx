@@ -14,6 +14,7 @@ import { calculateLandedCost } from "@/utils/compliance"
 import { cn } from "@/lib/utils"
 import {
   Truck,
+  Download,
   FileText,
   Plus,
   Loader2,
@@ -25,7 +26,6 @@ import {
   Clock,
   RotateCcw,
   AlertOctagon,
-  Download,
   PackageSearch,
   Building2,
   LayoutGrid,
@@ -36,6 +36,8 @@ import {
 import { useReactToPrint } from 'react-to-print'
 import { useRef } from 'react'
 import { POPrintTemplate } from "@/components/procurement/POPrintTemplate"
+import { GRNPrintTemplate } from "@/components/procurement/GRNPrintTemplate"
+import { GRNDialog } from "@/components/procurement/GRNDialog"
 import {
   Select,
   SelectContent,
@@ -110,9 +112,11 @@ type PurchaseOrder = {
   vendor: { name: string, state: string }
   branch: { name: string }
   invoice_url?: string
+  bill_url?: string
   vendor_bill_amount?: number
   requester_name?: string
   approver_name?: string
+  approver_email?: string
   cancellation_reason?: string
   terms_content?: string
   items: {
@@ -128,6 +132,44 @@ type PurchaseOrder = {
   }[]
 }
 
+type GRNData = {
+  id: string
+  grn_number: string
+  po_number: string
+  created_at: string
+  originator_name: string
+  approver_email?: string
+  condition_notes: string
+  items: {
+    product: {
+      model_name: string
+      product_code: string
+      hsn_code: string
+    }
+    quantity: number
+    serial_numbers: string[]
+  }[]
+}
+
+type GRNRawItem = {
+  quantity: number
+  serial_numbers: string[]
+  products: {
+    model_name: string
+    product_code: string
+    hsn_code: string
+  } | null
+}
+
+type GRNRawData = {
+  id: string
+  grn_number: string
+  created_at: string
+  condition_notes: string
+  profiles: { full_name: string } | { full_name: string }[] | null
+  grn_items: GRNRawItem[] | GRNRawItem | null
+}
+
 export default function ProcurementGRNPage() {
   const [isCreatingPO, setIsCreatingPO] = useState(false)
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -141,15 +183,12 @@ export default function ProcurementGRNPage() {
   const [poTerms, setPoTerms] = useState({ gstin: "", terms: "" })
   const [expectedDelivery, setExpectedDelivery] = useState("")
   const [poItems, setPoItems] = useState<POItem[]>([])
-  const [freightCharges, setFreightCharges] = useState<Record<string, number>>({})
-  const [serialNumbers, setSerialNumbers] = useState<Record<string, string[]>>({})
 
   const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
-  const [isProcessingGRN, setIsProcessingGRN] = useState(false)
   const [managerOverride, setManagerOverride] = useState<Record<number, boolean>>({})
   const [overrideReasons, setOverrideReasons] = useState<Record<number, string>>({})
   const [isUploading, setIsUploading] = useState<string | null>(null)
@@ -172,34 +211,102 @@ export default function ProcurementGRNPage() {
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [creationTerms, setCreationTerms] = useState<string>("")
   const printRef = useRef<HTMLDivElement>(null)
+  const grnPrintRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [currentGrnData, setCurrentGrnData] = useState<GRNData | null>(null)
+  const [uploadingPoId, setUploadingPoId] = useState<string | null>(null)
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `PO_${viewingPO?.po_number || 'Document'}`,
     onAfterPrint: () => setIsDownloading(null),
     onBeforePrint: async () => {
-      // Small delay to ensure render
+      await new Promise(resolve => setTimeout(resolve, 100));
+    },
+  })
+
+  const handleGrnPrint = useReactToPrint({
+    contentRef: grnPrintRef,
+    documentTitle: `GRN_${currentGrnData?.grn_number || 'Document'}`,
+    onAfterPrint: () => setIsDownloading(null),
+    onBeforePrint: async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     },
   })
 
   const handleDownloadPDF = async (po: PurchaseOrder) => {
     setIsDownloading(po.id);
+    setViewingPO(po);
     try {
-      // Trigger the print logic
-      handlePrint();
+      setTimeout(() => handlePrint(), 100);
     } catch (error) {
       console.error('PDF Generation Error:', error);
       alert('Could not generate PDF. Please try again.');
       setIsDownloading(null);
     }
   };
+
+  const handleDownloadGRN = async (po: PurchaseOrder) => {
+    setIsDownloading(po.id + '_grn');
+    try {
+      const supabase = createClient();
+      // Fetch the latest GRN for this PO
+      const { data: grnData, error: grnError } = await supabase
+        .from('grns')
+        .select(`
+          *,
+          profiles(full_name),
+          grn_items(
+            quantity,
+            serial_numbers,
+            products(model_name, product_code, hsn_code)
+          )
+        `)
+        .eq('po_id', po.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (grnError) throw grnError;
+      if (!grnData || grnData.length === 0) {
+        throw new Error("No Goods Receipt Note found for this order. It may have been processed before document tracking was enabled.");
+      }
+
+      const grnRecord = grnData[0];
+      const rawData = grnRecord as unknown as GRNRawData;
+      const profile = Array.isArray(rawData.profiles) ? rawData.profiles[0] : rawData.profiles;
+      const grnItems = Array.isArray(rawData.grn_items) ? rawData.grn_items : (rawData.grn_items ? [rawData.grn_items] : []);
+
+      setCurrentGrnData({
+        id: rawData.id,
+        grn_number: rawData.grn_number,
+        po_number: po.po_number,
+        created_at: rawData.created_at,
+        condition_notes: rawData.condition_notes,
+        originator_name: profile?.full_name || 'System Operator',
+        approver_email: po.approver_email,
+        items: grnItems.map(item => ({
+          product: item.products || { model_name: 'Unknown', product_code: 'N/A', hsn_code: 'N/A' },
+          quantity: item.quantity,
+          serial_numbers: item.serial_numbers
+        }))
+      });
+
+      // Small delay for React state update before print
+      setTimeout(() => handleGrnPrint(), 300);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('GRN PDF Error:', error);
+      alert(error.message || 'Could not generate GRN PDF.');
+      setIsDownloading(null);
+    }
+  };
   const [cancelModalId, setCancelModalId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState("")
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, poId: string) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    const poId = uploadingPoId
+    if (!file || !poId) return
 
     setIsUploading(poId)
     const formData = new FormData()
@@ -214,6 +321,12 @@ export default function ProcurementGRNPage() {
       const data = await res.json()
 
       if (data.success) {
+        // After successful upload, prompt for the bill amount to trigger reconciliation
+        const bill = prompt("Bill uploaded successfully! Enter Vendor Bill Amount for reconciliation:");
+        if (bill && !isNaN(Number(bill))) {
+          await handleReconcile(poId, Number(bill));
+        }
+
         const poRes = await fetch('/api/procurement/purchase-orders')
         setActivePOs(await poRes.json())
       } else {
@@ -224,7 +337,8 @@ export default function ProcurementGRNPage() {
       alert("An error occurred during upload")
     } finally {
       setIsUploading(null)
-      e.target.value = ""
+      setUploadingPoId(null)
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
@@ -448,55 +562,9 @@ export default function ProcurementGRNPage() {
     }
   }
 
-  const handleProcessGRN = async () => {
-    if (!selectedPO) return
-    setIsProcessingGRN(true)
-
-    // Validate serial numbers and construct items for sync
-    const grnItems = selectedPO.items
-      .map(item => ({
-        product_id: item.product_id,
-        unit_price: item.unit_price,
-        hsn_code: item.product.hsn_code,
-        freight: freightCharges[item.id] || 0,
-        serial_numbers: serialNumbers[item.id] || []
-      }))
-      .filter(item => item.serial_numbers.length > 0) // Only send items being received
-
-    if (grnItems.length === 0) {
-      setIsProcessingGRN(false)
-      alert("Please enter at least one serial number to process GRN.")
-      return
-    }
-
-    // Validation: current SNS + alreadyReceived <= quantity
-    for (const item of grnItems) {
-      const poItem = selectedPO.items.find(i => i.product_id === item.product_id)
-      const alreadyReceived = poItem?.received_quantity || 0
-      if (item.serial_numbers.length + alreadyReceived > (poItem?.quantity || 0)) {
-        setIsProcessingGRN(false)
-        alert(`Serial numbers count exceeds remaining quantity for ${poItem?.product.model_name}`)
-        return
-      }
-    }
-
-    try {
-      const res = await fetch('/api/procurement/inventory-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ po_id: selectedPO.id, items: grnItems })
-      })
-
-      if (res.ok) {
-        setSelectedPO(null)
-        const poRes = await fetch('/api/procurement/purchase-orders')
-        setActivePOs(await poRes.json())
-      }
-    } catch (err) {
-      console.error("GRN processing failed", err)
-    } finally {
-      setIsProcessingGRN(false)
-    }
+  const handleGRNSuccess = async () => {
+    const poRes = await fetch('/api/procurement/purchase-orders')
+    setActivePOs(await poRes.json())
   }
 
   const filteredPOs = activePOs.filter(po => {
@@ -718,109 +786,9 @@ export default function ProcurementGRNPage() {
             </Button>
           </CardFooter>
         </Card>
-      ) : selectedPO ? (
-        <Card className="shadow-md border-t-4 border-t-primary">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Process GRN: {selectedPO.po_number}</CardTitle>
-                <CardDescription>Vendor: {selectedPO.vendor.name}</CardDescription>
-              </div>
-              <Button variant="outline" onClick={() => setSelectedPO(null)}>Close</Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-center">Ordered</TableHead>
-                  <TableHead className="text-center">Received</TableHead>
-                  <TableHead className="text-center">Remaining</TableHead>
-                  <TableHead>Base Price</TableHead>
-                  <TableHead>Serials (Current GRN)</TableHead>
-                  <TableHead>Freight / Item</TableHead>
-                  <TableHead className="text-right">Unit Landed Cost</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {selectedPO.items.map((item) => {
-                  const alreadyReceived = item.received_quantity || 0
-                  const remaining = item.quantity - alreadyReceived
-                  const freight = freightCharges[item.id] || 0
-                  const currentSns = serialNumbers[item.id] || []
-
-                  // Refined composite supply calculation
-                  const costDetails = calculateLandedCost(
-                    item.unit_price,
-                    freight,
-                    item.product.hsn_code,
-                    selectedPO.vendor?.state || 'Kerala',
-                    currentSns.length || 1
-                  )
-
-                  return (
-                    <TableRow key={item.id} className={remaining === 0 ? "opacity-40 bg-muted/20" : ""}>
-                      <TableCell className="py-3">
-                        <div className="font-bold">{item.product.model_name}</div>
-                        <div className="font-mono text-[10px] text-muted-foreground uppercase">{item.product.hsn_code}</div>
-                      </TableCell>
-                      <TableCell className="font-semibold text-center">{item.quantity}</TableCell>
-                      <TableCell className="text-blue-600 font-medium text-center">{alreadyReceived}</TableCell>
-                      <TableCell className="text-orange-600 font-bold text-center">
-                        {remaining}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">₹{item.unit_price.toLocaleString('en-IN')}</TableCell>
-                      <TableCell>
-                        <Input
-                          placeholder="SN1, SN2..."
-                          className="w-full text-xs font-mono"
-                          disabled={remaining <= 0}
-                          onChange={(e) => {
-                            const sns = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                            if (sns.length > remaining && remaining > 0) {
-                              alert(`Only ${remaining} units remaining for this item.`);
-                              return;
-                            }
-                            if (remaining <= 0) {
-                              alert("This item has already been fully received.");
-                              return;
-                            }
-                            setSerialNumbers(prev => ({ ...prev, [item.id]: sns }));
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          placeholder="₹0"
-                          className="w-20 h-8"
-                          disabled={remaining <= 0}
-                          onChange={(e) => setFreightCharges(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex flex-col items-end">
-                          <span className="font-bold text-primary">₹{costDetails.totalLandedCost.toLocaleString('en-IN')}</span>
-                          <span className="text-[10px] bg-primary/10 px-1 rounded text-primary font-bold">{costDetails.gstRate}% GST Incl.</span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-          <CardFooter className="justify-end gap-3 border-t bg-muted/10 p-4">
-            <Button onClick={handleProcessGRN} className="bg-primary" disabled={isProcessingGRN}>
-              {isProcessingGRN ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Sync to Inventory & Finalize GRN
-            </Button>
-          </CardFooter>
-        </Card>
       ) : (
-      /* Registry with Tabs Integration */
+        <>
+      {/* Registry with Tabs Integration */}
       <Tabs defaultValue="all" className="w-full gap-0">
       <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1">
         <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
@@ -845,10 +813,15 @@ export default function ProcurementGRNPage() {
                 </TabsTrigger>
                 <TabsTrigger 
                   value="reconciliation" 
-                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 relative"
                 >
                   <Scale className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
                   3-Way Match Audit
+                  {activePOs.filter(p => (p.status === 'received' || p.status === 'partially_received') && !((p.vendor_bill_amount ?? 0) > 0)).length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
+                      {activePOs.filter(p => (p.status === 'received' || p.status === 'partially_received') && !((p.vendor_bill_amount ?? 0) > 0)).length}
+                    </span>
+                  )}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="returns" 
@@ -1013,10 +986,10 @@ export default function ProcurementGRNPage() {
                               <div className="flex items-center gap-2">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger render={
-                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95" />
-                                  }>
-                                    Actions <ChevronDown className="h-3 w-3" />
-                                  </DropdownMenuTrigger>
+                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
+                                      Actions <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                  } />
                                   <DropdownMenuContent align="end" className="w-56">
                                     {po.status === 'pending_approval' && (
                                       <>
@@ -1082,25 +1055,25 @@ export default function ProcurementGRNPage() {
                                       </DropdownMenuItem>
                                     )}
 
-                                    {(po.status === 'received' || po.status === 'partially_received' || po.status === 'approved') && (
-                                      <DropdownMenuItem className="p-0">
-                                        <label className="flex items-center w-full px-2 py-1.5 cursor-pointer text-slate-600 focus:text-blue-600 font-medium h-full">
-                                          <input
-                                            type="file"
-                                            accept=".pdf,.jpg,.jpeg,.png"
-                                            className="hidden"
-                                            disabled={isUploading === po.id}
-                                            onChange={(e) => handleFileUpload(e, po.id)}
-                                          />
-                                          {isUploading === po.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileUp className="h-4 w-4 mr-2" />}
-                                          <span>{po.invoice_url ? "Update Bill" : "Upload Bill"}</span>
-                                        </label>
+                                    {(po.status === 'received' || po.status === 'partially_received') && (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleDownloadGRN(po)}
+                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                        disabled={isDownloading === po.id + '_grn'}
+                                      >
+                                        {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                                        Download GRN
                                       </DropdownMenuItem>
                                     )}
-                                    
+
+                                    <DropdownMenuItem onClick={() => handleDownloadPDF(po)} className="cursor-pointer font-medium" disabled={isDownloading === po.id}>
+                                      {isDownloading === po.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                                      Download PO
+                                    </DropdownMenuItem>
+
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
-                                      <FileText className="h-4 w-4 mr-2" /> View Audit Trail
+                                      <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -1253,9 +1226,9 @@ export default function ProcurementGRNPage() {
                                           <div
                                             className={cn(
                                               "h-full transition-all duration-700",
-                                              progress === 100 ? "bg-green-500" : "bg-[#7FD1E3]",
-                                              `w-[${progress}%]`
+                                              progress === 100 ? "bg-green-500" : "bg-[#7FD1E3]"
                                             )}
+                                            style={{ width: `${progress}%` }}
                                           />
                                         </div>
                                       </div>
@@ -1266,10 +1239,10 @@ export default function ProcurementGRNPage() {
                               <TableCell className="text-right py-4 px-4">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger render={
-                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95" />
-                                  }>
-                                    Actions <ChevronDown className="h-3 w-3" />
-                                  </DropdownMenuTrigger>
+                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
+                                      Actions <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                  } />
                                   <DropdownMenuContent align="end" className="w-48">
                                     <DropdownMenuItem 
                                       onClick={() => setSelectedPO(po)}
@@ -1277,8 +1250,16 @@ export default function ProcurementGRNPage() {
                                     >
                                       <Truck className="h-4 w-4 mr-2" /> Process GRN
                                     </DropdownMenuItem>
+                                    {po.items.some(i => i.received_quantity > 0) && (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleDownloadGRN(po)}
+                                        className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                      >
+                                        <Download className="h-4 w-4 mr-2" /> Download GRN
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
-                                      <FileText className="h-4 w-4 mr-2" /> View Audit Trail
+                                      <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -1387,15 +1368,16 @@ export default function ProcurementGRNPage() {
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader className="bg-slate-50 border-b">
-                      <TableRow>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">1. Agreement (PO)</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">2. Reality (GRN)</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">3. Demand (Bill)</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Actions</TableHead>
-                      </TableRow>
+                        <TableRow>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Delayed By</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Ordered Amount</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Received Value</TableHead>
+                           <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor&apos;s Invoice</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Actions</TableHead>
+                        </TableRow>
                     </TableHeader>
                     <TableBody>
                       {activePOs
@@ -1408,7 +1390,7 @@ export default function ProcurementGRNPage() {
                           const poTotal = p.total_amount;
                           const grnTotal = p.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity) * (1 + item.tax_rate / 100), 0);
                           const billAmount = p.vendor_bill_amount || 0;
-                          const hasBill = billAmount > 0;
+                          const hasBill = !!(p.bill_url || p.invoice_url);
                           const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
 
                           if (auditMatchFilter === "match") return searchMatch && hasBill && isMatch;
@@ -1418,27 +1400,42 @@ export default function ProcurementGRNPage() {
                           return searchMatch;
                         })
                         .map((po) => {
-                          const poTotal = po.total_amount;
-                          const grnTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity) * (1 + item.tax_rate / 100), 0);
-                          const billAmount = po.vendor_bill_amount || 0;
+                            const poTotal = po.total_amount;
+                            const grnTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity) * (1 + item.tax_rate / 100), 0);
+                            const billAmount = po.vendor_bill_amount || 0;
 
-                          const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
-                          const hasBill = billAmount > 0;
+                            const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
+                            const matchesPO = Math.abs(poTotal - billAmount) < 1;
+                            const hasBill = !!(po.bill_url || po.invoice_url);
+                            const daysOutstanding = Math.floor((new Date().getTime() - new Date(po.created_at).getTime()) / (1000 * 3600 * 24));
 
-                          return (
-                            <TableRow key={po.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs">
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold font-mono text-[#001529]">{po.po_number}</TableCell>
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-semibold text-slate-600">{po.vendor?.name}</TableCell>
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-slate-500">₹{poTotal.toLocaleString()}</TableCell>
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-blue-600">₹{grnTotal.toLocaleString()}</TableCell>
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-amber-600">
-                                {hasBill ? `₹${billAmount.toLocaleString()}` : "Awaiting Bill"}
+                           return (
+                             <TableRow key={po.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs">
+                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold font-mono text-[#001529]">{po.po_number}</TableCell>
+                               <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                                 <div className="flex items-center gap-1.5">
+                                   <div className={`h-2 w-2 rounded-full ${daysOutstanding > 5 ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
+                                   <span className={`font-bold ${daysOutstanding > 5 ? 'text-red-600' : 'text-slate-700'}`}>
+                                     {daysOutstanding} Days
+                                   </span>
+                                 </div>
+                               </TableCell>
+                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-semibold text-slate-600">{po.vendor?.name}</TableCell>
+                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-slate-500">₹{poTotal.toLocaleString()}</TableCell>
+                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-blue-600">₹{grnTotal.toLocaleString()}</TableCell>
+                               <TableCell className={cn(
+                                 "py-2 px-4 border-r border-slate-100/50 font-bold",
+                                 hasBill 
+                                   ? (matchesPO ? "text-[#001529]" : "text-red-600") 
+                                   : "text-amber-600"
+                               )}>
+                                 {hasBill ? `₹${billAmount.toLocaleString()}` : "Awaiting Bill"}
                               </TableCell>
                               <TableCell className="text-center">
                                 {hasBill ? (
                                   isMatch ? (
                                     <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
-                                      <ShieldCheck className="h-3 w-3 mr-1" /> FULL MATCH
+                                      <ShieldCheck className="h-3 w-3 mr-1" /> MATCHED
                                     </Badge>
                                   ) : (
                                     <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200 animate-pulse">
@@ -1452,35 +1449,66 @@ export default function ProcurementGRNPage() {
                               <TableCell className="text-right px-8">
                                 <div className="flex justify-end gap-2">
                                   <DropdownMenu>
-                                    <DropdownMenuTrigger render={
-                                      <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95" />
-                                    }>
+                                  <DropdownMenuTrigger render={
+                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
                                       Actions <ChevronDown className="h-3 w-3" />
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48">
-                                      {po.invoice_url ? (
-                                        <DropdownMenuItem 
-                                          onClick={() => window.open(po.invoice_url, '_blank')}
-                                          className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
-                                        >
-                                          <FileText className="h-4 w-4 mr-2" /> View Doc
-                                        </DropdownMenuItem>
-                                      ) : (
-                                        <DropdownMenuItem 
-                                          onClick={() => {
-                                            const bill = prompt("Enter Vendor Bill Amount:");
-                                            if (bill) {
-                                              handleReconcile(po.id, Number(bill));
-                                            }
-                                          }}
-                                          className="text-amber-600 focus:text-amber-600 cursor-pointer font-medium"
-                                        >
-                                          <FileUp className="h-4 w-4 mr-2" /> Reconcile
-                                        </DropdownMenuItem>
-                                      )}
-                                      <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
-                                        <Scale className="h-4 w-4 mr-2" /> Audit Trail
+                                    </Button>
+                                  } />
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    {(po.bill_url || po.invoice_url) && (
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          const bill = prompt("Enter Vendor Bill Amount:", po.vendor_bill_amount?.toString());
+                                          if (bill) {
+                                            handleReconcile(po.id, Number(bill));
+                                          }
+                                        }}
+                                        className="text-amber-600 focus:text-amber-600 cursor-pointer font-medium"
+                                      >
+                                        <Scale className="h-4 w-4 mr-2" /> Verify Match
                                       </DropdownMenuItem>
+                                    )}
+
+                                    {(po.bill_url || po.invoice_url) && (
+                                      <DropdownMenuItem 
+                                        onClick={() => window.open(po.bill_url || po.invoice_url, '_blank')}
+                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                      >
+                                        <FileText className="h-4 w-4 mr-2" /> View Bill
+                                      </DropdownMenuItem>
+                                    )}
+
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        setUploadingPoId(po.id);
+                                        fileInputRef.current?.click();
+                                      }}
+                                      className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
+                                      disabled={isUploading === po.id}
+                                    >
+                                      {isUploading === po.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileUp className="h-4 w-4 mr-2" />}
+                                      {po.bill_url || po.invoice_url ? "Update Bill" : "Upload Bill"}
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator />
+                                    
+                                    <DropdownMenuItem 
+                                      onClick={() => handleDownloadPDF(po)}
+                                      className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
+                                    >
+                                      <Download className="h-4 w-4 mr-2" /> Download PO
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem 
+                                      onClick={() => handleDownloadGRN(po)}
+                                      className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                    >
+                                      <Download className="h-4 w-4 mr-2" /> Download GRN
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
+                                      <FileText className="h-4 w-4 mr-2" /> View Purchase Order
+                                    </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
@@ -1500,6 +1528,14 @@ export default function ProcurementGRNPage() {
           <DiscrepancyReportPage />
         </TabsContent>
       </Tabs>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileUpload} 
+        accept=".pdf" 
+        className="hidden" 
+      />
+      </>
       )}
 
       {/* PO Detail View Modal */}
@@ -1822,28 +1858,43 @@ export default function ProcurementGRNPage() {
       {/* Hidden PDF Generation Container */}
       <div className="fixed -left-[9999px] top-0">
         <div id="po-print-container">
-          {/* We'll use a local state to pass the PO being downloaded if needed, 
-              but since html2canvas takes a snapshot, we can render it on demand or keep it in sync */}
           {(() => {
-            const po = activePOs.find(p => p.id === isDownloading);
+            const poId = isDownloading?.endsWith('_grn') ? isDownloading.replace('_grn', '') : isDownloading;
+            const po = activePOs.find(p => p.id === poId);
             if (!po) return null;
             const vendor = vendors.find(v => v.id === po.vendor_id);
             const branch = branches.find(b => b.id === po.branch_id);
-            const corporateHQ = branches.find(b => b.name === "Corporate Headquarters") || branches[0];
             if (!vendor || !branch) return null;
             
+            if (isDownloading?.endsWith('_grn')) {
+              return currentGrnData && (
+                <GRNPrintTemplate 
+                  ref={grnPrintRef}
+                  grn={currentGrnData}
+                  branch={branch}
+                />
+              );
+            }
+
             return (
               <POPrintTemplate 
                 ref={printRef}
                 po={po}
                 vendor={vendor}
                 branch={branch}
-                corporateHQ={corporateHQ}
               />
             );
           })()}
         </div>
       </div>
+      {/* GRN Processing Dialog */}
+      <GRNDialog 
+        po={selectedPO}
+        isOpen={!!selectedPO}
+        onClose={() => setSelectedPO(null)}
+        onSuccess={handleGRNSuccess}
+      />
+
     </div>
   )
 }

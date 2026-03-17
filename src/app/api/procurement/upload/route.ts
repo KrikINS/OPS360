@@ -19,14 +19,14 @@ export async function POST(req: Request) {
     // Since we use the service role key, this will bypass RLS.
     const fileExt = file.name.split('.').pop()
     const fileName = `${poId}-${Date.now()}.${fileExt}`
-    const filePath = `invoices/${fileName}`
+    const filePath = `bills/${fileName}`
 
     // Next.js App Router File object to Buffer
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
     const { error: uploadError } = await supabase.storage
-      .from("procurement_docs")
+      .from("vendor-bills")
       .upload(filePath, buffer, { contentType: file.type || 'application/octet-stream' })
 
     if (uploadError) {
@@ -40,8 +40,8 @@ export async function POST(req: Request) {
     
     // Actually, createSignedUrl is safe and standard:
     const { data: signData, error: signError } = await supabase.storage
-      .from("procurement_docs")
-      .createSignedUrl(filePath, 60 * 60 * 24 * 365) // 1 year expiry for demo purposes
+      .from("vendor-bills")
+      .createSignedUrl(filePath, 60 * 60 * 24 * 365 * 10) // 10 years expiry
 
     if (signError) {
        console.error("Signing error:", signError)
@@ -50,7 +50,12 @@ export async function POST(req: Request) {
 
     const { error: updateError } = await supabase
       .from("purchase_orders")
-      .update({ invoice_url: signData.signedUrl })
+      .update({ 
+        bill_url: signData.signedUrl,
+        // Also update invoice_url for backward compatibility if needed, 
+        // but the task says bill_url column.
+        invoice_url: signData.signedUrl 
+      })
       .eq("id", poId)
 
     if (updateError) throw updateError

@@ -1,6 +1,18 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
+export interface InventoryImportItem {
+  "Item Name": string
+  "Branch": string
+  "Serial Number": string
+  "Estimated Cost": string
+  "Inward Date"?: string
+}
+
+export interface InventoryImportRequest {
+  items: InventoryImportItem[]
+}
+
 export async function POST(request: Request) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,7 +20,7 @@ export async function POST(request: Request) {
   )
 
   try {
-    const { items } = await request.json()
+    const { items }: InventoryImportRequest = await request.json()
     if (!items || !Array.isArray(items)) {
       return NextResponse.json({ error: "Invalid data format" }, { status: 400 })
     }
@@ -34,7 +46,7 @@ export async function POST(request: Request) {
     const legacyPoId = poRes.data.id
 
     // 2. Process and Smart Match
-    const inventoryData = items.map((item: any) => {
+    const inventoryData = items.map((item: InventoryImportItem) => {
       const productName = (item["Item Name"] || "").toLowerCase().trim()
       const branchNameInput = (item["Branch"] || "").trim()
       const branchNameLower = branchNameInput.toLowerCase()
