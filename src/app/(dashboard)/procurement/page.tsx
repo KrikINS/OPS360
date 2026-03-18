@@ -131,6 +131,8 @@ type PurchaseOrder = {
     override_reason?: string
     product: { model_name: string, hsn_code: string, product_code: string }
   }[]
+  grns?: Array<{ id: string, grn_number: string }>
+  discrepancies?: Array<{ status: string }>
 }
 
 type GRNData = {
@@ -195,6 +197,7 @@ export default function ProcurementGRNPage() {
   const [isUploading, setIsUploading] = useState<string | null>(null)
   const [revisionPO, setRevisionPO] = useState<PurchaseOrder | null>(null)
   const [viewingPO, setViewingPO] = useState<PurchaseOrder | null>(null)
+  const [targetPOForDownload, setTargetPOForDownload] = useState<PurchaseOrder | null>(null)
   const [editingTerms, setEditingTerms] = useState<string>("")
   const [isUpdatingTerms, setIsUpdatingTerms] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -236,6 +239,7 @@ export default function ProcurementGRNPage() {
   })
 
   const handleDownloadPDF = async (po: PurchaseOrder) => {
+    setTargetPOForDownload(po);
     setIsDownloading(po.id);
     setViewingPO(po);
     try {
@@ -247,12 +251,13 @@ export default function ProcurementGRNPage() {
     }
   };
 
-  const handleDownloadGRN = async (po: PurchaseOrder) => {
-    setIsDownloading(po.id + '_grn');
+  const handleDownloadGRN = async (po: PurchaseOrder, grnId?: string) => {
+    setTargetPOForDownload(po);
+    // Always use _grn suffix to ensure the hidden print container knows to render the GRN template
+    setIsDownloading(grnId ? `${grnId}_grn` : `${po.id}_grn`);
     try {
       const supabase = createClient();
-      // Fetch the latest GRN for this PO
-      const { data: grnData, error: grnError } = await supabase
+      let query = supabase
         .from('grns')
         .select(`
           *,
@@ -263,9 +268,15 @@ export default function ProcurementGRNPage() {
             products(model_name, product_code, hsn_code)
           )
         `)
-        .eq('po_id', po.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .eq('po_id', po.id);
+
+      if (grnId) {
+        query = query.eq('id', grnId);
+      } else {
+        query = query.order('created_at', { ascending: false }).limit(1);
+      }
+
+      const { data: grnData, error: grnError } = await query;
 
       if (grnError) throw grnError;
       if (!grnData || grnData.length === 0) {
@@ -346,15 +357,39 @@ export default function ProcurementGRNPage() {
   const handleReconcile = async (poId: string, amount: number) => {
     try {
       const supabase = createClient()
-      const { error } = await supabase
+      
+      // 1. Update the PO with the bill amount
+      const { error: poError } = await supabase
         .from('purchase_orders')
         .update({ vendor_bill_amount: amount })
         .eq('id', poId)
 
-      if (error) throw error
+      if (poError) throw poError
+
+      // 2. Audit for Price Discrepancy
+      const po = activePOs.find(p => p.id === poId)
+      if (po) {
+        const poTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.quantity * 1.18), 0)
+        const variance = Math.abs(poTotal - amount)
+        
+        if (variance >= 1) {
+          await supabase
+            .from('discrepancies')
+            .upsert({
+              po_id: poId,
+              vendor_id: po.vendor_id,
+              discrepancy_type: 'Price Mismatch',
+              detected_gap: (amount - poTotal),
+              status: 'Open'
+            }, { onConflict: 'po_id, discrepancy_type' })
+        } else {
+          // If variance was resolved by matching, we could potentially resolve the discrepancy here
+          // but usually it's better to do it via the Resolve button.
+        }
+      }
 
       // Refresh local state
-      setActivePOs(prev => prev.map(po => po.id === poId ? { ...po, vendor_bill_amount: amount } : po))
+      setActivePOs(prev => prev.map(p => p.id === poId ? { ...p, vendor_bill_amount: amount } : p))
     } catch (err) {
       console.error("Reconciliation failed", err)
       alert("Failed to update bill amount.")
@@ -1066,23 +1101,50 @@ export default function ProcurementGRNPage() {
                                     )}
 
                                     {(po.status === 'received' || po.status === 'partially_received') && (
-                                      <DropdownMenuItem 
-                                        onClick={() => handleDownloadGRN(po)}
-                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
-                                        disabled={isDownloading === po.id + '_grn'}
-                                      >
-                                        {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                                        Download GRN
-                                      </DropdownMenuItem>
+                                      <>
+                                        {po.grns && po.grns.length > 0 ? (
+                                          po.grns.map((grn) => (
+                                            <DropdownMenuItem 
+                                              key={grn.id}
+                                              onSelect={(e) => e.preventDefault()}
+                                              onClick={() => handleDownloadGRN(po, grn.id)}
+                                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px]"
+                                              disabled={isDownloading === grn.id + '_grn'}
+                                            >
+                                              {isDownloading === grn.id + '_grn' ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-2" />}
+                                              {po.grns && po.grns.length > 1 ? `GRN: ${grn.grn_number}` : "Download GRN"}
+                                            </DropdownMenuItem>
+                                          ))
+                                        ) : (
+                                          <DropdownMenuItem 
+                                            onSelect={(e) => e.preventDefault()}
+                                            onClick={() => handleDownloadGRN(po)}
+                                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                            disabled={isDownloading === po.id + '_grn'}
+                                          >
+                                            {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                                            Download GRN
+                                          </DropdownMenuItem>
+                                        )}
+                                      </>
                                     )}
 
-                                    <DropdownMenuItem onClick={() => handleDownloadPDF(po)} className="cursor-pointer font-medium" disabled={isDownloading === po.id}>
+                                    <DropdownMenuItem 
+                                      onSelect={(e) => e.preventDefault()}
+                                      onClick={() => handleDownloadPDF(po)} 
+                                      className="cursor-pointer font-medium" 
+                                      disabled={isDownloading === po.id}
+                                    >
                                       {isDownloading === po.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
                                       Download PO
                                     </DropdownMenuItem>
 
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
+                                    <DropdownMenuItem 
+                                      onSelect={(e) => e.preventDefault()}
+                                      onClick={() => setViewingPO(po)} 
+                                      className="cursor-pointer font-medium"
+                                    >
                                       <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -1258,22 +1320,48 @@ export default function ProcurementGRNPage() {
                                   } />
                                   <DropdownMenuContent align="end" className="w-48">
                                     <DropdownMenuItem 
+                                      onSelect={(e) => e.preventDefault()}
                                       onClick={() => setSelectedPO(po)}
                                       className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
                                     >
                                       <Truck className="h-4 w-4 mr-2" /> Process GRN
                                     </DropdownMenuItem>
-                                    {po.items.some(i => i.received_quantity > 0) && (
-                                      <DropdownMenuItem 
-                                        onClick={() => handleDownloadGRN(po)}
-                                        className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
-                                      >
-                                        <Download className="h-4 w-4 mr-2" /> Download GRN
-                                      </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
+                                    <DropdownMenuItem 
+                                      onSelect={(e) => e.preventDefault()}
+                                      onClick={() => setViewingPO(po)} 
+                                      className="cursor-pointer font-medium"
+                                    >
                                       <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                     </DropdownMenuItem>
+
+                                    {po.items.some(i => i.received_quantity > 0) && (
+                                      <>
+                                        {po.grns && po.grns.length > 0 ? (
+                                          po.grns.map((grn) => (
+                                            <DropdownMenuItem 
+                                              key={grn.id}
+                                              onSelect={(e) => e.preventDefault()}
+                                              onClick={() => handleDownloadGRN(po, grn.id)}
+                                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px]"
+                                              disabled={isDownloading === grn.id + '_grn'}
+                                            >
+                                              {isDownloading === grn.id + '_grn' ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-2" />}
+                                              {po.grns && po.grns.length > 1 ? `GRN: ${grn.grn_number}` : "Download GRN"}
+                                            </DropdownMenuItem>
+                                          ))
+                                        ) : (
+                                          <DropdownMenuItem 
+                                            onSelect={(e) => e.preventDefault()}
+                                            onClick={() => handleDownloadGRN(po)}
+                                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                            disabled={isDownloading === po.id + '_grn'}
+                                          >
+                                            {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                                            Download Latest GRN
+                                          </DropdownMenuItem>
+                                        )}
+                                      </>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
@@ -1404,8 +1492,9 @@ export default function ProcurementGRNPage() {
                           const grnTotal = p.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity * 1.18), 0);
                           const billAmount = p.vendor_bill_amount || 0;
                           const hasBill = !!(p.bill_url || p.invoice_url);
-                          const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
-
+                          const isMatch = (Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1) || 
+                                           p.discrepancies?.some((d: { status: string }) => d.status === 'Resolved');
+                          
                           if (auditMatchFilter === "match") return searchMatch && hasBill && isMatch;
                           if (auditMatchFilter === "variance") return searchMatch && hasBill && !isMatch;
                           if (auditMatchFilter === "pending") return searchMatch && !hasBill;
@@ -1416,9 +1505,9 @@ export default function ProcurementGRNPage() {
                             const poTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.quantity * 1.18), 0);
                             const grnTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity * 1.18), 0);
                             const billAmount = po.vendor_bill_amount || 0;
-
-                            const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
-                            const matchesPO = Math.abs(poTotal - billAmount) < 1;
+                            const isMatch = (Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1) || 
+                                           po.discrepancies?.some((d: { status: string }) => d.status === 'Resolved');
+                            const matchesPO = Math.abs(poTotal - billAmount) < 1 || po.discrepancies?.some((d: { status: string }) => d.status === 'Resolved');
                             const hasBill = !!(po.bill_url || po.invoice_url);
                             const daysOutstanding = Math.floor((new Date().getTime() - new Date(po.created_at).getTime()) / (1000 * 3600 * 24));
 
@@ -1439,11 +1528,11 @@ export default function ProcurementGRNPage() {
                                <TableCell className={cn(
                                  "py-2 px-4 border-r border-slate-100/50 font-bold",
                                  hasBill 
-                                   ? (matchesPO ? "text-[#001529]" : "text-red-600") 
+                                   ? (matchesPO ? "text-[#001529]" : "text-red-600 font-black underline decoration-double") 
                                    : "text-amber-600"
                                )}>
                                  {hasBill ? formatCurrency(billAmount) : "Awaiting Bill"}
-                              </TableCell>
+                               </TableCell>
                               <TableCell className="text-center">
                                 {hasBill ? (
                                   isMatch ? (
@@ -1496,6 +1585,7 @@ export default function ProcurementGRNPage() {
                                         setUploadingPoId(po.id);
                                         fileInputRef.current?.click();
                                       }}
+                                      onSelect={(e) => e.preventDefault()}
                                       className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
                                       disabled={isUploading === po.id}
                                     >
@@ -1506,20 +1596,49 @@ export default function ProcurementGRNPage() {
                                     <DropdownMenuSeparator />
                                     
                                     <DropdownMenuItem 
+                                      onSelect={(e) => e.preventDefault()}
                                       onClick={() => handleDownloadPDF(po)}
                                       className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
+                                      disabled={isDownloading === po.id}
                                     >
-                                      <Download className="h-4 w-4 mr-2" /> Download PO
+                                      {isDownloading === po.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                                      Download PO
                                     </DropdownMenuItem>
+
+                                    {po.items.some(i => i.received_quantity > 0) && (
+                                      <>
+                                        {po.grns && po.grns.length > 0 ? (
+                                          po.grns.map((grn) => (
+                                            <DropdownMenuItem 
+                                              key={grn.id}
+                                              onSelect={(e) => e.preventDefault()}
+                                              onClick={() => handleDownloadGRN(po, grn.id)}
+                                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px]"
+                                              disabled={isDownloading === grn.id + '_grn'}
+                                            >
+                                              {isDownloading === grn.id + '_grn' ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-2" />}
+                                              {po.grns && po.grns.length > 1 ? `GRN: ${grn.grn_number}` : "Download GRN"}
+                                            </DropdownMenuItem>
+                                          ))
+                                        ) : (
+                                          <DropdownMenuItem 
+                                            onSelect={(e) => e.preventDefault()}
+                                            onClick={() => handleDownloadGRN(po)}
+                                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                            disabled={isDownloading === po.id + '_grn'}
+                                          >
+                                            {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                                            Download GRN
+                                          </DropdownMenuItem>
+                                        )}
+                                      </>
+                                    )}
 
                                     <DropdownMenuItem 
-                                      onClick={() => handleDownloadGRN(po)}
-                                      className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                      onSelect={(e) => e.preventDefault()}
+                                      onClick={() => setViewingPO(po)} 
+                                      className="cursor-pointer font-medium"
                                     >
-                                      <Download className="h-4 w-4 mr-2" /> Download GRN
-                                    </DropdownMenuItem>
-
-                                    <DropdownMenuItem onClick={() => setViewingPO(po)} className="cursor-pointer font-medium">
                                       <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                     </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -1743,7 +1862,7 @@ export default function ProcurementGRNPage() {
                           <div className="mt-4 pt-4 border-t border-dashed border-slate-300">
                              <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Total Value in Words</Label>
                              <p className="text-[10px] font-black text-[#001529] italic leading-tight">
-                                {numberToWords(Math.round(grandTotal))} Only.
+                                {numberToWords(Math.round(grandTotal))}.
                              </p>
                           </div>
                         </>
@@ -1873,8 +1992,8 @@ export default function ProcurementGRNPage() {
       <div className="fixed -left-[9999px] top-0">
         <div id="po-print-container">
           {(() => {
-            const poId = isDownloading?.endsWith('_grn') ? isDownloading.replace('_grn', '') : isDownloading;
-            const po = activePOs.find(p => p.id === poId);
+            if (!isDownloading) return null;
+            const po = targetPOForDownload;
             if (!po) return null;
             const vendor = vendors.find(v => v.id === po.vendor_id);
             const branch = branches.find(b => b.id === po.branch_id);

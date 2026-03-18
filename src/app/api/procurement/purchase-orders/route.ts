@@ -32,7 +32,9 @@ export async function GET() {
       items:purchase_order_items(
         *,
         product:products(model_name, hsn_code)
-      )
+      ),
+      grns:grns(id, grn_number),
+      discrepancies:discrepancies(status)
     `)
     .order('created_at', { ascending: false })
 

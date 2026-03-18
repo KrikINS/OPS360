@@ -1,4 +1,4 @@
-import { Truck, ShieldCheck, Calculator, Hash, AlertTriangle, Download } from "lucide-react"
+import { Truck, ShieldCheck, Calculator, Hash, AlertTriangle, Download, ShieldAlert, History } from "lucide-react"
 
 export default function ProcurementDocs() {
   return (
@@ -157,9 +157,19 @@ export default function ProcurementDocs() {
             <div className="bg-[#001529] text-white px-3 py-1 rounded text-[10px] font-black tracking-widest uppercase">Serial Lock</div>
             <p className="text-xs text-slate-600 font-medium italic">Prevents duplicate returns of the same asset across different Debit Notes.</p>
           </div>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li>• <strong>ID Format:</strong> Standardized to <code>EHA-DN-YYYY-XXXX</code>.</li>
-            <li>• <strong>100% Recovery:</strong> Lands costs are tracked to verify that reversal amounts match original purchase values exactly.</li>
+          <ul className="space-y-3 text-sm text-slate-600">
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• ID Format:</span>
+              <span>Standardized to <code>EHA-DN-YYYY-XXXX</code>.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• 100% Recovery:</span>
+              <span>Lands costs are tracked to verify that reversal amounts match original purchase values exactly.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• Authorization Lifecycle:</span>
+              <span>Pending returns must be explicitly marked as <strong>AUTHORIZED</strong> to execute the financial reversal.</span>
+            </li>
           </ul>
         </div>
       </section>
@@ -200,6 +210,52 @@ export default function ProcurementDocs() {
         <p className="text-slate-600">
           Purchase orders are uniquely identified using code: <code>PO-YYYY-XXXX</code>. The system uses a global numeric-max calculation to ensure that PO numbers never collide, even during high-traffic operations.
         </p>
+      </section>
+
+      {/* ── Audit & Discrepancy Framework ── */}
+      <section className="space-y-6 pt-6 border-t">
+        <div className="flex items-center gap-3 text-red-500">
+          <ShieldAlert className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-[#001529]">Audit & Discrepancy Framework</h2>
+        </div>
+
+        <p className="text-slate-600 leading-relaxed">
+          Ops360 includes an automated <strong>Discrepancy Report Registry</strong> that captures every fiscal and physical variance detected during the procurement lifecycle.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-slate-50 border rounded-2xl p-6 space-y-3">
+            <div className="flex items-center gap-2 text-[#001529] font-black uppercase tracking-widest text-[10px]">
+              <History className="h-4 w-4" /> Auto-Logging Triggers
+            </div>
+            <ul className="space-y-2 text-xs text-slate-500">
+              <li className="flex items-start gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-red-400 mt-1" />
+                <span><strong>Quantity Mismatch:</strong> Triggered if GRN items &lt; PO ordered quantity.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-amber-400 mt-1" />
+                <span><strong>Price Mismatch:</strong> Triggered if Vendor Bill &ne; PO Total (Tolerance &lt; ₹1).</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-slate-50 border rounded-2xl p-6 space-y-3">
+            <div className="flex items-center gap-2 text-[#001529] font-black uppercase tracking-widest text-[10px]">
+              <ShieldCheck className="h-4 w-4" /> Resolution Paths
+            </div>
+            <ul className="space-y-2 text-xs text-slate-500">
+              <li className="flex items-start gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1" />
+                <span><strong>Link to Return:</strong> Automates the Debit Note / PR workflow for shortfalls.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 mt-1" />
+                <span><strong>Accept Variance:</strong> Manual ledger override with mandatory audit justification.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
       </section>
     </div>
   )

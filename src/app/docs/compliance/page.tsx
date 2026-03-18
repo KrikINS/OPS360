@@ -1,7 +1,8 @@
 import { 
   ChevronRight,
   Calculator,
-  Gavel
+  Gavel,
+  ShieldAlert
 } from "lucide-react"
 import { Feedback } from "@/components/docs/feedback"
 
@@ -45,34 +46,24 @@ export default function ComplianceDocs() {
       </div>
 
       <section className="space-y-6">
-        <h2 className="text-2xl font-bold text-[#001529] border-b pb-3">HSN Slab Reference</h2>
-        <div className="overflow-hidden border rounded-xl">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#001529] text-white">
-              <tr>
-                <th className="px-4 py-3 font-semibold">HSN Category</th>
-                <th className="px-4 py-3 font-semibold">GST Slab</th>
-                <th className="px-4 py-3 font-semibold">Typical Products</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y bg-white">
-              <tr>
-                <td className="px-4 py-3 font-mono">8415 / 8418</td>
-                <td className="px-4 py-3">28%</td>
-                <td className="px-4 py-3 text-slate-500">Air Conditioners, Large Refrigerators</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-mono">8450</td>
-                <td className="px-4 py-3">18%</td>
-                <td className="px-4 py-3 text-slate-500">Washing Machines</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-mono">8509 / 8414</td>
-                <td className="px-4 py-3">12%</td>
-                <td className="px-4 py-3 text-slate-500">Small Appliances, Fans</td>
-              </tr>
-            </tbody>
-          </table>
+        <h2 className="text-2xl font-bold text-[#001529] border-b pb-3">Audit Trail & Discrepancy Logging</h2>
+        <div className="bg-red-50/50 border border-red-100 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2 text-[#001529] font-black uppercase tracking-widest text-[10px]">
+            <ShieldAlert className="h-4 w-4 text-red-500" /> Variance Enforcement
+          </div>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            All procurement variances are automatically logged to the <strong>Discrepancy Registry</strong>. This ensures a permanent audit paper trail for fiscal and physical mismatches.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-red-100/50 shadow-sm">
+              <h4 className="font-bold text-xs text-[#001529] mb-1">Fiscal Variances</h4>
+              <p className="text-[11px] text-slate-500">Price mismatches between PO and Vendor Bill &gt; ₹1 are flagged for management review.</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-red-100/50 shadow-sm">
+              <h4 className="font-bold text-xs text-[#001529] mb-1">Stock Variances</h4>
+              <p className="text-[11px] text-slate-500">Shortfalls in GRN (received vs ordered) are tracked until resolved via Purchase Return or Manual Accept.</p>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { useEffect, useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/utils/supabase/client"
 import { 
   Table, 
   TableBody, 
@@ -10,73 +11,239 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ShieldAlert, User, Loader2, Search, Settings2, X } from "lucide-react"
+import { ShieldAlert, Loader2, Search, Settings2, X, CheckCircle2, RotateCcw, AlertTriangle, MessageSquare } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { formatCurrency } from "@/utils/format"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown, PencilLine, History, Eye } from "lucide-react"
+
+type Discrepancy = {
+  id: string;
+  po_id: string;
+  vendor_id: string;
+  discrepancy_type: string;
+  detected_gap: number;
+  status: string;
+  admin_comment: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  display_id?: string;
+  po?: { 
+    po_number: string; 
+    total_amount: number;
+    items: Array<{
+      id: string;
+      unit_price: number;
+      quantity: number;
+      received_quantity: number;
+    }>
+  };
+  vendor?: { name: string };
+};
 
 export default function DiscrepancyReportPage() {
-  const [discrepancies, setDiscrepancies] = useState<any[]>([])
-  const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map())
+  const [discrepancies, setDiscrepancies] = useState<Discrepancy[]>([])
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [authorizerFilter, setAuthorizerFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [typeFilter, setTypeFilter] = useState("all")
+  
+  // Resolution Modal State
+  const [resolutionModalOpen, setResolutionModalOpen] = useState(false)
+  const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<Discrepancy | null>(null)
+  const [adminComment, setAdminComment] = useState("")
+  const [isResolving, setIsResolving] = useState(false)
+  
+  // Advanced Actions State
+  const [reopenModalOpen, setReopenModalOpen] = useState(false)
+  const [editGapModalOpen, setEditGapModalOpen] = useState(false)
+  const [viewNoteModalOpen, setViewNoteModalOpen] = useState(false)
+  const [newGapValue, setNewGapValue] = useState("")
+  const [reopenReason, setReopenReason] = useState("")
+  const [isUpdatingAction, setIsUpdatingAction] = useState(false)
+  
+  const router = useRouter()
+
+  const supabase = createClient()
+
+  const fetchDiscrepancies = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('discrepancies')
+      .select(`
+        *,
+        po:purchase_orders(
+          po_number, 
+          total_amount,
+          items:purchase_order_items(id, unit_price, quantity, received_quantity)
+        ),
+        vendor:vendors(name)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (!error && data) {
+      setDiscrepancies(data)
+    }
+    setLoading(false)
+  }, [supabase])
 
   useEffect(() => {
-    async function fetchData() {
-      // Fetch PO items where override_reason is not null
-      const { data: discrepanciesData } = await supabase
-        .from('purchase_order_items')
-        .select(`
-          id,
-          tax_rate,
-          override_reason,
-          product:products(model_name),
-          po:purchase_orders(
-            po_number,
-            created_at,
-            approved_by
-          )
-        `)
-        .not('override_reason', 'is', null)
+    fetchDiscrepancies()
+  }, [fetchDiscrepancies])
 
-      if (discrepanciesData) {
-        setDiscrepancies(discrepanciesData)
+  const handleResolve = async (action: 'return' | 'accept') => {
+    if (!selectedDiscrepancy) return
+    setIsResolving(true)
+
+    try {
+      if (action === 'accept') {
+        if (!adminComment) {
+          alert("Admin comment is required to accept variance.")
+          setIsResolving(false)
+          return
+        }
+        
+        const { error } = await supabase
+          .from('discrepancies')
+          .update({ 
+            status: 'Resolved', 
+            admin_comment: adminComment,
+            resolved_at: new Date().toISOString()
+          })
+          .eq('id', selectedDiscrepancy.id)
+
+        if (error) throw error
+
+        // Sync PO status to MATCHED in the audit trail
+        // We use a separate fetch to the existing PATCH endpoint for safety
+        await fetch('/api/procurement/purchase-orders', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            id: selectedDiscrepancy.po_id, 
+            status: 'received', // Keep status but we'll flag it as matched in the UI logic
+            is_audit_matched: true // We'll try to pass this or use it in the UI
+          })
+        })
+      } else if (action === 'return') {
+        // Link to Return logic: Update status and redirect to Procurement Returns tab
+        const { error } = await supabase
+          .from('discrepancies')
+          .update({ 
+            status: 'Investigating',
+            admin_comment: "Linked to Purchase Return workflow." 
+          })
+          .eq('id', selectedDiscrepancy.id)
+
+        if (error) throw error
+        
+        // Use router to navigate to the returns tab
+        router.push('/procurement?tab=returns')
+        return
       }
 
-      // Fetch profiles to map approved_by
-      const { data: profiles } = await supabase.from('profiles').select('id, full_name, email')
-      if (profiles) {
-        setProfileMap(new Map(profiles.map(p => [p.id, p.full_name || p.email])))
-      }
-      setLoading(false)
+      setResolutionModalOpen(false)
+      setAdminComment("")
+      fetchDiscrepancies()
+    } catch (err) {
+      console.error("Resolution failed", err)
+      alert("Resolution failed. Please try again.")
+    } finally {
+      setIsResolving(false)
     }
-    fetchData()
-  }, [])
+  }
 
+  const handleUpdateAction = async (action: 'reopen' | 'update_gap') => {
+    if (!selectedDiscrepancy) return
+    setIsUpdatingAction(true)
+
+    try {
+      if (action === 'reopen') {
+        const { error } = await supabase
+          .from('discrepancies')
+          .update({ 
+            status: 'Investigating', 
+            admin_comment: `REOPENED: ${reopenReason}\n\nPREVIOUS NOTE: ${selectedDiscrepancy.admin_comment}`,
+            resolved_at: null 
+          })
+          .eq('id', selectedDiscrepancy.id)
+
+        if (error) throw error
+        setReopenModalOpen(false)
+        setReopenReason("")
+      } else if (action === 'update_gap') {
+        const { error } = await supabase
+          .from('discrepancies')
+          .update({ detected_gap: Number(newGapValue) })
+          .eq('id', selectedDiscrepancy.id)
+
+        if (error) throw error
+        setEditGapModalOpen(false)
+        setNewGapValue("")
+      }
+
+      fetchDiscrepancies()
+    } catch (err) {
+      console.error("Action failed", err)
+      alert("Action failed. Please try again.")
+    } finally {
+      setIsUpdatingAction(false)
+    }
+  }
+
+  // Create a stable mapping of IDs based on creation date
+  const allSortedDiscrepancies = [...discrepancies].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+  
   const filteredDiscrepancies = discrepancies.filter(item => {
-    const searchMatch = !searchTerm || item.po?.po_number?.toLowerCase().includes(searchTerm.toLowerCase()) || item.product?.model_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const authorizerMatch = authorizerFilter === "all" || item.po?.approved_by === authorizerFilter;
-    return searchMatch && authorizerMatch;
-  });
+    const searchMatch = !searchTerm || 
+      item.po?.po_number?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      item.vendor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.id.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const statusMatch = statusFilter === "all" || item.status === statusFilter
+    const typeMatch = typeFilter === "all" || item.discrepancy_type === typeFilter
+    
+    return searchMatch && statusMatch && typeMatch
+  })
 
-  const uniqueAuthorizers = Array.from(new Set(discrepancies.map(d => d.po?.approved_by).filter(Boolean)));
-
-  if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-[#001529]" /></div>
+  if (loading && discrepancies.length === 0) return (
+    <div className="flex flex-col h-64 items-center justify-center gap-4">
+      <Loader2 className="animate-spin h-8 w-8 text-[#001529]" />
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Auditing Variance Logs...</span>
+    </div>
+  )
 
   return (
     <div className="flex-1 space-y-8 mt-0">
       <Card className="shadow-md border-slate-200 border-t-0 rounded-t-none overflow-hidden text-xs py-0">
         <CardHeader className="bg-[#001529] text-white pt-4 pb-2 px-6 border-b-0 space-y-0 rounded-t-none">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <CardTitle className="text-lg flex items-center gap-2 text-white">
-              <ShieldAlert className="h-5 w-5 text-red-400" />
-              Procurement Exception Log
-            </CardTitle>
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2 text-white">
+                <ShieldAlert className="h-5 w-5 text-red-400" />
+                Discrepancy Report Registry
+              </CardTitle>
+              <CardDescription className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                Fiscal & Inventory Mismatch Management
+              </CardDescription>
+            </div>
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -87,13 +254,13 @@ export default function DiscrepancyReportPage() {
                 )}
               >
                 <Settings2 className={cn("h-3.5 w-3.5 transition-colors", showFilters ? "text-[#001529]" : "text-white group-hover:text-[#001529]")} />
-                {showFilters ? "Hide Filters" : "Advance Filters"}
+                {showFilters ? "Hide Filters" : "Filter Registry"}
               </Button>
 
               <div className="w-px h-6 bg-white/10 mx-2 hidden md:block" />
 
               <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-wider text-white/40 border-white/10">
-                Audit Registry
+                Live Audit Stream
               </Badge>
             </div>
           </div>
@@ -103,7 +270,7 @@ export default function DiscrepancyReportPage() {
               <div className="relative flex-1 min-w-[240px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
                 <Input
-                  placeholder="Search PO or Product..."
+                  placeholder="Search by ID, PO Number or Vendor..."
                   className="pl-9 h-8 border-white/10 bg-white/5 focus-visible:bg-white/10 text-white placeholder:text-white/30 rounded-lg text-xs"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -111,29 +278,42 @@ export default function DiscrepancyReportPage() {
               </div>
 
               <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
-                <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Authorizer</span>
-                <Select value={authorizerFilter} onValueChange={(v) => setAuthorizerFilter(v || "all")}>
-                  <SelectTrigger className="w-[150px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
-                    <SelectValue placeholder="All Authority" />
+                <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Type</span>
+                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v || "all")}>
+                  <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                    <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#001529] border-white/10 text-white">
-                    <SelectItem value="all">All Authority</SelectItem>
-                    {uniqueAuthorizers.map(id => (
-                      <SelectItem key={id} value={id} className="focus:bg-white/10 focus:text-[#7FD1E3]">
-                        {profileMap.get(id as string) || 'System'}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="Price Mismatch">Price Mismatch</SelectItem>
+                    <SelectItem value="Quantity Mismatch">Quantity Mismatch</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {(searchTerm || authorizerFilter !== "all") && (
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1 rounded-lg">
+                <span className="text-[9px] font-bold tracking-wider text-white/40 uppercase">Status</span>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || "all")}>
+                  <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 text-xs font-bold h-7 p-0 bg-transparent text-white">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#001529] border-white/10 text-white">
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="Open">Open</SelectItem>
+                    <SelectItem value="Investigating">Investigating</SelectItem>
+                    <SelectItem value="Resolved">Resolved</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(searchTerm || statusFilter !== "all" || typeFilter !== "all") && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
                     setSearchTerm("")
-                    setAuthorizerFilter("all")
+                    setStatusFilter("all")
+                    setTypeFilter("all")
                   }}
                   className="h-7 text-white/40 hover:text-white hover:bg-white/5 text-[9px] font-bold uppercase tracking-widest ml-auto gap-2"
                 >
@@ -146,64 +326,140 @@ export default function DiscrepancyReportPage() {
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-slate-100/50">
-              <TableRow className="border-b border-slate-200">
-                <TableHead className="font-black text-[#001529] uppercase text-[11px] px-6">PO Reference</TableHead>
-                <TableHead className="font-black text-[#001529] uppercase text-[11px]">Affected Line Item</TableHead>
-                <TableHead className="font-black text-[#001529] uppercase text-[11px]">Applied GST</TableHead>
-                <TableHead className="font-black text-[#001529] uppercase text-[11px] w-[400px]">Audit Justification</TableHead>
-                <TableHead className="font-black text-[#001529] uppercase text-[11px]">Authorized By</TableHead>
-                <TableHead className="font-black text-[#001529] uppercase text-[11px] text-right px-6">Audit Date</TableHead>
+            <TableHeader className="bg-slate-50 border-b">
+              <TableRow>
+                <TableHead className="py-3 px-6 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Discrepancy ID</TableHead>
+                <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">PO Reference</TableHead>
+                <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Vendor</TableHead>
+                <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Discrepancy Type</TableHead>
+                <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-right">Detected Gap</TableHead>
+                <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Status</TableHead>
+                <TableHead className="py-3 px-6 font-black text-slate-400 tracking-wider text-[9px] uppercase">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDiscrepancies.map((item: any) => (
-                <TableRow key={item.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100">
-                  <TableCell className="font-black text-[#001529] font-mono px-6 py-5">{item.po?.po_number}</TableCell>
-                  <TableCell>
-                    <div className="text-sm font-bold text-slate-700">{item.product?.model_name || item.product?.[0]?.model_name}</div>
-                    <div className="text-[10px] text-slate-400 font-medium tracking-tight">SYSTEM ID: {item.id.slice(0,8)}</div>
+              {filteredDiscrepancies.map((item: Discrepancy) => (
+                <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-[11px]">
+                  <TableCell className="py-4 px-6 font-black text-[#001529] font-mono border-r border-slate-100/50">
+                    {item.display_id || `EHA-DR-${(allSortedDiscrepancies.findIndex(d => d.id === item.id) + 1).toString().padStart(4, '0')}`}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 font-black text-[11px] px-2.5">
-                      {item.tax_rate}% MAN_OVR
+                  <TableCell className="py-4 px-4 font-bold text-[#001529] font-mono border-r border-slate-100/50">
+                    {item.po?.po_number}
+                  </TableCell>
+                  <TableCell className="py-4 px-4 font-bold text-slate-600 border-r border-slate-100/50">
+                    {item.vendor?.name}
+                  </TableCell>
+                  <TableCell className="py-4 px-4 border-r border-slate-100/50 text-center">
+                    <Badge variant="secondary" className={cn(
+                      "font-black text-[9px] uppercase tracking-tighter py-0 px-2 shadow-sm border",
+                      item.discrepancy_type === 'Price Mismatch' ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200"
+                    )}>
+                      {item.discrepancy_type}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-5">
-                    <div className="p-4 bg-slate-50 border-l-4 border-amber-400 rounded-r-lg text-sm font-medium text-slate-600 leading-relaxed italic animate-in fade-in slide-in-from-left-2 transition-all">
-                      &quot;{item.override_reason}&quot;
-                    </div>
+                  <TableCell className="py-4 px-4 border-r border-slate-100/50 text-right font-black font-mono">
+                    <span className={cn(
+                      "text-sm",
+                      item.detected_gap > 0 ? "text-red-600" : "text-emerald-600"
+                    )}>
+                      {item.discrepancy_type === 'Quantity Mismatch' 
+                        ? (
+                          <div className="flex flex-col items-end">
+                            <span>{formatCurrency(item.detected_gap)}</span>
+                            <span className="text-[9px] opacity-50 font-bold">
+                              {item.detected_gap > 0 ? 'SHRINKAGE' : 'OVERAGE'}
+                            </span>
+                          </div>
+                        )
+                        : formatCurrency(item.detected_gap)
+                      }
+                    </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                       <div className="h-9 w-9 rounded-xl bg-[#001529] flex items-center justify-center text-[#7FD1E3] shadow-md border border-white/10">
-                         <User className="h-4.5 w-4.5" />
-                       </div>
-                       <div className="flex flex-col">
-                         <span className="text-sm font-black text-slate-800 tracking-tight">
-                           {profileMap.get(item.po?.approved_by) || 'Administrative System'}
-                         </span>
-                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified Auth</span>
-                       </div>
-                    </div>
+                  <TableCell className="py-4 px-4 border-r border-slate-100/50 text-center">
+                    <Badge className={cn(
+                      "text-[9px] px-2 py-0.5 font-black uppercase tracking-tighter ring-1",
+                      item.status === 'Resolved' ? "bg-emerald-100 text-emerald-700 ring-emerald-200" :
+                      item.status === 'Investigating' ? "bg-blue-100 text-blue-700 ring-blue-200" : 
+                      "bg-amber-100 text-amber-700 ring-amber-200"
+                    )}>
+                      {item.status}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-500 font-black text-right px-6">
-                     {new Date(item.po?.created_at).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                     })}
+                  <TableCell className="py-4 px-6">
+                    <div className="flex justify-start">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="bg-[#001529] hover:bg-slate-800 text-white border-none h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 transition-all active:scale-95"
+                          >
+                            Actions <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-white border-slate-200 shadow-xl rounded-xl p-1">
+                          <DropdownMenuLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2">
+                            Audit Options
+                          </DropdownMenuLabel>
+                          
+                          {item.status !== 'Resolved' ? (
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setSelectedDiscrepancy(item);
+                                setResolutionModalOpen(true);
+                              }}
+                              className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-2" /> Resolve Discrepancy
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setSelectedDiscrepancy(item);
+                                setReopenModalOpen(true);
+                              }}
+                              className="text-amber-600 focus:text-amber-700 focus:bg-amber-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                            >
+                              <History className="h-4 w-4 mr-2" /> Reopen Investigation
+                            </DropdownMenuItem>
+                          )}
+                          
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setSelectedDiscrepancy(item);
+                              setNewGapValue(item.detected_gap.toString());
+                              setEditGapModalOpen(true);
+                            }}
+                            className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                          >
+                            <PencilLine className="h-4 w-4 mr-2" /> Edit Gap Value
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator className="my-1 bg-slate-100" />
+                          
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setSelectedDiscrepancy(item);
+                              setViewNoteModalOpen(true);
+                            }}
+                            className="text-slate-600 focus:text-slate-900 focus:bg-slate-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                          >
+                            <Eye className="h-4 w-4 mr-2" /> View Resolution Note
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredDiscrepancies.length === 0 && (
+              {filteredDiscrepancies.length === 0 && !loading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-24">
-                     <div className="flex flex-col items-center gap-4 opacity-30 grayscale">
+                  <TableCell colSpan={7} className="text-center py-24">
+                     <div className="flex flex-col items-center gap-4 opacity-20 grayscale">
                         <ShieldAlert className="h-16 w-16" />
-                        <div className="space-y-1">
-                          <p className="text-xl font-black text-slate-900 uppercase tracking-tighter">Negative Audit Variance</p>
-                          <p className="text-sm font-bold text-slate-500">No manual overrides or fiscal discrepancies detected.</p>
+                        <div className="space-y-1 text-center">
+                          <p className="text-xl font-black text-slate-900 uppercase tracking-tighter">Zero Variance Environment</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">No discrepancies detected for current filter profile</p>
                         </div>
                      </div>
                   </TableCell>
@@ -214,11 +470,219 @@ export default function DiscrepancyReportPage() {
         </CardContent>
       </Card>
 
-      {/* ── Footer ── */}
-      <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] pt-8 border-t border-slate-200">
-        <div>Logistics Compliance Framework v4.2</div>
-        <div>Generated by Ops360 Audit Engine</div>
-      </div>
+      {/* Resolution Modal */}
+      <Dialog open={resolutionModalOpen} onOpenChange={setResolutionModalOpen}>
+        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
+          <DialogHeader className="bg-[#001529] p-6 text-white text-left">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+              <div className="bg-red-500 p-2 rounded-lg">
+                <ShieldAlert className="h-5 w-5 text-white" />
+              </div>
+              Execute Resolution Logic
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 font-medium text-xs mt-2">
+              Select a corporate resolution path for the detected mismatch in <span className="text-white font-mono">{selectedDiscrepancy?.po?.po_number}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mismatch Type</p>
+                <p className="text-sm font-black text-slate-900">{selectedDiscrepancy?.discrepancy_type}</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Detected Gap</p>
+                <p className="text-sm font-black text-red-600">
+                  {selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch' 
+                    ? `${Math.abs(selectedDiscrepancy?.detected_gap)} Units`
+                    : formatCurrency(selectedDiscrepancy?.detected_gap || 0)
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+               <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                 <MessageSquare className="h-3 w-3" /> Audit Investigation Comment
+               </Label>
+               <Textarea
+                placeholder="Business justification (e.g., Vendor provided 2% cash discount, accepted discrepancy for urgent processing)..."
+                className="min-h-[120px] text-xs"
+                value={adminComment}
+                onChange={(e) => setAdminComment(e.target.value)}
+              />
+              <div className="flex justify-between items-center">
+                <p className={cn(
+                  "text-[10px] font-bold",
+                  adminComment.length >= 20 ? "text-emerald-600" : "text-amber-600"
+                )}>
+                  {adminComment.length < 20 
+                    ? `Minimum 20 characters required: ${adminComment.length}/20` 
+                    : "✓ Comment length sufficient"
+                  }
+                </p>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setResolutionModalOpen(false)}>Cancel</Button>
+                  <Button 
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => handleResolve('accept')}
+                    disabled={adminComment.length < 20 || isResolving}
+                  >
+                    {isResolving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                    Accept Variance
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-4">
+               <Button 
+                 variant="outline"
+                 onClick={() => handleResolve('return')}
+                 className="border-2 border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:border-orange-300 font-black h-12 flex flex-col gap-0 transition-all active:scale-95"
+               >
+                 <span className="text-xs">Link to Return</span>
+                 <span className="text-[8px] opacity-60">Logistics Shortfall</span>
+                 <RotateCcw className="absolute right-2 opacity-10 h-8 w-8" />
+               </Button>
+               
+               <Button 
+                 onClick={() => handleResolve('accept')}
+                 disabled={adminComment.length < 20 || isResolving}
+                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 flex flex-col gap-0 transition-all active:scale-95 overflow-hidden group shadow-lg shadow-emerald-600/20"
+               >
+                 {isResolving ? (
+                   <Loader2 className="h-5 w-5 animate-spin" />
+                 ) : (
+                   <>
+                     <span className="text-xs">Accept Variance</span>
+                     <span className="text-[8px] opacity-60">Manual Ledger Update</span>
+                     <CheckCircle2 className="absolute right-2 opacity-10 h-8 w-8 group-hover:opacity-20 transition-opacity" />
+                   </>
+                 )}
+               </Button>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+             <div className="flex items-center gap-2 text-red-500 animate-pulse">
+                <AlertTriangle className="h-3 w-3" />
+                <span className="text-[9px] font-black uppercase tracking-widest">Permanent Audit Record</span>
+             </div>
+             <Button variant="ghost" size="sm" onClick={() => setResolutionModalOpen(false)} className="text-[10px] font-black uppercase tracking-widest">
+               Close
+             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Reopen Modal */}
+      <Dialog open={reopenModalOpen} onOpenChange={setReopenModalOpen}>
+        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
+          <DialogHeader className="bg-amber-600 p-6 text-white text-left">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+              <History className="h-5 w-5" /> Reopen Investigation
+            </DialogTitle>
+            <DialogDescription className="text-amber-100 font-medium text-xs mt-2">
+              Provide a reason for reopening the audit for <span className="text-white font-mono">{selectedDiscrepancy?.po?.po_number}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Reason for Reopening</Label>
+              <Textarea 
+                placeholder="E.g., Incorrect original assessment, new vendor feedback..."
+                className="min-h-[100px] text-xs font-medium"
+                value={reopenReason}
+                onChange={(e) => setReopenReason(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setReopenModalOpen(false)}>Cancel</Button>
+              <Button 
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                onClick={() => handleUpdateAction('reopen')}
+                disabled={!reopenReason || isUpdatingAction}
+              >
+                {isUpdatingAction && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Reopen Now
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Gap Modal */}
+      <Dialog open={editGapModalOpen} onOpenChange={setEditGapModalOpen}>
+        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
+          <DialogHeader className="bg-blue-600 p-6 text-white text-left">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+              <PencilLine className="h-5 w-5" /> Adjust Fiscal Gap
+            </DialogTitle>
+            <DialogDescription className="text-blue-100 font-medium text-xs mt-2">
+              Manually correct the detected variance amount for audit accuracy.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">New Gap Value (Landed Cost)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">₹</span>
+                <Input 
+                  type="number"
+                  className="pl-7 font-black text-lg"
+                  value={newGapValue}
+                  onChange={(e) => setNewGapValue(e.target.value)}
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold italic mt-1">
+                Format: {formatCurrency(Number(newGapValue) || 0)}
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setEditGapModalOpen(false)}>Cancel</Button>
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                onClick={() => handleUpdateAction('update_gap')}
+                disabled={isUpdatingAction}
+              >
+                {isUpdatingAction && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Update Value
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Note Modal */}
+      <Dialog open={viewNoteModalOpen} onOpenChange={setViewNoteModalOpen}>
+        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
+          <DialogHeader className="bg-slate-800 p-6 text-white text-left">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+              <Eye className="h-5 w-5" /> Resolution History
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 font-medium text-xs mt-2">
+              Permanent audit log for <span className="text-white font-mono">{selectedDiscrepancy?.po?.po_number}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 min-h-[120px]">
+              <p className="text-xs font-medium text-slate-700 whitespace-pre-wrap">
+                {selectedDiscrepancy?.admin_comment || "No audit notes recorded."}
+              </p>
+            </div>
+            <div className="flex justify-end mt-2">
+              <Button className="bg-slate-800 hover:bg-slate-900 text-white font-bold" onClick={() => setViewNoteModalOpen(false)}>
+                Acknowledge
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
+}
+
+function Label({ children, className }: { children: React.ReactNode, className?: string }) {
+  return <label className={cn("block", className)}>{children}</label>
 }

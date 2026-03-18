@@ -87,6 +87,18 @@ interface DebitNoteData {
   metadata?: {
     serial_numbers?: string[];
   };
+  po?: {
+    po_number: string;
+    branch?: {
+      name: string;
+      full_address?: string;
+      gstin?: string;
+    };
+    vendor?: {
+      name: string;
+      gstin?: string;
+    };
+  };
 }
 
 export default function PurchaseReturn() {
@@ -102,7 +114,8 @@ export default function PurchaseReturn() {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [lastDebitNote, setLastDebitNote] = useState<DebitNoteData | null>(null)
-  const [isDownloading, setIsDownloading] = useState(false)
+  const [isDownloading, setIsDownloading] = useState<string | null>(null)
+  const [authorizingId, setAuthorizingId] = useState<string | null>(null)
   const [returns, setReturns] = useState<DebitNoteData[]>([])
   const [fetchingReturns, setFetchingReturns] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
@@ -130,7 +143,7 @@ export default function PurchaseReturn() {
   const handlePrint = useReactToPrint({
     contentRef: debitNoteRef,
     documentTitle: `DebitNote_${lastDebitNote?.debit_note_number || 'Document'}`,
-    onAfterPrint: () => setIsDownloading(false)
+    onAfterPrint: () => setIsDownloading(null)
   })
 
   const fetchReturns = useCallback(async () => {
@@ -149,13 +162,13 @@ export default function PurchaseReturn() {
         .order('created_at', { ascending: false })
 
       if (!error && data) {
-        setReturns((data as any[]).map((item) => ({
+        setReturns((data as unknown as DebitNoteData[]).map((item) => ({
           ...item,
-          po_number: item.po?.po_number || 'UNKNOWN',
-          vendor_name: item.po?.vendor?.name || 'UNKNOWN',
-          vendor: item.po?.vendor,
-          branch: item.po?.branch,
-          serial_numbers: (item.metadata as any)?.serial_numbers || item.serial_numbers || []
+          po_number: item.po_number || item.po?.po_number || 'UNKNOWN',
+          vendor_name: item.vendor_name || item.po?.vendor?.name || 'UNKNOWN',
+          vendor: item.vendor || item.po?.vendor,
+          branch: item.branch || item.po?.branch,
+          serial_numbers: item.metadata?.serial_numbers || item.serial_numbers || []
         })))
       }
     } catch (err) {
@@ -305,6 +318,26 @@ export default function PurchaseReturn() {
     )
   }
 
+  async function handleAuthorize(id: string) {
+    setAuthorizingId(id)
+    try {
+      const { error } = await supabase
+        .from("debit_notes")
+        .update({ status: "Authorized" })
+        .eq("id", id)
+
+      if (error) throw error
+      
+      setSuccessMessage("Return transaction authorized successfully.")
+      fetchReturns() // Refresh list
+    } catch (err) {
+      console.error("Authorization failed", err)
+      setError("Failed to authorize return.")
+    } finally {
+      setAuthorizingId(null)
+    }
+  }
+
   return (
     <div className="flex-1 space-y-8 mt-0">
       <Card className="shadow-md border-slate-200 border-t-0 rounded-t-none overflow-hidden py-0">
@@ -428,10 +461,10 @@ export default function PurchaseReturn() {
                 </div>
                 <Button 
                   onClick={() => {
-                    setIsDownloading(true);
+                    setIsDownloading(lastDebitNote.id);
                     setTimeout(() => handlePrint(), 500);
                   }}
-                  disabled={isDownloading}
+                  disabled={!!isDownloading}
                   className="bg-[#001529] hover:bg-slate-800 text-white gap-2 font-black uppercase text-xs h-10 px-6"
                 >
                   {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -515,7 +548,9 @@ export default function PurchaseReturn() {
                       <TableCell className="py-3 px-4 border-r border-slate-100/50">
                         <Badge className={cn(
                           "text-[9px] px-2 py-0.5 font-black uppercase tracking-tighter",
-                          ret.status === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                          ret.status === 'Paid' || ret.status === 'Authorized' 
+                            ? "bg-emerald-100 text-emerald-700" 
+                            : "bg-amber-100 text-amber-700"
                         )}>
                           {ret.status}
                         </Badge>
@@ -527,19 +562,36 @@ export default function PurchaseReturn() {
                               Actions <ChevronDown className="h-3 w-3" />
                             </Button>
                           } />
-                          <DropdownMenuContent align="start" className="w-48">
+                          <DropdownMenuContent align="start" className="w-52">
                             <DropdownMenuItem 
+                              onSelect={(e) => e.preventDefault()}
                               onClick={() => {
                                 setLastDebitNote(ret);
-                                setIsDownloading(true);
+                                setIsDownloading(ret.id);
                                 setTimeout(() => handlePrint(), 500);
                               }}
                               className="text-slate-700 font-medium cursor-pointer"
+                              disabled={isDownloading === ret.id}
                             >
-                              <Eye className="h-4 w-4 mr-2" /> View Debit Note
+                              {isDownloading === ret.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
+                              View Debit Note
                             </DropdownMenuItem>
+                            
+                            {ret.status?.toLowerCase() !== 'authorized' && ret.status?.toLowerCase() !== 'paid' && (
+                              <DropdownMenuItem 
+                                onSelect={(e) => e.preventDefault()}
+                                onClick={() => handleAuthorize(ret.id)}
+                                className="text-emerald-600 focus:text-emerald-600 font-bold cursor-pointer"
+                                disabled={authorizingId === ret.id}
+                              >
+                                {authorizingId === ret.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+                                Mark as Authorised
+                              </DropdownMenuItem>
+                            )}
+                            
                             {ret.evidence_url && (
                               <DropdownMenuItem 
+                                onSelect={(e) => e.preventDefault()}
                                 onClick={() => window.open(ret.evidence_url, '_blank')}
                                 className="text-blue-600 focus:text-blue-600 font-medium cursor-pointer"
                               >
