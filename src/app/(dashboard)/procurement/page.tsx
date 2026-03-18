@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { calculateLandedCost } from "@/utils/compliance"
+import { formatCurrency } from "@/utils/format"
 import { cn } from "@/lib/utils"
 import {
   Truck,
@@ -949,7 +950,7 @@ export default function ProcurementGRNPage() {
                       <TableRow>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Ship To</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item</TableHead>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
@@ -969,7 +970,16 @@ export default function ProcurementGRNPage() {
                               {po.po_number}
                             </TableCell>
                             <TableCell className="py-2 px-4 font-semibold text-slate-600 border-r border-slate-100/50">{po.vendor?.name}</TableCell>
-                            <TableCell className="py-2 px-4 text-slate-500 border-r border-slate-100/50">{po.branch?.name || '---'}</TableCell>
+                            <TableCell className="py-2 px-4 text-slate-500 border-r border-slate-100/50">
+                              <div className="font-semibold text-slate-700 truncate max-w-[140px]">
+                                {po.items[0]?.product?.model_name || '---'}
+                              </div>
+                              {po.items.length > 1 && (
+                                <div className="text-[9px] text-slate-400 font-bold uppercase">
+                                  + {po.items.length - 1} OTHER ITEMS
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell className="py-2 px-4 border-r border-slate-100/50">
                               <Badge className={
                                 po.status === 'received' ? "bg-green-100 text-green-700 hover:bg-green-200 text-[9px] px-1.5 py-0 font-bold" :
@@ -981,7 +991,7 @@ export default function ProcurementGRNPage() {
                                 {po.status === 'partially_received' ? 'PARTIAL' : po.status.toUpperCase()}
                               </Badge>
                             </TableCell>
-                            <TableCell className="py-2 px-4 font-bold text-[#001529] border-r border-slate-100/50">₹{po.total_amount.toLocaleString()}</TableCell>
+                            <TableCell className="py-2 px-4 font-bold text-[#001529] border-r border-slate-100/50">{formatCurrency(po.total_amount)}</TableCell>
                             <TableCell className="text-left py-4">
                               <div className="flex items-center gap-2">
                                 <DropdownMenu>
@@ -1222,15 +1232,18 @@ export default function ProcurementGRNPage() {
                                             {item.received_quantity} / {item.quantity}
                                           </span>
                                         </div>
-                                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner">
-                                          <div
-                                            className={cn(
-                                              "h-full transition-all duration-700",
-                                              progress === 100 ? "bg-green-500" : "bg-[#7FD1E3]"
-                                            )}
-                                            style={{ width: `${progress}%` }}
-                                          />
-                                        </div>
+                                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner">
+                                            <div
+                                              className={cn(
+                                                "h-full transition-all duration-700",
+                                                progress === 100 ? "bg-green-500 w-full" : 
+                                                progress >= 75 ? "bg-[#7FD1E3] w-3/4" :
+                                                progress >= 50 ? "bg-[#7FD1E3] w-1/2" :
+                                                progress >= 25 ? "bg-[#7FD1E3] w-1/4" :
+                                                progress > 0 ? "bg-[#7FD1E3] w-[10%]" : "w-0"
+                                              )}
+                                            />
+                                          </div>
                                       </div>
                                     )
                                   })}
@@ -1376,7 +1389,7 @@ export default function ProcurementGRNPage() {
                           <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Received Value</TableHead>
                            <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor&apos;s Invoice</TableHead>
                           <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Actions</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1387,8 +1400,8 @@ export default function ProcurementGRNPage() {
                           
                           if (auditMatchFilter === "all") return searchMatch;
                           
-                          const poTotal = p.total_amount;
-                          const grnTotal = p.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity) * (1 + item.tax_rate / 100), 0);
+                          const poTotal = p.items.reduce((acc, item) => acc + (item.unit_price * item.quantity * 1.18), 0);
+                          const grnTotal = p.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity * 1.18), 0);
                           const billAmount = p.vendor_bill_amount || 0;
                           const hasBill = !!(p.bill_url || p.invoice_url);
                           const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
@@ -1400,8 +1413,8 @@ export default function ProcurementGRNPage() {
                           return searchMatch;
                         })
                         .map((po) => {
-                            const poTotal = po.total_amount;
-                            const grnTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity) * (1 + item.tax_rate / 100), 0);
+                            const poTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.quantity * 1.18), 0);
+                            const grnTotal = po.items.reduce((acc, item) => acc + (item.unit_price * item.received_quantity * 1.18), 0);
                             const billAmount = po.vendor_bill_amount || 0;
 
                             const isMatch = Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1;
@@ -1421,15 +1434,15 @@ export default function ProcurementGRNPage() {
                                  </div>
                                </TableCell>
                                <TableCell className="py-2 px-4 border-r border-slate-100/50 font-semibold text-slate-600">{po.vendor?.name}</TableCell>
-                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-slate-500">₹{poTotal.toLocaleString()}</TableCell>
-                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-blue-600">₹{grnTotal.toLocaleString()}</TableCell>
+                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-slate-500">{formatCurrency(poTotal)}</TableCell>
+                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-blue-600">{formatCurrency(grnTotal)}</TableCell>
                                <TableCell className={cn(
                                  "py-2 px-4 border-r border-slate-100/50 font-bold",
                                  hasBill 
                                    ? (matchesPO ? "text-[#001529]" : "text-red-600") 
                                    : "text-amber-600"
                                )}>
-                                 {hasBill ? `₹${billAmount.toLocaleString()}` : "Awaiting Bill"}
+                                 {hasBill ? formatCurrency(billAmount) : "Awaiting Bill"}
                               </TableCell>
                               <TableCell className="text-center">
                                 {hasBill ? (
@@ -1446,8 +1459,8 @@ export default function ProcurementGRNPage() {
                                   <Badge variant="outline" className="text-slate-400">PENDING</Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right px-8">
-                                <div className="flex justify-end gap-2">
+                              <TableCell className="text-left py-4 px-4">
+                                <div className="flex justify-start gap-2">
                                   <DropdownMenu>
                                   <DropdownMenuTrigger render={
                                     <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
@@ -1534,6 +1547,7 @@ export default function ProcurementGRNPage() {
         onChange={handleFileUpload} 
         accept=".pdf" 
         className="hidden" 
+        aria-label="Upload Vendor Bill"
       />
       </>
       )}
@@ -1688,8 +1702,8 @@ export default function ProcurementGRNPage() {
                           </TableCell>
                           <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter">{item.product?.hsn_code || '---'}</TableCell>
                           <TableCell className="text-center font-black text-slate-900 text-sm">{item.quantity}</TableCell>
-                          <TableCell className="text-right font-bold text-slate-600">₹{item.unit_price.toLocaleString()}</TableCell>
-                          <TableCell className="text-right font-black text-[#001529]">₹{item.total_item_cost.toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-bold text-slate-600">{formatCurrency(item.unit_price)}</TableCell>
+                          <TableCell className="text-right font-black text-[#001529]">{formatCurrency(item.total_item_cost)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1709,22 +1723,22 @@ export default function ProcurementGRNPage() {
                         <>
                           <div className="flex justify-between items-center text-xs">
                             <span className="font-bold text-slate-500 uppercase tracking-tight">Net Taxable Value</span>
-                            <span className="font-black text-slate-900">₹{netTaxableValue.toLocaleString('en-IN')}</span>
+                            <span className="font-black text-slate-900">{formatCurrency(netTaxableValue)}</span>
                           </div>
                           <div className="flex justify-between items-center text-xs">
                             <span className="font-bold text-slate-500 uppercase tracking-tight">CGST (9%)</span>
-                            <span className="font-black text-slate-900">₹{cgst.toLocaleString('en-IN')}</span>
+                            <span className="font-black text-slate-900">{formatCurrency(cgst)}</span>
                           </div>
                           <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200">
                             <span className="font-bold text-slate-500 uppercase tracking-tight">SGST (9%)</span>
-                            <span className="font-black text-slate-900">₹{sgst.toLocaleString('en-IN')}</span>
+                            <span className="font-black text-slate-900">{formatCurrency(sgst)}</span>
                           </div>
                           <div className="flex justify-between items-center pt-2">
                             <div className="flex flex-col">
                               <span className="text-sm font-black text-[#001529] uppercase tracking-tighter leading-none">Grand Total</span>
                               <span className="text-[10px] text-blue-600 font-bold uppercase mt-1 px-2 p-0.5 rounded bg-blue-50 w-fit">{viewingPO.status.replace('_', ' ')}</span>
                             </div>
-                            <span className="text-2xl font-black text-[#001529]">₹{grandTotal.toLocaleString('en-IN')}</span>
+                            <span className="text-2xl font-black text-[#001529]">{formatCurrency(grandTotal)}</span>
                           </div>
                           <div className="mt-4 pt-4 border-t border-dashed border-slate-300">
                              <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Total Value in Words</Label>

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
+import { formatCurrency } from "@/utils/format";
 
 interface Branch {
   id: string;
@@ -62,7 +63,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
     const netTaxableValue = po.items.reduce((acc, item) => acc + item.total_item_cost, 0);
     const cgst = netTaxableValue * 0.09;
     const sgst = netTaxableValue * 0.09;
-    const grandTotal = Math.round(netTaxableValue + cgst + sgst);
+    const grandTotal = netTaxableValue + cgst + sgst;
 
     return (
       <div 
@@ -218,8 +219,8 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                       <td className="p-4 text-center font-black text-black font-mono border-x border-slate-100">
                         {item.quantity}
                       </td>
-                      <td className="p-4 text-right font-bold text-black">₹{item.unit_price.toLocaleString('en-IN')}</td>
-                      <td className="p-4 text-right font-black text-black">₹{item.total_item_cost.toLocaleString('en-IN')}</td>
+                      <td className="p-4 text-right font-bold text-black">{formatCurrency(item.unit_price)}</td>
+                      <td className="p-4 text-right font-black text-black">{formatCurrency(item.total_item_cost)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -231,19 +232,19 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               <div className="w-[320px] space-y-2 p-6 border-2 border-black">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-black uppercase tracking-tight">Net Taxable Value</span>
-                  <span className="font-black text-black">₹{netTaxableValue.toLocaleString('en-IN')}</span>
+                  <span className="font-black text-black">{formatCurrency(netTaxableValue)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-black uppercase tracking-tight">CGST (9%)</span>
-                  <span className="font-black text-black">₹{cgst.toLocaleString('en-IN')}</span>
+                  <span className="font-black text-black">{formatCurrency(cgst)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs pb-2 border-b-2 border-black">
                   <span className="font-bold text-black uppercase tracking-tight">SGST (9%)</span>
-                  <span className="font-black text-black">₹{sgst.toLocaleString('en-IN')}</span>
+                  <span className="font-black text-black">{formatCurrency(sgst)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-sm font-black text-black uppercase tracking-tighter">Grand Total</span>
-                  <span className="text-xl font-black text-black">₹{grandTotal.toLocaleString('en-IN')}</span>
+                  <span className="text-xl font-black text-black">{formatCurrency(grandTotal)}</span>
                 </div>
               </div>
             </div>
@@ -261,7 +262,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </div>
               <div className="space-y-1">
                  <Label className="text-[9px] text-black font-bold uppercase tracking-widest">Total Value in Words</Label>
-                 <p className="text-[10px] font-black italic m-0 underline decoration-slate-900 underline-offset-4 text-black">{numberToWords(grandTotal)} Only.</p>
+                 <p className="text-[10px] font-black italic m-0 underline decoration-slate-900 underline-offset-4 text-black">{numberToWords(grandTotal)}.</p>
               </div>
             </div>
 

@@ -1,79 +1,70 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createClient } from "@/utils/supabase/server"
 import { NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: {
-          get(name: string) { return cookieStore.get(name)?.value },
-          set(name: string, value: string, options: any) { cookieStore.set({ name, value, ...options }) },
-          remove(name: string, options: any) { cookieStore.set({ name, value: '', ...options }) },
-        },
-      }
-    )
+    const supabase = await createClient()
+
+    const formData = await req.formData()
+    const po_id = formData.get("po_id") as string
+    const serial_numbers = JSON.parse(formData.get("serial_numbers") as string) as string[]
+    const reason = formData.get("reason") as string
+    const proofFile = formData.get("proof") as File | null
 
     const { data: { user } } = await supabase.auth.getUser()
-    const { serial_number, reason } = await req.json()
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    if (!serial_number || !reason) {
-      return NextResponse.json({ error: "Serial number and reason are required" }, { status: 400 })
+    let evidence_url = ""
+    if (proofFile) {
+      const fileName = `${po_id}-${Date.now()}-${proofFile.name}`
+      const { error: uploadError } = await supabase.storage
+        .from("returns-evidence")
+        .upload(`proof/${fileName}`, proofFile)
+
+      if (uploadError) throw uploadError
+      
+      const { data: publicUrl } = supabase.storage
+        .from("returns-evidence")
+        .getPublicUrl(`proof/${fileName}`)
+      
+      evidence_url = publicUrl.publicUrl
     }
 
-    // 1. Find the inventory item and its landed cost/pedigree
-    const { data: item, error: fetchError } = await supabase
-      .from("inventory")
-      .select("id, landed_cost, source_po_id, status")
-      .eq("serial_number", serial_number)
-      .single()
-
-    if (fetchError || !item) {
-      return NextResponse.json({ error: "Item not found" }, { status: 404 })
-    }
-
-    if (item.status === "Sold") {
-      return NextResponse.json({ error: "Cannot return a sold item" }, { status: 400 })
-    }
-
-    if (item.status === "Returned") {
-       return NextResponse.json({ error: "Item is already returned" }, { status: 400 })
-    }
-
-    // 2. Perform transaction: Update status + Create Debit Note
-    // Since we are in an API, we can't do a multi-table transaction easily without RPC, 
-    // but we can do them sequentially or use a single query if possible.
-    // For simplicity and audit safety, we'll do them sequentially.
-
-    const { error: updateError } = await supabase
-      .from("inventory")
-      .update({ status: "Returned" })
-      .eq("id", item.id)
-
-    if (updateError) throw updateError
-
-    const { error: dnError } = await supabase
-      .from("debit_notes")
-      .insert({
-        inventory_id: item.id,
-        po_id: item.source_po_id,
-        amount: item.landed_cost || 0,
-        reason: reason,
-        created_by: user?.id
-      })
-
-    if (dnError) throw dnError
-
-    return NextResponse.json({ 
-      success: true, 
-      debit_note_amount: item.landed_cost,
-      message: `Item ${serial_number} returned successfully. Debit note generated.`
+    // Call RPC
+    const { data, error: rpcError } = await supabase.rpc("process_purchase_return_atomic", {
+      p_po_id: po_id,
+      p_serial_numbers: serial_numbers,
+      p_reason: reason,
+      p_evidence_url: evidence_url,
+      p_user_id: user.id
     })
-  } catch (error: any) {
-    console.error("Return error:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+
+    if (rpcError) throw rpcError
+    
+    const result = data as { 
+      success: boolean; 
+      total_amount: number; 
+      units_returned: number; 
+      debit_note_id: string;
+      debit_note_number: string;
+      error?: string 
+    }
+    if (result.success) {
+      return NextResponse.json({ 
+        success: true, 
+        message: `Return processed successfully. ${result.units_returned} units returned. Debit note: ${result.debit_note_number}`,
+        total_amount: result.total_amount,
+        debit_note_id: result.debit_note_id,
+        debit_note_number: result.debit_note_number
+      })
+    } else {
+      return NextResponse.json({ error: result.error || "Failed to process return" }, { status: 400 })
+    }
+
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error"
+    console.error("Return engine failure:", error)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

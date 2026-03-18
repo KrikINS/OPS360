@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Trash2, Tag, LayoutGrid, FileText, CheckCircle2 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
+import { cn } from "@/lib/utils"
 
 interface MasterItem {
   id: string
@@ -24,39 +25,51 @@ interface TermsTemplate {
   created_at: string
 }
 
+interface ReturnReasonMaster {
+  id: string
+  reason_text: string
+  is_active: boolean
+  created_at: string
+}
+
 export function GlobalMastersTab() {
   const [brands, setBrands] = useState<MasterItem[]>([])
   const [categories, setCategories] = useState<MasterItem[]>([])
   const [terms, setTerms] = useState<TermsTemplate[]>([])
+  const [returnReasons, setReturnReasons] = useState<ReturnReasonMaster[]>([])
   
   const [newBrand, setNewBrand] = useState("")
   const [newCategory, setNewCategory] = useState("")
+  const [newReturnReason, setNewReturnReason] = useState("")
   
   const [newTermName, setNewTermName] = useState("")
   const [newTermContent, setNewTermContent] = useState("")
   const [isDefaultTerm, setIsDefaultTerm] = useState(false)
 
-  const fetchMasters = async () => {
+  const fetchMasters = useCallback(async () => {
     const supabase = createClient()
     
     const [
       { data: b },
       { data: c },
-      { data: t }
+      { data: t },
+      { data: rr }
     ] = await Promise.all([
       supabase.from("brands").select("*").order("name"),
       supabase.from("categories").select("*").order("name"),
-      supabase.from("po_terms_templates").select("*").order("created_at")
+      supabase.from("po_terms_templates").select("*").order("created_at"),
+      supabase.from("return_reason_master").select("*").order("reason_text")
     ])
 
     if (b) setBrands(b)
     if (c) setCategories(c)
     if (t) setTerms(t)
-  }
+    if (rr) setReturnReasons(rr)
+  }, [])
 
   useEffect(() => {
     fetchMasters()
-  }, [])
+  }, [fetchMasters])
 
   const addMaster = async (table: string, data: Record<string, string | boolean>) => {
     const supabase = createClient()
@@ -65,6 +78,7 @@ export function GlobalMastersTab() {
     else {
       if (table === "brands") setNewBrand("")
       if (table === "categories") setNewCategory("")
+      if (table === "return_reason_master") setNewReturnReason("")
       if (table === "po_terms_templates") {
         setNewTermName("")
         setNewTermContent("")
@@ -72,6 +86,13 @@ export function GlobalMastersTab() {
       }
       fetchMasters()
     }
+  }
+
+  const toggleReasonStatus = async (id: string, currentStatus: boolean) => {
+    const supabase = createClient()
+    const { error } = await supabase.from("return_reason_master").update({ is_active: !currentStatus }).eq("id", id)
+    if (error) alert(error.message)
+    else fetchMasters()
   }
 
   const deleteMaster = async (table: string, id: string) => {
@@ -163,6 +184,47 @@ export function GlobalMastersTab() {
                 </div>
               ))}
               {categories.length === 0 && <div className="p-8 text-center text-slate-400 text-xs italic">No categories defined.</div>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Return Reason Master */}
+        <Card className="card-elevated">
+          <CardHeader className="border-b bg-slate-50/50">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Return Reason Master
+            </CardTitle>
+            <CardDescription className="text-xs">Manage standardized reasons for product returns.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Enter new return reason..." 
+                value={newReturnReason} 
+                onChange={e => setNewReturnReason(e.target.value)} 
+                onKeyDown={e => e.key === "Enter" && addMaster("return_reason_master", { reason_text: newReturnReason })}
+              />
+              <Button onClick={() => addMaster("return_reason_master", { reason_text: newReturnReason })} className="bg-[#001529] font-bold shadow-soft h-10">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="border rounded-xl divide-y overflow-hidden h-[250px] overflow-y-auto bg-white/50">
+              {returnReasons.map(r => (
+                <div key={r.id} className="p-3 flex items-center justify-between group hover:bg-white transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={r.is_active}
+                      onCheckedChange={() => toggleReasonStatus(r.id, r.is_active)}
+                      className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                    />
+                    <span className={cn("text-sm font-semibold text-slate-700", !r.is_active && "text-slate-400 line-through")}>{r.reason_text}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="text-slate-300 hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => deleteMaster("return_reason_master", r.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {returnReasons.length === 0 && <div className="p-8 text-center text-slate-400 text-xs italic">No reasons defined.</div>}
             </div>
           </CardContent>
         </Card>

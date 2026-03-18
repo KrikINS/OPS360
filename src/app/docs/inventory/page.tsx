@@ -66,31 +66,46 @@ export default function InventoryDocs() {
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-white border rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
+            <div className="h-8 w-8 rounded-lg bg-[#7FD1E3]/20 flex items-center justify-center">
+              <span className="text-[#001529]">03</span>
+            </div>
+            Active Stock Grouping & Drill-Down
+          </h3>
+          <p className="text-sm text-slate-600 mb-4">
+            High-density inventory is now grouped by <strong>Model Code</strong> and <strong>Branch</strong> to provide an executive overview of stock levels.
+          </p>
+          <ul className="space-y-3 text-sm text-slate-600">
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• Grouped Analytics:</span>
+              <span>Total Stock, Average Landed Cost, and Primary Aging (oldest unit) are summarized at the model level.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• Interactive Drill-Down:</span>
+              <span>Expand any group to reveal a sub-table of individual serial numbers with their unique registry metadata.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="bg-white border rounded-xl p-6 shadow-sm">
+           <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
             <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <span className="text-blue-600">03</span>
+              <span className="text-blue-600">04</span>
             </div>
             Advanced Search & Sort
           </h3>
           <p className="text-sm text-slate-600 mb-4">
-            New refinements allow for multi-dimensional inventory filtering:
+            Powerful filtering tools for multi-dimensional inventory reconciliation:
           </p>
-          <ul className="space-y-2 text-sm text-slate-600">
+          <ul className="space-y-2 text-[13px] text-slate-600">
             <li className="flex items-start gap-2">
               <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Metadata Joining:</strong> View product information (HSN, Model) directly within the inventory register.</span>
+              <span><strong>Metadata Joining:</strong> View HSN, Model Specifications, and Branch locations in a single unified view.</span>
             </li>
             <li className="flex items-start gap-2">
               <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Age Sorting:</strong> Instantly identify the oldest stock to prioritize for liquidation or inter-branch transfer.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Visual Accessibility:</strong> UI elements use standardized bold weights and mixed casing to ensure readability in high-density data environments.</span>
+              <span><strong>Slow Mover Filters:</strong> Identify groups with units exceeding 60-day aging thresholds for immediate action.</span>
             </li>
           </ul>
-        </div>
-        <div className="bg-slate-50 border border-dashed rounded-xl p-6 flex flex-col justify-center text-center">
-            <p className="text-sm font-medium text-slate-500 italic">Integrating Real-time Stock Analytics...</p>
         </div>
       </div>
 

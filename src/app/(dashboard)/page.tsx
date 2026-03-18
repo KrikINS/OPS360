@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,7 +18,9 @@ import {
   History,
   AlertOctagon,
   Clock,
-  Settings2
+  Settings2,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react"
 import { 
   Tooltip,
@@ -29,6 +31,7 @@ import {
 import { Upload } from "lucide-react"
 import { ImportStockModal } from "@/components/inventory/import-stock-modal"
 import { cn } from "@/lib/utils"
+import { formatCurrency } from "@/utils/format"
 
 type Branch = {
   id: string
@@ -61,6 +64,22 @@ type InventoryItem = {
   product: ProductMetadata
 }
 
+interface InventoryGroup {
+  key: string;
+  product?: ProductMetadata;
+  branch_id: string;
+  branch_name: string;
+  total_stock: number;
+  items: InventoryItem[];
+  status: string;
+  max_aging: number;
+  total_landed_cost: number;
+  brand: string;
+  product_code: string;
+  model_name: string;
+  category: string;
+}
+
 export default function InventoryDashboard() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>([])
@@ -71,6 +90,14 @@ export default function InventoryDashboard() {
   const [sortOrder, setSortOrder] = useState<'oldest' | 'newest'>('oldest')
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+
+  const toggleRow = (key: string) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }))
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -157,11 +184,40 @@ export default function InventoryDashboard() {
     const matchesBrand = selectedBrand === "all" || item.product?.brand === selectedBrand
 
     return matchesSearch && matchesBrand
-  }).sort((a, b) => {
-    const daysA = calculateDaysInStock(a.created_at)
-    const daysB = calculateDaysInStock(b.created_at)
-    return sortOrder === 'oldest' ? daysB - daysA : daysA - daysB
   })
+
+  const groupedInventory = useMemo(() => {
+    const groups: Record<string, InventoryGroup> = {};
+    filteredInventory.forEach(item => {
+      const key = `${item.branch_id}-${item.product?.product_code}-${item.status}`;
+      if (!groups[key]) {
+        groups[key] = {
+          key,
+          product: item.product,
+          branch_id: item.branch_id,
+          branch_name: branches.find(b => b.id === item.branch_id)?.name || "—",
+          total_stock: 0,
+          items: [],
+          status: item.status,
+          max_aging: 0,
+          total_landed_cost: 0,
+          brand: item.product?.brand || "Generic",
+          product_code: item.product?.product_code || '---',
+          model_name: item.product?.model_name || "Unknown Item",
+          category: item.product?.category || "Misc"
+        };
+      }
+      groups[key].items.push(item);
+      groups[key].total_stock++;
+      const days = calculateDaysInStock(item.created_at);
+      if (days > groups[key].max_aging) groups[key].max_aging = days;
+      groups[key].total_landed_cost += (item.landed_cost || item.price);
+    });
+
+    return Object.values(groups).sort((a, b) => {
+      return sortOrder === 'oldest' ? b.max_aging - a.max_aging : a.max_aging - b.max_aging;
+    });
+  }, [filteredInventory, branches, sortOrder]);
 
   const availableStock = inventory.filter(i => i.status === "Available").length
   const inTransit = inventory.filter(i => i.status === "In-Transit").length
@@ -329,15 +385,16 @@ export default function InventoryDashboard() {
           <Table>
             <TableHeader className="bg-slate-50 border-b">
               <TableRow>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-10"></TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Brand</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA Code</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name & Specification</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Serial Number</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Total Stock</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Category</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Branch</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Landed Cost</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Aging</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Value (LC)</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Primary Aging</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -350,74 +407,135 @@ export default function InventoryDashboard() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filteredInventory.length === 0 ? (
+              ) : groupedInventory.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-64 text-center">
+                  <TableCell colSpan={10} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <AlertOctagon className="h-10 w-10 text-slate-200" />
                       <p className="text-sm font-medium text-slate-400">No matching assets found in current perimeter.</p>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filteredInventory.map((item) => {
-                const days = calculateDaysInStock(item.created_at)
+              ) : groupedInventory.map((group) => {
+                const isExpanded = expandedRows[group.key]
+                const avgLandedCost = group.total_landed_cost / group.total_stock
+                const formattedCount = new Intl.NumberFormat('en-IN').format(group.total_stock)
+
                 return (
-                  <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs">
-                    <TableCell className="py-2 px-4 font-semibold text-slate-500 tracking-tight group-hover:text-slate-900 transition-colors">{item.product?.brand || "Generic"}</TableCell>
-                    <TableCell className="py-2 px-4 border-r border-slate-100/50">
-                      <code className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-bold">
-                        {item.product?.product_code || '---'}
-                      </code>
-                    </TableCell>
-                    <TableCell className="py-2 px-4 border-r border-slate-100/50">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-[#001529] tracking-tight">{item.product?.model_name || "Unknown Item"}</span>
-                        <span className="text-[10px] text-slate-400 font-medium group-hover:text-slate-500 line-clamp-1">{item.product?.description || "No specs available"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-2 px-4 border-r border-slate-100/50">
-                      <code className="bg-slate-100 text-[#001529] px-2 py-0.5 rounded font-mono text-[11px] font-bold border border-slate-200">
-                        {item.serial_number}
-                      </code>
-                    </TableCell>
-                    <TableCell className="py-2 px-4 text-center border-r border-slate-100/50">
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-semibold text-[9px] px-1.5 py-0">{item.product?.category || "Misc"}</Badge>
-                    </TableCell>
-                    <TableCell className="py-2 px-4 border-r border-slate-100/50">
-                      <div className="flex items-center gap-1.5 font-semibold text-slate-600 text-[11px]">
-                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
-                        {branches.find(b => b.id === item.branch_id)?.name || "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-2 px-4 text-center border-r border-slate-100/50">
-                      <span className={
-                        item.status === "Available"
-                          ? "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold bg-green-50 text-[#5A9E78] border border-green-100 tracking-wider"
-                          : item.status === "In-Transit"
-                          ? "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-[#D4860A] border border-amber-100 tracking-wider"
-                          : "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold bg-red-50 text-[#C0392B] border border-red-100 tracking-wider"
-                      }>
-                        {item.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-2 px-4 font-bold text-[#001529] text-xs border-r border-slate-100/50">₹{(item.landed_cost || item.price).toLocaleString("en-IN")}</TableCell>
-                    <TableCell className="py-2 px-4 text-right pr-6">
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <div className={`flex items-center justify-end gap-1.5 cursor-default ${getAgingColor(days)}`}>
-                            {days > 60 && <AlertCircle className="h-3 w-3" />}
-                            <Clock className="h-3 w-3 opacity-50" />
-                            <span className="text-xs">{days}d</span>
-                          </div>
-                        </TooltipTrigger>
-                        {days > 60 && (
-                          <TooltipContent className="bg-[#DC2626] text-white border-none font-bold text-[10px]">
-                            SLOW MOVER PROTOCOL ACTIVE
+                  <React.Fragment key={group.key}>
+                    <TableRow 
+                      className={cn(
+                        "group hover:bg-slate-50/80 transition-all border-b last:border-0 cursor-pointer",
+                        isExpanded && "bg-slate-50/50"
+                      )}
+                      onClick={() => toggleRow(group.key)}
+                    >
+                      <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-slate-200 rounded-full">
+                          {isExpanded ? <ChevronDown className="h-4 w-4 text-[#001529]" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="py-3 px-4 font-semibold text-slate-500 tracking-tight group-hover:text-slate-900">{group.brand}</TableCell>
+                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
+                        <code className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-bold">
+                          {group.product_code}
+                        </code>
+                      </TableCell>
+                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-[#001529] tracking-tight">{group.model_name}</span>
+                          <span className="text-[10px] text-slate-400 font-medium group-hover:text-slate-500 line-clamp-1">{group.product?.description}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="text-xs font-black text-[#001529]">{formattedCount}</span>
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Units</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-semibold text-[9px] px-1.5 py-0">{group.category}</Badge>
+                      </TableCell>
+                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
+                        <div className="flex items-center gap-1.5 font-semibold text-slate-600 text-[11px]">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
+                          {group.branch_name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
+                        <span className={cn(
+                          "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold tracking-wider",
+                          group.status === "Available" ? "bg-green-50 text-[#5A9E78] border border-green-100" :
+                          group.status === "In-Transit" ? "bg-amber-50 text-[#D4860A] border border-amber-100" :
+                          "bg-red-50 text-[#C0392B] border border-red-100"
+                        )}>
+                          {group.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3 px-4 font-bold text-[#001529] text-xs border-r border-slate-100/50">
+                        {formatCurrency(avgLandedCost)}
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-right pr-6">
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className={cn("flex items-center justify-end gap-1.5 cursor-default", getAgingColor(group.max_aging))}>
+                              {group.max_aging > 60 && <AlertCircle className="h-3 w-3" />}
+                              <Clock className="h-3 w-3 opacity-50" />
+                              <span className="text-xs">{group.max_aging}d</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-slate-900 text-white border-none font-bold text-[10px]">
+                            {group.max_aging > 60 ? "SLOW MOVER PROTOCOL ACTIVE" : "Active Stock Aging Overview"}
                           </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+
+                    {isExpanded && (
+                      <TableRow className="bg-slate-50/30 border-b border-slate-100">
+                        <TableCell colSpan={10} className="p-0">
+                          <div className="px-16 py-4 bg-white/50 animate-in slide-in-from-top-2 duration-300">
+                            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-inner">
+                              <Table>
+                                <TableHeader className="bg-slate-100/50">
+                                  <TableRow className="hover:bg-transparent">
+                                    <TableHead className="h-8 text-[8px] font-black text-slate-500 uppercase tracking-widest px-4">Serial Number</TableHead>
+                                    <TableHead className="h-8 text-[8px] font-black text-slate-500 uppercase tracking-widest px-4">Landed Cost</TableHead>
+                                    <TableHead className="h-8 text-[8px] font-black text-slate-500 uppercase tracking-widest px-4">Registry Date</TableHead>
+                                    <TableHead className="h-8 text-[8px] font-black text-slate-500 uppercase tracking-widest px-4 text-right">Aging</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {group.items.map((item: InventoryItem) => {
+                                    const days = calculateDaysInStock(item.created_at)
+                                    return (
+                                      <TableRow key={item.id} className="hover:bg-slate-50 transition-colors border-slate-100">
+                                        <TableCell className="py-2 px-4">
+                                          <code className="bg-[#001529]/5 text-[#001529] px-2 py-0.5 rounded font-mono text-[10px] font-bold">
+                                            {item.serial_number}
+                                          </code>
+                                        </TableCell>
+                                        <TableCell className="py-2 px-4 text-[10px] font-bold text-slate-600">{formatCurrency(item.landed_cost || item.price)}</TableCell>
+                                        <TableCell className="py-2 px-4 text-[10px] text-slate-400 font-medium">
+                                          {new Date(item.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </TableCell>
+                                        <TableCell className="py-2 px-4 text-right pr-6">
+                                          <div className={cn("inline-flex items-center gap-1 font-bold text-[10px]", getAgingColor(days))}>
+                                            <Clock className="h-2.5 w-2.5 opacity-50" />
+                                            {days} Days
+                                          </div>
+                                        </TableCell>
+                                      </TableRow>
+                                    )
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 )
               })}
             </TableBody>

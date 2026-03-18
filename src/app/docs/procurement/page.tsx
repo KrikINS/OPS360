@@ -101,6 +101,69 @@ export default function ProcurementDocs() {
         </div>
       </section>
 
+      {/* ── 3-Way Match Audit ── */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-3 text-[#7FD1E3]">
+          <ShieldCheck className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-[#001529]">3-Way Match Audit Protocols</h2>
+        </div>
+        <div className="bg-slate-50 border rounded-xl p-6 shadow-sm border-l-4 border-l-green-500">
+          <p className="text-sm text-slate-600 leading-relaxed mb-4">
+            Financial integrity is enforced through a strict 3-way reconciliation between <strong>Purchase Orders</strong>, <strong>Goods Receipt Notes</strong>, and <strong>Vendor Invoices</strong>:
+          </p>
+          <ul className="space-y-3 text-sm text-slate-600">
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• Global Tax Alignment:</span>
+              <span>All Ordered and Received values automatically include the standard 18% GST (or HSN-mapped rate) to match the Grand Total of Tax Invoices.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#001529]">• Variance Protection:</span>
+              <span>Variance is calculated as <code>Math.abs(PO_Total - Bill_Amount)</code>. Only variances &lt; ₹1.00 are classified as <strong>MATCHED</strong>.</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {/* ── Indian Numbering System ── */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-3 text-[#7FD1E3]">
+          <Hash className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-[#001529]">Indian Numbering System (en-IN)</h2>
+        </div>
+        <p className="text-slate-600">
+          Enterprise-grade financial reporting in Ops360 uses the <strong>Lakhs/Crores</strong> format (e.g., ₹45,05,600.00).
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white border p-4 rounded-xl">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Currency Formatting</h4>
+            <code className="text-xs text-[#001529] font-bold">formatCurrency(4505600) → ₹45,05,600.00</code>
+          </div>
+          <div className="bg-white border p-4 rounded-xl">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Amount in Words</h4>
+            <code className="text-xs text-[#001529] font-bold">&quot;Forty-Five Lakh Five Thousand...&quot;</code>
+            <p className="text-[9px] text-slate-500 mt-1 italic">Includes <strong>Paisa Support</strong> and pluralization logic (Lakhs/Crores).</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Return & Reversal Logic ── */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-3 text-red-500">
+          <AlertTriangle className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-[#001529]">Return & Reversal Logic (Debit Notes)</h2>
+        </div>
+        <div className="bg-red-50/30 border border-red-100 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-[#001529] text-white px-3 py-1 rounded text-[10px] font-black tracking-widest uppercase">Serial Lock</div>
+            <p className="text-xs text-slate-600 font-medium italic">Prevents duplicate returns of the same asset across different Debit Notes.</p>
+          </div>
+          <ul className="space-y-2 text-sm text-slate-600">
+            <li>• <strong>ID Format:</strong> Standardized to <code>EHA-DN-YYYY-XXXX</code>.</li>
+            <li>• <strong>100% Recovery:</strong> Lands costs are tracked to verify that reversal amounts match original purchase values exactly.</li>
+          </ul>
+        </div>
+      </section>
+
       {/* ── Reliable PO PDF Generation ── */}
       <section className="space-y-4">
         <div className="flex items-center gap-3 text-[#7FD1E3]">
