@@ -11,12 +11,12 @@ export async function GET(request: Request) {
 
   const supabase = await createClient()
 
-  // Search by code prefix or description keyword
+  // Search by code prefix, description keyword, or search_tags
   const { data, error } = await supabase
     .from("hsn_master")
     .select("*")
-    .or(`hsn_code.ilike.${query}%,description.ilike.%${query}%`)
-    .limit(10)
+    .or(`hsn_code.ilike.${query}%,description.ilike.%${query}%,search_tags.cs.{${query.toLowerCase()}}`)
+    .limit(20)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
