@@ -60,6 +60,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { MultiSelect } from "@/components/ui/multi-select"
 
 type Vendor = {
   id: string
@@ -81,6 +82,8 @@ type Vendor = {
   payment_terms?: string
   state_code?: string
   category?: string
+  brand_ids?: string[]
+  category_ids?: string[]
   credit_limit?: number
   compliance_status: 'Verified' | 'Pending' | 'Blacklisted'
   status: 'awaiting_approval' | 'approved' | 'deactivated'
@@ -125,6 +128,8 @@ export default function VendorsClient({
   const [documents, setDocuments] = useState<VendorDocument[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [allBrands, setAllBrands] = useState<{label: string, value: string}[]>([])
+  const [allCategories, setAllCategories] = useState<{label: string, value: string}[]>([])
   
   const [formData, setFormData] = useState({
     name: "",
@@ -144,7 +149,9 @@ export default function VendorsClient({
     },
     payment_terms: "",
     credit_limit: "",
-    category: ""
+    category: "",
+    brand_ids: [] as string[],
+    category_ids: [] as string[]
   })
 
   const fetchVendors = useCallback(async () => {
@@ -267,7 +274,14 @@ export default function VendorsClient({
   }
 
   useEffect(() => {
-    // Only fetch if we don't have initial vendors or to keep it updated
+    const fetchMetadata = async () => {
+      const { data: brands } = await supabase.from('brands').select('id, name')
+      const { data: categories } = await supabase.from('categories').select('id, name')
+      
+      if (brands) setAllBrands(brands.map(b => ({ label: b.name, value: b.id })))
+      if (categories) setAllCategories(categories.map(c => ({ label: c.name, value: c.id })))
+    }
+    fetchMetadata()
   }, [])
 
   const handleCreateVendor = async (e: React.FormEvent) => {
@@ -287,7 +301,8 @@ export default function VendorsClient({
           name: "", trade_name: "", gstin: "", pan_number: "",
           contact_person: "", email: "", phone: "", address: "", state_code: "",
           bank_details: { account_name: "", account_number: "", ifsc: "", bank_name: "" },
-          payment_terms: "", credit_limit: "", category: ""
+          payment_terms: "", credit_limit: "", category: "",
+          brand_ids: [], category_ids: []
         })
         fetchVendors()
       } else {
@@ -433,18 +448,22 @@ export default function VendorsClient({
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="category">Primary Category</Label>
-                    <Select value={formData.category} onValueChange={(val) => setFormData({...formData, category: val || ""})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="logistics">Logistics</SelectItem>
-                        <SelectItem value="electronics">Electronics</SelectItem>
-                        <SelectItem value="raw_materials">Raw Materials</SelectItem>
-                        <SelectItem value="services">Services</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="category">Categories (Multi-Select)</Label>
+                    <MultiSelect
+                      options={allCategories}
+                      selected={formData.category_ids}
+                      onChange={(vals) => setFormData({...formData, category_ids: vals})}
+                      placeholder="Select all applicable categories"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="brands">Brands (Multi-Select)</Label>
+                    <MultiSelect
+                      options={allBrands}
+                      selected={formData.brand_ids}
+                      onChange={(vals) => setFormData({...formData, brand_ids: vals})}
+                      placeholder="Select all applicable brands"
+                    />
                   </div>
                 </div>
               )}

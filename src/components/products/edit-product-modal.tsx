@@ -30,6 +30,8 @@ interface Product {
   min_stock_level: number
   tracking_type: string
   description: string
+  tax_rate?: number
+  warranty_months?: number
 }
 
 interface EditProductModalProps {
@@ -52,6 +54,8 @@ interface FormState {
   min_stock_level: string
   tracking_type: string
   description: string
+  tax_rate: string
+  warranty_months: string
 }
 
 export function EditProductModal({ open, onOpenChange, onSuccess, product }: EditProductModalProps) {
@@ -62,7 +66,9 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
     hsn_code: product?.hsn_code || "",
     min_stock_level: product?.min_stock_level?.toString() || "0",
     tracking_type: product?.tracking_type || "Stocked",
-    description: product?.description || ""
+    description: product?.description || "",
+    tax_rate: product?.tax_rate?.toString() || "18",
+    warranty_months: product?.warranty_months?.toString() || "12"
   })
 
   useEffect(() => {
@@ -73,7 +79,9 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
         hsn_code: product.hsn_code || "",
         min_stock_level: product.min_stock_level?.toString() || "0",
         tracking_type: product.tracking_type || "Stocked",
-        description: product.description || ""
+        description: product.description || "",
+        tax_rate: product.tax_rate?.toString() || "18",
+        warranty_months: product.warranty_months?.toString() || "12"
       })
     }
   }, [product])
@@ -94,7 +102,9 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           hsn_code: formData.hsn_code,
           min_stock_level: parseInt(formData.min_stock_level),
           tracking_type: formData.tracking_type,
-          description: formData.description
+          description: formData.description,
+          tax_rate: parseFloat(formData.tax_rate),
+          warranty_months: parseInt(formData.warranty_months)
         })
         .eq("id", product.id)
 
@@ -128,7 +138,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-price">Base Price *</Label>
+              <Label htmlFor="edit-price">Unit Rate (Excl. Tax) *</Label>
               <Input 
                 id="edit-price" 
                 type="number" 
@@ -137,6 +147,11 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
                 required
               />
+              {formData.base_price && formData.tax_rate && (
+                <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
+                  Estimated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-hsn">HSN Code</Label>
@@ -144,6 +159,29 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 id="edit-hsn" 
                 value={formData.hsn_code}
                 onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-tax">Tax Rate (%) *</Label>
+              <Input 
+                id="edit-tax" 
+                type="number" 
+                step="0.1" 
+                value={formData.tax_rate}
+                onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-warranty">Warranty (Months)</Label>
+              <Input 
+                id="edit-warranty" 
+                type="number" 
+                value={formData.warranty_months}
+                onChange={(e) => setFormData({ ...formData, warranty_months: e.target.value })}
               />
             </div>
           </div>

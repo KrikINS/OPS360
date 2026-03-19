@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Check } from "lucide-react"
 
-function Checkbox({ className, ...props }: React.ComponentProps<"input"> & { onCheckedChange?: (checked: boolean) => void }) {
+function Checkbox({ className, onCheckedChange, ...props }: React.ComponentProps<"input"> & { onCheckedChange?: (checked: boolean) => void }) {
   const [checked, setChecked] = React.useState(props.checked || props.defaultChecked || false)
 
   React.useEffect(() => {
@@ -16,7 +16,7 @@ function Checkbox({ className, ...props }: React.ComponentProps<"input"> & { onC
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = e.target.checked
     setChecked(isChecked)
-    props.onCheckedChange?.(isChecked)
+    onCheckedChange?.(isChecked)
   }
 
   return (

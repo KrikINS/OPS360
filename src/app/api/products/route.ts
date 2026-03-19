@@ -17,7 +17,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('products')
-    .select('id, model_name, brand, category, hsn_code, base_price, description, product_code, min_stock_level, tracking_type, is_archived')
+    .select('id, model_name, brand, category, hsn_code, base_price, description, product_code, min_stock_level, tracking_type, is_archived, tax_rate, warranty_months')
     .eq('is_archived', false)
     .order('model_name', { ascending: true })
 
@@ -51,7 +51,9 @@ export async function POST(request: Request) {
       description: body.description,
       product_code: body.product_code,
       min_stock_level: body.min_stock_level || 0,
-      tracking_type: body.tracking_type || 'Stocked'
+      tracking_type: body.tracking_type || 'Stocked',
+      tax_rate: body.tax_rate ?? 18.0,
+      warranty_months: body.warranty_months ?? 12
     }])
     .select()
     .single()

@@ -108,6 +108,8 @@ function SelectLabel({
   )
 }
 
+const BaseSelectItemText = SelectPrimitive.ItemText
+
 function SelectItem({
   className,
   children,
@@ -122,9 +124,9 @@ function SelectItem({
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
+      <BaseSelectItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
         {children}
-      </SelectPrimitive.ItemText>
+      </BaseSelectItemText>
       <SelectPrimitive.ItemIndicator
         render={
           <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
@@ -192,6 +194,7 @@ export {
   SelectContent,
   SelectGroup,
   SelectItem,
+  BaseSelectItemText as SelectItemText,
   SelectLabel,
   SelectScrollDownButton,
   SelectScrollUpButton,

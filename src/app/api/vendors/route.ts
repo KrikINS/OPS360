@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     name, trade_name, gstin, pan_number, 
     contact_person, email, phone, address, 
     state_code, bank_details, payment_terms, 
-    credit_limit, category 
+    credit_limit, category, brand_ids, category_ids 
   } = body
 
   if (!name) return NextResponse.json({ error: "Vendor name is required" }, { status: 400 })
@@ -78,6 +78,8 @@ export async function POST(request: Request) {
       payment_terms,
       credit_limit: credit_limit ? parseFloat(credit_limit) : 0,
       category,
+      brand_ids: Array.isArray(brand_ids) ? brand_ids : [],
+      category_ids: Array.isArray(category_ids) ? category_ids : [],
       status: 'awaiting_approval',
       compliance_status: 'Pending',
       created_by: user.id
@@ -143,6 +145,9 @@ export async function PATCH(request: Request) {
     if (status === 'approved') updateData.approved_by = user.id
   }
   if (compliance_status) updateData.compliance_status = compliance_status
+  
+  if (body.brand_ids) updateData.brand_ids = body.brand_ids
+  if (body.category_ids) updateData.category_ids = body.category_ids
 
   const { data, error } = await supabase
     .from('vendors')

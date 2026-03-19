@@ -201,6 +201,37 @@ export default function ProcurementDocs() {
         </div>
       </section>
 
+      {/* ── Procurement Terms & Conditions Templates ── */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-3 text-[#2E86C1]">
+          <History className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-[#001529]">Procurement Terms & Conditions Templates</h2>
+        </div>
+        <div className="bg-slate-50 border rounded-xl p-6 shadow-sm border-l-4 border-l-[#2E86C1]">
+          <p className="text-sm text-slate-600 leading-relaxed mb-4">
+            Customizable T&C templates ensure legal consistency across all purchase agreements while maintaining operational speed:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[#001529]">Centralized Governance</h4>
+              <p className="text-xs text-slate-500">Managed via <strong>Admin Center &gt; Global Masters</strong>. Templates consist of a unique name and full legal content block.</p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[#001529]">Smart Auto-Loading</h4>
+              <p className="text-xs text-slate-500">Upon Vendor selection in the PO Registry, the system automatically fetches and applies the template marked as <strong>is_default: true</strong>.</p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[#001529]">Manual Override</h4>
+              <p className="text-xs text-slate-500">The PO creation form includes a real-time template selector dropdown. Users can swap between templates or edit the content manually for specific order requirements.</p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[#001529]">Data Integrity (Postgres)</h4>
+              <p className="text-xs text-slate-500">Enforced by table triggers in <code>po_terms_templates</code> to ensure a singleton default state is maintained globally.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Intelligent PO Sequencing ── */}
       <section className="space-y-4">
         <div className="flex items-center gap-3 text-[#7FD1E3]">

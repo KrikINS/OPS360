@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client"
 import { 
   Search, 
   Plus, 
-  MoreVertical, 
+  ChevronDown, 
   Edit2, 
   Archive, 
   Loader2,
@@ -37,6 +37,8 @@ interface Product {
   min_stock_level: number
   tracking_type: string
   description: string
+  tax_rate?: number
+  warranty_months?: number
 }
 
 export default function ProductsPage() {
@@ -55,7 +57,7 @@ export default function ProductsPage() {
     setLoading(true)
     const { data } = await supabase
       .from("products")
-      .select("id, model_name, brand, category, product_code, base_price, hsn_code, min_stock_level, tracking_type, description")
+      .select("id, model_name, brand, category, product_code, base_price, hsn_code, min_stock_level, tracking_type, description, tax_rate, warranty_months")
       .eq("is_archived", false)
       .order("model_name")
     
@@ -194,7 +196,8 @@ export default function ProductsPage() {
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Category</th>
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA Code</th>
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">HSN Code</th>
-                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Price</th>
+                  <th className="text-center py-2.5 px-1 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tax</th>
+                  <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Unit Rate (Excl. Tax)</th>
                   <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Min Stock</th>
                   <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tracking</th>
                   <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] w-20">Actions</th>
@@ -231,7 +234,8 @@ export default function ProductsPage() {
                         <code className="text-[10px] font-mono font-semibold text-[#001529] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{p.product_code || "---"}</code>
                       </td>
                       <td className="py-2 px-4 text-slate-400 font-semibold">{p.hsn_code || "---"}</td>
-                      <td className="py-2 px-4 font-bold text-[#001529] text-xs">₹{p.base_price.toLocaleString("en-IN")}</td>
+                      <td className="py-2 px-1 text-center font-bold text-slate-500 text-[10px]">{p.tax_rate ?? 18}%</td>
+                      <td className="py-2 px-4 font-bold text-right text-[#001529] text-xs">₹{p.base_price.toLocaleString("en-IN")}</td>
                       <td className="py-2 px-4 text-center">
                         <span className="font-semibold text-slate-900 border border-slate-100 px-1.5 py-0.5 rounded bg-slate-50">{p.min_stock_level || 0}</span>
                       </td>
@@ -248,10 +252,10 @@ export default function ProductsPage() {
                       <td className="py-2 px-4 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger render={
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-slate-100 transition-colors" />
-                          }>
-                            <MoreVertical className="h-4 w-4" />
-                          </DropdownMenuTrigger>
+                            <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
+                              Actions <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          } />
                           <DropdownMenuContent align="end" className="w-44 font-bold text-[10px] tracking-wider text-[#001529] border-slate-200 shadow-2xl">
                             <DropdownMenuItem onClick={() => setEditingProduct(p)} className="gap-3 cursor-pointer py-2.5">
                               <Edit2 className="h-3.5 w-3.5 text-blue-500" /> Edit Metadata

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { numberToWords } from "@/lib/number-to-words"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -19,14 +19,13 @@ import {
   FileText,
   Plus,
   Loader2,
-  FileUp,
   Scale,
   ShieldAlert,
   ShieldCheck,
   CheckCircle2,
   Clock,
   RotateCcw,
-  AlertOctagon,
+
   PackageSearch,
   Building2,
   LayoutGrid,
@@ -147,11 +146,18 @@ type PurchaseOrder = {
     override_reason?: string
     product: { model_name: string, hsn_code: string, product_code: string }
   }[]
-  grns?: Array<{ id: string, grn_number: string }>
-  discrepancies?: Array<{ status: string }>
-}
-
-type GRNData = {
+    grns?: Array<{ id: string, grn_number: string }>
+    discrepancies?: Array<{ status: string }>
+  }
+  
+  type POTermsTemplate = {
+    id: string
+    name: string
+    content: string
+    is_default: boolean
+  }
+  
+  type GRNData = {
   id: string
   grn_number: string
   po_number: string
@@ -210,16 +216,12 @@ export default function ProcurementGRNPage() {
   const [loading, setLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [approvingId, setApprovingId] = useState<string | null>(null)
-  const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [managerOverride, setManagerOverride] = useState<Record<number, boolean>>({})
   const [overrideReasons, setOverrideReasons] = useState<Record<number, string>>({})
-  const [isUploading, setIsUploading] = useState<string | null>(null)
   const [revisionPO, setRevisionPO] = useState<PurchaseOrder | null>(null)
   const [viewingPO, setViewingPO] = useState<PurchaseOrder | null>(null)
   const [viewingGRN, setViewingGRN] = useState<GRNData | null>(null)
-  const [targetPOForDownload, setTargetPOForDownload] = useState<PurchaseOrder | null>(null)
-  const [editingTerms, setEditingTerms] = useState<string>("")
-  const [isUpdatingTerms, setIsUpdatingTerms] = useState(false)
+
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [branchFilter, setBranchFilter] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -233,17 +235,12 @@ export default function ProcurementGRNPage() {
   const [auditMatchFilter, setAuditMatchFilter] = useState("all")
 
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
-  const [creationTerms, setCreationTerms] = useState<string>("")
+  const [creationTerms, setCreationTerms] = useState("")
+  const [availableTemplates, setAvailableTemplates] = useState<POTermsTemplate[]>([])
+  const [mappedProductIds, setMappedProductIds] = useState<string[]>([])
   const printRef = useRef<HTMLDivElement>(null)
   const grnPrintRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentGrnData, setCurrentGrnData] = useState<GRNData | null>(null)
-  const [uploadingPoId, setUploadingPoId] = useState<string | null>(null)
-  const [billGalleryPO, setBillGalleryPO] = useState<PurchaseOrder | null>(null)
-  const [supplementalBillPO, setSupplementalBillPO] = useState<PurchaseOrder | null>(null)
-  const [supplementalBillInfo, setSupplementalBillInfo] = useState({ number: "", amount: "" })
-  const [supplementalFile, setSupplementalFile] = useState<File | null>(null)
-
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `PO_${viewingPO?.po_number || 'Document'}`,
@@ -263,7 +260,6 @@ export default function ProcurementGRNPage() {
   })
 
   const handleDownloadPDF = async (po: PurchaseOrder) => {
-    setTargetPOForDownload(po);
     setIsDownloading(po.id);
     setViewingPO(po);
     try {
@@ -276,7 +272,6 @@ export default function ProcurementGRNPage() {
   };
 
   const handleDownloadGRN = async (po: PurchaseOrder, grnId?: string) => {
-    setTargetPOForDownload(po);
     // Always use _grn suffix to ensure the hidden print container knows to render the GRN template
     setIsDownloading(grnId ? `${grnId}_grn` : `${po.id}_grn`);
     try {
@@ -339,109 +334,7 @@ export default function ProcurementGRNPage() {
       setIsDownloading(null);
     }
   };
-  const [cancelModalId, setCancelModalId] = useState<string | null>(null)
-  const [cancelReason, setCancelReason] = useState("")
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    
-    // Case 1: Supplemental modal is already open
-    if (supplementalBillPO) {
-      setSupplementalFile(file);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    // Case 2: Initial upload flow from Actions (e.g. from an action button that sets uploadingPoId)
-    const poId = uploadingPoId
-    if (poId) {
-      const po = activePOs.find(p => p.id === poId);
-      if (po) {
-        setSupplementalFile(file);
-        setSupplementalBillPO(po);
-        setUploadingPoId(null);
-      }
-    }
-    
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-
-  const handleSupplementalUpload = async () => {
-    if (!supplementalBillPO || !supplementalFile || !supplementalBillInfo.number || !supplementalBillInfo.amount) {
-      alert("Please provide all bill details and a file.");
-      return;
-    }
-
-    setIsUploading(supplementalBillPO.id)
-    const formData = new FormData()
-    formData.append("file", supplementalFile)
-    formData.append("po_id", supplementalBillPO.id)
-    formData.append("bill_number", supplementalBillInfo.number)
-    formData.append("bill_amount", supplementalBillInfo.amount)
-
-    try {
-      const res = await fetch('/api/procurement/upload', {
-        method: 'POST',
-        body: formData
-      })
-      const data = await res.json()
-
-      if (data.success) {
-        // Trigger reconciliation after upload
-        await handleReconcile(supplementalBillPO.id);
-        setSupplementalBillPO(null);
-        setSupplementalBillInfo({ number: "", amount: "" });
-        setSupplementalFile(null);
-      } else {
-        alert(data.error || "Upload failed")
-      }
-    } catch (err) {
-      console.error("Upload error", err)
-      alert("An error occurred during upload")
-    } finally {
-      setIsUploading(null)
-    }
-  }
-
-  const handleReconcile = async (poId: string) => {
-    try {
-      const supabase = createClient()
-      
-      const poRes = await fetch('/api/procurement/purchase-orders')
-      const pos = await poRes.json()
-      setActivePOs(pos)
-      
-      const po = pos.find((p: PurchaseOrder) => p.id === poId)
-      if (!po) return
-
-      const totalBilled = po.vendor_bills.reduce((acc: number, b: VendorBill) => acc + Number(b.bill_amount), 0)
-      const poTotal = po.items.reduce((acc: number, item: POItem) => acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0)
-      const variance = Math.abs(poTotal - totalBilled)
-      
-      // Update summary fields in main table
-      await supabase
-        .from('purchase_orders')
-        .update({ vendor_bill_amount: totalBilled })
-        .eq('id', poId)
-
-      if (variance >= 1) {
-        await supabase
-          .from('discrepancies')
-          .upsert({
-            po_id: poId,
-            vendor_id: po.vendor_id,
-            discrepancy_type: 'Price Mismatch',
-            detected_gap: (totalBilled - poTotal),
-            status: 'Open'
-          }, { onConflict: 'po_id, discrepancy_type' })
-      } else {
-        // If matched exactly, we could potentially resolve but keeping it manual for now
-      }
-    } catch (err) {
-      console.error("Reconciliation error", err)
-    }
-  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -499,13 +392,30 @@ export default function ProcurementGRNPage() {
       // Fetch default PO terms template if creating a new PO
       if (isCreatingPO && !revisionPO) {
         const supabase = createClient()
+        // First fetch all templates for the dropdown
         supabase
           .from('po_terms_templates')
-          .select('content')
-          .eq('is_default', true)
-          .single()
+          .select('*')
+          .order('name')
           .then(({ data }) => {
-            if (data?.content) setCreationTerms(data.content)
+            if (data) {
+                setAvailableTemplates(data);
+                const defaultTemplate = data.find(t => t.is_default);
+                if (defaultTemplate) setCreationTerms(defaultTemplate.content);
+            }
+          })
+
+        // Fetch vendor-product mapping
+        supabase
+          .from('vendor_product_map')
+          .select('product_id')
+          .eq('vendor_id', vendorId)
+          .then(({ data }) => {
+            if (data) {
+              setMappedProductIds(data.map(m => m.product_id));
+            } else {
+              setMappedProductIds([]);
+            }
           })
       }
     }
@@ -601,29 +511,7 @@ export default function ProcurementGRNPage() {
     }
   }
 
-  const handleCancelPO = async () => {
-    if (!cancelModalId || cancelReason.length < 10) return
 
-    setCancellingId(cancelModalId)
-    try {
-      const res = await fetch('/api/procurement/purchase-orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: cancelModalId, status: 'cancelled', cancellation_reason: cancelReason })
-      })
-
-      if (res.ok) {
-        setCancelModalId(null)
-        setCancelReason("")
-        const poRes = await fetch('/api/procurement/purchase-orders')
-        setActivePOs(await poRes.json())
-      }
-    } catch (err) {
-      console.error("Failed to cancel PO", err)
-    } finally {
-      setCancellingId(null)
-    }
-  }
 
   const handleApprovePO = async (poId: string) => {
     setApprovingId(poId)
@@ -747,12 +635,14 @@ export default function ProcurementGRNPage() {
                       <SelectValue placeholder="Search products..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map(p => (
-                        <SelectItem key={p.id} value={p.id}>
-                          <span className="font-mono text-xs font-bold mr-2 text-blue-600">[{p.product_code}]</span>
-                          {p.model_name} (â‚¹{p.base_price.toLocaleString()})
-                        </SelectItem>
-                      ))}
+                      {products
+                        .filter(p => mappedProductIds.length === 0 || mappedProductIds.includes(p.id))
+                        .map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="font-mono text-xs font-bold mr-2 text-blue-600">[{p.product_code}]</span>
+                            {p.model_name} (₹{p.base_price.toLocaleString()})
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -828,8 +718,8 @@ export default function ProcurementGRNPage() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>â‚¹{item.unit_price.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">â‚¹{(item.unit_price * item.quantity).toLocaleString()}</TableCell>
+                          <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">₹{(item.unit_price * item.quantity).toLocaleString()}</TableCell>
                           <TableCell>
                             <Button variant="ghost" size="sm" onClick={() => setPoItems(poItems.filter((_, i: number) => i !== idx))}>Remove</Button>
                           </TableCell>
@@ -840,9 +730,31 @@ export default function ProcurementGRNPage() {
                 )}
 
                 <div className="space-y-4 pt-6">
-                  <Label className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-blue-600" /> Contractual Terms & Conditions
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-blue-600" /> Contractual Terms & Conditions
+                    </Label>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Template:</span>
+                      <Select onValueChange={(val) => {
+                        const template = availableTemplates.find(t => t.id === val);
+                        if (template) setCreationTerms(template.content);
+                      }}>
+                        <SelectTrigger className="h-7 w-[180px] text-[10px] font-bold bg-slate-50 border-slate-200">
+                          <SelectValue placeholder="Apply Template..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTemplates.map(t => (
+                            <SelectItem key={t.id} value={t.id} className="text-[10px] font-medium">
+                              {t.name} {t.is_default ? '(Default)' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
                   <Textarea 
                     placeholder="These terms will be printed on the official PO PDF..."
                     value={creationTerms}
@@ -851,7 +763,7 @@ export default function ProcurementGRNPage() {
                     className="font-medium text-sm leading-relaxed border-slate-200 focus:ring-blue-500"
                   />
                   <p className="text-[10px] text-slate-400 italic">
-                    Pre-filled from Global Masters. You can modify these specifically for this order.
+                    Pre-filled from Global Masters. You can modify these specifically for this order or choose a different template above.
                   </p>
                 </div>
               </div>
@@ -1149,14 +1061,6 @@ export default function ProcurementGRNPage() {
                                             </DropdownMenuItem>
                                           </>
                                         )}
-                                        <DropdownMenuItem 
-                                          onClick={() => { setCancelModalId(po.id); setCancelReason(""); }}
-                                          className="text-red-500 focus:text-red-500 cursor-pointer font-medium"
-                                          disabled={cancellingId === po.id}
-                                        >
-                                          <AlertOctagon className="h-4 w-4 mr-2" /> Cancel PO
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
                                       </>
                                     )}
 
@@ -1209,23 +1113,6 @@ export default function ProcurementGRNPage() {
                                     </DropdownMenuItem>
 
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem 
-                                        onClick={() => setBillGalleryPO(po)}
-                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
-                                      >
-                                        <FileText className="h-4 w-4 mr-2" /> View Bill Gallery {po.vendor_bills?.length > 0 ? `(${po.vendor_bills.length})` : ""}
-                                      </DropdownMenuItem>
-                                      
-                                      <DropdownMenuItem 
-                                        onClick={() => {
-                                          setSupplementalBillPO(po);
-                                          setSupplementalBillInfo({ number: "", amount: "" });
-                                        }}
-                                        className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
-                                      >
-                                        <Plus className="h-4 w-4 mr-2" /> {po.vendor_bills?.length > 0 ? "Add Supplemental Bill" : "Upload Initial Bill"}
-                                      </DropdownMenuItem>
-                                      
                                       <DropdownMenuItem 
                                         onSelect={(e) => e.preventDefault()}
                                         onClick={() => setViewingPO(po)} 
@@ -1692,25 +1579,6 @@ export default function ProcurementGRNPage() {
                                     </Button>
                                   } />
                                   <DropdownMenuContent align="end" className="w-56">
-                                      <DropdownMenuItem 
-                                        onClick={() => {
-                                          setSupplementalBillPO(po);
-                                          setSupplementalBillInfo({ number: "", amount: "" });
-                                        }}
-                                        onSelect={(e) => e.preventDefault()}
-                                        className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
-                                        disabled={isUploading === po.id}
-                                      >
-                                        {isUploading === po.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                                        {po.vendor_bills?.length > 0 ? "Add Supplemental Bill" : "Upload Initial Bill"}
-                                      </DropdownMenuItem>
-
-                                      <DropdownMenuItem 
-                                        onClick={() => setBillGalleryPO(po)}
-                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
-                                      >
-                                        <FileText className="h-4 w-4 mr-2" /> View Bill Gallery {po.vendor_bills?.length > 0 ? `(${po.vendor_bills.length})` : ""}
-                                      </DropdownMenuItem>
 
                                       <DropdownMenuSeparator />
 
@@ -1787,14 +1655,6 @@ export default function ProcurementGRNPage() {
           <DiscrepancyReportPage />
         </TabsContent>
       </Tabs>
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileUpload} 
-        accept=".pdf" 
-        className="hidden" 
-        aria-label="Upload Vendor Bill"
-      />
       </>
     )}
 
@@ -1803,7 +1663,7 @@ export default function ProcurementGRNPage() {
         <Dialog open={!!viewingPO} onOpenChange={(open) => {
           if (!open) {
             setViewingPO(null);
-            setEditingTerms("");
+
           }
         }}>
           <DialogContent className="w-[90vw] max-w-[1200px] sm:max-w-none h-[85vh] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl">
@@ -1913,7 +1773,7 @@ export default function ProcurementGRNPage() {
                     className="min-h-[120px] bg-slate-50 border-slate-200 text-xs leading-relaxed focus:bg-white transition-all resize-none font-medium text-slate-700"
                     placeholder="Enter specific PO terms..."
                     defaultValue={viewingPO.terms_content || "1. Supply as per agreed specifications and delivery schedule.\n2. Invoices must mention the PO Number and GSTIN of both parties.\n3. Subject to Bengaluru Jurisdiction."}
-                    onChange={(e) => setEditingTerms(e.target.value)}
+
                   />
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Badge variant="outline" className="bg-white/80 backdrop-blur-sm text-[8px] uppercase">Editable Document View</Badge>
