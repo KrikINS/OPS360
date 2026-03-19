@@ -270,7 +270,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
             variant="outline" 
             onClick={onClose} 
             disabled={isProcessing}
-            className="h-10 px-6 font-black uppercase text-[11px] tracking-widest border-slate-300 hover:bg-slate-100"
+            className="h-10 px-6 font-black uppercase text-[11px] tracking-widest border-red-100 text-red-500 hover:bg-red-50"
           >
             Cancel
           </Button>

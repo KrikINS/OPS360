@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
+import NextImage from "next/image"
 import { 
   Search, 
   RotateCcw, 
@@ -20,7 +21,10 @@ import {
   ExternalLink,
   ChevronDown,
   Settings2,
-  ShieldCheck
+  ShieldCheck,
+  Building2,
+  Truck,
+  LayoutGrid
 } from "lucide-react"
 import { useReactToPrint } from "react-to-print"
 import { useRef, useMemo } from "react"
@@ -32,6 +36,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/utils/format"
 import { cn } from "@/lib/utils"
+import { Label } from "@/components/ui/label"
+import { numberToWords } from "@/lib/number-to-words"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -116,6 +122,7 @@ export default function PurchaseReturn() {
   const [lastDebitNote, setLastDebitNote] = useState<DebitNoteData | null>(null)
   const [isDownloading, setIsDownloading] = useState<string | null>(null)
   const [authorizingId, setAuthorizingId] = useState<string | null>(null)
+  const [viewingDebitNote, setViewingDebitNote] = useState<DebitNoteData | null>(null)
   const [returns, setReturns] = useState<DebitNoteData[]>([])
   const [fetchingReturns, setFetchingReturns] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
@@ -566,14 +573,11 @@ export default function PurchaseReturn() {
                             <DropdownMenuItem 
                               onSelect={(e) => e.preventDefault()}
                               onClick={() => {
-                                setLastDebitNote(ret);
-                                setIsDownloading(ret.id);
-                                setTimeout(() => handlePrint(), 500);
+                                setViewingDebitNote(ret);
                               }}
                               className="text-slate-700 font-medium cursor-pointer"
-                              disabled={isDownloading === ret.id}
                             >
-                              {isDownloading === ret.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
+                              <Eye className="h-4 w-4 mr-2" />
                               View Debit Note
                             </DropdownMenuItem>
                             
@@ -834,6 +838,208 @@ export default function PurchaseReturn() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Debit Note Detail View Modal */}
+      {viewingDebitNote && (
+        <Dialog open={!!viewingDebitNote} onOpenChange={(open) => {
+          if (!open) {
+            setViewingDebitNote(null);
+          }
+        }}>
+          <DialogContent className="w-[90vw] max-w-[1200px] sm:max-w-none h-[85vh] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl">
+            <DialogHeader className="bg-[#111827] p-8 text-white rounded-t-lg shrink-0">
+              <div className="flex justify-between items-start w-full">
+                <div className="space-y-4">
+                  <h1 className="text-4xl font-black tracking-tighter text-white m-0 leading-none">
+                    Debit Note
+                  </h1>
+                  <div className="space-y-1">
+                    <p className="text-xl font-bold m-0 flex items-center gap-2">
+                      <span className="opacity-60 text-sm uppercase tracking-widest font-black">Ref:</span>
+                      {viewingDebitNote.debit_note_number}
+                    </p>
+                    <DialogDescription className="text-slate-400 font-medium m-0">
+                      <span className="opacity-60 text-[10px] uppercase tracking-widest font-black mr-2">Date:</span>
+                      {new Date(viewingDebitNote.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </DialogDescription>
+                  </div>
+                </div>
+
+                <div className="text-right flex flex-col items-end gap-3">
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-xl font-black text-white m-0 uppercase tracking-tighter">Ethan Home Appliances</p>
+                      <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Reverse Logistics Division</p>
+                    </div>
+                    <div className="bg-white p-2 rounded-lg">
+                       <NextImage src="/ethan-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto p-8 bg-white space-y-8">
+              {/* Metadata Grid */}
+              <div className="grid md:grid-cols-2 gap-8 p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-[#001529]">
+                    <Building2 className="h-4 w-4" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Originating Branch</Label>
+                  </div>
+                  <div className="pl-6 border-l-2 border-slate-200">
+                    <p className="font-bold text-lg text-slate-900">{viewingDebitNote.branch?.name || viewingDebitNote.po?.branch?.name || 'Authorized Branch'}</p>
+                    <p className="text-[10px] text-slate-400 mt-1 italic leading-tight">
+                      {viewingDebitNote.branch?.full_address || viewingDebitNote.po?.branch?.full_address || 'Ops360 Node Address Pending Retrieval'}
+                    </p>
+                    <p className="text-[10px] font-black text-slate-500 mt-1 uppercase tracking-wider">
+                      GSTIN: {viewingDebitNote.branch?.gstin || viewingDebitNote.po?.branch?.gstin || '32AAAAA0000A1Z5'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-[#001529]">
+                    <Truck className="h-4 w-4" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Vendor Creditor</Label>
+                  </div>
+                  <div className="pl-6 border-l-2 border-slate-200">
+                    <p className="font-bold text-lg text-slate-900">{viewingDebitNote.vendor?.name || viewingDebitNote.vendor_name || 'Vendor Partner'}</p>
+                    <p className="text-[10px] font-mono mt-1 text-slate-400 uppercase">
+                      GSTIN: {viewingDebitNote.vendor?.gstin || viewingDebitNote.po?.vendor?.gstin || 'Verification Pending'}
+                    </p>
+                    <Badge variant="outline" className="mt-2 text-[8px] uppercase font-black px-2 py-0 border-blue-200 text-blue-700 bg-blue-50">
+                      Linked to PO: {viewingDebitNote.po_number}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transaction Breakdown */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                  <LayoutGrid className="h-4 w-4" />
+                  Reversal Transaction details
+                </h4>
+                <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                  <Table>
+                    <TableHeader className="bg-slate-50/50">
+                      <TableRow className="border-b border-slate-100">
+                        <TableHead className="min-w-[300px] font-black uppercase text-[10px] tracking-widest">Description of Reversal</TableHead>
+                        <TableHead className="text-right font-black uppercase text-[10px] tracking-widest pr-8">Deductible Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                        <TableCell className="py-6">
+                          <div className="font-bold text-slate-900 text-base">Purchase Return: {viewingDebitNote.reason}</div>
+                          {viewingDebitNote.serial_numbers && viewingDebitNote.serial_numbers.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-3">
+                              {viewingDebitNote.serial_numbers.map((sn, idx) => (
+                                <Badge key={idx} variant="outline" className="text-[8px] font-mono font-bold bg-white text-blue-600 border-blue-100">
+                                  {sn}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right pr-8">
+                          <span className="text-lg font-black text-[#001529]">{formatCurrency(viewingDebitNote.amount)}</span>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <div className="w-[340px] space-y-2 p-6 rounded-2xl bg-[#001529]/5 border border-[#001529]/10">
+                    {(() => {
+                      const grandTotal = viewingDebitNote.amount;
+                      const netValue = grandTotal / 1.18;
+                      const cgst = netValue * 0.09;
+                      const sgst = netValue * 0.09;
+
+                      return (
+                        <>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-500 uppercase tracking-tight">Net Deductible</span>
+                            <span className="font-black text-slate-900">{formatCurrency(netValue)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-500 uppercase tracking-tight">CGST Reversed (9%)</span>
+                            <span className="font-black text-slate-900">{formatCurrency(cgst)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200">
+                            <span className="font-bold text-slate-500 uppercase tracking-tight">SGST Reversed (9%)</span>
+                            <span className="font-black text-slate-900">{formatCurrency(sgst)}</span>
+                          </div>
+                          <div className="flex justify-between items-center pt-2">
+                            <span className="text-sm font-black text-[#001529] uppercase tracking-tighter">Total Debit value</span>
+                            <span className="text-2xl font-black text-[#001529]">{formatCurrency(grandTotal)}</span>
+                          </div>
+                          <div className="mt-4 pt-4 border-t border-dashed border-slate-300">
+                            <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Total Reversal in Words</Label>
+                            <p className="text-[10px] font-black text-[#001529] italic leading-tight">
+                              {numberToWords(Math.round(grandTotal))}.
+                            </p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Audit Compliance */}
+              <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative mt-8">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                  <ShieldCheck className="h-24 w-24" />
+                </div>
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-1">
+                    <h4 className="text-lg font-black uppercase tracking-tighter text-[#7FD1E3]">Reverse Logistics Integrity Audit</h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Authorized Financial Recovery Mechanism</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10">
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
+                      <p className="text-[10px] font-bold uppercase text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="h-2 w-2" /> Audited & Verified
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="bg-slate-50 p-6 border-t rounded-b-lg shrink-0">
+              <div className="flex justify-between items-center w-full">
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl font-bold text-xs uppercase tracking-widest h-12 border-2 hover:bg-slate-100 transition-all px-8"
+                  onClick={() => setViewingDebitNote(null)}
+                >
+                  Close Document
+                </Button>
+                <div className="flex gap-4">
+                   <Button 
+                    className="bg-[#001529] text-white hover:bg-slate-800 font-bold text-xs uppercase h-12 px-8 rounded-xl shadow-md transition-all active:scale-95 flex gap-2"
+                    onClick={() => {
+                        setLastDebitNote(viewingDebitNote);
+                        setIsDownloading(viewingDebitNote.id);
+                        setTimeout(() => handlePrint(), 500);
+                    }}
+                    disabled={isDownloading === viewingDebitNote.id}
+                  >
+                    {isDownloading === viewingDebitNote.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    Generate Formal PDF
+                  </Button>
+                </div>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Hidden PDF Template */}
       <div className="fixed -left-[9999px] top-0">
         {lastDebitNote && (

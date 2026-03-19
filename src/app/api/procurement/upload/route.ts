@@ -11,6 +11,8 @@ export async function POST(req: Request) {
     const formData = await req.formData()
     const file = formData.get("file") as File
     const poId = formData.get("po_id") as string
+    const billNumber = formData.get("bill_number") as string
+    const billAmount = formData.get("bill_amount") as string
 
     if (!file || !poId) {
       return NextResponse.json({ error: "File and PO ID are required" }, { status: 400 })
@@ -48,12 +50,25 @@ export async function POST(req: Request) {
        throw signError
     }
 
+    const { error: insertBillError } = await supabase
+      .from("vendor_bills")
+      .insert({
+        po_id: poId,
+        bill_number: billNumber || 'SUPPLEMENTAL',
+        bill_amount: parseFloat(billAmount || '0'),
+        file_path: signData.signedUrl
+      })
+
+    if (insertBillError) {
+      console.error("Bill insertion error:", insertBillError)
+      throw insertBillError
+    }
+
     const { error: updateError } = await supabase
       .from("purchase_orders")
       .update({ 
         bill_url: signData.signedUrl,
-        // Also update invoice_url for backward compatibility if needed, 
-        // but the task says bill_url column.
+        vendor_bill_amount: parseFloat(billAmount || '0'),
         invoice_url: signData.signedUrl 
       })
       .eq("id", poId)

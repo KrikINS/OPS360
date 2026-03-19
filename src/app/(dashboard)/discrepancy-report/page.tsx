@@ -21,15 +21,9 @@ import { cn } from "@/lib/utils"
 import { formatCurrency } from "@/utils/format"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup } from "@/components/ui/dropdown-menu"
 import { ChevronDown, PencilLine, History, Eye } from "lucide-react"
+import { buttonVariants } from "@/components/ui/button"
 
 type Discrepancy = {
   id: string;
@@ -360,14 +354,14 @@ export default function DiscrepancyReportPage() {
                   <TableCell className="py-4 px-4 border-r border-slate-100/50 text-right font-black font-mono">
                     <span className={cn(
                       "text-sm",
-                      item.detected_gap > 0 ? "text-red-600" : "text-emerald-600"
+                      item.detected_gap < 0 ? "text-red-500" : "text-emerald-600"
                     )}>
-                      {item.discrepancy_type === 'Quantity Mismatch' 
+                      {item.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || item.discrepancy_type === 'Quantity Mismatch'
                         ? (
                           <div className="flex flex-col items-end">
-                            <span>{formatCurrency(item.detected_gap)}</span>
+                            <span>{item.detected_gap} Unit{Math.abs(item.detected_gap) !== 1 ? 's' : ''}</span>
                             <span className="text-[9px] opacity-50 font-bold">
-                              {item.detected_gap > 0 ? 'SHRINKAGE' : 'OVERAGE'}
+                              {item.detected_gap < 0 ? 'SHRINKAGE' : 'OVERAGE'}
                             </span>
                           </div>
                         )
@@ -388,52 +382,51 @@ export default function DiscrepancyReportPage() {
                   <TableCell className="py-4 px-6">
                     <div className="flex justify-start">
                       <DropdownMenu>
-                        <DropdownMenuTrigger>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="bg-[#001529] hover:bg-slate-800 text-white border-none h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 transition-all active:scale-95"
-                          >
-                            Actions <ChevronDown className="h-3 w-3" />
-                          </Button>
+                        <DropdownMenuTrigger className={cn(
+                          buttonVariants({ variant: "outline", size: "xs" }),
+                          "bg-[#001529] hover:bg-slate-800 text-white border-none h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 transition-all active:scale-95"
+                        )}>
+                          Actions <ChevronDown className="h-3 w-3" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 bg-white border-slate-200 shadow-xl rounded-xl p-1">
-                          <DropdownMenuLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2">
-                            Audit Options
-                          </DropdownMenuLabel>
-                          
-                          {item.status !== 'Resolved' ? (
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-1">
+                              Audit Options
+                            </DropdownMenuLabel>
+                            
+                            {item.status !== 'Resolved' ? (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedDiscrepancy(item);
+                                  setResolutionModalOpen(true);
+                                }}
+                                className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" /> Resolve Discrepancy
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedDiscrepancy(item);
+                                  setReopenModalOpen(true);
+                                }}
+                                className="text-amber-600 focus:text-amber-700 focus:bg-amber-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                              >
+                                <History className="h-4 w-4 mr-2" /> Reopen Investigation
+                              </DropdownMenuItem>
+                            )}
+                            
                             <DropdownMenuItem 
                               onClick={() => {
                                 setSelectedDiscrepancy(item);
-                                setResolutionModalOpen(true);
+                                setNewGapValue(item.detected_gap.toString());
+                                setEditGapModalOpen(true);
                               }}
-                              className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                              className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 cursor-pointer font-bold py-2.5 rounded-lg"
                             >
-                              <CheckCircle2 className="h-4 w-4 mr-2" /> Resolve Discrepancy
+                              <PencilLine className="h-4 w-4 mr-2" /> Edit Gap Value
                             </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                setSelectedDiscrepancy(item);
-                                setReopenModalOpen(true);
-                              }}
-                              className="text-amber-600 focus:text-amber-700 focus:bg-amber-50 cursor-pointer font-bold py-2.5 rounded-lg"
-                            >
-                              <History className="h-4 w-4 mr-2" /> Reopen Investigation
-                            </DropdownMenuItem>
-                          )}
-                          
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              setSelectedDiscrepancy(item);
-                              setNewGapValue(item.detected_gap.toString());
-                              setEditGapModalOpen(true);
-                            }}
-                            className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 cursor-pointer font-bold py-2.5 rounded-lg"
-                          >
-                            <PencilLine className="h-4 w-4 mr-2" /> Edit Gap Value
-                          </DropdownMenuItem>
+                          </DropdownMenuGroup>
                           
                           <DropdownMenuSeparator className="my-1 bg-slate-100" />
                           
@@ -493,9 +486,9 @@ export default function DiscrepancyReportPage() {
               </div>
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Detected Gap</p>
-                <p className="text-sm font-black text-red-600">
-                  {selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch' 
-                    ? `${Math.abs(selectedDiscrepancy?.detected_gap)} Units`
+                <p className="text-sm font-black text-red-500">
+                  {selectedDiscrepancy?.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch'
+                    ? `${selectedDiscrepancy?.detected_gap} Unit${Math.abs(selectedDiscrepancy?.detected_gap || 0) !== 1 ? 's' : ''}`
                     : formatCurrency(selectedDiscrepancy?.detected_gap || 0)
                   }
                 </p>
@@ -523,7 +516,7 @@ export default function DiscrepancyReportPage() {
                   }
                 </p>
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setResolutionModalOpen(false)}>Cancel</Button>
+                  <Button variant="outline" className="text-red-500 border-red-100 hover:bg-red-50 font-bold" onClick={() => setResolutionModalOpen(false)}>Cancel</Button>
                   <Button 
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
                     onClick={() => handleResolve('accept')}
@@ -570,7 +563,7 @@ export default function DiscrepancyReportPage() {
                 <AlertTriangle className="h-3 w-3" />
                 <span className="text-[9px] font-black uppercase tracking-widest">Permanent Audit Record</span>
              </div>
-             <Button variant="ghost" size="sm" onClick={() => setResolutionModalOpen(false)} className="text-[10px] font-black uppercase tracking-widest">
+             <Button variant="outline" size="sm" onClick={() => setResolutionModalOpen(false)} className="text-[10px] font-black uppercase tracking-widest text-red-500 border-red-100 hover:bg-red-50">
                Close
              </Button>
           </div>
@@ -598,7 +591,7 @@ export default function DiscrepancyReportPage() {
               />
             </div>
             <div className="flex justify-end gap-3 mt-4">
-              <Button variant="outline" onClick={() => setReopenModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" className="text-red-500 border-red-100 hover:bg-red-50 font-bold" onClick={() => setReopenModalOpen(false)}>Cancel</Button>
               <Button 
                 className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
                 onClick={() => handleUpdateAction('reopen')}
@@ -625,22 +618,35 @@ export default function DiscrepancyReportPage() {
           </DialogHeader>
           <div className="p-6 space-y-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">New Gap Value (Landed Cost)</Label>
+              <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                New Gap Value ({selectedDiscrepancy?.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch' ? 'Physical Units' : 'Landed Cost'})
+              </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">₹</span>
+                {!(selectedDiscrepancy?.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch') && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">₹</span>
+                )}
                 <Input 
                   type="number"
-                  className="pl-7 font-black text-lg"
+                  className={cn(
+                    "font-black text-lg",
+                    !(selectedDiscrepancy?.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch') && "pl-7"
+                  )}
                   value={newGapValue}
                   onChange={(e) => setNewGapValue(e.target.value)}
                 />
+                {(selectedDiscrepancy?.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch') && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">Unit(s)</span>
+                )}
               </div>
               <p className="text-[10px] text-slate-400 font-bold italic mt-1">
-                Format: {formatCurrency(Number(newGapValue) || 0)}
+                Format: {selectedDiscrepancy?.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch'
+                  ? `${newGapValue} Unit(s)`
+                  : formatCurrency(Number(newGapValue) || 0)
+                }
               </p>
             </div>
             <div className="flex justify-end gap-3 mt-4">
-              <Button variant="outline" onClick={() => setEditGapModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" className="text-red-500 border-red-100 hover:bg-red-50 font-bold" onClick={() => setEditGapModalOpen(false)}>Cancel</Button>
               <Button 
                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                 onClick={() => handleUpdateAction('update_gap')}
@@ -672,8 +678,8 @@ export default function DiscrepancyReportPage() {
               </p>
             </div>
             <div className="flex justify-end mt-2">
-              <Button className="bg-slate-800 hover:bg-slate-900 text-white font-bold" onClick={() => setViewNoteModalOpen(false)}>
-                Acknowledge
+              <Button className="bg-red-50 text-red-600 border-red-100 hover:bg-red-100 font-black uppercase text-[10px] tracking-widest h-10 w-full" onClick={() => setViewNoteModalOpen(false)}>
+                Close Portal View
               </Button>
             </div>
           </div>

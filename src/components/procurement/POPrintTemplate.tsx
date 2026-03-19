@@ -59,8 +59,8 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
       second: '2-digit'
     });
 
-    // Lead Architect: Net Taxable Value is the base sum
-    const netTaxableValue = po.items.reduce((acc, item) => acc + item.total_item_cost, 0);
+    // Lead Architect: Net Taxable Value is the base sum (Quantity * Unit Price)
+    const netTaxableValue = po.items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
     const cgst = netTaxableValue * 0.09;
     const sgst = netTaxableValue * 0.09;
     const grandTotal = netTaxableValue + cgst + sgst;
@@ -82,7 +82,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               background: white !important;
-              counter-reset: page 1;
+              counter-reset: page 0;
             }
             #po-print-template {
               width: 100% !important;
@@ -100,6 +100,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               background: white;
             }
             .page-number:after {
+              counter-increment: page;
               content: "Page " counter(page);
             }
             .print-content {

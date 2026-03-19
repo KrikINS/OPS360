@@ -174,28 +174,28 @@ export default function ProcurementDocs() {
         </div>
       </section>
 
-      {/* ── Reliable PO PDF Generation ── */}
+      {/* ── Enterprise Print Protocols (PO & GRN) ── */}
       <section className="space-y-4">
         <div className="flex items-center gap-3 text-[#7FD1E3]">
           <Download className="h-6 w-6" />
-          <h2 className="text-2xl font-bold text-[#001529]">Reliable PO PDF Generation</h2>
+          <h2 className="text-2xl font-bold text-[#001529]">Enterprise Print Protocols (PO & GRN)</h2>
         </div>
         <div className="bg-slate-50 border rounded-xl p-6 shadow-sm">
           <p className="text-sm text-slate-600 leading-relaxed mb-4">
-            The PO Download system uses <code>html2canvas</code> and <code>jsPDF</code>. The engine is enterprise-hardened for high-volume transactions:
+            The external document architecture operates via <code>html2canvas</code> mapping over React render engines. It eliminates browser PDF errors natively:
           </p>
-          <ul className="space-y-3 text-sm text-slate-600">
+          <ul className="space-y-4 text-sm text-slate-600">
             <li className="flex gap-2">
-              <span className="font-bold text-[#001529]">• Multi-page Stability:</span>
-              <span>Proprietary CSS ensures that POs with 50+ line items break correctly across pages without data clipping.</span>
+              <span className="font-bold text-[#001529] min-w-[200px]">• Deterministic Overflow (GRN):</span>
+              <span>Because HTML-to-PDF struggles with fluid auto-wrapping text, the system utilizes a proprietary React-rendering loop. It calculates scanned intake arrays and fragments serial numbers strictly (e.g., <strong>exactly 40 units on Page 1 to accommodate headers</strong>, and <strong>60 units per subsequent page</strong>) to definitively prevent cross-page clipping.</span>
             </li>
             <li className="flex gap-2">
-              <span className="font-bold text-[#001529]">• Security Classification:</span>
-              <span>Every physical page includes a <strong>fixed</strong> footer (&quot;CONFIDENTIAL&quot;) and dynamic <strong>CSS Page Counters</strong> for auditability.</span>
+              <span className="font-bold text-[#001529] min-w-[200px]">• Synchronous Pagination Fix:</span>
+              <span>All <code>content: counter(page)</code> CSS bugs generating &quot;Page 1/0&quot; are entirely excised. The footers evaluate exactly <code>&#123;page.pageIndex&#125; of &#123;pages.length&#125;</code> natively inside synchronous React state bounds before printing.</span>
             </li>
             <li className="flex gap-2">
-              <span className="font-bold text-[#001529]">• Engine Sanitization:</span>
-              <span>Modern CSS functions (<code>lab</code>, <code>oklch</code>) are automatically converted to standard sRGB to ensure cross-browser PDF fidelity.</span>
+              <span className="font-bold text-[#001529] min-w-[200px]">• Audit Immutability:</span>
+              <span>Every physical print page securely renders an Intake Timestamp and <strong>CONFIDENTIAL</strong> watermark footprint identically at the document&apos;s terminus.</span>
             </li>
           </ul>
         </div>

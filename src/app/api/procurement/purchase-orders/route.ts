@@ -34,7 +34,8 @@ export async function GET() {
         product:products(model_name, hsn_code)
       ),
       grns:grns(id, grn_number),
-      discrepancies:discrepancies(status)
+      discrepancies:discrepancies(status),
+      vendor_bills:vendor_bills(*)
     `)
     .order('created_at', { ascending: false })
 
@@ -142,7 +143,8 @@ export async function POST(request: Request) {
       status,
       created_by: user.id,
       terms_content,
-      total_amount: items.reduce((acc: number, item: { total_item_cost: number }) => acc + item.total_item_cost, 0)
+      total_amount: items.reduce((acc: number, item: { unit_price: number, quantity: number, tax_rate: number }) => 
+        acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0)
     })
     .select()
     .single()
@@ -254,7 +256,8 @@ export async function PATCH(request: Request) {
     if (insertError) return NextResponse.json({ error: "Failed to update items" }, { status: 500 })
     
     // Recalculate total if not provided explicitly
-      updateData.total_amount = items.reduce((acc: number, item: { total_item_cost: number }) => acc + item.total_item_cost, 0)
+      updateData.total_amount = items.reduce((acc: number, item: { unit_price: number, quantity: number, tax_rate: number }) => 
+        acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0)
   }
 
   const { data, error } = await supabase

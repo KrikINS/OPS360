@@ -91,6 +91,7 @@ export default function InventoryDashboard() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  const [activeTab, setActiveTab] = useState<'active' | 'dispositions'>('active')
 
   const toggleRow = (key: string) => {
     setExpandedRows(prev => ({
@@ -175,6 +176,14 @@ export default function InventoryDashboard() {
 
 
   const filteredInventory = inventory.filter(item => {
+    // 1. Tab Level Filtering
+    const isActiveTab = activeTab === 'active'
+    const isItemActive = item.status === 'Available' || item.status === 'In-Transit'
+    
+    if (isActiveTab && !isItemActive) return false
+    if (!isActiveTab && isItemActive) return false
+
+    // 2. Search & UI Filtering
     const brand = item.product?.brand?.toLowerCase() || ""
     const model = item.product?.model_name?.toLowerCase() || ""
     const serial = item.serial_number?.toLowerCase() || ""
@@ -280,13 +289,36 @@ export default function InventoryDashboard() {
       </div>
 
 
-      <Card className="border-slate-200 shadow-xl overflow-hidden rounded-xl border-t-0 py-0">
-        <CardHeader className="bg-[#001529] text-white pt-4 pb-2 mb-0 rounded-t-none">
+      <div className="flex border-b border-slate-200 mt-6 mb-4">
+        <button
+          onClick={() => setActiveTab('active')}
+          className={cn(
+            "px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors",
+            activeTab === 'active' ? "border-[#001529] text-[#001529]" : "border-transparent text-slate-400 hover:text-slate-600"
+          )}
+        >
+          Active Stock
+        </button>
+        <button
+          onClick={() => setActiveTab('dispositions')}
+          className={cn(
+            "px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors",
+            activeTab === 'dispositions' ? "border-[#D4860A] text-[#D4860A]" : "border-transparent text-slate-400 hover:text-slate-600"
+          )}
+        >
+          Dispositions (Sold/Returned)
+        </button>
+      </div>
+
+      <Card className="border-slate-200 shadow-xl overflow-hidden rounded-xl py-0">
+        <CardHeader className="bg-[#001529] text-white pt-4 pb-2 mb-0 rounded-t-lg">
           <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <History className="h-5 w-5 text-[#7FD1E3]" />
-                <CardTitle className="text-lg font-bold tracking-tight">Active Stock Registry</CardTitle>
+                <CardTitle className="text-lg font-bold tracking-tight">
+                  {activeTab === 'active' ? 'Active Stock Registry' : 'Historical Dispositions'}
+                </CardTitle>
               </div>
               <div className="flex items-center gap-4">
                 <Button 

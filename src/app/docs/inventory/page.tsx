@@ -109,6 +109,33 @@ export default function InventoryDocs() {
         </div>
       </div>
 
+      <div className="bg-white border rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <span className="text-emerald-600">05</span>
+          </div>
+          Active Stock & Dispositions Hub
+        </h3>
+        <p className="text-sm text-slate-600 mb-4">
+          The Inventory Registry separates active tradable assets from historic dispositions to guarantee precise dashboard metrics.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg">
+            <h4 className="text-[11px] font-black uppercase text-[#001529] tracking-widest mb-2 border-b border-slate-200 pb-2">Active Stock</h4>
+            <p className="text-[13px] text-slate-600 leading-relaxed">
+              Exclusively displays <strong>Available</strong> and <strong>In-Transit</strong> stock. 
+              The global <code>Available Units</code> tracking metric actively runs off this filtered subset, inherently preventing tracking inflation from damaged or reversed serial numbers.
+            </p>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+             <h4 className="text-[11px] font-black uppercase text-amber-900 tracking-widest mb-2 border-b border-amber-200 pb-2">Historic Dispositions</h4>
+             <p className="text-[13px] text-amber-800 leading-relaxed">
+               A dedicated historic UI timeline housing all <strong>Sold</strong>, <strong>Returned</strong>, or <strong>Damaged</strong> legacy serial numbers required strictly for external auditing and compliance checks.
+             </p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-[#001529] rounded-xl p-8 text-white relative overflow-hidden">
         <div className="relative z-10">
           <h2 className="text-xl font-bold mb-2">Pedigree Tracking</h2>
