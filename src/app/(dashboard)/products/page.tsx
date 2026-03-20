@@ -9,7 +9,12 @@ import {
   Edit2, 
   Archive, 
   Loader2,
-  Settings2
+  Settings2,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  AlertTriangle,
+  History
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +30,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AddProductModal } from "@/components/products/add-product-modal"
 import { EditProductModal } from "@/components/products/edit-product-modal"
 import { cn } from "@/lib/utils"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter 
+} from "@/components/ui/dialog"
 
 interface Product {
   id: string
@@ -39,6 +52,7 @@ interface Product {
   description: string
   tax_rate?: number
   warranty_months?: number
+  is_archived?: boolean
 }
 
 export default function ProductsPage() {
@@ -50,6 +64,9 @@ export default function ProductsPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [selectedBrand, setSelectedBrand] = useState<string>("all")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
+  const [showArchived, setShowArchived] = useState(false)
+  const [confirmingArchive, setConfirmingArchive] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -57,8 +74,8 @@ export default function ProductsPage() {
     setLoading(true)
     const { data } = await supabase
       .from("products")
-      .select("id, model_name, brand, category, product_code, base_price, hsn_code, min_stock_level, tracking_type, description, tax_rate, warranty_months")
-      .eq("is_archived", false)
+      .select("id, model_name, brand, category, product_code, base_price, hsn_code, min_stock_level, tracking_type, description, tax_rate, warranty_months, is_archived")
+      .eq("is_archived", showArchived)
       .order("model_name")
     
     if (data) setProducts(data as Product[])
@@ -68,13 +85,35 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [showArchived])
 
   const handleArchive = async (id: string) => {
-    if (!confirm("Are you sure you want to archive this product?")) return
+    setLoading(true)
     const { error } = await supabase.from("products").update({ is_archived: true }).eq("id", id)
-    if (error) alert(error.message)
-    else fetchProducts()
+    
+    if (error) {
+      setToast({ message: error.message, type: 'error' })
+      setLoading(false)
+    } else {
+      setToast({ message: "Asset successfully decommissioned", type: 'success' })
+      setTimeout(() => setToast(null), 3000)
+      setConfirmingArchive(null)
+      fetchProducts()
+    }
+  }
+
+  const handleRestore = async (id: string) => {
+    setLoading(true)
+    const { error } = await supabase.from("products").update({ is_archived: false }).eq("id", id)
+    
+    if (error) {
+      setToast({ message: error.message, type: 'error' })
+      setLoading(false)
+    } else {
+      setToast({ message: "Asset successfully re-commissioned", type: 'success' })
+      setTimeout(() => setToast(null), 3000)
+      fetchProducts()
+    }
   }
 
   const uniqueBrands = Array.from(new Set(products.map(p => p.brand).filter(Boolean))).sort()
@@ -99,10 +138,54 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-[#001529]">Product Master Registry</h1>
           <p className="text-slate-500 text-xs mt-1">Centralized EHA Protocol & Global Stock Assets</p>
         </div>
+        
+        {/* Toast Notification Container */}
+        {toast && (
+          <div className={cn(
+            "fixed bottom-6 right-6 z-50 animate-in slide-in-from-right-10 duration-500 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border backdrop-blur-md transition-all",
+            toast.type === 'success' ? "bg-emerald-500/90 border-emerald-400/50 text-white" : "bg-rose-500/90 border-rose-400/50 text-white"
+          )}>
+            {toast.type === 'success' ? (
+              <CheckCircle2 className="h-5 w-5 animate-bounce" />
+            ) : (
+              <XCircle className="h-5 w-5 animate-pulse" />
+            )}
+            <div className="flex flex-col">
+              <span className="font-black text-[10px] uppercase tracking-widest opacity-70">
+                {toast.type === 'success' ? "System Success" : "Protocol Deviation"}
+              </span>
+              <span className="font-bold text-sm tracking-tight">{toast.message}</span>
+            </div>
+            <button 
+              onClick={() => setToast(null)}
+              className="ml-4 p-1 hover:bg-white/20 rounded-lg transition-colors"
+              aria-label="Close notification"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
-          <Button onClick={() => setIsAddOpen(true)} className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs">
-            <Plus className="h-4 w-4" /> Add New Asset
+          <Button 
+            onClick={() => setShowArchived(!showArchived)} 
+            variant="outline"
+            className={cn(
+              "gap-2 font-bold transition-all h-10 px-4 text-xs",
+              showArchived ? "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" : "hover:bg-slate-50"
+            )}
+          >
+            {showArchived ? (
+              <><History className="h-4 w-4" /> View Active Assets</>
+            ) : (
+              <><Archive className="h-4 w-4" /> View Archived Assets</>
+            )}
           </Button>
+          {!showArchived && (
+            <Button onClick={() => setIsAddOpen(true)} className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs">
+              <Plus className="h-4 w-4" /> Add New Asset
+            </Button>
+          )}
         </div>
       </div>
 
@@ -261,9 +344,15 @@ export default function ProductsPage() {
                               <Edit2 className="h-3.5 w-3.5 text-blue-500" /> Edit Metadata
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-100" />
-                            <DropdownMenuItem onClick={() => handleArchive(p.id)} className="gap-3 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer py-2.5 font-bold">
-                              <Archive className="h-3.5 w-3.5" /> Decommission Asset
-                            </DropdownMenuItem>
+                            {p.is_archived ? (
+                              <DropdownMenuItem onClick={() => handleRestore(p.id)} className="gap-3 text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer py-2.5 font-bold">
+                                <RefreshCw className="h-3.5 w-3.5" /> Re-commission Asset
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => setConfirmingArchive(p.id)} className="gap-3 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer py-2.5 font-bold">
+                                <Archive className="h-3.5 w-3.5" /> Decommission Asset
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -290,6 +379,39 @@ export default function ProductsPage() {
           product={editingProduct}
         />
       )}
+
+      {/* Confirmation Modal for Decommissioning */}
+      <Dialog open={!!confirmingArchive} onOpenChange={(open) => !open && setConfirmingArchive(null)}>
+        <DialogContent className="sm:max-w-[400px] border-amber-200 shadow-2xl">
+          <DialogHeader className="flex flex-col items-center text-center space-y-4 pt-4">
+            <div className="h-16 w-16 bg-amber-50 rounded-full flex items-center justify-center border border-amber-100">
+              <AlertTriangle className="h-8 w-8 text-amber-500 animate-pulse" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-[#001529]">Decommission Asset?</DialogTitle>
+            <DialogDescription className="text-slate-500 text-sm leading-relaxed">
+              This will remove the product from the <strong>active registry</strong> and sales terminal. Are you sure you want to proceed with this protocol?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setConfirmingArchive(null)}
+              className="flex-1 font-bold border-slate-200 h-10"
+            >
+              Abort Protocol
+            </Button>
+            <Button 
+              type="button" 
+              onClick={() => confirmingArchive && handleArchive(confirmingArchive)}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold h-10 shadow-lg shadow-red-200"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Decommission"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -62,22 +62,29 @@ export async function POST(request: Request) {
 
   if (!name) return NextResponse.json({ error: "Vendor name is required" }, { status: 400 })
 
+  // Clean empty strings for columns with check constraints
+  const cleanedGstin = gstin && gstin.trim() !== "" ? gstin.trim() : null
+  const cleanedPan = pan_number && pan_number.trim() !== "" ? pan_number.trim() : null
+
+  // Robust parsing for numbers
+  const parsedCreditLimit = credit_limit && !isNaN(parseFloat(credit_limit)) ? parseFloat(credit_limit) : 0
+
   const { data, error } = await supabase
     .from('vendors')
     .insert({
       name,
-      trade_name,
-      gstin,
-      pan_number,
-      contact_person,
-      email,
-      phone,
-      address,
-      state_code,
-      bank_details,
-      payment_terms,
-      credit_limit: credit_limit ? parseFloat(credit_limit) : 0,
-      category,
+      trade_name: trade_name || null,
+      gstin: cleanedGstin,
+      pan_number: cleanedPan,
+      contact_person: contact_person || null,
+      email: email || null,
+      phone: phone || null,
+      address: address || null,
+      state_code: state_code || null,
+      bank_details: bank_details || {},
+      payment_terms: payment_terms || null,
+      credit_limit: parsedCreditLimit,
+      category: category || null,
       brand_ids: Array.isArray(brand_ids) ? brand_ids : [],
       category_ids: Array.isArray(category_ids) ? category_ids : [],
       status: 'awaiting_approval',
@@ -85,10 +92,13 @@ export async function POST(request: Request) {
       created_by: user.id
     })
     .select()
-    .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data, { status: 201 })
+  if (error) {
+    console.error("Vendor POST Error:", error)
+    return NextResponse.json({ error: error.message, details: error }, { status: 500 })
+  }
+  
+  return NextResponse.json(data?.[0] || {}, { status: 201 })
 }
 
 /**
@@ -139,15 +149,37 @@ export async function PATCH(request: Request) {
     .eq('id', id)
     .single()
 
-  const updateData: Record<string, string | number> = {}
+  const updateData: Record<string, unknown> = {}
+  
+  // Status/Compliance updates
   if (status) {
     updateData.status = status
     if (status === 'approved') updateData.approved_by = user.id
   }
   if (compliance_status) updateData.compliance_status = compliance_status
   
+  // Brand/Category relations
   if (body.brand_ids) updateData.brand_ids = body.brand_ids
   if (body.category_ids) updateData.category_ids = body.category_ids
+
+  // General Info updates
+  if (body.name) updateData.name = body.name
+  if (body.trade_name !== undefined) updateData.trade_name = body.trade_name
+  if (body.gstin !== undefined) updateData.gstin = body.gstin
+  if (body.pan_number !== undefined) updateData.pan_number = body.pan_number
+  if (body.contact_person !== undefined) updateData.contact_person = body.contact_person
+  if (body.email !== undefined) updateData.email = body.email
+  if (body.phone !== undefined) updateData.phone = body.phone
+  if (body.address !== undefined) updateData.address = body.address
+  if (body.state_code !== undefined) updateData.state_code = body.state_code
+
+  // Commercials updates
+  if (body.bank_details !== undefined) updateData.bank_details = body.bank_details
+  if (body.payment_terms !== undefined) updateData.payment_terms = body.payment_terms
+  if (body.credit_limit !== undefined) {
+    updateData.credit_limit = body.credit_limit && !isNaN(parseFloat(body.credit_limit)) ? parseFloat(body.credit_limit) : 0
+  }
+  if (body.category !== undefined) updateData.category = body.category
 
   const { data, error } = await supabase
     .from('vendors')

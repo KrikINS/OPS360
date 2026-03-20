@@ -32,6 +32,7 @@ interface Product {
   description: string
   tax_rate?: number
   warranty_months?: number
+  is_archived?: boolean
 }
 
 interface EditProductModalProps {

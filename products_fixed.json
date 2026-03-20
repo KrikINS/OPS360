@@ -1,0 +1,35 @@
+﻿[dotenv@17.3.1] injecting env (3) from .env.local -- tip: ≡ƒñû agentic secret storage: https://dotenvx.com/as2
+Products: [
+  {
+    "model_name": "Ethan Arctic 1.5T",
+    "product_code": "EHA-AIR-ETH-001"
+  },
+  {
+    "model_name": "Ethan Frost 1.0T",
+    "product_code": "EHA-AIR-ETH-002"
+  },
+  {
+    "model_name": "Ethan Wave 20L",
+    "product_code": "EHA-MIC-ETH-001"
+  },
+  {
+    "model_name": "Ethan Grill 25L",
+    "product_code": "EHA-MIC-ETH-002"
+  },
+  {
+    "model_name": "Ethan Solo 17L",
+    "product_code": "EHA-MIC-ETH-003"
+  },
+  {
+    "model_name": "Ethan Arctic 2T",
+    "product_code": null
+  },
+  {
+    "model_name": "Ethan Arctic 2T",
+    "product_code": "EHA-AIR-ETH-003"
+  },
+  {
+    "model_name": "Panasonic OLED 4K",
+    "product_code": "EHA-TEL-PAN-001"
+  }
+]

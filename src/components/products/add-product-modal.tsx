@@ -29,26 +29,11 @@ interface AddProductModalProps {
   onSuccess: () => void
 }
 
-const CATEGORIES = [
-  "Air Conditioner",
-  "Microwave",
-  "Refrigerator",
-  "Washing Machine",
-  "Television",
-  "Kitchen Appliance"
-]
-
-const BRANDS = [
-  "Ethan",
-  "Samsung",
-  "LG",
-  "Whirlpool",
-  "Sony",
-  "Panasonic"
-]
-
 export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductModalProps) {
   const [loading, setLoading] = useState(false)
+  const [brands, setBrands] = useState<string[]>([])
+  const [categories, setCategories] = useState<string[]>([])
+  const [loadingMasters, setLoadingMasters] = useState(false)
   const [formData, setFormData] = useState({
     model_name: "",
     brand: "",
@@ -63,6 +48,22 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
   const [generatedCode, setGeneratedCode] = useState("")
 
   const supabase = createClient()
+
+  useEffect(() => {
+    async function fetchMasters() {
+      if (!open) return
+      setLoadingMasters(true)
+      
+      const { data: bData } = await supabase.from("brands").select("name").order("name")
+      const { data: cData } = await supabase.from("categories").select("name").order("name")
+      
+      if (bData) setBrands(bData.map((b: { name: string }) => b.name))
+      if (cData) setCategories(cData.map((c: { name: string }) => c.name))
+      
+      setLoadingMasters(false)
+    }
+    fetchMasters()
+  }, [open, supabase])
 
   // Update EHA Code whenever category or brand changes
   useEffect(() => {
@@ -137,7 +138,11 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                   <SelectValue placeholder="Select Brand" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  {loadingMasters ? (
+                    <div className="p-2 text-center"><Loader2 className="h-4 w-4 animate-spin mx-auto text-slate-300" /></div>
+                  ) : (
+                    brands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -151,7 +156,11 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                   <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {loadingMasters ? (
+                    <div className="p-2 text-center"><Loader2 className="h-4 w-4 animate-spin mx-auto text-slate-300" /></div>
+                  ) : (
+                    categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)
+                  )}
                 </SelectContent>
               </Select>
             </div>

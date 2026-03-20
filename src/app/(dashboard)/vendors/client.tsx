@@ -42,7 +42,10 @@ import {
   BarChart3,
   Clock,
   CheckSquare,
-  ShieldCheck
+  ShieldCheck,
+  Pencil,
+  Save,
+  X
 } from "lucide-react"
 import { 
   Select, 
@@ -130,6 +133,9 @@ export default function VendorsClient({
   const [isUploading, setIsUploading] = useState(false)
   const [allBrands, setAllBrands] = useState<{label: string, value: string}[]>([])
   const [allCategories, setAllCategories] = useState<{label: string, value: string}[]>([])
+  const [isEditingGeneral, setIsEditingGeneral] = useState(false)
+  const [isEditingCommercials, setIsEditingCommercials] = useState(false)
+  const [editFormData, setEditFormData] = useState<Partial<Vendor>>({})
   
   const [formData, setFormData] = useState({
     name: "",
@@ -159,11 +165,13 @@ export default function VendorsClient({
     try {
       const res = await fetch('/api/vendors')
       const data = await res.json()
-      if (res.ok) {
+      if (res.ok && Array.isArray(data)) {
         setVendors(data)
       } else {
-        alert("Error: " + data.error)
+        console.error("Vendors API error or invalid data:", data)
+        setVendors([])
       }
+
     } catch {
       alert("Error: Failed to fetch vendors")
     } finally {
@@ -179,7 +187,7 @@ export default function VendorsClient({
       
       if (error) throw error
       
-      const formattedDocs: VendorDocument[] = (data || []).map(file => ({
+      const formattedDocs: VendorDocument[] = (data || []).map((file: any) => ({
         name: file.name,
         id: file.id || '',
         created_at: file.created_at || new Date().toISOString(),
@@ -241,8 +249,8 @@ export default function VendorsClient({
     }
   }, [selectedVendor, isDetailOpen, fetchVendorDocuments, fetchAuditLogs])
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
     if (!file || !selectedVendor) return
 
     setIsUploading(true)
@@ -278,8 +286,8 @@ export default function VendorsClient({
       const { data: brands } = await supabase.from('brands').select('id, name')
       const { data: categories } = await supabase.from('categories').select('id, name')
       
-      if (brands) setAllBrands(brands.map(b => ({ label: b.name, value: b.id })))
-      if (categories) setAllCategories(categories.map(c => ({ label: c.name, value: c.id })))
+      if (brands) setAllBrands(brands.map((b: {id: string, name: string}) => ({ label: b.name, value: b.id })))
+      if (categories) setAllCategories(categories.map((c: {id: string, name: string}) => ({ label: c.name, value: c.id })))
     }
     fetchMetadata()
   }, [])
@@ -315,14 +323,14 @@ export default function VendorsClient({
 
   const handleUpdateStatus = async (id: string, newStatus?: string, newCompliance?: string) => {
     try {
-      const body: Record<string, string> = { id }
-      if (newStatus) body.status = newStatus
-      if (newCompliance) body.compliance_status = newCompliance
+      const updateData: Record<string, unknown> = { id }
+      if (newStatus) updateData.status = newStatus
+      if (newCompliance) updateData.compliance_status = newCompliance
 
       const res = await fetch('/api/vendors', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(updateData)
       })
       const data = await res.json()
       if (res.ok) {
@@ -431,11 +439,15 @@ export default function VendorsClient({
                       <Input 
                         id="gstin" 
                         placeholder="27AAAAA0000A1Z5" 
+                        minLength={15}
                         maxLength={15}
                         required
                         value={formData.gstin}
                         onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})}
                       />
+                      {formData.gstin && formData.gstin.length !== 15 && (
+                        <p className="text-[10px] text-destructive">Must be exactly 15 characters</p>
+                      )}
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="pan">PAN Number</Label>
@@ -510,16 +522,48 @@ export default function VendorsClient({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="state">State / Province</Label>
+                    <Label htmlFor="state">State</Label>
                     <Select value={formData.state_code} onValueChange={(val) => setFormData({...formData, state_code: val || ""})}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select State" />
+                        <SelectValue placeholder="Select State / UT" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="MH">Maharashtra (27)</SelectItem>
-                        <SelectItem value="DL">Delhi (07)</SelectItem>
-                        <SelectItem value="KA">Karnataka (29)</SelectItem>
-                        <SelectItem value="TN">Tamil Nadu (33)</SelectItem>
+                      <SelectContent className="h-[250px] overflow-y-auto">
+                        <SelectItem value="AN">Andaman and Nicobar Islands</SelectItem>
+                        <SelectItem value="AP">Andhra Pradesh</SelectItem>
+                        <SelectItem value="AR">Arunachal Pradesh</SelectItem>
+                        <SelectItem value="AS">Assam</SelectItem>
+                        <SelectItem value="BR">Bihar</SelectItem>
+                        <SelectItem value="CH">Chandigarh</SelectItem>
+                        <SelectItem value="CT">Chhattisgarh</SelectItem>
+                        <SelectItem value="DN">Dadra and Nagar Haveli and Daman and Diu</SelectItem>
+                        <SelectItem value="DL">Delhi</SelectItem>
+                        <SelectItem value="GA">Goa</SelectItem>
+                        <SelectItem value="GJ">Gujarat</SelectItem>
+                        <SelectItem value="HR">Haryana</SelectItem>
+                        <SelectItem value="HP">Himachal Pradesh</SelectItem>
+                        <SelectItem value="JK">Jammu and Kashmir</SelectItem>
+                        <SelectItem value="JH">Jharkhand</SelectItem>
+                        <SelectItem value="KA">Karnataka</SelectItem>
+                        <SelectItem value="KL">Kerala</SelectItem>
+                        <SelectItem value="LA">Ladakh</SelectItem>
+                        <SelectItem value="LD">Lakshadweep</SelectItem>
+                        <SelectItem value="MP">Madhya Pradesh</SelectItem>
+                        <SelectItem value="MH">Maharashtra</SelectItem>
+                        <SelectItem value="MN">Manipur</SelectItem>
+                        <SelectItem value="ML">Meghalaya</SelectItem>
+                        <SelectItem value="MZ">Mizoram</SelectItem>
+                        <SelectItem value="NL">Nagaland</SelectItem>
+                        <SelectItem value="OR">Odisha</SelectItem>
+                        <SelectItem value="PY">Puducherry</SelectItem>
+                        <SelectItem value="PB">Punjab</SelectItem>
+                        <SelectItem value="RJ">Rajasthan</SelectItem>
+                        <SelectItem value="SK">Sikkim</SelectItem>
+                        <SelectItem value="TN">Tamil Nadu</SelectItem>
+                        <SelectItem value="TG">Telangana</SelectItem>
+                        <SelectItem value="TR">Tripura</SelectItem>
+                        <SelectItem value="UP">Uttar Pradesh</SelectItem>
+                        <SelectItem value="UT">Uttarakhand</SelectItem>
+                        <SelectItem value="WB">West Bengal</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -746,45 +790,251 @@ export default function VendorsClient({
                     </TabsList>
                   </div>
 
-                  <TabsContent value="details" className="space-y-6 animate-in fade-in duration-300">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">General Info</h4>
-                        <div className="grid gap-1">
-                          <Label className="text-xs text-muted-foreground">Trade Name</Label>
-                          <p className="text-sm font-medium">{selectedVendor.trade_name || 'N/A'}</p>
+                  <TabsContent value="details" className="space-y-6 animate-in fade-in duration-300 px-1">
+                    <div className="grid grid-cols-2 gap-8 pt-2">
+                      {/* Left Column: General Info */}
+                      <div className="space-y-4 relative group/section">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-muted">
+                          <h4 className="font-bold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
+                            <Building2 className="h-4 w-4" /> General Info
+                          </h4>
+                          { (userRole === 'admin' || userRole === 'manager') && (
+                            !isEditingGeneral ? (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 w-7 p-0 rounded-full hover:bg-muted"
+                                onClick={() => {
+                                  setEditFormData({ ...selectedVendor })
+                                  setIsEditingGeneral(true)
+                                }}
+                              >
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            ) : (
+                              <div className="flex gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 w-7 p-0 rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                  onClick={async () => {
+                                    if (!selectedVendor) return
+                                    const res = await fetch('/api/vendors', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: selectedVendor.id, ...editFormData })
+                                    })
+                                    if (res.ok) {
+                                      const updated = await res.json()
+                                      setSelectedVendor(updated)
+                                      setIsEditingGeneral(false)
+                                      fetchVendors()
+                                    } else {
+                                      alert("Update failed")
+                                    }
+                                  }}
+                                >
+                                  <Save className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 w-7 p-0 rounded-full text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                  onClick={() => setIsEditingGeneral(false)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )
+                          )}
                         </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs text-muted-foreground">Primary Category</Label>
-                          <p className="text-sm font-medium capitalize">{selectedVendor.category || 'General'}</p>
-                        </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs text-muted-foreground">GSTIN</Label>
-                          <p className="text-sm font-mono">{selectedVendor.gstin || 'Missing'}</p>
-                        </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs text-muted-foreground">PAN Number</Label>
-                          <p className="text-sm font-mono">{selectedVendor.pan_number || 'Missing'}</p>
-                        </div>
+
+                        {!isEditingGeneral ? (
+                          <div className="space-y-4 bg-muted/5 p-4 rounded-xl border border-muted/50">
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Legal Name</Label>
+                              <p className="text-sm font-semibold">{selectedVendor.name}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Trade Name</Label>
+                              <p className="text-sm font-medium">{selectedVendor.trade_name || 'N/A'}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Primary Category</Label>
+                              <p className="text-sm font-medium capitalize">{selectedVendor.category || 'General'}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Contact Details</Label>
+                              <p className="text-sm font-medium">{selectedVendor.contact_person}</p>
+                              <p className="text-xs text-muted-foreground">{selectedVendor.email} • {selectedVendor.phone}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">GSTIN</Label>
+                              <p className="text-sm font-mono font-medium">{selectedVendor.gstin || 'Missing'}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">PAN Number</Label>
+                              <p className="text-sm font-mono font-medium">{selectedVendor.pan_number || 'Missing'}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Billing Address</Label>
+                              <p className="text-xs leading-relaxed">{selectedVendor.address}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4 bg-white p-4 rounded-xl border border-primary/20 shadow-sm animate-in zoom-in-95 duration-200">
+                             <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Legal Name</Label>
+                              <Input 
+                                value={editFormData.name ?? ""} 
+                                onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Trade Name</Label>
+                              <Input 
+                                value={editFormData.trade_name ?? ""} 
+                                onChange={e => setEditFormData({...editFormData, trade_name: e.target.value})}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">GSTIN</Label>
+                              <Input 
+                                value={editFormData.gstin ?? ""} 
+                                onChange={e => setEditFormData({...editFormData, gstin: e.target.value})}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">PAN Number</Label>
+                              <Input 
+                                value={editFormData.pan_number ?? ""} 
+                                onChange={e => setEditFormData({...editFormData, pan_number: e.target.value})}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Address</Label>
+                              <Input 
+                                value={editFormData.address ?? ""} 
+                                onChange={e => setEditFormData({...editFormData, address: e.target.value})}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-4">
-                        <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Commercials</h4>
-                        <div className="grid gap-1">
-                          <Label className="text-xs text-muted-foreground">Bank Name</Label>
-                          <p className="text-sm font-medium">{selectedVendor.bank_details?.bank_name || 'N/A'}</p>
+
+                      {/* Right Column: Commercials */}
+                      <div className="space-y-4 relative group/section">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-muted">
+                          <h4 className="font-bold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4" /> Commercials
+                          </h4>
+                          { (userRole === 'admin' || userRole === 'manager') && (
+                            !isEditingCommercials ? (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 w-7 p-0 rounded-full hover:bg-muted"
+                                onClick={() => {
+                                  setEditFormData({ ...selectedVendor })
+                                  setIsEditingCommercials(true)
+                                }}
+                              >
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            ) : (
+                              <div className="flex gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 w-7 p-0 rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                  onClick={async () => {
+                                    if (!selectedVendor) return
+                                    const res = await fetch('/api/vendors', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: selectedVendor.id, ...editFormData })
+                                    })
+                                    if (res.ok) {
+                                      const updated = await res.json()
+                                      setSelectedVendor(updated)
+                                      setIsEditingCommercials(false)
+                                      fetchVendors()
+                                    } else {
+                                      alert("Update failed")
+                                    }
+                                  }}
+                                >
+                                  <Save className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 w-7 p-0 rounded-full text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                  onClick={() => setIsEditingCommercials(false)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )
+                          )}
                         </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs text-muted-foreground">Account Number</Label>
-                          <p className="text-sm font-mono">{selectedVendor.bank_details?.account_number || 'N/A'}</p>
-                        </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs text-muted-foreground">Payment Terms</Label>
-                          <p className="text-sm font-medium">{selectedVendor.payment_terms || 'Immediate'}</p>
-                        </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs text-muted-foreground">Credit Limit</Label>
-                          <p className="text-sm font-medium">₹{Number(selectedVendor.credit_limit || 0).toLocaleString()}</p>
-                        </div>
+
+                        {!isEditingCommercials ? (
+                          <div className="space-y-4 bg-muted/5 p-4 rounded-xl border border-muted/50">
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Bank Name</Label>
+                              <p className="text-sm font-medium">{selectedVendor.bank_details?.bank_name || 'N/A'}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">IFSC Code</Label>
+                              <p className="text-sm font-mono font-medium">{selectedVendor.bank_details?.ifsc || 'N/A'}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Account Number</Label>
+                              <p className="text-sm font-mono font-medium">{selectedVendor.bank_details?.account_number || 'N/A'}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Payment Terms</Label>
+                              <p className="text-sm font-medium">{selectedVendor.payment_terms || 'Immediate'}</p>
+                            </div>
+                            <div className="grid gap-1">
+                              <Label className="text-xs text-muted-foreground">Credit Limit</Label>
+                              <p className="text-sm font-semibold text-emerald-600">₹{Number(selectedVendor.credit_limit || 0).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4 bg-white p-4 rounded-xl border border-primary/20 shadow-sm animate-in zoom-in-95 duration-200">
+                             <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Bank Name</Label>
+                              <Input 
+                                value={editFormData.bank_details?.bank_name ?? ""} 
+                                onChange={e => setEditFormData({...editFormData, bank_details: { ...editFormData.bank_details, bank_name: e.target.value }})}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">IFSC Code</Label>
+                              <Input 
+                                value={editFormData.bank_details?.ifsc ?? ""} 
+                                onChange={e => setEditFormData({...editFormData, bank_details: { ...editFormData.bank_details, ifsc: e.target.value.toUpperCase() }})}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Account Number</Label>
+                              <Input 
+                                value={editFormData.bank_details?.account_number ?? ""} 
+                                onChange={e => setEditFormData({...editFormData, bank_details: { ...editFormData.bank_details, account_number: e.target.value }})}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Credit Limit</Label>
+                              <Input 
+                                type="number"
+                                value={editFormData.credit_limit ?? 0} 
+                                onChange={e => setEditFormData({...editFormData, credit_limit: Number(e.target.value)})}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </TabsContent>

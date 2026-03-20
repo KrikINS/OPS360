@@ -156,6 +156,10 @@ type PurchaseOrder = {
     content: string
     is_default: boolean
   }
+
+  type VendorProductMap = {
+    product_id: string
+  }
   
   type GRNData = {
   id: string
@@ -339,6 +343,8 @@ export default function ProcurementGRNPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+
+
         setLoading(true)
         // 1. Fetch User Role
         const supabase = createClient()
@@ -349,29 +355,63 @@ export default function ProcurementGRNPage() {
         }
 
         // 2. Fetch Vendors
-        const vendorRes = await fetch('/api/vendors')
-        const vendorData = await vendorRes.json()
-        setVendors(vendorData.filter((v: Vendor) => v.status === 'approved'))
+        try {
+          const vendorRes = await fetch('/api/vendors')
+          if (!vendorRes.ok) throw new Error(`HTTP error! status: ${vendorRes.status}`)
+          const vendorData = await vendorRes.json()
+          if (Array.isArray(vendorData)) {
+            setVendors(vendorData.filter((v: Vendor) => v.status === 'approved'))
+          } else {
+            console.warn("Vendors API did not return an array:", vendorData)
+            setVendors([])
+          }
+        } catch (vErr) {
+          console.error("Failed to fetch vendors:", vErr)
+          setVendors([])
+        }
 
         // 3. Fetch Products
-        const productRes = await fetch('/api/products')
-        const productData = await productRes.json()
-        setProducts(productData)
+        try {
+          const productRes = await fetch('/api/products')
+          if (!productRes.ok) throw new Error(`HTTP error! status: ${productRes.status}`)
+          const productData = await productRes.json()
+          setProducts(Array.isArray(productData) ? productData : [])
+        } catch (pErr) {
+          console.error("Failed to fetch products:", pErr)
+          setProducts([])
+        }
 
         // 4. Fetch Active POs
-        const poRes = await fetch('/api/procurement/purchase-orders')
-        const poData = await poRes.json()
-        setActivePOs(poData)
+        try {
+          const poRes = await fetch('/api/procurement/purchase-orders')
+          if (!poRes.ok) throw new Error(`HTTP error! status: ${poRes.status}`)
+          const poData = await poRes.json()
+          setActivePOs(Array.isArray(poData) ? poData : [])
+        } catch (poErr) {
+          console.error("Failed to fetch POs:", poErr)
+          setActivePOs([])
+        }
 
         // 5. Fetch Branches
-        const { data: branchData } = await supabase.from('branches').select('id, name, full_address, gstin').order('name')
-        if (branchData) setBranches(branchData)
+        try {
+          const { data: branchData, error: bErr } = await supabase
+            .from('branches')
+            .select('id, name, full_address, gstin')
+            .order('name')
+          
+          if (bErr) throw bErr
+          if (branchData) setBranches(branchData)
+        } catch (brErr) {
+          console.error("Failed to fetch branches:", brErr)
+          setBranches([])
+        }
       } catch (err) {
-        console.error("Failed to load data", err)
+        console.error("Critical failure loading initial data", err)
       } finally {
         setLoading(false)
       }
     }
+
     fetchData()
   }, [])
 
@@ -397,10 +437,10 @@ export default function ProcurementGRNPage() {
           .from('po_terms_templates')
           .select('*')
           .order('name')
-          .then(({ data }) => {
+          .then(({ data }: { data: POTermsTemplate[] | null }) => {
             if (data) {
                 setAvailableTemplates(data);
-                const defaultTemplate = data.find(t => t.is_default);
+                const defaultTemplate = data.find((t: POTermsTemplate) => t.is_default);
                 if (defaultTemplate) setCreationTerms(defaultTemplate.content);
             }
           })
@@ -410,9 +450,9 @@ export default function ProcurementGRNPage() {
           .from('vendor_product_map')
           .select('product_id')
           .eq('vendor_id', vendorId)
-          .then(({ data }) => {
+          .then(({ data }: { data: VendorProductMap[] | null }) => {
             if (data) {
-              setMappedProductIds(data.map(m => m.product_id));
+              setMappedProductIds(data.map((m: VendorProductMap) => m.product_id));
             } else {
               setMappedProductIds([]);
             }

@@ -134,9 +134,13 @@ export function GlobalMastersTab() {
                 placeholder="Enter new brand..." 
                 value={newBrand} 
                 onChange={e => setNewBrand(e.target.value)} 
-                onKeyDown={e => e.key === "Enter" && addMaster("brands", { name: newBrand })}
+                onKeyDown={e => e.key === "Enter" && newBrand.trim() && addMaster("brands", { name: newBrand.trim() })}
               />
-              <Button onClick={() => addMaster("brands", { name: newBrand })} className="bg-[#001529] font-bold shadow-soft h-10">
+              <Button 
+                onClick={() => newBrand.trim() && addMaster("brands", { name: newBrand.trim() })} 
+                disabled={!newBrand.trim()}
+                className="bg-[#001529] font-bold shadow-soft h-10"
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -168,9 +172,13 @@ export function GlobalMastersTab() {
                 placeholder="Enter new category..." 
                 value={newCategory} 
                 onChange={e => setNewCategory(e.target.value)} 
-                onKeyDown={e => e.key === "Enter" && addMaster("categories", { name: newCategory })}
+                onKeyDown={e => e.key === "Enter" && newCategory.trim() && addMaster("categories", { name: newCategory.trim() })}
               />
-              <Button onClick={() => addMaster("categories", { name: newCategory })} className="bg-[#001529] font-bold shadow-soft h-10">
+              <Button 
+                onClick={() => newCategory.trim() && addMaster("categories", { name: newCategory.trim() })} 
+                disabled={!newCategory.trim()}
+                className="bg-[#001529] font-bold shadow-soft h-10"
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -202,9 +210,13 @@ export function GlobalMastersTab() {
                 placeholder="Enter new return reason..." 
                 value={newReturnReason} 
                 onChange={e => setNewReturnReason(e.target.value)} 
-                onKeyDown={e => e.key === "Enter" && addMaster("return_reason_master", { reason_text: newReturnReason })}
+                onKeyDown={e => e.key === "Enter" && newReturnReason.trim() && addMaster("return_reason_master", { reason_text: newReturnReason.trim() })}
               />
-              <Button onClick={() => addMaster("return_reason_master", { reason_text: newReturnReason })} className="bg-[#001529] font-bold shadow-soft h-10">
+              <Button 
+                onClick={() => newReturnReason.trim() && addMaster("return_reason_master", { reason_text: newReturnReason.trim() })} 
+                disabled={!newReturnReason.trim()}
+                className="bg-[#001529] font-bold shadow-soft h-10"
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -271,11 +283,16 @@ export function GlobalMastersTab() {
                   <Label htmlFor="default-term" className="text-xs font-semibold cursor-pointer">Set as default for new POs</Label>
                 </div>
                 <Button 
-                  onClick={() => addMaster("po_terms_templates", { 
-                    name: newTermName, 
-                    content: newTermContent, 
-                    is_default: isDefaultTerm 
-                  })} 
+                  onClick={() => {
+                    if (newTermName.trim() && newTermContent.trim()) {
+                      addMaster("po_terms_templates", { 
+                        name: newTermName.trim(), 
+                        content: newTermContent.trim(), 
+                        is_default: isDefaultTerm 
+                      })
+                    }
+                  }} 
+                  disabled={!newTermName.trim() || !newTermContent.trim()}
                   className="w-full bg-[#001529] font-black uppercase tracking-widest text-[10px]"
                 >
                   <Plus className="h-3 w-3 mr-2" /> Save Template
