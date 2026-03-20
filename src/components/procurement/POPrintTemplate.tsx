@@ -37,6 +37,7 @@ interface POPrintTemplateProps {
       };
       quantity: number;
       unit_price: number;
+      tax_rate: number;
       total_item_cost: number;
     }[];
   };
@@ -61,9 +62,12 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
 
     // Lead Architect: Net Taxable Value is the base sum (Quantity * Unit Price)
     const netTaxableValue = po.items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
-    const cgst = netTaxableValue * 0.09;
-    const sgst = netTaxableValue * 0.09;
-    const grandTotal = netTaxableValue + cgst + sgst;
+    const totalTax = po.items.reduce((acc, item) => acc + (item.unit_price * item.quantity * (item.tax_rate / 100)), 0);
+    const grandTotal = netTaxableValue + totalTax;
+    
+    // Split GST for display purposes (assuming 50/50 CGST/SGST which is standard for local)
+    const cgst = totalTax / 2;
+    const sgst = totalTax / 2;
 
     return (
       <div 
@@ -221,7 +225,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                         {item.quantity}
                       </td>
                       <td className="p-4 text-right font-bold text-black">{formatCurrency(item.unit_price)}</td>
-                      <td className="p-4 text-right font-black text-black">{formatCurrency(item.total_item_cost)}</td>
+                      <td className="p-4 text-right font-black text-black">{formatCurrency(item.unit_price * item.quantity)}</td>
                     </tr>
                   ))}
                 </tbody>

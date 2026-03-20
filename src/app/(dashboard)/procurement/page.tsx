@@ -121,11 +121,11 @@ type PurchaseOrder = {
   po_number: string
   vendor_id: string
   branch_id: string
-  status: 'draft' | 'pending_approval' | 'approved' | 'received' | 'partially_received' | 'cancelled'
+  status: 'draft' | 'pending_approval' | 'needs_revision' | 'approved' | 'received' | 'partially_received' | 'cancelled'
   total_amount: number
   created_at: string
-  vendor: { name: string, state: string }
-  branch: { name: string }
+  vendor: { name: string, state: string, payment_terms?: string }
+  branch: { name: string, state?: string, gstin?: string }
   invoice_url?: string
   bill_url?: string
   vendor_bill_amount?: number
@@ -134,7 +134,9 @@ type PurchaseOrder = {
   approver_name?: string
   approver_email?: string
   cancellation_reason?: string
+  revision_notes?: string
   terms_content?: string
+  payment_terms?: string
   items: {
     id: string
     product_id: string
@@ -242,6 +244,10 @@ export default function ProcurementGRNPage() {
   const [creationTerms, setCreationTerms] = useState("")
   const [availableTemplates, setAvailableTemplates] = useState<POTermsTemplate[]>([])
   const [mappedProductIds, setMappedProductIds] = useState<string[]>([])
+  // Revision workflow state
+  const [revisionDialogPO, setRevisionDialogPO] = useState<PurchaseOrder | null>(null)
+  const [revisionNotesInput, setRevisionNotesInput] = useState("")
+  const [isSubmittingRevision, setIsSubmittingRevision] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
   const grnPrintRef = useRef<HTMLDivElement>(null)
   const [currentGrnData, setCurrentGrnData] = useState<GRNData | null>(null)
@@ -405,6 +411,20 @@ export default function ProcurementGRNPage() {
           console.error("Failed to fetch branches:", brErr)
           setBranches([])
         }
+
+        // 5. Fetch Terms Templates
+        try {
+          const { data: templateData, error: tErr } = await supabase
+            .from('po_terms_templates')
+            .select('*')
+            .order('name')
+          
+          if (tErr) throw tErr
+          if (templateData) setAvailableTemplates(templateData)
+        } catch (tErr) {
+          console.error("Failed to fetch templates:", tErr)
+          setAvailableTemplates([])
+        }
       } catch (err) {
         console.error("Critical failure loading initial data", err)
       } finally {
@@ -429,24 +449,14 @@ export default function ProcurementGRNPage() {
         terms: vendor.payment_terms || "Immediate"
       })
 
-      // Fetch default PO terms template if creating a new PO
+      // Set default template if creating a new PO and not in revision
       if (isCreatingPO && !revisionPO) {
-        const supabase = createClient()
-        // First fetch all templates for the dropdown
-        supabase
-          .from('po_terms_templates')
-          .select('*')
-          .order('name')
-          .then(({ data }: { data: POTermsTemplate[] | null }) => {
-            if (data) {
-                setAvailableTemplates(data);
-                const defaultTemplate = data.find((t: POTermsTemplate) => t.is_default);
-                if (defaultTemplate) setCreationTerms(defaultTemplate.content);
-            }
-          })
+        const defaultTemplate = availableTemplates.find(t => t.is_default);
+        if (defaultTemplate) setCreationTerms(defaultTemplate.content);
+      }
 
-        // Fetch vendor-product mapping
-        supabase
+      // Fetch vendor-product mapping
+      createClient()
           .from('vendor_product_map')
           .select('product_id')
           .eq('vendor_id', vendorId)
@@ -459,7 +469,7 @@ export default function ProcurementGRNPage() {
           })
       }
     }
-  }
+
 
   const getVisibleBranches = () => {
     return branches;
@@ -524,8 +534,12 @@ export default function ProcurementGRNPage() {
           override_reason: overrideReasons[idx] || item.override_reason || null,
           total_item_cost: (item.unit_price * item.quantity) * (1 + item.tax_rate / 100)
         })),
-        status: isRevision ? 'draft' : 'pending_approval',
-        terms_content: creationTerms
+        // needs_revision PO → resubmit to pending_approval
+        // regular approver revision → back to draft
+        // new PO → pending_approval
+        status: revisionPO?.status === 'needs_revision' ? 'pending_approval' : isRevision ? 'draft' : 'pending_approval',
+        terms_content: creationTerms,
+        payment_terms: poTerms.terms
       };
 
       const res = await fetch(url, {
@@ -573,6 +587,65 @@ export default function ProcurementGRNPage() {
     }
   }
 
+  // Approver sends PO back for revision with comments
+  const handleRevisionRequest = async () => {
+    if (!revisionDialogPO || !revisionNotesInput.trim()) return
+    setIsSubmittingRevision(true)
+    try {
+      const res = await fetch('/api/procurement/purchase-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: revisionDialogPO.id,
+          status: 'needs_revision',
+          revision_notes: revisionNotesInput.trim()
+        })
+      })
+      if (res.ok) {
+        const poRes = await fetch('/api/procurement/purchase-orders')
+        setActivePOs(await poRes.json())
+        setRevisionDialogPO(null)
+        setRevisionNotesInput("")
+      } else {
+        const err = await res.json()
+        console.error("Failed to send back for revision:", err.error)
+      }
+    } catch (err) {
+      console.error("Failed to send back for revision:", err)
+    } finally {
+      setIsSubmittingRevision(false)
+    }
+  }
+
+  // Initiator opens a needs_revision PO for editing and resubmission
+  const handleEditResubmit = (po: PurchaseOrder) => {
+    setRevisionPO(po)
+    const vendor = vendors.find(v => v.id === po.vendor_id)
+    if (vendor) {
+      setSelectedVendor(vendor)
+      setPoTerms({ gstin: vendor.gstin || "", terms: po.payment_terms || vendor.payment_terms || "Immediate" })
+    }
+    setSelectedBranch(po.branch_id)
+    setPoItems(po.items.map((item) => ({
+      id: item.id || `rev-${Date.now()}-${Math.random()}`,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      received_quantity: item.received_quantity,
+      tax_rate: item.tax_rate,
+      total_item_cost: item.total_item_cost,
+      override_reason: item.override_reason,
+      product: {
+        model_name: item.product?.model_name || 'Item',
+        product_code: item.product?.product_code || '',
+        hsn_code: item.product?.hsn_code || '---'
+      }
+    })))
+    setCreationTerms(po.terms_content || "")
+    setIsCreatingPO(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handleGRNSuccess = async () => {
     const poRes = await fetch('/api/procurement/purchase-orders')
     setActivePOs(await poRes.json())
@@ -606,11 +679,35 @@ export default function ProcurementGRNPage() {
       {/* Filter Bar moved inside the Registry Card below */}
 
       {isCreatingPO ? (
-        <Card className="shadow-md border-t-4 border-t-[#001529]">
+        <Card className={cn("shadow-md border-t-4", revisionPO?.status === 'needs_revision' ? "border-t-amber-500" : "border-t-[#001529]")}>
           <CardHeader>
-            <CardTitle>Draft Purchase Order</CardTitle>
-            <CardDescription>Select a vendor and add products to generate a PO.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              {revisionPO?.status === 'needs_revision' ? (
+                <><RotateCcw className="h-5 w-5 text-amber-500" /> Revise &amp; Resubmit PO</>
+              ) : revisionPO ? (
+                <><RotateCcw className="h-5 w-5 text-blue-500" /> Revising PO</>
+              ) : (
+                <>Draft Purchase Order</>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {revisionPO?.status === 'needs_revision'
+                ? 'Address the approver\'s comments below and resubmit for approval.'
+                : revisionPO
+                ? 'Modify the PO below and send back to draft for approval.'
+                : 'Select a vendor and add products to generate a PO.'}
+            </CardDescription>
           </CardHeader>
+          {/* Revision Notes Banner — shown to initiator when editing a needs_revision PO */}
+          {revisionPO?.status === 'needs_revision' && revisionPO.revision_notes && (
+            <div className="mx-6 mb-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <ShieldAlert className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-amber-700 mb-1">Approver&apos;s Revision Notes</p>
+                <p className="text-sm text-amber-800 font-medium leading-relaxed">{revisionPO.revision_notes}</p>
+              </div>
+            </div>
+          )}
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -653,7 +750,11 @@ export default function ProcurementGRNPage() {
               </div>
               <div className="space-y-4">
                 <Label>Payment Terms</Label>
-                <Input value={poTerms.terms} readOnly className="bg-muted/50 h-10" />
+                <Input 
+                  value={poTerms.terms} 
+                  onChange={(e) => setPoTerms({ ...poTerms, terms: e.target.value })}
+                  className="h-10 border-blue-100 focus:border-blue-500 transition-colors" 
+                />
               </div>
               <div className="space-y-4">
                 <Label>Expected Delivery</Label>
@@ -812,12 +913,12 @@ export default function ProcurementGRNPage() {
           <CardFooter className="justify-end gap-3 border-t bg-muted/30">
             <Button variant="ghost" onClick={resetForm}>Cancel</Button>
             <Button
-              className="bg-[#001529]"
+              className={revisionPO?.status === 'needs_revision' ? "bg-amber-600 hover:bg-amber-700" : "bg-[#001529]"}
               disabled={!selectedVendor || poItems.length === 0 || poTerms.gstin.length !== 15 || isGenerating}
               onClick={handleGeneratePO}
             >
               {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {revisionPO ? "Send Back to Draft" : "Generate Purchase Order"}
+              {revisionPO?.status === 'needs_revision' ? "Resubmit for Approval" : revisionPO ? "Send Back to Draft" : "Generate Purchase Order"}
             </Button>
           </CardFooter>
         </Card>
@@ -984,6 +1085,7 @@ export default function ProcurementGRNPage() {
                       <TableRow>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Payment</TableHead>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item</TableHead>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
@@ -1004,6 +1106,11 @@ export default function ProcurementGRNPage() {
                               {po.po_number}
                             </TableCell>
                             <TableCell className="py-2 px-4 font-semibold text-slate-600 border-r border-slate-100/50">{po.vendor?.name}</TableCell>
+                            <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                              <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">
+                                {po.payment_terms || po.vendor?.payment_terms || 'Immediate'}
+                              </span>
+                            </TableCell>
                             <TableCell className="py-2 px-4 text-slate-500 border-r border-slate-100/50">
                               <div className="font-semibold text-slate-700 truncate max-w-[140px]">
                                 {po.items[0]?.product?.model_name || '---'}
@@ -1020,9 +1127,10 @@ export default function ProcurementGRNPage() {
                                   po.status === 'approved' ? "bg-blue-100 text-blue-700 hover:bg-blue-200 text-[9px] px-1.5 py-0 font-bold" :
                                     po.status === 'cancelled' ? "bg-red-100 text-red-700 hover:bg-red-200 text-[9px] px-1.5 py-0 font-bold" :
                                       po.status === 'partially_received' ? "bg-amber-100 text-amber-700 hover:bg-amber-200 text-[9px] px-1.5 py-0 font-bold" :
-                                        "bg-slate-100 text-slate-700 hover:bg-slate-200 text-[9px] px-1.5 py-0 font-bold"
+                                        po.status === 'needs_revision' ? "bg-orange-100 text-orange-700 hover:bg-orange-200 text-[9px] px-1.5 py-0 font-bold border border-orange-200" :
+                                          "bg-slate-100 text-slate-700 hover:bg-slate-200 text-[9px] px-1.5 py-0 font-bold"
                               }>
-                                {po.status === 'partially_received' ? 'PARTIAL' : po.status.toUpperCase()}
+                                {po.status === 'partially_received' ? 'PARTIAL' : po.status === 'needs_revision' ? 'NEEDS REVISION' : po.status.toUpperCase()}
                               </Badge>
                             </TableCell>
                             <TableCell className="py-2 px-4 font-bold text-[#001529] border-r border-slate-100/50">
@@ -1070,38 +1178,43 @@ export default function ProcurementGRNPage() {
                                             </DropdownMenuItem>
                                             <DropdownMenuItem 
                                               onClick={() => {
-                                                setRevisionPO(po);
-                                                const vendor = vendors.find(v => v.id === po.vendor_id);
-                                                if (vendor) {
-                                                  setSelectedVendor(vendor);
-                                                  setPoTerms({ gstin: vendor.gstin || "", terms: vendor.payment_terms || "Immediate" });
-                                                }
-                                                setSelectedBranch(po.branch_id);
-                                                setPoItems(po.items.map((item) => ({
-                                                  id: item.id || `rev-${Date.now()}-${Math.random()}`,
-                                                  product_id: item.product_id,
-                                                  quantity: item.quantity,
-                                                  unit_price: item.unit_price,
-                                                  received_quantity: item.received_quantity,
-                                                  tax_rate: item.tax_rate,
-                                                  total_item_cost: item.total_item_cost,
-                                                  override_reason: item.override_reason,
-                                                  product: {
-                                                    model_name: item.product?.model_name || 'Item',
-                                                    product_code: item.product?.product_code || '',
-                                                    hsn_code: item.product?.hsn_code || '---'
-                                                  }
-                                                })));
-                                                setIsCreatingPO(true);
-                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                setRevisionDialogPO(po)
+                                                setRevisionNotesInput("")
                                               }}
-                                              className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                              className="text-amber-600 focus:text-amber-600 cursor-pointer font-medium"
                                             >
-                                              <RotateCcw className="h-4 w-4 mr-2" /> Revise & Approve
+                                              <RotateCcw className="h-4 w-4 mr-2" /> Revise PO
                                             </DropdownMenuItem>
                                           </>
                                         )}
                                       </>
+                                    )}
+                                    {po.status === 'needs_revision' && (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleEditResubmit(po)}
+                                        className="text-amber-600 focus:text-amber-600 cursor-pointer font-medium"
+                                      >
+                                        <RotateCcw className="h-4 w-4 mr-2" /> Edit &amp; Resubmit
+                                      </DropdownMenuItem>
+                                    )}
+
+                                    {po.status === 'draft' && (
+                                      <DropdownMenuItem
+                                        onClick={async () => {
+                                          const res = await fetch('/api/procurement/purchase-orders', {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ id: po.id, status: 'pending_approval' })
+                                          })
+                                          if (res.ok) {
+                                            const poRes = await fetch('/api/procurement/purchase-orders')
+                                            setActivePOs(await poRes.json())
+                                          }
+                                        }}
+                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                      >
+                                        <CheckCircle2 className="h-4 w-4 mr-2" /> Submit for Approval
+                                      </DropdownMenuItem>
                                     )}
 
                                     {(po.status === 'approved' || po.status === 'partially_received') && (
@@ -1719,10 +1832,16 @@ export default function ProcurementGRNPage() {
                       <span className="opacity-60 text-sm uppercase tracking-widest font-black">Ref:</span>
                       {viewingPO.po_number}
                     </p>
-                    <DialogDescription className="text-slate-400 font-medium m-0">
-                      <span className="opacity-60 text-[10px] uppercase tracking-widest font-black mr-2">Date:</span>
-                      {new Date(viewingPO.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
-                    </DialogDescription>
+                    <div className="text-slate-400 font-medium m-0 flex flex-col gap-1 text-sm">
+                      <span className="flex items-center">
+                        <span className="opacity-60 text-[10px] uppercase tracking-widest font-black mr-2">Date:</span>
+                        {new Date(viewingPO.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </span>
+                      <span className="flex items-center">
+                        <span className="opacity-60 text-[10px] uppercase tracking-widest font-black mr-2">Payment:</span>
+                        <span className="text-blue-400 font-bold">{viewingPO.payment_terms || viewingPO.vendor?.payment_terms || 'Immediate'}</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -1849,7 +1968,7 @@ export default function ProcurementGRNPage() {
                           <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter">{item.product?.hsn_code || '---'}</TableCell>
                           <TableCell className="text-center font-black text-slate-900 text-sm">{item.quantity}</TableCell>
                           <TableCell className="text-right font-bold text-slate-600">{formatCurrency(item.unit_price)}</TableCell>
-                          <TableCell className="text-right font-black text-[#001529]">{formatCurrency(item.total_item_cost)}</TableCell>
+                          <TableCell className="text-right font-black text-[#001529]">{formatCurrency(item.unit_price * item.quantity)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1860,10 +1979,9 @@ export default function ProcurementGRNPage() {
                 <div className="flex justify-end pt-4">
                   <div className="w-[340px] space-y-2 p-6 rounded-2xl bg-[#001529]/5 border border-[#001529]/10 animate-in fade-in slide-in-from-right-4">
                     {(() => {
-                      const netTaxableValue = viewingPO.items.reduce((acc: number, item: POItem) => acc + item.total_item_cost, 0);
-                      const cgst = netTaxableValue * 0.09;
-                      const sgst = netTaxableValue * 0.09;
-                      const grandTotal = netTaxableValue + cgst + sgst;
+                      const netTaxableValue = viewingPO.items.reduce((acc: number, item: POItem) => acc + (Number(item.unit_price) * Number(item.quantity)), 0);
+                      const taxTotal = viewingPO.items.reduce((acc: number, item: POItem) => acc + (Number(item.unit_price) * Number(item.quantity) * (Number(item.tax_rate) / 100)), 0);
+                      const grandTotal = netTaxableValue + taxTotal;
                       
                       return (
                         <>
@@ -1871,13 +1989,9 @@ export default function ProcurementGRNPage() {
                             <span className="font-bold text-slate-500 uppercase tracking-tight">Net Taxable Value</span>
                             <span className="font-black text-slate-900">{formatCurrency(netTaxableValue)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-slate-500 uppercase tracking-tight">CGST (9%)</span>
-                            <span className="font-black text-slate-900">{formatCurrency(cgst)}</span>
-                          </div>
                           <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200">
-                            <span className="font-bold text-slate-500 uppercase tracking-tight">SGST (9%)</span>
-                            <span className="font-black text-slate-900">{formatCurrency(sgst)}</span>
+                            <span className="font-bold text-slate-500 uppercase tracking-tight">Total Tax (GST)</span>
+                            <span className="font-black text-slate-900">{formatCurrency(taxTotal)}</span>
                           </div>
                           <div className="flex justify-between items-center pt-2">
                             <div className="flex flex-col">
@@ -1969,10 +2083,10 @@ export default function ProcurementGRNPage() {
                       <span className="opacity-60 text-sm uppercase tracking-widest font-black">GRN No:</span>
                       {viewingGRN.grn_number}
                     </p>
-                    <DialogDescription className="text-emerald-100 font-medium m-0">
+                    <div className="text-emerald-100 font-medium m-0">
                       <span className="opacity-60 text-[10px] uppercase tracking-widest font-black mr-2">Received Date:</span>
                       {new Date(viewingGRN.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
-                    </DialogDescription>
+                    </div>
                   </div>
                 </div>
 
@@ -2106,6 +2220,54 @@ export default function ProcurementGRNPage() {
         onClose={() => setSelectedPO(null)}
         onSuccess={handleGRNSuccess}
       />
+
+      {/* Revision Notes Dialog — for approver to send PO back with comments */}
+      <Dialog open={!!revisionDialogPO} onOpenChange={(open) => { if (!open) { setRevisionDialogPO(null); setRevisionNotesInput("") } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+                <RotateCcw className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[#001529]">Revise PO</h2>
+                <p className="text-[11px] text-slate-500 font-medium">{revisionDialogPO?.po_number}</p>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="mt-1 mb-2">
+            <DialogDescription>
+              This will send the PO back to the initiator for revision. Please provide clear instructions on what needs to be changed.
+            </DialogDescription>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                Revision Notes <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                placeholder="e.g. Please renegotiate the unit price for Samsung Galaxy S24 Ultra. Also add the extended warranty as a separate line item."
+                value={revisionNotesInput}
+                onChange={(e) => setRevisionNotesInput(e.target.value)}
+                rows={5}
+                className="text-sm font-medium border-amber-200 focus:ring-amber-500 resize-none"
+              />
+              <p className="text-[10px] text-slate-400 italic">This note will be visible to the initiator when they open the PO for revision.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setRevisionDialogPO(null); setRevisionNotesInput("") }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRevisionRequest}
+              disabled={!revisionNotesInput.trim() || isSubmittingRevision}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isSubmittingRevision ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+              Send Back for Revision
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

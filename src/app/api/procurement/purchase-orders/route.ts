@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  const { vendor_id, branch_id, items, terms_content, status = 'draft' } = body
+  const { vendor_id, branch_id, items, terms_content, status = 'draft', payment_terms } = body
 
   if (!vendor_id || !branch_id || !items || items.length === 0) {
     return NextResponse.json({ error: "Vendor, branch, and items are required" }, { status: 400 })
@@ -143,6 +143,7 @@ export async function POST(request: Request) {
       status,
       created_by: user.id,
       terms_content,
+      payment_terms,
       total_amount: items.reduce((acc: number, item: { unit_price: number, quantity: number, tax_rate: number }) => 
         acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0)
     })
@@ -203,7 +204,7 @@ export async function PATCH(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  const { id, status, vendor_id, branch_id, items, terms_content, total_amount, cancellation_reason } = body
+  const { id, status, vendor_id, branch_id, items, terms_content, total_amount, cancellation_reason, payment_terms, revision_notes } = body
 
   if (!id || !status) return NextResponse.json({ error: "ID and status are required" }, { status: 400 })
 
@@ -220,13 +221,30 @@ export async function PATCH(request: Request) {
     }
   }
 
+  // Only admins can send back for revision
+  if (status === 'needs_revision') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return NextResponse.json({ error: "Only admins can request revisions" }, { status: 403 })
+    }
+  }
+
   const updateData: Record<string, string | number | null> = { status }
   if (status === 'approved') updateData.approved_by = user.id
   if (vendor_id) updateData.vendor_id = vendor_id
   if (branch_id) updateData.branch_id = branch_id
   if (total_amount) updateData.total_amount = total_amount
   if (terms_content) updateData.terms_content = terms_content
+  if (payment_terms) updateData.payment_terms = payment_terms
   if (cancellation_reason) updateData.cancellation_reason = cancellation_reason
+  // Store revision notes when sending back, clear them on resubmit
+  if (status === 'needs_revision') updateData.revision_notes = revision_notes || null
+  if (status === 'pending_approval') updateData.revision_notes = null
 
   // If items are provided, we need to update items (Revise & Approve flow)
   if (items && items.length > 0) {
@@ -236,7 +254,7 @@ export async function PATCH(request: Request) {
     const { error: deleteError } = await adminSupabase
       .from('purchase_order_items')
       .delete()
-      .eq('purchase_order_id', id)
+      .eq('po_id', id)
     
     if (deleteError) return NextResponse.json({ error: "Failed to clear existing items" }, { status: 500 })
 
@@ -244,7 +262,7 @@ export async function PATCH(request: Request) {
     const { error: insertError } = await adminSupabase
       .from('purchase_order_items')
       .insert(items.map((item: { product_id: string, quantity: number, unit_price: number, tax_rate: number, total_item_cost: number, override_reason?: string }) => ({
-        purchase_order_id: id,
+        po_id: id,
         product_id: item.product_id,
         quantity: item.quantity,
         unit_price: item.unit_price,

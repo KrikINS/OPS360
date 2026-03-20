@@ -352,14 +352,14 @@ export default function DiscrepancyReportPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="py-4 px-4 border-r border-slate-100/50 text-right font-black font-mono">
-                    <span className={cn(
+                    <div className={cn(
                       "text-sm",
                       item.detected_gap < 0 ? "text-red-500" : "text-emerald-600"
                     )}>
                       {item.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || item.discrepancy_type === 'Quantity Mismatch'
                         ? (
                           <div className="flex flex-col items-end">
-                            <span>{item.detected_gap} Unit{Math.abs(item.detected_gap) !== 1 ? 's' : ''}</span>
+                            <span className="font-bold">{item.detected_gap} Unit{Math.abs(item.detected_gap) !== 1 ? 's' : ''}</span>
                             <span className="text-[9px] opacity-50 font-bold">
                               {item.detected_gap < 0 ? 'SHRINKAGE' : 'OVERAGE'}
                             </span>
@@ -367,7 +367,7 @@ export default function DiscrepancyReportPage() {
                         )
                         : formatCurrency(item.detected_gap)
                       }
-                    </span>
+                    </div>
                   </TableCell>
                   <TableCell className="py-4 px-4 border-r border-slate-100/50 text-center">
                     <Badge className={cn(
@@ -468,9 +468,9 @@ export default function DiscrepancyReportPage() {
         <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
           <DialogHeader className="bg-[#001529] p-6 text-white text-left">
             <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-              <div className="bg-red-500 p-2 rounded-lg">
+              <span className="bg-red-500 p-2 rounded-lg flex items-center justify-center">
                 <ShieldAlert className="h-5 w-5 text-white" />
-              </div>
+              </span>
               Execute Resolution Logic
             </DialogTitle>
             <DialogDescription className="text-slate-400 font-medium text-xs mt-2">
@@ -574,7 +574,10 @@ export default function DiscrepancyReportPage() {
         <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
           <DialogHeader className="bg-amber-600 p-6 text-white text-left">
             <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-              <History className="h-5 w-5" /> Reopen Investigation
+              <span className="bg-amber-500 p-2 rounded-lg flex items-center justify-center">
+                <History className="h-5 w-5 text-white" />
+              </span>
+              Reopen Investigation
             </DialogTitle>
             <DialogDescription className="text-amber-100 font-medium text-xs mt-2">
               Provide a reason for reopening the audit for <span className="text-white font-mono">{selectedDiscrepancy?.po?.po_number}</span>.
@@ -610,7 +613,10 @@ export default function DiscrepancyReportPage() {
         <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
           <DialogHeader className="bg-blue-600 p-6 text-white text-left">
             <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-              <PencilLine className="h-5 w-5" /> Adjust Fiscal Gap
+              <span className="bg-blue-600 p-2 rounded-lg flex items-center justify-center">
+                <PencilLine className="h-5 w-5 text-white" />
+              </span>
+              Adjust Fiscal Gap
             </DialogTitle>
             <DialogDescription className="text-blue-100 font-medium text-xs mt-2">
               Manually correct the detected variance amount for audit accuracy.
@@ -665,7 +671,10 @@ export default function DiscrepancyReportPage() {
         <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
           <DialogHeader className="bg-slate-800 p-6 text-white text-left">
             <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-              <Eye className="h-5 w-5" /> Resolution History
+              <span className="bg-slate-800 p-2 rounded-lg flex items-center justify-center">
+                <Eye className="h-5 w-5 text-white" />
+              </span>
+              Resolution History
             </DialogTitle>
             <DialogDescription className="text-slate-400 font-medium text-xs mt-2">
               Permanent audit log for <span className="text-white font-mono">{selectedDiscrepancy?.po?.po_number}</span>.
