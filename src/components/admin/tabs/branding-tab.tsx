@@ -19,7 +19,7 @@ export function BrandingTab() {
     const init = async () => {
       const supabase = createClient()
       const { data } = await supabase.from("app_settings").select("key, value").in("key", ["logo_url", "company_name"])
-      data?.forEach(row => {
+      data?.forEach((row: { key: string, value: string }) => {
         if (row.key === "logo_url" && row.value) setCurrentLogo(row.value)
         if (row.key === "company_name" && row.value) setCompanyName(row.value)
       })

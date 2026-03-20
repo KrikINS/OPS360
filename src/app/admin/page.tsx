@@ -69,7 +69,7 @@ export default function AdminDashboardPage() {
         .from("profiles")
         .select("role")
       
-      const roleCounts = (profileData || []).reduce((acc: any, curr) => {
+      const roleCounts = (profileData || []).reduce((acc: Record<string, number>, curr: { role: string }) => {
         acc[curr.role] = (acc[curr.role] || 0) + 1
         return acc
       }, {})
@@ -100,11 +100,11 @@ export default function AdminDashboardPage() {
       })
       setRoles(roleList)
       setRecentUsers((recent || []) as RecentUser[])
-      setBranches((branchData || []).map(b => ({ ...b, status: "Active" })))
+      setBranches((branchData || []).map((b: {id: string, name: string, location: string}) => ({ ...b, status: "Active" })))
     }
 
     fetchData()
-  }, [])
+  }, [supabase])
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -267,7 +267,7 @@ export default function AdminDashboardPage() {
   )
 }
 
-function StatCard({ label, value, icon: Icon, color, description }: { label: string, value: string | number, icon: any, color: string, description: string }) {
+function StatCard({ label, value, icon: Icon, color, description }: { label: string, value: string | number, icon: React.ElementType, color: string, description: string }) {
   return (
     <Card className="border-none shadow-sm overflow-hidden">
       <CardContent className="p-0">

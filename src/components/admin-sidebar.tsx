@@ -59,7 +59,7 @@ export function AdminSidebar() {
       .select("value")
       .eq("key", "logo_url")
       .single()
-      .then(({ data }) => { if (data?.value) setLogoUrl(data.value) })
+      .then((res: { data: { value: string } | null }) => { if (res.data?.value) setLogoUrl(res.data.value) })
   }, [])
 
   return (
