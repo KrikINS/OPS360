@@ -96,20 +96,27 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               margin: 0 !important;
               color: #000000 !important;
             }
+            /* Single fixed header — same on ALL pages */
+            .print-header {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              width: 100%;
+              background: white;
+              z-index: 100;
+            }
             .print-footer {
               position: fixed;
               bottom: 0;
+              left: 0;
+              right: 0;
               width: 100%;
               border-top: 1px solid #000000;
               background: white;
             }
-            .page-number:after {
-              counter-increment: page;
-              content: "Page " counter(page);
-            }
-            .print-content {
-              margin-bottom: 20mm;
-            }
+            /* Padding now handled by standard container classes and table spacers */
+            .print-content {}
             tr {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
@@ -121,43 +128,53 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
           }
         `}} />
 
-        <div 
-          className="px-10 py-2.5 flex justify-between items-baseline w-full shrink-0 border-b-2 border-black"
-        >
-          {/* Realined Header: Title and Company on same horizontal line */}
-          <h1 className="text-[18pt] font-bold tracking-tighter text-[#000000] m-0 leading-none uppercase">
-            Purchase Order
-          </h1>
-
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-[18pt] font-bold text-[#000000] m-0 uppercase tracking-tight">
-                Ethan Home Appliances
-              </p>
-              <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-slate-500">Ops360 Enterprise ERP</p>
+        {/* Single fixed header — same on ALL pages */}
+        <div className="print-header">
+          <div className="px-10 py-3 flex justify-between items-center w-full border-b-2 border-black bg-white">
+            <div>
+              <h1 className="text-[14pt] font-bold tracking-tighter text-black m-0 leading-none uppercase">Purchase Order</h1>
+              <p className="text-[10px] font-black text-slate-500 m-0">Ref: {po.po_number}</p>
             </div>
-            <div className="bg-white p-1 rounded-lg border border-slate-200">
-               <Image src="/ethan-logo.png" alt="Ethan Logo" width={40} height={40} className="h-9 w-auto object-contain" />
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-[13pt] font-bold text-black m-0 uppercase tracking-tight">Ethan Home Appliances</p>
+                <p className="text-[8px] uppercase tracking-[0.3em] font-black m-0 text-slate-500">Ops360 Enterprise ERP</p>
+              </div>
+              <div className="bg-white p-1 rounded border border-slate-200">
+                <Image src="/ethan-logo.png" alt="Ethan Logo" width={32} height={32} className="h-7 w-auto object-contain" />
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Dynamic HQ Mapping Section */}
-        <div className="px-10 py-4 flex justify-between items-start bg-slate-50 border-b border-slate-200">
-          <div className="space-y-0.5 text-[10px] font-bold text-black uppercase tracking-tight">
-            <p className="m-0">Ethan Home Appliances HQ</p>
-            <p className="m-0">Minzta Hotel, Vazhappilly Tower, Koratty</p>
-            <p className="m-0">Thrissur, Kerala</p>
-            <p className="m-0">Contact No: 9747552277 | Email: ethanops360@gmail.com</p>
+        {/* HTML Table Spacer Hack to prevent overlap.
+            thead / tfoot repeat automatically on every page.
+            The fixed header / footer visually sit on top of the empty transparent spacer rows. */}
+        <table className="w-full">
+          <thead>
+            <tr>
+              <td>
+                <div className="h-[23mm]"></div> {/* Matches fixed header height */}
+              </td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div className="px-10 space-y-10 print-content">
+          {/* HQ Address + Reference — first body section (was second header strip) */}
+          <div className="py-6 px-10 flex justify-between items-start bg-slate-50 border border-slate-200 rounded-xl">
+            <div className="space-y-0.5 text-[10px] font-bold text-black uppercase tracking-tight">
+              <p className="m-0">Ethan Home Appliances HQ</p>
+              <p className="m-0">Minzta Hotel, Vazhappilly Tower, Koratty</p>
+              <p className="m-0">Thrissur, Kerala</p>
+              <p className="m-0">Contact No: 9747552277 | Email: ethanops360@gmail.com</p>
+            </div>
+            <div className="text-right text-[10px] font-bold text-black">
+              <p className="m-0 uppercase tracking-widest text-slate-500">Reference Number</p>
+              <p className="text-sm font-black m-0">{po.po_number}</p>
+              <p className="m-0 text-slate-500 mt-1">{new Date(po.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+            </div>
           </div>
-          <div className="text-right text-[10px] font-bold text-black">
-            <p className="m-0 uppercase tracking-widest text-slate-500">Reference Number</p>
-            <p className="text-sm font-black m-0">{po.po_number}</p>
-            <p className="m-0 text-slate-500 mt-1">{new Date(po.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-          </div>
-        </div>
-
-        <div className="p-10 space-y-10 flex-1">
           {/* Metadata Grid (Ship-To and Vendor) */}
           <div className="grid grid-cols-2 gap-8 p-8 rounded-2xl bg-slate-50 border border-slate-100">
             <div className="space-y-3">
@@ -199,12 +216,12 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               Line Item Breakdown
             </h4>
             <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse table-fixed">
                 <thead className="bg-white">
                   <tr className="border-b-2 border-black">
                     <th className="p-4 text-center w-[60px] font-black uppercase text-[9px] tracking-widest text-[#000000]">#</th>
-                    <th className="p-4 text-left font-black uppercase text-[9px] tracking-widest text-[#000000]">Model Specification</th>
-                    <th className="p-4 text-left font-black uppercase text-[9px] tracking-widest text-[#000000]">HSN/SAC</th>
+                    <th className="p-4 text-left w-[40%] font-black uppercase text-[9px] tracking-widest text-[#000000]">Model Specification</th>
+                    <th className="p-4 text-left w-[15%] font-black uppercase text-[9px] tracking-widest text-[#000000]">HSN/SAC</th>
                     <th className="p-4 text-center w-20 font-black uppercase text-[9px] tracking-widest text-[#000000]">Qty</th>
                     <th className="p-4 text-right w-32 font-black uppercase text-[9px] tracking-widest text-[#000000]">Net Rate</th>
                     <th className="p-4 text-right w-32 font-black uppercase text-[9px] tracking-widest text-[#000000]">Subtotal</th>
@@ -213,12 +230,12 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                 <tbody className="text-[11px] text-black">
                   {po.items.map((item, idx) => (
                     <tr key={idx} className="border-b border-slate-100">
-                      <td className="p-4 text-center font-bold text-black border-r border-slate-100">{idx + 1}</td>
-                      <td className="p-4">
-                        <div className="font-bold text-black text-sm">{item.product?.model_name || 'Item'}</div>
-                        <div className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter">SKU: {item.product?.product_code}</div>
+                      <td className="p-4 text-center align-top font-bold text-black border-r border-slate-100">{idx + 1}</td>
+                      <td className="p-4 align-top w-[40%]">
+                        <div className="font-bold text-black text-sm whitespace-normal break-words leading-tight">{item.product?.model_name || 'Item'}</div>
+                        <div className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter mt-1">SKU: {item.product?.product_code}</div>
                       </td>
-                      <td className="p-4 text-black font-mono text-[10px] font-bold tracking-tighter">
+                      <td className="p-4 align-top text-black font-mono text-[10px] font-bold tracking-tighter w-[15%]">
                         {item.product?.hsn_code || '---'}
                       </td>
                       <td className="p-4 text-center font-black text-black font-mono border-x border-slate-100">
@@ -302,7 +319,18 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </div>
             </div>
           </div>
-        </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>
+                <div className="h-[30mm]"></div> {/* Matches fixed footer height + extra visual padding */}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
 
         <div 
           className="w-full px-10 py-6 border-t font-bold text-black uppercase tracking-widest shrink-0 bg-white print-footer"
@@ -310,11 +338,12 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
           <div className="flex justify-between items-end w-full">
             <div className="w-[45%] flex flex-col gap-1">
               <p className="m-0 text-black font-black text-[9px]">CLASSIFICATION: CONFIDENTIAL – AUTHORIZED VENDOR USE ONLY</p>
-              <p className="text-[7px] opacity-100 m-0 leading-tight">Subject to Ernakulam/Kochi Jurisdiction. System-generated PO ID: {po.id}</p>
+              <p className="text-[7px] opacity-100 m-0 leading-tight font-bold uppercase tracking-wider">SUBJECT TO THE LOCAL JURISDICTION OF ETHAN HOME APPLIANCES</p>
             </div>
             
             <div className="text-center">
-              <p className="m-0 page-number text-[10px]"></p>
+              {/* Page numbers must be handled natively by the browser's "Headers and footers" option,
+                  because Chrome window.print() graphically clones fixed elements and cannot dynamically increment CSS counters. */}
             </div>
 
             <div className="w-[55%] text-right flex flex-row items-end justify-end gap-6 text-[8px]">

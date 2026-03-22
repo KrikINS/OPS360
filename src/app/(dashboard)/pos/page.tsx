@@ -106,7 +106,7 @@ export default function POSPage() {
     // Check for exact serial match first
     const { data: item } = await supabase
       .from('inventory')
-      .select('*, products(*)')
+      .select('*, products!inventory_product_id_fkey(*)')
       .eq('serial_number', code)
       .eq('status', 'Available')
       .eq('branch_id', bId)
@@ -406,7 +406,7 @@ export default function POSPage() {
                 <Table>
                   <TableHeader className="bg-[#001529] sticky top-0 z-10">
                     <TableRow className="hover:bg-[#001529] border-none">
-                      <TableHead className="text-white font-black text-[10px] uppercase tracking-widest h-10 px-6">Description</TableHead>
+                      <TableHead className="w-[40%] min-w-[200px] whitespace-normal text-white font-black text-[10px] uppercase tracking-widest h-10 px-6">Description</TableHead>
                       <TableHead className="text-white font-black text-[10px] uppercase tracking-widest h-10 text-center">Qty</TableHead>
                       <TableHead className="text-white font-black text-[10px] uppercase tracking-widest h-10">Rate</TableHead>
                       <TableHead className="text-white font-black text-[10px] uppercase tracking-widest h-10">GST Split</TableHead>
@@ -416,7 +416,7 @@ export default function POSPage() {
                   <TableBody>
                     {invoiceLines.map((line) => (
                       <TableRow key={line.product.id} className="group border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
-                        <TableCell className="py-4 px-6">
+                        <TableCell className="w-[40%] min-w-[200px] whitespace-normal break-words py-4 px-6 align-top">
                           <div className="font-bold text-slate-800 text-sm">{line.product.model_name}</div>
                           <div className="flex flex-wrap gap-1 mt-1.5">
                             {line.serial_numbers?.map(sn => (
@@ -424,10 +424,10 @@ export default function POSPage() {
                             )) || <span className="text-[9px] text-slate-400 font-bold uppercase">Generic Unit Mapping</span>}
                           </div>
                         </TableCell>
-                        <TableCell className="py-4 text-center">
+                        <TableCell className="py-4 text-center align-top">
                           <span className="font-black text-slate-900">{line.qty}</span>
                         </TableCell>
-                        <TableCell className="py-4 text-xs font-bold text-slate-600">₹{line.product.base_price.toLocaleString('en-IN')}</TableCell>
+                        <TableCell className="py-4 text-xs font-bold text-slate-600 align-top">₹{line.product.base_price.toLocaleString('en-IN')}</TableCell>
                         <TableCell className="py-4">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-[9px] font-bold text-[#001529]">{line.gstRate}% Total GST</span>

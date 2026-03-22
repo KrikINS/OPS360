@@ -35,7 +35,8 @@ export async function GET() {
       ),
       grns:grns(id, grn_number),
       discrepancies:discrepancies(status),
-      vendor_bills:vendor_bills(*)
+      vendor_bills:vendor_bills(*),
+      debit_notes:debit_notes(*)
     `)
     .order('created_at', { ascending: false })
 

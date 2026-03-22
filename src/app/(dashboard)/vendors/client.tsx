@@ -187,7 +187,7 @@ export default function VendorsClient({
       
       if (error) throw error
       
-      const formattedDocs: VendorDocument[] = (data || []).map((file: any) => ({
+      const formattedDocs: VendorDocument[] = (data || []).map((file: { name: string, id: string, created_at: string, metadata?: { size?: number, mimetype?: string } }) => ({
         name: file.name,
         id: file.id || '',
         created_at: file.created_at || new Date().toISOString(),

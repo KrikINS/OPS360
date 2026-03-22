@@ -48,89 +48,17 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
       second: '2-digit'
     });
 
-    interface PageChunk {
-      pageIndex: number;
-      items: {
-        product: {
-          model_name: string;
-          product_code: string;
-          hsn_code: string;
-        };
-        quantity: number;
-        serial_numbers: string[];
-        isContinuation: boolean;
-        originalIndex: number;
-      }[];
-    }
-
-    const pages: PageChunk[] = [];
-    let currentPageItems: PageChunk['items'] = [];
-    let currentSNCount = 0;
-
-    grn.items.forEach((item, itemIdx) => {
-      const sns = item.serial_numbers;
-      if (!sns || sns.length === 0) {
-        currentPageItems.push({
-          ...item,
-          originalIndex: itemIdx,
-          isContinuation: false,
-          serial_numbers: []
-        });
-        currentSNCount += 8; // Item with no SNs still consumes header space
-      } else {
-        let snIndex = 0;
-        let isCont = false;
-        while (snIndex < sns.length) {
-          // Page 1 has Branch details, so capacity is lower. Page 2+ only has corporate header.
-          const pageLimit = pages.length === 0 ? 48 : 68;
-          
-          if (currentSNCount >= pageLimit) {
-            pages.push({ pageIndex: pages.length + 1, items: currentPageItems });
-            currentPageItems = [];
-            currentSNCount = 0;
-            isCont = true;
-          }
-          
-          // Header box consumes ~8 units equivalent visual space
-          const spaceLeft = Math.max(0, pageLimit - currentSNCount - 8); 
-          if (spaceLeft <= 0) {
-            pages.push({ pageIndex: pages.length + 1, items: currentPageItems });
-            currentPageItems = [];
-            currentSNCount = 0;
-            isCont = true;
-            continue;
-          }
-          
-          const chunk = sns.slice(snIndex, snIndex + spaceLeft);
-          currentPageItems.push({
-            ...item,
-            originalIndex: itemIdx,
-            isContinuation: isCont,
-            serial_numbers: chunk
-          });
-          
-          snIndex += chunk.length;
-          currentSNCount += chunk.length + 8;
-        }
-      }
-    });
-
-    if (currentPageItems.length > 0) {
-      pages.push({ pageIndex: pages.length + 1, items: currentPageItems });
-    }
-    // ------
-
     return (
       <div 
         ref={ref}
         id="grn-print-template" 
-        className="bg-slate-200 text-[#000000] flex flex-col items-center w-full min-h-screen py-4 font-sans relative [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
+        className="bg-white text-[#000000] flex flex-col w-[210mm] min-h-[297mm] p-0 mx-auto font-sans relative [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
       >
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0;
+              margin: 10mm;
             }
             body {
               -webkit-print-color-adjust: exact !important;
@@ -138,183 +66,226 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
               background: white !important;
             }
             #grn-print-template {
-              background: white !important;
+              width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
               padding: 0 !important;
               margin: 0 !important;
+              color: #000000 !important;
             }
-            .print-page {
-               width: 210mm;
-               min-height: 296mm;
-               margin: 0 auto;
-               padding: 10mm;
-               page-break-after: always;
-               background: white;
-               display: flex;
-               flex-direction: column;
-               border: none !important;
-               box-shadow: none !important;
+            .print-header {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              width: 100%;
+              background: white;
+              z-index: 100;
             }
-            .print-page:last-child {
-               page-break-after: auto;
+            .print-footer {
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              width: 100%;
+              border-top: 1px solid #000000;
+              background: white;
+            }
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            * {
+              color-adjust: exact !important;
+              -webkit-print-color-adjust: exact !important;
             }
           }
         `}} />
 
-        {pages.map((page, pIdx) => (
-          <div key={pIdx} className="print-page w-[210mm] min-h-[297mm] bg-white shadow-xl mx-auto flex flex-col p-[8mm] mb-8 last:mb-0 border border-slate-300">
-            {/* Corporate Header */}
-            <div className="px-6 py-2 flex justify-between items-baseline w-full shrink-0 border-b-2 border-black">
-              <h1 className="text-[16pt] font-black tracking-tighter text-[#000000] m-0 leading-none uppercase">
-                Goods Receipt Note
-              </h1>
-
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-[14pt] font-black text-[#000000] m-0 uppercase tracking-tight leading-none">
-                    Ethan Home Appliances
-                  </p>
-                  <p className="text-[8px] uppercase tracking-[0.3em] font-black m-0 text-slate-500">Ops360 Enterprise ERP</p>
-                </div>
-                <div className="bg-white p-1 flex items-center justify-center border border-slate-200 h-10 w-10">
-                   <Image src="/ethan-logo.png" alt="Ethan Logo" width={32} height={32} className="h-full w-auto object-contain" />
-                </div>
-              </div>
+        {/* Standardized Header */}
+        <div className="print-header">
+          <div className="px-10 py-3 flex justify-between items-center w-full border-b-2 border-black bg-white">
+            <div>
+              <h1 className="text-[14pt] font-bold tracking-tighter text-black m-0 leading-none uppercase">Goods Receipt Note</h1>
+              <p className="text-[10px] font-black text-slate-500 m-0">Ref: {grn.grn_number}</p>
             </div>
-
-            {/* Dynamic HQ Mapping Section */}
-            <div className="px-6 py-3 flex justify-between items-start bg-slate-50 border-b border-black">
-              <div className="space-y-0.5 text-[9px] font-bold text-black uppercase tracking-tight">
-                <p className="m-0 font-black">Ethan Home Appliances HQ</p>
-                <p className="m-0 text-slate-600">Minzta Hotel, Vazhappilly Tower, Koratty</p>
-                <p className="m-0 text-slate-600">Thrissur, Kerala</p>
-                <p className="m-0 text-slate-600">Contact No: 9747552277 | Email: ethanops360@gmail.com</p>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-[13pt] font-bold text-black m-0 uppercase tracking-tight">Ethan Home Appliances</p>
+                <p className="text-[8px] uppercase tracking-[0.3em] font-black m-0 text-slate-500">Inventory Management Hub</p>
               </div>
-              <div className="text-right text-[10px] font-bold text-black">
-                <p className="m-0 uppercase tracking-widest text-slate-500 text-[8px]">Document Reference</p>
-                <p className="text-sm font-black m-0">{grn.grn_number}</p>
-                <p className="m-0 text-slate-600 mt-1 text-[9px]">PO Link: {grn.po_number || 'N/A'}</p>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 flex flex-col flex-1">
-              {/* Branch & Reception Details ONLY ON PAGE 1 */}
-              {pIdx === 0 && (
-                <div className="grid grid-cols-2 gap-8 p-6 rounded-xl bg-slate-50 border border-slate-200 mb-6 shrink-0">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-[#001529]">
-                      <Building2 className="h-4 w-4" />
-                      <Label className="text-[9px] font-black uppercase tracking-widest opacity-60">Receiving Branch</Label>
-                    </div>
-                    <div className="pl-6 border-l-2 border-slate-900">
-                      <p className="font-bold text-sm text-black m-0">{branch?.name || 'Central Hub'}</p>
-                      <p className="text-[9px] text-slate-700 mt-1 m-0">{branch?.full_address || 'Branch address registry required'}</p>
-                      <p className="text-[8px] font-black text-slate-800 mt-1 m-0 uppercase flex items-center gap-2 tracking-widest">
-                         <span className="opacity-50">GSTIN:</span> 
-                         {branch?.gstin || '32BBBBB0000B1Z5'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-[#001529]">
-                      <ShieldAlert className="h-4 w-4" />
-                      <Label className="text-[9px] font-black uppercase tracking-widest opacity-60">Audit Information</Label>
-                    </div>
-                    <div className="pl-6 border-l-2 border-slate-900 font-bold">
-                      <p className="font-bold text-sm text-black m-0 tracking-tight">{grn.originator_name || 'System Operator'}</p>
-                      <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest m-0 mt-0.5">GRN Verification Source</p>
-                      {grn.approver_email && (
-                        <p className="text-[8px] font-mono text-slate-600 mt-1 truncate">{grn.approver_email}</p>
-                      )}
-                      <div className="mt-2 p-2 bg-white rounded border border-black shadow-sm">
-                         <p className="text-[7px] font-black uppercase text-black mb-1">Condition Notes</p>
-                         <p className="text-[9px] text-black m-0 italic font-medium">{grn.condition_notes || 'No observation notes provided'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Received Items (Auto-Flow Block Layout) */}
-              <div className="space-y-0 w-full flex-1">
-                <h4 className="font-black text-[10px] uppercase text-slate-500 tracking-widest flex items-center gap-2 m-0 mb-3">
-                  <LayoutGrid className="h-3 w-3" />
-                  {pIdx === 0 ? "Received Item Specification" : `Received Item Specification (Continued)`}
-                </h4>
-                
-                <div className="border-t-2 border-black pt-4">
-                  {page.items.map((item, idx) => (
-                    <div key={idx} className="block w-full border-b border-slate-200 pb-4 mb-4 last:border-0 last:mb-0 last:pb-0">
-                      <div className="mb-2 flex justify-between items-start bg-slate-50 p-2 px-3 rounded text-black border border-slate-200">
-                        <div>
-                           <div className="font-bold text-black text-[11px] uppercase tracking-tight">
-                             #{item.originalIndex + 1} - {item.product.model_name} {item.isContinuation ? '(Cont.)' : ''}
-                           </div>
-                           <div className="text-[8px] font-bold text-slate-600 uppercase tracking-widest mt-0.5">EHA Code: {item.product.product_code} &nbsp;|&nbsp; HSN: {item.product.hsn_code}</div>
-                        </div>
-                        <div className="text-right flex items-center gap-2 bg-white px-2 py-1 border border-black rounded shadow-sm">
-                           <span className="text-[8px] uppercase tracking-widest font-black">
-                             {item.isContinuation ? 'Chunk Qty:' : 'Received Qty:'}
-                           </span>
-                           <span className="font-black text-black font-mono text-xs">{item.serial_numbers.length} / {item.quantity}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="px-1 mt-3">
-                        {item.serial_numbers.length > 0 ? (
-                          <div className="grid grid-cols-4 gap-2">
-                            {item.serial_numbers.map((sn, snIdx) => (
-                              <div key={snIdx} className="bg-white text-black px-2 py-1.5 rounded text-[9px] font-mono border border-slate-300 font-bold shadow-sm text-center tracking-tighter overflow-hidden text-ellipsis whitespace-nowrap">
-                                {sn}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-[9px] italic text-slate-500">No serial numbers mapped for this condition.</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Corporate Footer */}
-            <div className="w-full px-6 py-4 mt-auto border-t-2 border-slate-900 border-dashed font-bold text-black shrink-0 bg-white">
-              <div className="flex justify-between items-end w-full">
-                <div className="w-[45%] flex flex-col gap-1">
-                  <p className="m-0 text-black font-black text-[8px] uppercase tracking-widest">CLASSIFICATION: CONFIDENTIAL – GOODS RECEIPT AUDIT</p>
-                  <p className="text-[7px] text-slate-600 m-0 leading-tight">Subject to Ernakulam/Kochi Jurisdiction. Document ID: {grn.id}</p>
-                </div>
-                
-                <div className="text-center">
-                  <p className="m-0 text-[10px] uppercase font-black tracking-widest bg-slate-100 px-3 py-1 rounded-full border border-slate-200 text-slate-600">
-                    Page {page.pageIndex} of {pages.length}
-                  </p>
-                </div>
-
-                <div className="w-[45%] text-right flex flex-row items-end justify-end gap-4 text-[8px]">
-                  <div className="flex flex-col gap-1">
-                    <p className="m-0 uppercase tracking-tighter">Intake Timestamp: {systemTimestamp}</p>
-                    <p className="text-[7px] opacity-100 m-0 uppercase flex items-center gap-1 justify-end font-black text-[#5A9E78]">
-                       <CheckCircle2 className="h-2.5 w-2.5" /> Verified Inventory Intake
-                    </p>
-                  </div>
-                  <div className="bg-white p-1 border border-slate-300 h-10 w-10 flex items-center justify-center rounded">
-                    <Image 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-GRN-${grn.grn_number}-${grn.id}`)}`} 
-                      alt="QR Code" 
-                      width={40}
-                      height={40}
-                      unoptimized
-                      className="h-full w-full object-contain grayscale"
-                    />
-                  </div>
-                </div>
+              <div className="bg-white p-1 rounded border border-slate-200">
+                <Image src="/ethan-logo.png" alt="Ethan Logo" width={32} height={32} className="h-7 w-auto object-contain" />
               </div>
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Table Flow Container */}
+        <table className="w-full">
+          <thead>
+            <tr>
+              <td>
+                <div className="h-[23mm]"></div> {/* Fixed header height spacer */}
+              </td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div className="px-10 space-y-10 py-6">
+                  {/* HQ Address Section - Matches PO Body First Block */}
+                  <div className="py-6 px-10 flex justify-between items-start bg-slate-50 border border-slate-200 rounded-xl">
+                    <div className="space-y-0.5 text-[10px] font-bold text-black uppercase tracking-tight">
+                      <p className="m-0">Ethan Home Appliances HQ</p>
+                      <p className="m-0">Minzta Hotel, Vazhappilly Tower, Koratty</p>
+                      <p className="m-0">Thrissur, Kerala</p>
+                      <p className="m-0">Contact No: 9747552277 | Email: ethanops360@gmail.com</p>
+                    </div>
+                    <div className="text-right text-[10px] font-bold text-black">
+                      <p className="m-0 uppercase tracking-widest text-slate-500">Receipt Reference</p>
+                      <p className="text-sm font-black m-0 leading-none">{grn.grn_number}</p>
+                      <p className="m-0 text-slate-500 mt-1">{new Date(grn.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                      <p className="m-0 text-[#001529] font-black text-[9px] mt-1 italic tracking-tight underline">Ref PO: {grn.po_number}</p>
+                    </div>
+                  </div>
+
+                  {/* Metadata Grid (Receiving Branch & Audit) */}
+                  <div className="grid grid-cols-2 gap-8 p-8 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-[#001529]">
+                        <Building2 className="h-5 w-5" />
+                        <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Receiving Branch</Label>
+                      </div>
+                      <div className="pl-6 border-l-2 border-slate-900">
+                        <p className="font-bold text-lg text-black m-0">{branch?.name || 'Central Hub'}</p>
+                        <p className="text-xs text-slate-600 font-medium m-0 italic">Authorized Stock Intake Point</p>
+                        <p className="text-[10px] text-black mt-1 m-0">{branch?.full_address || 'Address verification pending'}</p>
+                        <p className="text-[9px] font-black text-black mt-1 m-0 uppercase flex items-center gap-2">
+                           <span className="opacity-50 tracking-tighter">GSTIN:</span> 
+                           {branch?.gstin || '32BBBBB0000B1Z5'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-[#001529]">
+                        <ShieldAlert className="h-5 w-5" />
+                        <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Audit Verification</Label>
+                      </div>
+                      <div className="pl-6 border-l-2 border-slate-900">
+                        <p className="font-bold text-lg text-black m-0">{grn.originator_name || 'System Auto-Gen'}</p>
+                        <p className="text-xs text-slate-600 font-medium m-0">Inbound Quality Controller</p>
+                        <div className="mt-3 p-3 bg-white rounded-lg border border-slate-200">
+                           <p className="text-[8px] font-black uppercase text-slate-400 mb-1 tracking-widest">Inspection Notes</p>
+                           <p className="text-[10px] text-slate-900 m-0 italic font-medium leading-relaxed">
+                             &quot;{grn.condition_notes || 'All received items matched quantity and quality standards during initial inbound staging.'}&quot;
+                           </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Item Breakdown */}
+                  <div className="space-y-4">
+                    <h4 className="font-black text-xs uppercase text-slate-400 tracking-widest flex items-center gap-2 m-0">
+                      <LayoutGrid className="h-4 w-4" />
+                      Received Item Breakdown
+                    </h4>
+                    <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                      <table className="w-full border-collapse">
+                        <thead className="bg-white">
+                          <tr className="border-b-2 border-black">
+                            <th className="p-4 text-center w-[60px] font-black uppercase text-[9px] tracking-widest text-black">#</th>
+                            <th className="p-4 text-left font-black uppercase text-[9px] tracking-widest text-black">Model Specification</th>
+                            <th className="p-4 text-left w-[120px] font-black uppercase text-[9px] tracking-widest text-black">HSN/SAC</th>
+                            <th className="p-4 text-center w-[120px] font-black uppercase text-[9px] tracking-widest text-black">Received Qty</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-[11px] text-black">
+                          {grn.items.map((item, idx) => (
+                            <tr key={idx} className="border-b border-slate-100">
+                              <td className="p-4 text-center align-top font-bold text-black border-r border-slate-100">{idx + 1}</td>
+                              <td className="p-4 align-top">
+                                <div className="font-bold text-black text-sm whitespace-normal break-words leading-tight">{item.product.model_name}</div>
+                                <div className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter mt-1">SKU: {item.product.product_code}</div>
+                                
+                                {item.serial_numbers && item.serial_numbers.length > 0 && (
+                                  <div className="mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 leading-none">Registered Serial Inventory</p>
+                                    <div className="grid grid-cols-4 gap-2">
+                                      {item.serial_numbers.map((sn, snIdx) => (
+                                        <div key={snIdx} className="bg-white border border-slate-200 px-2 py-1 rounded font-mono text-[9px] font-bold text-center">
+                                          {sn}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-4 align-top text-black font-mono text-[10px] font-bold tracking-tighter">
+                                {item.product.hsn_code}
+                              </td>
+                              <td className="p-4 text-center align-top">
+                                <span className="bg-[#064E3B] text-white font-black px-3 py-1 rounded text-xs">
+                                  {item.quantity} Units
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Certification Block */}
+                  <div className="flex justify-end pt-6">
+                    <div className="text-center w-full max-w-[240px] border-t-2 pt-6 border-black">
+                       <p className="text-[10px] font-black uppercase tracking-[0.2em] m-0 text-black">Inbound Verifier</p>
+                       <p className="text-[7px] font-bold text-slate-500 mt-1 uppercase m-0 tracking-[0.3em]">Electronically Validated Stage 1</p>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>
+                <div className="h-[30mm]"></div> {/* Fixed footer height spacer */}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+        {/* Standardized Footer */}
+        <div className="w-full px-10 py-6 border-t font-bold text-black uppercase tracking-widest shrink-0 bg-white print-footer">
+          <div className="flex justify-between items-end w-full">
+            <div className="w-[45%] flex flex-col gap-1">
+              <p className="m-0 text-black font-black text-[9px]">CLASSIFICATION: CONFIDENTIAL – INTERNAL INVENTORY AUDIT</p>
+              <p className="text-[7px] opacity-100 m-0 leading-tight font-bold uppercase tracking-wider">INTAKE VERIFIED BY OPS360 ENTERPRISE LOGISTICS SUITE</p>
+            </div>
+            
+            <div className="w-[55%] text-right flex flex-row items-end justify-end gap-6 text-[8px]">
+              <div className="flex flex-col gap-1">
+                <p className="m-0 uppercase tracking-tighter">Receipt Timestamp: {systemTimestamp}</p>
+                <p className="text-[7px] opacity-100 m-0 uppercase flex items-center gap-1 justify-end font-black text-[#064E3B]">
+                   <CheckCircle2 className="h-2 w-2" /> Authenticated Hub Entry
+                </p>
+              </div>
+              <div className="bg-white p-1 border border-black h-12 w-12 flex items-center justify-center">
+                <Image 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-GRN-${grn.grn_number}-${grn.id}`)}`} 
+                  alt="QR Code" 
+                  width={48}
+                  height={48}
+                  unoptimized
+                  className="h-full w-full object-contain grayscale"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

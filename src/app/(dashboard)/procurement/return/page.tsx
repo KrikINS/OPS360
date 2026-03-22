@@ -80,6 +80,7 @@ interface DebitNoteData {
   evidence_url?: string
   status: string
   vendor_name?: string
+  item_names?: string[]
   vendor?: {
     name: string;
     gstin?: string;
@@ -92,6 +93,7 @@ interface DebitNoteData {
   };
   metadata?: {
     serial_numbers?: string[];
+    item_names?: string[];
   };
   po?: {
     po_number: string;
@@ -129,6 +131,8 @@ export default function PurchaseReturn() {
   const [searchTerm, setSearchTerm] = useState("")
   const [vendorFilter, setVendorFilter] = useState("all")
   const [reasonFilter, setReasonFilter] = useState("all")
+  const [isOpenEditDN, setIsOpenEditDN] = useState(false)
+  const [editingDN, setEditingDN] = useState<DebitNoteData | null>(null)
   const [returnReasons, setReturnReasons] = useState<ReturnReasonMaster[]>([])
   
   const debitNoteRef = useRef<HTMLDivElement>(null)
@@ -160,22 +164,24 @@ export default function PurchaseReturn() {
         .from("debit_notes")
         .select(`
           *,
-          po:po_id(
+          po:purchase_orders (
             po_number,
-            branch:branch_id(name, full_address, gstin),
-            vendor:vendor_id(name, gstin)
-          )
+            branch:branches (name, full_address, gstin),
+            vendor:vendors (name, gstin)
+          ),
+          vendor:vendors (name, gstin)
         `)
-        .order('created_at', { ascending: false })
+        .order("created_at", { ascending: false })
 
       if (!error && data) {
         setReturns((data as unknown as DebitNoteData[]).map((item) => ({
           ...item,
           po_number: item.po_number || item.po?.po_number || 'UNKNOWN',
-          vendor_name: item.vendor_name || item.po?.vendor?.name || 'UNKNOWN',
+          vendor_name: item.vendor?.name || item.po?.vendor?.name || item.vendor_name || 'UNKNOWN',
+          branch: item.po?.branch,
           vendor: item.vendor || item.po?.vendor,
-          branch: item.branch || item.po?.branch,
-          serial_numbers: item.metadata?.serial_numbers || item.serial_numbers || []
+          serial_numbers: item.metadata?.serial_numbers || item.serial_numbers || [],
+          item_names: item.metadata?.item_names || []
         })))
       }
     } catch (err) {
@@ -184,6 +190,10 @@ export default function PurchaseReturn() {
       setFetchingReturns(false)
     }
   }, [supabase])
+
+  useEffect(() => {
+    fetchReturnReasons()
+  }, [fetchReturnReasons])
 
   useEffect(() => {
     fetchReturns()
@@ -328,20 +338,79 @@ export default function PurchaseReturn() {
   async function handleAuthorize(id: string) {
     setAuthorizingId(id)
     try {
-      const { error } = await supabase
+      // 1. Authorize the debit note
+      const { data: dn, error } = await supabase
         .from("debit_notes")
         .update({ status: "Authorized" })
         .eq("id", id)
+        .select("po_id, amount, debit_note_number")
+        .single();
 
       if (error) throw error
       
-      setSuccessMessage("Return transaction authorized successfully.")
+      // 2. DISCREPANCY RECONCILIATION: Subtract return from gap
+      if (dn && dn.po_id) {
+        const { data: openMismatch } = await supabase
+          .from('discrepancies')
+          .select('id, detected_gap, admin_comment')
+          .eq('po_id', dn.po_id)
+          .eq('discrepancy_type', 'Price Mismatch')
+          .neq('status', 'Resolved')
+          .maybeSingle();
+
+        if (openMismatch) {
+          // Adjust the gap. (Negative gap means billed less than PO, so a return - which is also a bill-reduction - makes the gap positive/zero?)
+          // Wait! Gap = TotalBills - POTotal. (Negative = Underbilling).
+          // If we return, we are essentially "matching" the underbilling.
+          // New Gap = Current Gap + Return Amount
+          const newGap = Number(openMismatch.detected_gap) + Number(dn.amount);
+          const timestamp = new Date().toLocaleString('en-IN');
+          const isResolved = Math.abs(newGap) < 1;
+          
+          const newComment = `${openMismatch.admin_comment}\n\n[RESOLVE ${timestamp}]: Authorized Return (${dn.debit_note_number}) for ₹${Number(dn.amount).toLocaleString('en-IN')} applied. New Gap: ₹${newGap.toLocaleString('en-IN')}.${isResolved ? ' RESOLVED.' : ''}`;
+          
+          await supabase
+            .from('discrepancies')
+            .update({ 
+               detected_gap: newGap,
+               admin_comment: newComment,
+               status: isResolved ? 'Resolved' : 'Investigating'
+            })
+            .eq('id', openMismatch.id);
+        }
+      }
+
+      setSuccessMessage("Return transaction authorized and discrepancy reconciled.");
       fetchReturns() // Refresh list
     } catch (err) {
       console.error("Authorization failed", err)
       setError("Failed to authorize return.")
     } finally {
       setAuthorizingId(null)
+    }
+  }
+
+  async function handleUpdateDN() {
+    if (!editingDN) return;
+    setReturnLoading(true);
+    try {
+      const { error } = await supabase
+        .from("debit_notes")
+        .update({
+          reason: editingDN.reason,
+          amount: editingDN.amount
+        })
+        .eq("id", editingDN.id);
+
+      if (error) throw error;
+      setSuccessMessage(`Debit Note ${editingDN.debit_note_number} updated successfully.`);
+      setIsOpenEditDN(false);
+      fetchReturns();
+    } catch (err) {
+      console.error("Failed to update debit note", err);
+      setError("Failed to update debit note details.");
+    } finally {
+      setReturnLoading(false);
     }
   }
 
@@ -482,7 +551,7 @@ export default function PurchaseReturn() {
           </div>
         )}
 
-        {error && !isReturnModalOpen && (
+        {error && (
           <div className="p-4 bg-red-50 border-y border-red-100 flex items-center gap-3 text-red-600 font-bold text-xs uppercase tracking-tight">
             <AlertCircle className="h-4 w-4" />
             {error}
@@ -509,6 +578,8 @@ export default function PurchaseReturn() {
                     <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Vendor</TableHead>
                     <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Return Logic</TableHead>
                     <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Landed Cost / Debit Note</TableHead>
+                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name</TableHead>
+                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Serials</TableHead>
                     <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Status</TableHead>
                     <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] uppercase">Actions</TableHead>
                   </TableRow>
@@ -552,6 +623,18 @@ export default function PurchaseReturn() {
                           Landed Cost Sum: {formatCurrency(ret.amount)}
                         </div>
                       </TableCell>
+                      <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                        <div className="font-bold text-slate-900 line-clamp-1 max-w-[150px]">{ret.item_names?.join(", ") || "Multiple Items"}</div>
+                      </TableCell>
+                      <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                        <div className="flex flex-wrap gap-1">
+                          {ret.serial_numbers.map((sn) => (
+                            <Badge key={sn} variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-[9px] font-mono px-1.5 py-0 h-4">
+                              {sn}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
                       <TableCell className="py-3 px-4 border-r border-slate-100/50">
                         <Badge className={cn(
                           "text-[9px] px-2 py-0.5 font-black uppercase tracking-tighter",
@@ -579,6 +662,18 @@ export default function PurchaseReturn() {
                             >
                               <Eye className="h-4 w-4 mr-2" />
                               View Debit Note
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem 
+                              onSelect={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setEditingDN(ret);
+                                setIsOpenEditDN(true);
+                              }}
+                              className="text-amber-600 focus:text-amber-600 font-medium cursor-pointer"
+                            >
+                              <Settings2 className="h-4 w-4 mr-2" />
+                              Edit Details
                             </DropdownMenuItem>
                             
                             {ret.status?.toLowerCase() !== 'authorized' && ret.status?.toLowerCase() !== 'paid' && (
@@ -737,6 +832,13 @@ export default function PurchaseReturn() {
 
               {/* Right Column: Reasoning & Proof */}
               <div className="col-span-2 p-8 bg-slate-50/50 space-y-8">
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-600 font-bold text-[10px] uppercase tracking-tight">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      {error}
+                    </div>
+                  )}
+
                   <div className="space-y-4">
                     <label className="text-[10px] font-black text-[#000000] uppercase tracking-widest">3. Primary Return Logic</label>
                     <Select value={returnReason} onValueChange={(v) => setReturnReason(v || "")}>
@@ -950,8 +1052,33 @@ export default function PurchaseReturn() {
                   </Table>
                 </div>
 
-                <div className="flex justify-end pt-4">
-                  <div className="w-[340px] space-y-2 p-6 rounded-2xl bg-[#001529]/5 border border-[#001529]/10">
+                <div className="flex justify-between items-start pt-6 gap-10">
+                  {/* Rejection Clause & Value in Words on the left */}
+                  <div className="flex-1 space-y-6 pt-2">
+                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-inner">
+                      <h4 className="text-xs font-black uppercase flex items-center gap-2 m-0 text-slate-800">
+                        <AlertCircle className="h-4 w-4 text-rose-600" /> Rejection & Debit Clause
+                      </h4>
+                      <p className="text-[10px] font-bold leading-relaxed text-slate-600 italic m-0">
+                        This debit note is issued in accordance with the purchase return protocol and quality inspection records. 
+                        The corresponding amount will be adjusted against the vendor&apos;s pending invoices or future payment cycles. 
+                        Acceptance of this return constitutes agreement to these financial adjustments.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-1.5 pl-2">
+                       <Label className="text-[10px] text-slate-400 font-black uppercase tracking-widest block">Total Reversal Value in Words</Label>
+                       <p className="text-xs font-black italic m-0 underline decoration-slate-900 underline-offset-4 text-[#001529]">
+                         {numberToWords(Math.round(viewingDebitNote.amount))}.
+                       </p>
+                    </div>
+                  </div>
+
+                  {/* Financial Summary Box on the right */}
+                  <div className="w-[360px] space-y-3 p-8 rounded-2xl bg-[#001529] text-white shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                       <ShieldCheck className="h-16 w-16" />
+                    </div>
                     {(() => {
                       const grandTotal = viewingDebitNote.amount;
                       const netValue = grandTotal / 1.18;
@@ -960,27 +1087,21 @@ export default function PurchaseReturn() {
 
                       return (
                         <>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-slate-500 uppercase tracking-tight">Net Deductible</span>
-                            <span className="font-black text-slate-900">{formatCurrency(netValue)}</span>
+                          <div className="flex justify-between items-center text-xs opacity-80">
+                            <span className="font-bold uppercase tracking-tight">Net Deductible</span>
+                            <span className="font-black text-white">{formatCurrency(netValue)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-slate-500 uppercase tracking-tight">CGST Reversed (9%)</span>
-                            <span className="font-black text-slate-900">{formatCurrency(cgst)}</span>
+                          <div className="flex justify-between items-center text-xs opacity-80">
+                            <span className="font-bold uppercase tracking-tight">CGST Reversed (9%)</span>
+                            <span className="font-black text-white">{formatCurrency(cgst)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200">
-                            <span className="font-bold text-slate-500 uppercase tracking-tight">SGST Reversed (9%)</span>
-                            <span className="font-black text-slate-900">{formatCurrency(sgst)}</span>
+                          <div className="flex justify-between items-center text-xs pb-3 border-b border-white/10 opacity-80">
+                            <span className="font-bold uppercase tracking-tight">SGST Reversed (9%)</span>
+                            <span className="font-black text-white">{formatCurrency(sgst)}</span>
                           </div>
-                          <div className="flex justify-between items-center pt-2">
-                            <span className="text-sm font-black text-[#001529] uppercase tracking-tighter">Total Debit value</span>
-                            <span className="text-2xl font-black text-[#001529]">{formatCurrency(grandTotal)}</span>
-                          </div>
-                          <div className="mt-4 pt-4 border-t border-dashed border-slate-300">
-                            <Label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Total Reversal in Words</Label>
-                            <p className="text-[10px] font-black text-[#001529] italic leading-tight">
-                              {numberToWords(Math.round(grandTotal))}.
-                            </p>
+                          <div className="flex justify-between items-center pt-3">
+                            <span className="text-sm font-black uppercase tracking-tighter text-[#7FD1E3]">Total Debit Value</span>
+                            <span className="text-3xl font-black text-white drop-shadow-sm">{formatCurrency(grandTotal)}</span>
                           </div>
                         </>
                       );
@@ -999,11 +1120,25 @@ export default function PurchaseReturn() {
                     <h4 className="text-lg font-black uppercase tracking-tighter text-[#7FD1E3]">Reverse Logistics Integrity Audit</h4>
                     <p className="text-[10px] text-slate-400 font-bold uppercase">Authorized Financial Recovery Mechanism</p>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10">
+
+                  <div className="flex items-center gap-6">
+                    <div className="text-right flex flex-col items-end">
+                      <span className="text-[9px] font-black tracking-widest text-[#7FD1E3] uppercase mb-1">Scan for Validation</span>
+                      <div className="bg-white p-1 rounded-lg shadow-inner shadow-slate-900/20">
+                         <NextImage 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`OPS360-DN-MODAL-${viewingDebitNote.debit_note_number}`)}`} 
+                            alt="Validation QR" 
+                            width={48}
+                            height={48}
+                            unoptimized
+                            className="h-12 w-12 block grayscale contrast-125 hover:grayscale-0 transition-all cursor-crosshair"
+                          />
+                      </div>
+                    </div>
+                    <div className="px-5 py-3 bg-white/5 rounded-2xl border border-white/10 flex flex-col justify-center">
                       <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
-                      <p className="text-[10px] font-bold uppercase text-emerald-400 flex items-center gap-1">
-                        <CheckCircle2 className="h-2 w-2" /> Audited & Verified
+                      <p className="text-[11px] font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3 w-3" /> Audited & Verified
                       </p>
                     </div>
                   </div>
@@ -1059,6 +1194,56 @@ export default function PurchaseReturn() {
           />
         )}
       </div>
+      {/* ── EDIT DEBIT NOTE MODAL ── */}
+      <Dialog open={isOpenEditDN} onOpenChange={setIsOpenEditDN}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-amber-500" />
+              Edit Debit Note: {editingDN?.debit_note_number}
+            </DialogTitle>
+            <DialogDescription>
+              Update the return reason or amount for this transaction.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider">Return Reason</Label>
+              <Select 
+                value={editingDN?.reason || ""} 
+                onValueChange={(v: string | null) => {
+                  if (v && editingDN) setEditingDN({...editingDN, reason: v});
+                }}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select Reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {returnReasons.map(r => (
+                    <SelectItem key={r.id} value={r.reason_text}>{r.reason_text}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider">Landed Cost / Debit Amount (₹)</Label>
+              <Input 
+                type="number"
+                value={editingDN?.amount}
+                onChange={(e) => editingDN && setEditingDN({...editingDN, amount: Number(e.target.value)})}
+                className="font-mono"
+              />
+              <p className="text-[10px] text-slate-400 italic">Warning: Manual amount edits should only be done if the calculated landed cost was incorrect.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpenEditDN(false)} disabled={returnLoading}>Cancel</Button>
+            <Button onClick={handleUpdateDN} disabled={returnLoading} className="bg-[#001529]">
+              {returnLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

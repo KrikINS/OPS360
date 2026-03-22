@@ -116,7 +116,7 @@ export default function InventoryDashboard() {
         .from('inventory')
         .select(`
           *,
-          product:products (
+          product:products!inventory_product_id_fkey (
             id,
             brand,
             model_name,
@@ -135,6 +135,9 @@ export default function InventoryDashboard() {
       }
       
       const { data: dbInventory, error: invErr } = await query
+      if (invErr) {
+        console.error("DEBUG INVENTORY ERROR:", invErr.message, invErr.details, invErr.hint, invErr.code)
+      }
       if (!invErr && dbInventory) {
         setInventory(dbInventory as unknown as InventoryItem[])
       } else {
@@ -418,15 +421,15 @@ export default function InventoryDashboard() {
             <TableHeader className="bg-slate-50 border-b">
               <TableRow>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-10"></TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Brand</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA Code</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-24">Brand</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">EHA Code</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name & Specification</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Total Stock</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Category</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Branch</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Value (LC)</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Primary Aging</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Total Stock</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-28">Category</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-32">Branch</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Status</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">Value (LC)</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right w-24">Primary Aging</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -473,10 +476,11 @@ export default function InventoryDashboard() {
                           {group.product_code}
                         </code>
                       </TableCell>
-                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-[#001529] tracking-tight">{group.model_name}</span>
-                          <span className="text-[10px] text-slate-400 font-medium group-hover:text-slate-500 line-clamp-1">{group.product?.description}</span>
+                      <TableCell className="max-w-[250px] py-3 px-4 border-r border-slate-100/50">
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="font-semibold text-[#001529] tracking-tight break-words line-clamp-2" title={group.model_name}>
+                            {group.model_name}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
@@ -527,6 +531,12 @@ export default function InventoryDashboard() {
                       <TableRow className="bg-slate-50/30 border-b border-slate-100">
                         <TableCell colSpan={10} className="p-0">
                           <div className="px-16 py-4 bg-white/50 animate-in slide-in-from-top-2 duration-300">
+                            {group.product?.description && (
+                              <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5">Model Specification / Description</h4>
+                                <p className="text-xs text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">{group.product.description}</p>
+                              </div>
+                            )}
                             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-inner">
                               <Table>
                                 <TableHeader className="bg-slate-100/50">

@@ -51,6 +51,27 @@ export async function POST(req: NextRequest) {
       error?: string 
     }
     if (result.success) {
+      // ────────────────────────────────────────────────────────────────────────
+      // DISCREPANCY SYNC: Link to open Price Mismatches
+      // ────────────────────────────────────────────────────────────────────────
+      const { data: openMismatch } = await supabase
+        .from('discrepancies')
+        .select('id, admin_comment')
+        .eq('po_id', po_id)
+        .eq('discrepancy_type', 'Price Mismatch')
+        .neq('status', 'Resolved')
+        .maybeSingle();
+
+      if (openMismatch) {
+        const timestamp = new Date().toLocaleString('en-IN');
+        const newComment = `${openMismatch.admin_comment}\n\n[LOG ${timestamp}]: Return initiated (${result.debit_note_number}) for ₹${result.total_amount.toLocaleString('en-IN')}. Awaiting authorization to reconcile gap.`;
+        
+        await supabase
+          .from('discrepancies')
+          .update({ admin_comment: newComment })
+          .eq('id', openMismatch.id);
+      }
+
       return NextResponse.json({ 
         success: true, 
         message: `Return processed successfully. ${result.units_returned} units returned. Debit note: ${result.debit_note_number}`,
