@@ -1,6 +1,7 @@
 "use client"
+// Procurement & Lifecycle Management Page
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useReactToPrint } from "react-to-print"
 import Image from "next/image"
@@ -141,7 +142,9 @@ type PurchaseOrder = {
   bill_url?: string
   vendor_bill_amount?: number
   vendor_bills: VendorBill[]
-  debit_notes?: { amount: number }[]
+  debit_notes?: { id: string, status: string, amount: number }[]
+  discrepancies?: { id: string, status: string }[]
+  grns?: { id: string, grn_number: string }[]
   requester_name?: string
   approver_name?: string
   approver_email?: string
@@ -160,8 +163,6 @@ type PurchaseOrder = {
     override_reason?: string
     product: { model_name: string, hsn_code: string, product_code: string }
   }[]
-    grns?: Array<{ id: string, grn_number: string }>
-    discrepancies?: Array<{ status: string }>
   }
   
   type POTermsTemplate = {
@@ -377,11 +378,26 @@ export default function ProcurementGRNPage() {
   };
 
 
+  // Memoized counters for badges
+  const pendingFulfilmentCount = useMemo(() => 
+    activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length
+  , [activePOs]);
+
+  const auditActionCount = useMemo(() => 
+    activePOs.filter(p => (p.status === 'received' || p.status === 'partially_received' || p.status === 'PARTIALLY_RETURNED') && p.vendor_bills?.length === 0).length
+  , [activePOs]);
+
+  const returnActionCount = useMemo(() => 
+    activePOs.reduce((acc, p) => acc + (p.debit_notes?.filter(dn => !['Authorized', 'Paid', 'authorized'].includes(dn.status)).length || 0), 0)
+  , [activePOs]);
+
+  const discrepancyActionCount = useMemo(() => 
+    activePOs.reduce((acc, p) => acc + (p.discrepancies?.filter(d => ['Open', 'open', 'needs_audit'].includes(d.status)).length || 0), 0)
+  , [activePOs]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-
-
         setLoading(true)
         // 1. Fetch User Role
         const supabase = createClient()
@@ -443,7 +459,7 @@ export default function ProcurementGRNPage() {
           setBranches([])
         }
 
-        // 5. Fetch Terms Templates
+        // 6. Fetch Terms Templates
         try {
           const { data: templateData, error: tErr } = await supabase
             .from('po_terms_templates')
@@ -1173,9 +1189,9 @@ export default function ProcurementGRNPage() {
                 >
                   <Clock className="h-3.5 w-3.5 group-data-active:text-amber-400 transition-colors" />
                   Pending Fulfilment
-                  {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length > 0 && (
+                  {pendingFulfilmentCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
-                      {activePOs.filter(p => p.status === 'approved' || p.status === 'partially_received').length}
+                      {pendingFulfilmentCount}
                     </span>
                   )}
                 </TabsTrigger>
@@ -1185,25 +1201,35 @@ export default function ProcurementGRNPage() {
                 >
                   <Scale className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
                   3-Way Match Audit
-                  {activePOs.filter(p => (p.status === 'received' || p.status === 'partially_received' || p.status === 'PARTIALLY_RETURNED') && p.vendor_bills?.length === 0).length > 0 && (
+                  {auditActionCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
-                      {activePOs.filter(p => (p.status === 'received' || p.status === 'partially_received' || p.status === 'PARTIALLY_RETURNED') && p.vendor_bills?.length === 0).length}
+                      {auditActionCount}
                     </span>
                   )}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="returns" 
-                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 relative"
                 >
                   <RotateCcw className="h-3.5 w-3.5 group-data-active:text-orange-400 transition-colors" />
                   Purchase Returns
+                  {returnActionCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
+                      {returnActionCount}
+                    </span>
+                  )}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="discrepancy" 
-                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 border border-slate-200"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 border border-slate-200 relative"
                 >
                   <ShieldAlert className="h-3.5 w-3.5 group-data-active:text-red-400 transition-colors" />
                   Discrepancy Report
+                  {discrepancyActionCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
+                      {discrepancyActionCount}
+                    </span>
+                  )}
                 </TabsTrigger>
         </TabsList>
       </div>

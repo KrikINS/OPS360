@@ -9,8 +9,10 @@ export const COMPANY_STATE_CODE = '32';
 /**
  * Resolves the GST slab (12%, 18%, or 28%) based on the HSN Code.
  */
-export function getGstRateFromHsn(hsnCode: string): number {
-  if (hsnCode.startsWith('8415') || hsnCode.startsWith('8418')) return 0.28; // AC & Refrigerator
+export function getGstRateFromHsn(hsnCode: string | null | undefined): number {
+  if (!hsnCode) return 0.18; // Default
+  const hsn = String(hsnCode);
+  if (hsn.startsWith('8415') || hsn.startsWith('8418')) return 0.28; // AC & Refrigerator
   if (hsnCode.startsWith('8450')) return 0.18; // Washing Machine
   if (hsnCode.startsWith('8414')) return 0.12; // Fans & Small Appliances
   return 0.18; // Default
@@ -39,8 +41,8 @@ export function calculateLandedCost(
   const gstRate = getGstRateFromHsn(hsnCode);
   const gstType = getGstType(vendorState);
   
-  // Taxable Value includes base price and freight (Composite Supply)
-  const taxableValue = basePrice + freight;
+  // Taxable Value includes total base price (unit price * count) and total freight (Composite Supply)
+  const taxableValue = (basePrice * quantity) + freight;
   const totalGstAmount = taxableValue * gstRate;
   const totalCostWithGst = taxableValue + totalGstAmount;
 
@@ -56,7 +58,7 @@ export function calculateLandedCost(
       sgstAmount: totalGstAmount / 2,
       igstAmount: 0,
       totalGstAmount,
-      totalLandedCost: totalCostWithGst / quantity, // Unit landed cost
+      totalLandedCost: quantity > 0 ? (totalCostWithGst / quantity) : totalCostWithGst, // Unit landed cost
       totalBatchCost: totalCostWithGst,
       gstType
     };
@@ -71,7 +73,7 @@ export function calculateLandedCost(
     sgstAmount: 0,
     igstAmount: totalGstAmount,
     totalGstAmount,
-    totalLandedCost: totalCostWithGst / quantity, // Unit landed cost
+    totalLandedCost: quantity > 0 ? (totalCostWithGst / quantity) : totalCostWithGst, // Unit landed cost
     totalBatchCost: totalCostWithGst,
     gstType
   };

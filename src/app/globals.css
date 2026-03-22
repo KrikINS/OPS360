@@ -215,4 +215,13 @@
     background-color: #002244;
     color: #ffffff;
   }
+
+  /* Scrollbar removal utility */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none !important;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
 }
