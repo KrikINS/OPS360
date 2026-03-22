@@ -642,11 +642,11 @@ export default function RetailFastPOS() {
                 <span className="uppercase tracking-widest flex items-center gap-2">
                   Total GST Aggregate
                   <Tooltip>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger render={
                       <button type="button" title="GST Info">
                         <AlertCircle className="h-3 w-3" />
                       </button>
-                    </TooltipTrigger>
+                    } />
                     <TooltipContent className="bg-[#001529] text-white border-none p-3 text-xs leading-relaxed max-w-[200px]">
                       Sum of CGST and SGST as per HSN lookup compliance protocol.
                     </TooltipContent>
