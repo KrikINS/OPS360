@@ -100,9 +100,9 @@ export function UserNav({ profile }: UserNavProps) {
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuGroup>
+          <DropdownMenuGroup className="font-bold text-[10px] uppercase tracking-wider">
             <DropdownMenuItem 
-              className="cursor-pointer" 
+              className="cursor-pointer font-bold text-[10px] uppercase tracking-wider h-9" 
               onSelect={(e) => {
                 e.preventDefault()
                 setIsEditDialogOpen(true)
@@ -117,7 +117,7 @@ export function UserNav({ profile }: UserNavProps) {
             <form action={logout}>
               <button
                 type="submit"
-                className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none transition-colors hover:bg-destructive/10 focus:bg-destructive/10"
+                className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-destructive focus:bg-destructive/10 outline-none transition-colors hover:bg-destructive/10"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Log out</span>

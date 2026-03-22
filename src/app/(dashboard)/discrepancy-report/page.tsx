@@ -384,11 +384,11 @@ export default function DiscrepancyReportPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger className={cn(
                           buttonVariants({ variant: "outline", size: "xs" }),
-                          "bg-[#001529] hover:bg-slate-800 text-white border-none h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 transition-all active:scale-95"
+                          "bg-[#001529] hover:bg-slate-800 text-white border-none h-8 px-4 text-[11px] font-bold gap-2 transition-all active:scale-95"
                         )}>
                           Actions <ChevronDown className="h-3 w-3" />
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 bg-white border-slate-200 shadow-xl rounded-xl p-1">
+                        <DropdownMenuContent align="end" className="w-56 bg-white border-slate-200 shadow-xl rounded-xl p-1 font-bold text-[10px] uppercase tracking-wider">
                           <DropdownMenuGroup>
                             <DropdownMenuLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-1">
                               Audit Options
@@ -400,7 +400,7 @@ export default function DiscrepancyReportPage() {
                                   setSelectedDiscrepancy(item);
                                   setResolutionModalOpen(true);
                                 }}
-                                className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                                className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer font-bold text-[10px] uppercase tracking-wider py-2.5 rounded-lg"
                               >
                                 <CheckCircle2 className="h-4 w-4 mr-2" /> Resolve Discrepancy
                               </DropdownMenuItem>
@@ -410,7 +410,7 @@ export default function DiscrepancyReportPage() {
                                   setSelectedDiscrepancy(item);
                                   setReopenModalOpen(true);
                                 }}
-                                className="text-amber-600 focus:text-amber-700 focus:bg-amber-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                                className="text-amber-600 focus:text-amber-700 focus:bg-amber-50 cursor-pointer font-bold text-[10px] uppercase tracking-wider py-2.5 rounded-lg"
                               >
                                 <History className="h-4 w-4 mr-2" /> Reopen Investigation
                               </DropdownMenuItem>
@@ -422,7 +422,7 @@ export default function DiscrepancyReportPage() {
                                 setNewGapValue(item.detected_gap.toString());
                                 setEditGapModalOpen(true);
                               }}
-                              className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                              className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 cursor-pointer font-bold text-[10px] uppercase tracking-wider py-2.5 rounded-lg"
                             >
                               <PencilLine className="h-4 w-4 mr-2" /> Edit Gap Value
                             </DropdownMenuItem>
@@ -435,7 +435,7 @@ export default function DiscrepancyReportPage() {
                               setSelectedDiscrepancy(item);
                               setViewNoteModalOpen(true);
                             }}
-                            className="text-slate-600 focus:text-slate-900 focus:bg-slate-50 cursor-pointer font-bold py-2.5 rounded-lg"
+                            className="text-slate-600 focus:text-slate-900 focus:bg-slate-50 cursor-pointer font-bold text-[10px] uppercase tracking-wider py-2.5 rounded-lg"
                           >
                             <Eye className="h-4 w-4 mr-2" /> View Resolution Note
                           </DropdownMenuItem>

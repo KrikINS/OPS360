@@ -761,19 +761,19 @@ export default function ProcurementGRNPage() {
           if (!uploadError && data) {
             file_paths.push(data.path)
           } else if (uploadError) {
-            console.error("File upload failed for:", file.name, uploadError)
+            throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
           }
         }
       }
 
-      const { error } = await supabase.from('vendor_bills').insert({
+      const { error: insertError } = await supabase.from('vendor_bills').insert({
         po_id: uploadBillPO.id,
         bill_number: billNumber.trim(),
         bill_amount: Number(billAmount),
         file_path: file_paths.length > 0 ? file_paths.join(',') : null
       })
 
-      if (error) throw error
+      if (insertError) throw insertError
 
       // ────────────────────────────────────────────────────────────────────────
       // DISCREPANCY AUDIT: Detect Variances & Log to Report (Factor in Returns)
@@ -865,13 +865,20 @@ export default function ProcurementGRNPage() {
       setBillFiles([])
       
       const poRes = await fetch('/api/procurement/purchase-orders')
-      setActivePOs(await poRes.json())
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(err.message)
-      } else {
-        alert("An unknown error occurred")
+      const updatedPOs = await poRes.json()
+      setActivePOs(updatedPOs)
+      
+      // Sync the viewing invoices modal if open
+      if (viewingInvoices && viewingInvoices.id === uploadBillPO.id) {
+        const found = updatedPOs.find((p: any) => p.id === uploadBillPO.id)
+        if (found) setViewingInvoices(found)
       }
+    } catch (err: unknown) {
+      console.error("Bill upload failure:", err)
+      const errorMsg = err instanceof Error ? err.message : 
+                      (err && typeof err === 'object' && 'message' in err) ? (err as {message: string}).message :
+                      (typeof err === 'string' ? err : "An unknown error occurred during upload");
+      alert(errorMsg);
     } finally {
       setIsUploadingBill(false)
     }
@@ -1401,14 +1408,31 @@ export default function ProcurementGRNPage() {
                                       {formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0))}
                                     </span>
                                   } />
-                                  <TooltipContent className="bg-[#001529] text-white border-slate-700">
-                                    <div className="space-y-1 text-[10px]">
+                                  <TooltipContent className="bg-[#001529] text-white border-slate-700 w-64">
+                                    <div className="space-y-2 text-[10px]">
                                       <div className="flex justify-between gap-4">
                                         <span className="text-white/60 uppercase font-bold tracking-wider text-[8px]">Excl. Tax</span>
                                         <span className="font-mono">{formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity)), 0))}</span>
                                       </div>
-                                      <div className="flex justify-between gap-4 border-t border-white/10 pt-1">
-                                        <span className="text-white/60 uppercase font-bold tracking-wider text-[8px]">Total GST</span>
+                                      <div className="space-y-1 border-t border-white/10 pt-2">
+                                        <p className="text-[8px] font-black uppercase text-blue-400 tracking-widest mb-1">GST Breakdown</p>
+                                        {Object.entries(
+                                          po.items.reduce((acc: Record<number, { tax: number }>, item) => {
+                                            const rate = Number(item.tax_rate);
+                                            const tax = Number(item.unit_price) * Number(item.quantity) * (rate / 100);
+                                            if (!acc[rate]) acc[rate] = { tax: 0 };
+                                            acc[rate].tax += tax;
+                                            return acc;
+                                          }, {} as Record<number, { tax: number }>)
+                                        ).map(([rate, data]) => (
+                                          <div key={rate} className="flex justify-between text-[9px]">
+                                            <span className="opacity-60">Rate @ {rate}%:</span>
+                                            <span className="font-mono">{formatCurrency(data.tax / 2)} + {formatCurrency(data.tax / 2)}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <div className="flex justify-between gap-4 border-t border-white/20 pt-1 font-black text-blue-400">
+                                        <span className="uppercase tracking-wider text-[8px]">Total GST</span>
                                         <span className="font-mono">{formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * Number(item.tax_rate) / 100), 0))}</span>
                                       </div>
                                     </div>
@@ -1431,7 +1455,7 @@ export default function ProcurementGRNPage() {
                                           <>
                                             <DropdownMenuItem 
                                               onClick={() => handleApprovePO(po.id)}
-                                              className="text-green-600 focus:text-green-600 cursor-pointer font-medium"
+                                              className="text-green-600 focus:text-green-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                               disabled={approvingId === po.id}
                                             >
                                               <CheckCircle2 className="h-4 w-4 mr-2" /> Approve PO
@@ -1441,13 +1465,13 @@ export default function ProcurementGRNPage() {
                                                 setRevisionDialogPO(po)
                                                 setRevisionNotesInput("")
                                               }}
-                                              className="text-amber-600 focus:text-amber-600 cursor-pointer font-medium"
+                                              className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                             >
                                               <RotateCcw className="h-4 w-4 mr-2" /> Revise PO
                                             </DropdownMenuItem>
                                             <DropdownMenuItem 
                                               onClick={() => handleRejectPO(po.id)}
-                                              className="text-red-600 focus:text-red-600 cursor-pointer font-medium"
+                                              className="text-red-600 focus:text-red-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                             >
                                               <XCircle className="h-4 w-4 mr-2" /> Reject PO
                                             </DropdownMenuItem>
@@ -1458,7 +1482,7 @@ export default function ProcurementGRNPage() {
                                     {po.status === 'needs_revision' && (
                                       <DropdownMenuItem 
                                         onClick={() => handleEditResubmit(po)}
-                                        className="text-amber-600 focus:text-amber-600 cursor-pointer font-medium"
+                                        className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                       >
                                         <RotateCcw className="h-4 w-4 mr-2" /> Edit &amp; Resubmit
                                       </DropdownMenuItem>
@@ -1477,7 +1501,7 @@ export default function ProcurementGRNPage() {
                                             setActivePOs(await poRes.json())
                                           }
                                         }}
-                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                       >
                                         <CheckCircle2 className="h-4 w-4 mr-2" /> Submit for Approval
                                       </DropdownMenuItem>
@@ -1486,7 +1510,7 @@ export default function ProcurementGRNPage() {
                                     {(po.status === 'approved' || po.status === 'partially_received') && (
                                       <DropdownMenuItem 
                                         onClick={(e) => { e.stopPropagation(); setSelectedPO(po); }}
-                                        className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
+                                        className="text-[#001529] focus:text-[#001529] cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                       >
                                         <Truck className="h-4 w-4 mr-2" /> Process GRN
                                       </DropdownMenuItem>
@@ -1500,7 +1524,7 @@ export default function ProcurementGRNPage() {
                                               key={grn.id}
                                               onSelect={(e) => e.preventDefault()}
                                               onClick={() => handleDownloadGRN(po, grn.id)}
-                                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px]"
+                                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                               disabled={isDownloading === grn.id + '_grn'}
                                             >
                                               {isDownloading === grn.id + '_grn' ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-2" />}
@@ -1511,7 +1535,7 @@ export default function ProcurementGRNPage() {
                                           <DropdownMenuItem 
                                             onSelect={(e) => e.preventDefault()}
                                             onClick={() => handleDownloadGRN(po)}
-                                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                             disabled={isDownloading === po.id + '_grn'}
                                           >
                                             {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
@@ -1525,7 +1549,7 @@ export default function ProcurementGRNPage() {
                                       <DropdownMenuItem 
                                         onSelect={(e) => e.preventDefault()}
                                         onClick={() => setViewingPO(po)} 
-                                        className="cursor-pointer font-medium"
+                                        className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-slate-700"
                                       >
                                         <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                       </DropdownMenuItem>
@@ -1534,7 +1558,7 @@ export default function ProcurementGRNPage() {
                                         <DropdownMenuItem 
                                           onSelect={(e) => e.preventDefault()}
                                           onClick={() => setViewingInvoices(po)} 
-                                          className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                          className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                         >
                                           <FileCheck className="h-4 w-4 mr-2" /> View Voice/Bill
                                         </DropdownMenuItem>
@@ -1714,14 +1738,14 @@ export default function ProcurementGRNPage() {
                                     <DropdownMenuItem 
                                       onSelect={(e) => e.preventDefault()}
                                       onClick={() => setSelectedPO(po)}
-                                      className="text-[#001529] focus:text-[#001529] cursor-pointer font-medium"
+                                      className="text-[#001529] focus:text-[#001529] cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                     >
                                       <Truck className="h-4 w-4 mr-2" /> Process GRN
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 
                                       onSelect={(e) => e.preventDefault()}
                                       onClick={() => setViewingPO(po)} 
-                                      className="cursor-pointer font-medium"
+                                      className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-slate-700"
                                     >
                                       <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                     </DropdownMenuItem>
@@ -1902,9 +1926,13 @@ export default function ProcurementGRNPage() {
                              const grnTotal = grnSubtotal + grnTaxTotal;
                              
                              const billAmount = po.vendor_bills?.reduce((acc: number, b: VendorBill) => acc + Number(b.bill_amount), 0) || 0;
-                             const isMatch = (Math.abs(poTotal - billAmount) < 1 && Math.abs(grnTotal - billAmount) < 1) || 
-                                            po.discrepancies?.some((d: { status: string }) => d.status === 'Resolved' || d.status === 'resolved');
-                             const matchesPO = Math.abs(poTotal - billAmount) < 1 || po.discrepancies?.some((d: { status: string }) => d.status === 'Resolved' || d.status === 'resolved');
+                             
+                             const hasOpenDiscrepancy = po.discrepancies?.some((d: { status: string }) => d.status === 'Open' || d.status === 'open');
+                             const isMatch = !hasOpenDiscrepancy && 
+                                            Math.abs(poTotal - billAmount) < 1 && 
+                                            Math.abs(grnTotal - billAmount) < 1;
+                             
+                             const matchesPO = !hasOpenDiscrepancy && Math.abs(poTotal - billAmount) < 1;
                             const hasBill = po.vendor_bills?.length > 0;
                             const daysOutstanding = Math.floor((new Date().getTime() - new Date(po.created_at).getTime()) / (1000 * 3600 * 24));
 
@@ -2010,7 +2038,7 @@ export default function ProcurementGRNPage() {
                                             setViewingPO(po);
                                           }
                                         }} 
-                                        className="cursor-pointer font-medium"
+                                        className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-[#001529]"
                                       >
                                         <Search className="h-4 w-4 mr-2" /> Audit & Reconcile
                                       </DropdownMenuItem>
@@ -2035,7 +2063,7 @@ export default function ProcurementGRNPage() {
                                           <DropdownMenuItem 
                                             onSelect={(e) => e.preventDefault()}
                                             onClick={() => handleDownloadGRN(po)}
-                                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                             disabled={isDownloading === po.id + '_grn'}
                                           >
                                             {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
@@ -2049,7 +2077,7 @@ export default function ProcurementGRNPage() {
                                       <DropdownMenuItem 
                                         onSelect={(e) => e.preventDefault()}
                                         onClick={() => setUploadBillPO(po)} 
-                                        className="cursor-pointer font-medium text-amber-600 focus:text-amber-600"
+                                        className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-amber-600 focus:text-amber-600"
                                       >
                                         <Upload className="h-4 w-4 mr-2" /> Upload Bill Details
                                       </DropdownMenuItem>
@@ -2058,7 +2086,7 @@ export default function ProcurementGRNPage() {
                                     <DropdownMenuItem 
                                       onSelect={(e) => e.preventDefault()}
                                       onClick={() => setViewingPO(po)} 
-                                      className="cursor-pointer font-medium"
+                                      className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-[#001529]"
                                     >
                                       <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                     </DropdownMenuItem>
@@ -2067,7 +2095,7 @@ export default function ProcurementGRNPage() {
                                       <DropdownMenuItem 
                                         onSelect={(e) => e.preventDefault()}
                                         onClick={() => setViewingInvoices(po)} 
-                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-medium"
+                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                       >
                                         <FileCheck className="h-4 w-4 mr-2" /> View Invoice
                                       </DropdownMenuItem>
@@ -2256,6 +2284,48 @@ export default function ProcurementGRNPage() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+
+                {/* Tax Breakdown Summary - Modal View */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                    <ShieldCheck className="h-3 w-3" />
+                    GST Tax Summary breakdown
+                  </h4>
+                  <div className="border border-slate-100 rounded-xl overflow-hidden bg-slate-50/30">
+                    <Table>
+                      <TableHeader className="bg-slate-100/50">
+                        <TableRow className="border-b border-slate-200 hover:bg-transparent h-8">
+                          <TableHead className="p-2 text-[8px] font-black uppercase tracking-widest">Tax Slab</TableHead>
+                          <TableHead className="p-2 text-right text-[8px] font-black uppercase tracking-widest">Taxable Value</TableHead>
+                          <TableHead className="p-2 text-right text-[8px] font-black uppercase tracking-widest">CGST</TableHead>
+                          <TableHead className="p-2 text-right text-[8px] font-black uppercase tracking-widest">SGST</TableHead>
+                          <TableHead className="p-2 text-right text-[8px] font-black uppercase tracking-widest">Total GST</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(
+                          viewingPO.items.reduce((acc: Record<number, { taxable: number, tax: number }>, item: POItem) => {
+                            const rate = Number(item.tax_rate);
+                            const taxable = Number(item.unit_price) * Number(item.quantity);
+                            const tax = taxable * (rate / 100);
+                            if (!acc[rate]) acc[rate] = { taxable: 0, tax: 0 };
+                            acc[rate].taxable += taxable;
+                            acc[rate].tax += tax;
+                            return acc;
+                          }, {} as Record<number, { taxable: number, tax: number }>)
+                        ).map(([rate, data]) => (
+                          <TableRow key={rate} className="h-8 hover:bg-white transition-colors border-b border-slate-100 last:border-0">
+                            <TableCell className="p-2 text-[10px] font-bold text-[#001529]">GST @ {rate}%</TableCell>
+                            <TableCell className="p-2 text-right text-[10px] font-mono text-slate-600 font-bold">{formatCurrency(data.taxable)}</TableCell>
+                            <TableCell className="p-2 text-right text-[10px] font-mono text-slate-500">{formatCurrency(data.tax / 2)}</TableCell>
+                            <TableCell className="p-2 text-right text-[10px] font-mono text-slate-500">{formatCurrency(data.tax / 2)}</TableCell>
+                            <TableCell className="p-2 text-right text-[10px] font-black text-[#001529]">{formatCurrency(data.tax)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
 
                 {/* Lead Architect: Financial Flow & Totals */}
@@ -2723,14 +2793,20 @@ export default function ProcurementGRNPage() {
                           <span className="text-[9px] font-bold text-slate-400 tracking-widest uppercase">
                             {new Date(bill.created_at).toLocaleDateString()}
                           </span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            onClick={() => handleDeleteBill(bill.id, viewingInvoices.id)}
+                          <button 
+                            type="button"
+                            aria-label="Delete bill"
+                            title="Delete bill"
+                            className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors relative z-[100] cursor-pointer"
+                            onClick={(e) => {
+                              console.log("Delete button clicked for bill:", bill.id);
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteBill(bill.id, viewingInvoices.id);
+                            }}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                       

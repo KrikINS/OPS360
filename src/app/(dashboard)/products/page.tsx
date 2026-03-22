@@ -339,17 +339,17 @@ export default function ProductsPage() {
                               Actions <ChevronDown className="h-3 w-3" />
                             </Button>
                           } />
-                          <DropdownMenuContent align="end" className="w-44 font-bold text-[10px] tracking-wider text-[#001529] border-slate-200 shadow-2xl">
-                            <DropdownMenuItem onClick={() => setEditingProduct(p)} className="gap-3 cursor-pointer py-2.5">
+                          <DropdownMenuContent align="end" className="w-44 font-bold text-[10px] uppercase tracking-wider text-[#001529] border-slate-200 shadow-2xl">
+                            <DropdownMenuItem onClick={() => setEditingProduct(p)} className="gap-3 cursor-pointer py-2.5 font-bold text-[10px] uppercase tracking-wider">
                               <Edit2 className="h-3.5 w-3.5 text-blue-500" /> Edit Metadata
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-100" />
                             {p.is_archived ? (
-                              <DropdownMenuItem onClick={() => handleRestore(p.id)} className="gap-3 text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer py-2.5 font-bold">
+                              <DropdownMenuItem onClick={() => handleRestore(p.id)} className="gap-3 text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer py-2.5 font-bold text-[10px] uppercase tracking-wider">
                                 <RefreshCw className="h-3.5 w-3.5" /> Re-commission Asset
                               </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem onClick={() => setConfirmingArchive(p.id)} className="gap-3 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer py-2.5 font-bold">
+                              <DropdownMenuItem onClick={() => setConfirmingArchive(p.id)} className="gap-3 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer py-2.5 font-bold text-[10px] uppercase tracking-wider">
                                 <Archive className="h-3.5 w-3.5" /> Decommission Asset
                               </DropdownMenuItem>
                             )}

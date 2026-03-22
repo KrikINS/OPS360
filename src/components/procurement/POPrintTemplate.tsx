@@ -249,6 +249,48 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </table>
             </div>
             
+            {/* Tax Breakdown Hub */}
+            <div className="space-y-4">
+              <h4 className="font-black text-xs uppercase text-slate-400 tracking-widest flex items-center gap-2 m-0">
+                <ShieldAlert className="h-4 w-4" />
+                GST Tax Summary breakdown
+              </h4>
+              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                <table className="w-full border-collapse">
+                  <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200">
+                      <th className="p-3 text-left font-black uppercase text-[8px] tracking-widest text-slate-500">Tax Rate</th>
+                      <th className="p-3 text-right font-black uppercase text-[8px] tracking-widest text-slate-500">Taxable value</th>
+                      <th className="p-3 text-right font-black uppercase text-[8px] tracking-widest text-slate-500">CGST Amount</th>
+                      <th className="p-3 text-right font-black uppercase text-[8px] tracking-widest text-slate-500">SGST Amount</th>
+                      <th className="p-3 text-right font-black uppercase text-[8px] tracking-widest text-slate-500">Total Tax</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[10px] font-bold text-black bg-white">
+                    {Object.entries(
+                      po.items.reduce((acc, item) => {
+                        const rate = Number(item.tax_rate || 0);
+                        const taxable = Number(item.unit_price) * Number(item.quantity);
+                        const tax = taxable * (rate / 100);
+                        if (!acc[rate]) acc[rate] = { taxable: 0, tax: 0 };
+                        acc[rate].taxable += taxable;
+                        acc[rate].tax += tax;
+                        return acc;
+                      }, {} as Record<number, { taxable: number, tax: number }>)
+                    ).map(([rate, data]) => (
+                      <tr key={rate} className="border-b border-slate-50">
+                        <td className="p-3 text-left uppercase tracking-tighter">GST @ {rate}%</td>
+                        <td className="p-3 text-right font-mono">{formatCurrency(data.taxable)}</td>
+                        <td className="p-3 text-right font-mono">{formatCurrency(data.tax / 2)}</td>
+                        <td className="p-3 text-right font-mono">{formatCurrency(data.tax / 2)}</td>
+                        <td className="p-3 text-right font-black">{formatCurrency(data.tax)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
             {/* Financial Summary Block */}
             <div className="flex justify-end pt-4">
               <div className="w-[320px] space-y-2 p-6 border-2 border-black">
@@ -257,15 +299,18 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                   <span className="font-black text-black">{formatCurrency(netTaxableValue)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-black uppercase tracking-tight">CGST (9%)</span>
-                  <span className="font-black text-black">{formatCurrency(cgst)}</span>
+                  <span className="font-bold text-black uppercase tracking-tight">Total Gst component</span>
+                  <span className="font-black text-black">{formatCurrency(totalTax)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs pb-2 border-b-2 border-black">
-                  <span className="font-bold text-black uppercase tracking-tight">SGST (9%)</span>
-                  <span className="font-black text-black">{formatCurrency(sgst)}</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-black uppercase tracking-tight">Split GST Registry</span>
+                    <span className="text-[8px] opacity-50 uppercase tracking-widest font-black">CGST + SGST (50/50 Allocation)</span>
+                  </div>
+                  <span className="font-black text-black">{formatCurrency(cgst)} + {formatCurrency(sgst)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2">
-                  <span className="text-sm font-black text-black uppercase tracking-tighter">Grand Total</span>
+                  <span className="text-sm font-black text-black uppercase tracking-tighter">Amount Payable (Net)</span>
                   <span className="text-xl font-black text-black">{formatCurrency(grandTotal)}</span>
                 </div>
               </div>

@@ -289,27 +289,18 @@ export const DebitNotePrintTemplate = React.forwardRef<HTMLDivElement, DebitNote
               <p className="text-[7px] m-0 leading-tight">OPS360 ERP | REVERSE LOGISTICS LAYER | AUDITED DOCUMENT</p>
             </div>
             
-            <div className="text-center flex flex-col items-center gap-2">
-              <span className="text-black font-black text-[8px] tracking-[0.2em]">SECURITY COMPLIANCE HUB</span>
-              <div className="flex items-center gap-4">
-                <div className="bg-white p-1 border border-slate-900 leading-none">
-                   {/* Standard img used for consistent print rendering of external Barcode source */}
-                   <img 
-                    src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(debitNote.debit_note_number)}&scaleX=2&scaleY=1&includetext`} 
-                    alt="Barcode" 
-                    style={{ height: '35px', width: 'auto' }}
-                    className="block grayscale contrast-150"
-                  />
-                </div>
-                <div className="bg-white p-1 border border-slate-900 leading-none">
-                   {/* Standard img used for consistent print rendering of external QR source */}
-                   <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-DN-${debitNote.debit_note_number}-${debitNote.id}`)}`} 
-                    alt="Compliance QR" 
-                    style={{ height: '35px', width: '35px' }}
-                    className="block grayscale contrast-125"
-                  />
-                </div>
+            <div className="text-center text-[10px] flex items-center gap-3">
+              <span className="text-black font-black">SCAN FOR VALIDATION</span>
+              <div className="bg-white p-0.5 border border-slate-900 leading-none">
+                 {/* Standard img used for consistent print rendering of external QR source */}
+                 <Image 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-DN-${debitNote.debit_note_number}`)}`} 
+                  alt="Compliance QR" 
+                  width={40}
+                  height={40}
+                  unoptimized
+                  className="h-10 w-10 block grayscale contrast-125"
+                />
               </div>
             </div>
 

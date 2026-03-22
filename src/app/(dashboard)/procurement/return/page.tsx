@@ -350,7 +350,7 @@ export default function PurchaseReturn() {
       
       // 2. DISCREPANCY RECONCILIATION: Subtract return from gap
       if (dn && dn.po_id) {
-        const { data: openMismatch } = await supabase
+        const { data: openMismatch, error: mismatchError } = await supabase
           .from('discrepancies')
           .select('id, detected_gap, admin_comment')
           .eq('po_id', dn.po_id)
@@ -358,18 +358,16 @@ export default function PurchaseReturn() {
           .neq('status', 'Resolved')
           .maybeSingle();
 
-        if (openMismatch) {
-          // Adjust the gap. (Negative gap means billed less than PO, so a return - which is also a bill-reduction - makes the gap positive/zero?)
-          // Wait! Gap = TotalBills - POTotal. (Negative = Underbilling).
-          // If we return, we are essentially "matching" the underbilling.
-          // New Gap = Current Gap + Return Amount
+        if (mismatchError) {
+          console.error("Failed to check for existing discrepancies:", mismatchError);
+        } else if (openMismatch) {
           const newGap = Number(openMismatch.detected_gap) + Number(dn.amount);
           const timestamp = new Date().toLocaleString('en-IN');
           const isResolved = Math.abs(newGap) < 1;
           
           const newComment = `${openMismatch.admin_comment}\n\n[RESOLVE ${timestamp}]: Authorized Return (${dn.debit_note_number}) for ₹${Number(dn.amount).toLocaleString('en-IN')} applied. New Gap: ₹${newGap.toLocaleString('en-IN')}.${isResolved ? ' RESOLVED.' : ''}`;
           
-          await supabase
+          const { error: updateError } = await supabase
             .from('discrepancies')
             .update({ 
                detected_gap: newGap,
@@ -377,14 +375,19 @@ export default function PurchaseReturn() {
                status: isResolved ? 'Resolved' : 'Investigating'
             })
             .eq('id', openMismatch.id);
+
+          if (updateError) {
+            console.error("Discrepancy reconciliation failed:", updateError);
+            throw new Error(`Reconciliation failure: ${updateError.message}`);
+          }
         }
       }
 
       setSuccessMessage("Return transaction authorized and discrepancy reconciled.");
       fetchReturns() // Refresh list
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Authorization failed", err)
-      setError("Failed to authorize return.")
+      setError(`Failed to authorize return: ${err instanceof Error ? err.message : 'Internal logic failure'}`)
     } finally {
       setAuthorizingId(null)
     }
@@ -658,7 +661,7 @@ export default function PurchaseReturn() {
                               onClick={() => {
                                 setViewingDebitNote(ret);
                               }}
-                              className="text-slate-700 font-medium cursor-pointer"
+                              className="text-slate-700 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
                             >
                               <Eye className="h-4 w-4 mr-2" />
                               View Debit Note
@@ -670,7 +673,7 @@ export default function PurchaseReturn() {
                                 setEditingDN(ret);
                                 setIsOpenEditDN(true);
                               }}
-                              className="text-amber-600 focus:text-amber-600 font-medium cursor-pointer"
+                              className="text-amber-600 focus:text-amber-600 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
                             >
                               <Settings2 className="h-4 w-4 mr-2" />
                               Edit Details
@@ -680,7 +683,7 @@ export default function PurchaseReturn() {
                               <DropdownMenuItem 
                                 onSelect={(e) => e.preventDefault()}
                                 onClick={() => handleAuthorize(ret.id)}
-                                className="text-emerald-600 focus:text-emerald-600 font-bold cursor-pointer"
+                                className="text-emerald-600 focus:text-emerald-600 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
                                 disabled={authorizingId === ret.id}
                               >
                                 {authorizingId === ret.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
@@ -692,7 +695,7 @@ export default function PurchaseReturn() {
                               <DropdownMenuItem 
                                 onSelect={(e) => e.preventDefault()}
                                 onClick={() => window.open(ret.evidence_url, '_blank')}
-                                className="text-blue-600 focus:text-blue-600 font-medium cursor-pointer"
+                                className="text-blue-600 focus:text-blue-600 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
                               >
                                 <ExternalLink className="h-4 w-4 mr-2" /> View Evidence
                               </DropdownMenuItem>
@@ -711,7 +714,7 @@ export default function PurchaseReturn() {
 
       {/* ── RETURN INITIATION MODAL ── */}
       <Dialog open={isReturnModalOpen} onOpenChange={setIsReturnModalOpen}>
-        <DialogContent className="sm:max-w-4xl w-full p-0 overflow-hidden border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh]">
+        <DialogContent className="sm:max-w-4xl w-full p-0 overflow-hidden border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh] [&>button]:text-white">
           <DialogHeader className="bg-[#001529] p-6 text-white border-b-0 space-y-1 shrink-0">
             <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
               <div className="bg-orange-500 p-2 rounded-lg">
@@ -947,7 +950,7 @@ export default function PurchaseReturn() {
             setViewingDebitNote(null);
           }
         }}>
-          <DialogContent className="w-[90vw] max-w-[1200px] sm:max-w-none h-[85vh] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl">
+          <DialogContent className="w-[90vw] max-w-[1200px] sm:max-w-none h-[85vh] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl [&>button]:text-white">
             <DialogHeader className="bg-[#111827] p-8 text-white rounded-t-lg shrink-0">
               <div className="flex justify-between items-start w-full">
                 <div className="space-y-4">
