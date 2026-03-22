@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Upload, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 
 interface ImportStockModalProps {
   open: boolean
@@ -31,7 +31,7 @@ export function ImportStockModal({ open, onOpenChange, onSuccess }: ImportStockM
     
     return lines.slice(1).map(line => {
       const values = line.split(",").map(v => v.trim())
-      const obj: any = {}
+      const obj: Record<string, string> = {}
       headers.forEach((header, i) => {
         obj[header] = values[i]
       })
@@ -62,7 +62,7 @@ export function ImportStockModal({ open, onOpenChange, onSuccess }: ImportStockM
       } else {
         setResult({ success: false, message: data.error || "Failed to import items." })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error)
       setResult({ success: false, message: "Error parsing or uploading file." })
     } finally {

@@ -313,6 +313,12 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                   <span className="text-sm font-black text-black uppercase tracking-tighter">Amount Payable (Net)</span>
                   <span className="text-xl font-black text-black">{formatCurrency(grandTotal)}</span>
                 </div>
+                <div className="mt-4 pt-4 border-t border-dashed border-black">
+                   <Label className="text-[9px] text-black font-bold uppercase tracking-widest block mb-1">Total Value in Words</Label>
+                   <p className="text-[10px] font-black italic m-0 underline decoration-slate-900 underline-offset-4 text-black">
+                      {numberToWords(Math.round(grandTotal))}.
+                   </p>
+                </div>
               </div>
             </div>
           </div>
@@ -327,10 +333,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               <div className="text-[10px] text-slate-600 leading-relaxed font-medium whitespace-pre-wrap p-5 rounded-xl border border-slate-100 bg-slate-50/50 italic">
                 {po.terms_content || "1. Supply as per agreed specifications and delivery schedule.\n2. Invoices must mention the PO Number and GSTIN of both parties.\n3. Subject to Ernakulam/Kochi Jurisdiction."}
               </div>
-              <div className="space-y-1">
-                 <Label className="text-[9px] text-black font-bold uppercase tracking-widest">Total Value in Words</Label>
-                 <p className="text-[10px] font-black italic m-0 underline decoration-slate-900 underline-offset-4 text-black">{numberToWords(grandTotal)}.</p>
-              </div>
+
             </div>
 
             <div className="space-y-6">

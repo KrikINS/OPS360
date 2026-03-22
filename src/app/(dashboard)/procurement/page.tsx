@@ -870,7 +870,7 @@ export default function ProcurementGRNPage() {
       
       // Sync the viewing invoices modal if open
       if (viewingInvoices && viewingInvoices.id === uploadBillPO.id) {
-        const found = updatedPOs.find((p: any) => p.id === uploadBillPO.id)
+        const found = updatedPOs.find((p: PurchaseOrder) => p.id === uploadBillPO.id)
         if (found) setViewingInvoices(found)
       }
     } catch (err: unknown) {
@@ -2390,7 +2390,7 @@ export default function ProcurementGRNPage() {
               </div>
             </div>
 
-            <DialogFooter className="bg-slate-50 p-6 border-t rounded-b-lg shrink-0">
+            <DialogFooter className="bg-slate-50 p-8 border-t rounded-b-lg shrink-0">
               <div className="flex justify-end items-center w-full gap-4">
                 <Button
                   variant="outline"
