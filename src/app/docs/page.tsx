@@ -42,6 +42,17 @@ export default function DocsPage() {
           </div>
         </Link>
 
+        <Link 
+          href="/docs/inventory"
+          className="group p-8 border rounded-2xl bg-slate-50 hover:bg-white hover:shadow-xl hover:border-[#7FD1E3] transition-all duration-300"
+        >
+          <h3 className="text-lg font-bold group-hover:text-[#001529] transition-colors">Inventory & Stock Aging</h3>
+          <p className="text-sm text-slate-500 mt-2">Track stock lifecycles, aging alerts, and opening stock imports.</p>
+          <div className="mt-6 flex items-center text-[#7FD1E3] font-semibold text-sm">
+            Read Guide <ChevronRight className="ml-2 h-4 w-4" />
+          </div>
+        </Link>
+
         <section className="space-y-4 p-8 border rounded-2xl bg-slate-50 hover:bg-white hover:shadow-xl transition-all duration-300">
             <h2 className="text-2xl font-semibold flex items-center gap-2">
               <Package className="h-6 w-6 text-primary" />

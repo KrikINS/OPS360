@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Upload, AlertCircle, FileSpreadsheet } from "lucide-react"
 
 export default function InventoryDocs() {
   return (
@@ -144,6 +144,38 @@ export default function InventoryDocs() {
           </p>
         </div>
         <div className="absolute top-0 right-0 h-full w-1/3 bg-gradient-to-l from-white/5 to-transparent" />
+      </div>
+
+      {/* ── Bulk Data Ingestion (CSV Imports) ── */}
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 space-y-6">
+        <div className="flex items-center gap-3 text-[#7FD1E3]">
+          <Upload className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-[#001529]">Bulk Data Ingestion (CSV Imports)</h2>
+        </div>
+        
+        <p className="text-slate-600 leading-relaxed">
+          For large-scale system initialization or warehouse stock-takes, Ops360 provides a high-speed <strong>Opening Stock CSV Import</strong> tool.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white border rounded-xl p-6 space-y-3">
+             <div className="flex items-center gap-2 text-[#001529] font-black uppercase tracking-widest text-[10px]">
+               <FileSpreadsheet className="h-4 w-4" /> Required Columns
+             </div>
+             <p className="text-xs text-slate-500 leading-relaxed">
+               The CSV must contain: <strong>Brand</strong>, <strong>Item Name</strong> (Model), <strong>Serial Number</strong>, <strong>Branch Name</strong>, and <strong>Estimated Cost</strong>. 
+               The system automatically maps these strings to existing project IDs.
+             </p>
+          </div>
+          <div className="bg-white border rounded-xl p-6 space-y-3">
+             <div className="flex items-center gap-2 text-amber-600 font-black uppercase tracking-widest text-[10px]">
+               <AlertCircle className="h-4 w-4" /> Validation Rules
+             </div>
+             <p className="text-xs text-slate-500 leading-relaxed">
+               Duplicate serial numbers found in the CSV or existing database will be rejected during the pre-flight scan to ensure <strong>100% data integrity</strong>.
+             </p>
+          </div>
+        </div>
       </div>
     </div>
   )

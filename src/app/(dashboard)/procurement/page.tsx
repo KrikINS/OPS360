@@ -2260,73 +2260,55 @@ export default function ProcurementGRNPage() {
                   <Table>
                     <TableHeader className="bg-slate-50/50">
                       <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                        <TableHead className="w-[60px] text-center font-black uppercase text-[10px] tracking-widest">#</TableHead>
-                        <TableHead className="w-[40%] min-w-[200px] font-black uppercase text-[10px] tracking-widest">Model Specification</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest">HSN/SAC</TableHead>
-                        <TableHead className="text-center font-black uppercase text-[10px] tracking-widest">Qty</TableHead>
-                        <TableHead className="text-right font-black uppercase text-[10px] tracking-widest">Net Rate</TableHead>
-                        <TableHead className="text-right font-black uppercase text-[10px] tracking-widest">Subtotal</TableHead>
+                        <TableHead className="w-[50px] text-center font-black uppercase text-[9px] tracking-tight text-black">#</TableHead>
+                        <TableHead className="w-[25%] min-w-[150px] font-black uppercase text-[9px] tracking-tight text-black">Model Specification</TableHead>
+                        <TableHead className="font-black uppercase text-[9px] tracking-tight text-black">HSN/SAC</TableHead>
+                        <TableHead className="text-center font-black uppercase text-[9px] tracking-tight text-black">Qty</TableHead>
+                        <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Unit Price</TableHead>
+                        <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black min-w-[100px]">Tax Slab</TableHead>
+                        <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Total GST</TableHead>
+                        <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Subtotal</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingPO.items.map((item: POItem, idx: number) => (
-                        <TableRow key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
-                          <TableCell className="text-center font-bold text-slate-400 text-xs align-top pt-4">{idx + 1}</TableCell>
-                          <TableCell className="w-[40%] align-top pt-4 pb-4">
-                            <div className="font-bold text-slate-900 text-sm whitespace-normal break-words leading-tight">{item.product?.model_name || 'Item'}</div>
-                            <div className="text-[10px] font-bold text-blue-500 uppercase tracking-tighter mt-1">SKU: {item.product?.product_code}</div>
-                          </TableCell>
-                          <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter">{item.product?.hsn_code || '---'}</TableCell>
-                          <TableCell className="text-center font-black text-slate-900 text-sm">{item.quantity}</TableCell>
-                          <TableCell className="text-right font-bold text-slate-600">{formatCurrency(item.unit_price)}</TableCell>
-                          <TableCell className="text-right font-black text-[#001529]">{formatCurrency(item.unit_price * item.quantity)}</TableCell>
-                        </TableRow>
-                      ))}
+                      {viewingPO.items.map((item: POItem, idx: number) => {
+                        const qty = Number(item.quantity)
+                        const price = Number(item.unit_price)
+                        const rate = Number(item.tax_rate)
+                        const taxable = price * qty
+                        const taxTotal = taxable * (rate / 100)
+                        const lineTotal = taxable + taxTotal
+
+                        return (
+                          <TableRow key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                            <TableCell className="text-center font-bold text-slate-400 text-xs align-top pt-4">{idx + 1}</TableCell>
+                            <TableCell className="w-[25%] align-top pt-4 pb-4">
+                              <div className="font-bold text-slate-900 text-xs whitespace-normal break-words leading-tight">{item.product?.model_name || 'Item'}</div>
+                              <div className="text-[10px] font-bold text-blue-500 uppercase tracking-tighter mt-1">SKU: {item.product?.product_code}</div>
+                            </TableCell>
+                            <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter align-top pt-4">{item.product?.hsn_code || '---'}</TableCell>
+                            <TableCell className="text-center font-black text-slate-900 text-sm align-top pt-4">{qty}</TableCell>
+                            <TableCell className="text-right font-bold text-slate-600 align-top pt-4">{formatCurrency(price)}</TableCell>
+                            <TableCell className="text-right align-top pt-4">
+                              <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-bold text-[#001529]">GST @ {rate}%</span>
+                                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">({rate/2}% + {rate/2}%)</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-slate-500 align-top pt-4">
+                              {formatCurrency(taxTotal)}
+                            </TableCell>
+                            <TableCell className="text-right font-black text-[#001529] align-top pt-4">
+                              {formatCurrency(lineTotal)}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>
 
-                {/* Tax Breakdown Summary - Modal View */}
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                    <ShieldCheck className="h-3 w-3" />
-                    GST Tax Summary breakdown
-                  </h4>
-                  <div className="border border-slate-100 rounded-xl overflow-hidden bg-slate-50/30">
-                    <Table>
-                      <TableHeader className="bg-slate-100/50">
-                        <TableRow className="border-b border-slate-200 hover:bg-transparent h-8">
-                          <TableHead className="p-2 text-[8px] font-black uppercase tracking-widest">Tax Slab</TableHead>
-                          <TableHead className="p-2 text-right text-[8px] font-black uppercase tracking-widest">Taxable Value</TableHead>
-                          <TableHead className="p-2 text-right text-[8px] font-black uppercase tracking-widest">CGST</TableHead>
-                          <TableHead className="p-2 text-right text-[8px] font-black uppercase tracking-widest">SGST</TableHead>
-                          <TableHead className="p-2 text-right text-[8px] font-black uppercase tracking-widest">Total GST</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(
-                          viewingPO.items.reduce((acc: Record<number, { taxable: number, tax: number }>, item: POItem) => {
-                            const rate = Number(item.tax_rate);
-                            const taxable = Number(item.unit_price) * Number(item.quantity);
-                            const tax = taxable * (rate / 100);
-                            if (!acc[rate]) acc[rate] = { taxable: 0, tax: 0 };
-                            acc[rate].taxable += taxable;
-                            acc[rate].tax += tax;
-                            return acc;
-                          }, {} as Record<number, { taxable: number, tax: number }>)
-                        ).map(([rate, data]) => (
-                          <TableRow key={rate} className="h-8 hover:bg-white transition-colors border-b border-slate-100 last:border-0">
-                            <TableCell className="p-2 text-[10px] font-bold text-[#001529]">GST @ {rate}%</TableCell>
-                            <TableCell className="p-2 text-right text-[10px] font-mono text-slate-600 font-bold">{formatCurrency(data.taxable)}</TableCell>
-                            <TableCell className="p-2 text-right text-[10px] font-mono text-slate-500">{formatCurrency(data.tax / 2)}</TableCell>
-                            <TableCell className="p-2 text-right text-[10px] font-mono text-slate-500">{formatCurrency(data.tax / 2)}</TableCell>
-                            <TableCell className="p-2 text-right text-[10px] font-black text-[#001529]">{formatCurrency(data.tax)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
+
 
                 {/* Lead Architect: Financial Flow & Totals */}
                 <div className="flex justify-end pt-4">

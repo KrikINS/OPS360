@@ -1,4 +1,4 @@
-import { Truck, ShieldCheck, Calculator, Hash, AlertTriangle, Download, ShieldAlert, History } from "lucide-react"
+import { Truck, ShieldCheck, Calculator, Hash, AlertTriangle, Download, ShieldAlert, History, LayoutGrid } from "lucide-react"
 
 export default function ProcurementDocs() {
   return (
@@ -201,6 +201,68 @@ export default function ProcurementDocs() {
         </div>
       </section>
 
+      {/* ── Detailed Tax Breakdown Hub (GST Summary) ── */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-3 text-[#7FD1E3]">
+          <ShieldAlert className="h-6 w-6" />
+          <h2 className="text-2xl font-bold text-[#001529]">Detailed Tax Breakdown Hub</h2>
+        </div>
+        
+        <p className="text-slate-600 leading-relaxed">
+          Ops360 provides a professional-grade <strong>GST Summary Breakdown</strong> for every Purchase Order, ensuring full clarity on tax allocations across multiple rate slabs.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-slate-50 border rounded-2xl p-6 space-y-3">
+             <h4 className="text-[10px] font-black uppercase text-[#001529] tracking-widest flex items-center gap-2">
+               <Calculator className="h-3 w-3" /> Professional Print View
+             </h4>
+             <p className="text-xs text-slate-500 leading-normal">
+               The formal PO PDF includes a dedicated <strong>Tax Summary table</strong> grouping items by their tax rate (e.g., 28%, 18%, 12%). 
+               It explicitly displays the <strong>CGST/SGST split</strong> (50% each) and total tax per slab.
+             </p>
+          </div>
+          <div className="bg-slate-50 border rounded-2xl p-6 space-y-3">
+             <h4 className="text-[10px] font-black uppercase text-[#001529] tracking-widest flex items-center gap-2">
+               <ShieldCheck className="h-3 w-3" /> Dynamic Modal Insight
+             </h4>
+             <p className="text-xs text-slate-500 leading-normal">
+               The same tabular breakdown is mirrored inside the <strong>&quot;View Purchase Order&quot;</strong> dashboard modal, providing instant fiscal oversight before document generation.
+             </p>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex gap-4">
+          <Calculator className="h-5 w-5 text-blue-600 shrink-0" />
+          <div className="text-sm text-blue-800">
+            <strong>Enhanced Financial Tooltips:</strong> Hovering over the <strong>Total Amount</strong> column in the PO Registry or 3-Way Audit table reveals a popup summary of the GST breakdown, including the total taxable value and the CGST/SGST allocation per tax slab.
+          </div>
+        </div>
+      </section>
+
+      {/* ── Action Menu & UI Standards ── */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-3 text-[#001529]">
+          <LayoutGrid className="h-6 w-6" />
+          <h2 className="text-2xl font-bold">Action Menu & UI Standards</h2>
+        </div>
+        <div className="bg-white border rounded-xl p-6 space-y-4">
+          <p className="text-sm text-slate-600">
+            Ops360 maintains a unified design language across all procurement interfaces:
+          </p>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <li className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border">
+              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#001529]">Standardized Action Menus</span>
+            </li>
+            <li className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border">
+              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#001529]">Consistent Typographic Scale</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
       {/* ── Procurement Terms & Conditions Templates ── */}
       <section className="space-y-4">
         <div className="flex items-center gap-3 text-[#2E86C1]">
@@ -253,6 +315,25 @@ export default function ProcurementDocs() {
         <p className="text-slate-600 leading-relaxed">
           Ops360 includes an automated <strong>Discrepancy Report Registry</strong> that captures every fiscal and physical variance detected during the procurement lifecycle.
         </p>
+
+        <div className="bg-white border rounded-2xl p-6 shadow-sm border-l-4 border-l-blue-600 animate-in fade-in slide-in-from-right-4">
+          <h4 className="text-[10px] font-black uppercase text-blue-600 tracking-widest mb-3 flex items-center gap-2">
+            <ShieldCheck className="h-3 w-3" /> Audit Synchronization Protocols
+          </h4>
+          <p className="text-sm text-slate-600 leading-relaxed mb-4">
+            The <strong>3-Way Audit</strong> engine uses real-time state synchronization to ensure your workspace remains accurate during multi-user operations:
+          </p>
+          <ul className="space-y-4 text-xs text-slate-500">
+            <li className="flex gap-4">
+              <span className="font-bold text-[#001529] min-w-[120px]">Live Sync:</span>
+              <span>Uploading or updating a Vendor Bill automatically refreshes the underlying Purchase Order state and synchronizes any open <strong>&quot;View Invoices&quot;</strong> modals instantly.</span>
+            </li>
+            <li className="flex gap-4">
+              <span className="font-bold text-[#001529] min-w-[120px]">Deletion Safeguards:</span>
+              <span>Removing an incorrect invoice requires explicit confirmation. Upon deletion, the system recalculates the <strong>Bill Total</strong> and updates the Match Status (e.g., from <strong>MATCHED</strong> to <strong>UNMATCHED</strong>) immediately.</span>
+            </li>
+          </ul>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-slate-50 border rounded-2xl p-6 space-y-3">

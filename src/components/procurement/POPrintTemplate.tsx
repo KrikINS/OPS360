@@ -216,81 +216,61 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               Line Item Breakdown
             </h4>
             <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-              <table className="w-full border-collapse table-fixed">
+              <table className="w-full border-collapse">
                 <thead className="bg-white">
                   <tr className="border-b-2 border-black">
-                    <th className="p-4 text-center w-[60px] font-black uppercase text-[9px] tracking-widest text-[#000000]">#</th>
-                    <th className="p-4 text-left w-[40%] font-black uppercase text-[9px] tracking-widest text-[#000000]">Model Specification</th>
-                    <th className="p-4 text-left w-[15%] font-black uppercase text-[9px] tracking-widest text-[#000000]">HSN/SAC</th>
-                    <th className="p-4 text-center w-20 font-black uppercase text-[9px] tracking-widest text-[#000000]">Qty</th>
-                    <th className="p-4 text-right w-32 font-black uppercase text-[9px] tracking-widest text-[#000000]">Net Rate</th>
-                    <th className="p-4 text-right w-32 font-black uppercase text-[9px] tracking-widest text-[#000000]">Subtotal</th>
+                    <th className="p-3 text-center w-[40px] font-black uppercase text-[8px] tracking-tight text-black">#</th>
+                    <th className="p-3 text-left w-[25%] font-black uppercase text-[8px] tracking-tight text-black">Model Specification</th>
+                    <th className="p-3 text-left font-black uppercase text-[8px] tracking-tight text-black">HSN/SAC</th>
+                    <th className="p-3 text-center font-black uppercase text-[8px] tracking-tight text-black">Qty</th>
+                    <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Unit Price</th>
+                    <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Tax Slab</th>
+                    <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Total GST</th>
+                    <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="text-[11px] text-black">
-                  {po.items.map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-100">
-                      <td className="p-4 text-center align-top font-bold text-black border-r border-slate-100">{idx + 1}</td>
-                      <td className="p-4 align-top w-[40%]">
-                        <div className="font-bold text-black text-sm whitespace-normal break-words leading-tight">{item.product?.model_name || 'Item'}</div>
-                        <div className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter mt-1">SKU: {item.product?.product_code}</div>
-                      </td>
-                      <td className="p-4 align-top text-black font-mono text-[10px] font-bold tracking-tighter w-[15%]">
-                        {item.product?.hsn_code || '---'}
-                      </td>
-                      <td className="p-4 text-center font-black text-black font-mono border-x border-slate-100">
-                        {item.quantity}
-                      </td>
-                      <td className="p-4 text-right font-bold text-black">{formatCurrency(item.unit_price)}</td>
-                      <td className="p-4 text-right font-black text-black">{formatCurrency(item.unit_price * item.quantity)}</td>
-                    </tr>
-                  ))}
+                <tbody className="text-[10px] text-black bg-white">
+                  {po.items.map((item, idx) => {
+                    const qty = Number(item.quantity)
+                    const price = Number(item.unit_price)
+                    const rate = Number(item.tax_rate || 0)
+                    const taxable = price * qty
+                    const taxTotal = taxable * (rate / 100)
+                    const lineTotal = taxable + taxTotal
+
+                    return (
+                      <tr key={idx} className="border-b border-slate-100">
+                        <td className="p-3 text-center align-top font-bold text-black border-r border-slate-100">{idx + 1}</td>
+                        <td className="p-3 align-top w-[25%]">
+                          <div className="font-bold text-black text-[11px] whitespace-normal break-words leading-tight">{item.product?.model_name || 'Item'}</div>
+                          <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter mt-1">SKU: {item.product?.product_code}</div>
+                        </td>
+                        <td className="p-3 align-top text-black font-mono text-[9px] font-bold tracking-tighter">
+                          {item.product?.hsn_code || '---'}
+                        </td>
+                        <td className="p-3 text-center font-black text-black font-mono border-x border-slate-100 align-top">
+                          {qty}
+                        </td>
+                        <td className="p-3 text-right font-bold text-black align-top">{formatCurrency(price)}</td>
+                        <td className="p-3 text-right align-top">
+                           <div className="flex flex-col items-end">
+                              <span className="font-bold text-black">GST @ {rate}%</span>
+                              <span className="text-[7px] text-slate-400 font-bold uppercase tracking-tighter">({rate/2}% + {rate/2}%)</span>
+                           </div>
+                        </td>
+                        <td className="p-3 text-right font-bold text-black align-top">
+                           {formatCurrency(taxTotal)}
+                        </td>
+                        <td className="p-3 text-right font-black text-black align-top">
+                           {formatCurrency(lineTotal)}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
-            
-            {/* Tax Breakdown Hub */}
-            <div className="space-y-4">
-              <h4 className="font-black text-xs uppercase text-slate-400 tracking-widest flex items-center gap-2 m-0">
-                <ShieldAlert className="h-4 w-4" />
-                GST Tax Summary breakdown
-              </h4>
-              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                <table className="w-full border-collapse">
-                  <thead className="bg-slate-50">
-                    <tr className="border-b border-slate-200">
-                      <th className="p-3 text-left font-black uppercase text-[8px] tracking-widest text-slate-500">Tax Rate</th>
-                      <th className="p-3 text-right font-black uppercase text-[8px] tracking-widest text-slate-500">Taxable value</th>
-                      <th className="p-3 text-right font-black uppercase text-[8px] tracking-widest text-slate-500">CGST Amount</th>
-                      <th className="p-3 text-right font-black uppercase text-[8px] tracking-widest text-slate-500">SGST Amount</th>
-                      <th className="p-3 text-right font-black uppercase text-[8px] tracking-widest text-slate-500">Total Tax</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-[10px] font-bold text-black bg-white">
-                    {Object.entries(
-                      po.items.reduce((acc, item) => {
-                        const rate = Number(item.tax_rate || 0);
-                        const taxable = Number(item.unit_price) * Number(item.quantity);
-                        const tax = taxable * (rate / 100);
-                        if (!acc[rate]) acc[rate] = { taxable: 0, tax: 0 };
-                        acc[rate].taxable += taxable;
-                        acc[rate].tax += tax;
-                        return acc;
-                      }, {} as Record<number, { taxable: number, tax: number }>)
-                    ).map(([rate, data]) => (
-                      <tr key={rate} className="border-b border-slate-50">
-                        <td className="p-3 text-left uppercase tracking-tighter">GST @ {rate}%</td>
-                        <td className="p-3 text-right font-mono">{formatCurrency(data.taxable)}</td>
-                        <td className="p-3 text-right font-mono">{formatCurrency(data.tax / 2)}</td>
-                        <td className="p-3 text-right font-mono">{formatCurrency(data.tax / 2)}</td>
-                        <td className="p-3 text-right font-black">{formatCurrency(data.tax)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            
+
             {/* Financial Summary Block */}
             <div className="flex justify-end pt-4">
               <div className="w-[320px] space-y-2 p-6 border-2 border-black">
