@@ -5,15 +5,15 @@ import { Printer, CheckCircle2, User, Phone, AlertCircle, Loader2 } from 'lucide
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { usePos } from './PosContext'
-import { getGstRateFromHsn } from "@/utils/compliance"
+import { usePos } from '@/context/PosContext'
 
 export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenChange: (val: boolean) => void }) {
-  const { cart, selectedCustomer, executeCheckout, loading } = usePos()
+  const { totals, selectedCustomer, executeCheckout, loading } = usePos()
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.product.base_price * item.qty), 0)
-  const totalGst = cart.reduce((sum, item) => sum + (item.product.base_price * item.qty * getGstRateFromHsn(item.product.hsn_code)), 0)
-  const grandTotal = subtotal + totalGst
+  const handleCheckout = async () => {
+    await executeCheckout()
+    onOpenChange(false)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,13 +47,13 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
           </div>
 
           <div className="bg-slate-50 rounded-xl border border-slate-100 p-4 space-y-3 font-bold text-[11px]">
-             <div className="flex justify-between text-slate-500 font-medium lowercase"><span>Taxable amount</span><span>₹{subtotal.toLocaleString()}</span></div>
-             <div className="flex justify-between text-slate-400 font-medium lowercase"><span>CGST (9%)</span><span>₹{(totalGst / 2).toLocaleString()}</span></div>
-             <div className="flex justify-between text-slate-400 font-medium lowercase"><span>SGST (9%)</span><span>₹{(totalGst / 2).toLocaleString()}</span></div>
+             <div className="flex justify-between text-slate-500 font-medium lowercase"><span>Taxable amount</span><span>₹{Math.round(totals.subtotal).toLocaleString()}</span></div>
+             <div className="flex justify-between text-slate-400 font-medium lowercase"><span>CGST ({totals.totalGst > 0 ? "Split" : "0%"})</span><span>₹{Math.round(totals.cgst).toLocaleString()}</span></div>
+             <div className="flex justify-between text-slate-400 font-medium lowercase"><span>SGST ({totals.totalGst > 0 ? "Split" : "0%"})</span><span>₹{Math.round(totals.sgst).toLocaleString()}</span></div>
              <div className="h-px bg-slate-200" />
              <div className="flex justify-between items-baseline">
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Payable</span>
-                <span className="text-3xl font-black text-slate-900 tracking-tighter font-mono">₹{Math.round(grandTotal).toLocaleString()}</span>
+                <span className="text-3xl font-black text-slate-900 tracking-tighter font-mono">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
              </div>
           </div>
 
@@ -66,7 +66,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
         <DialogFooter className="p-6 pt-0">
           <div className="flex gap-3 w-full">
             <Button variant="ghost" className="flex-1 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400" onClick={() => onOpenChange(false)}>Abort</Button>
-            <Button className="flex-1 h-12 bg-[#001529] hover:bg-black text-white text-[10px] font-black uppercase tracking-widest" onClick={executeCheckout} disabled={loading}>
+            <Button className="flex-1 h-12 bg-[#001529] hover:bg-black text-white text-[10px] font-black uppercase tracking-widest" onClick={handleCheckout} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
               Seal Invoice
             </Button>

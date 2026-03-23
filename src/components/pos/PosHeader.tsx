@@ -3,7 +3,7 @@
 import React from 'react'
 import { Zap, Monitor, Settings, User } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { usePos } from './PosContext'
+import { usePos } from '@/context/PosContext'
 
 export function PosHeader() {
   const { branchName } = usePos()

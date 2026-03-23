@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { CheckCircle2, XCircle, ShoppingCart } from 'lucide-react'
-import { PosProvider, usePos } from '@/components/pos/PosContext'
+import { PosProvider, usePos } from '@/context/PosContext'
 import { PosHeader } from '@/components/pos/PosHeader'
 import { ProductCatalog } from '@/components/pos/ProductCatalog'
 import { CartSidebar } from '@/components/pos/CartSidebar'
