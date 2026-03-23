@@ -60,8 +60,10 @@ interface PosContextType {
     sgst: number
     grandTotal: number
   }
+  isLocked: boolean
 
   // --- Actions ---
+  setIsLocked: (locked: boolean) => void
   addToCart: (product: Product) => void
   removeFromCart: (productId: string) => void
   updateQty: (productId: string, delta: number) => void
@@ -70,7 +72,7 @@ interface PosContextType {
   searchCustomers: (term: string) => Promise<void>
   selectCustomer: (customer: Customer) => void
   setSelectedCustomer: (customer: Customer | null) => void
-  executeCheckout: () => Promise<void>
+  executeCheckout: () => Promise<{ success: boolean; invoiceId?: string; error?: string }>
   refreshInventory: () => Promise<void>
   changeBranch: (branchId: string) => Promise<void>
 }
@@ -98,6 +100,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
   const [searchingCustomer, setSearchingCustomer] = useState(false)
+  const [isLocked, setIsLocked] = useState(false)
   const [toast, setToast] = useState<Toast>(null)
   const [invoiceNumber, setInvoiceNumber] = useState("")
   const [currentDate, setCurrentDate] = useState("")
@@ -287,15 +290,40 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const executeCheckout = useCallback(async () => {
+    if (cart.length === 0) return { success: false, error: 'Cart is empty' }
     setLoading(true)
-    // Stub for process_pos_sale logic
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setToast({ message: "Sale Executed Successfully!", type: 'success' })
-    clearCart()
-    if (selectedBranch) await fetchInventory(selectedBranch)
-    setInvoiceNumber(`INV-${new Date().getTime().toString().slice(-6)}`)
-    setLoading(false)
-  }, [clearCart, selectedBranch, fetchInventory])
+    try {
+      const { data: invoiceId, error } = await supabase.rpc('process_pos_sale', {
+        p_customer_id: selectedCustomer?.id || '00000000-0000-0000-0000-000000000000',
+        p_branch_id: selectedBranch,
+        p_items: cart.map(item => ({
+          product_id: item.id,
+          qty: item.qty,
+          unit_price: item.base_price,
+          gst_amount: (item.base_price * (item.gst_rate / 100)) * item.qty
+        })),
+        p_net_amount: totals.subtotal,
+        p_tax_amount: totals.totalGst,
+        p_total_amount: totals.grandTotal
+      })
+
+      if (error) throw error
+
+      setToast({ message: `Sale Finalized! Inv: ${invoiceId.slice(0, 8)}`, type: 'success' })
+      clearCart()
+      if (selectedBranch) await fetchInventory(selectedBranch)
+      setInvoiceNumber(`INV-${invoiceId.slice(0, 8).toUpperCase()}`)
+      return { success: true, invoiceId: invoiceId as string }
+    } catch (err) {
+      const error = err as { message?: string }
+      console.error('Checkout Error:', error)
+      const message = error.message || "Execution Failed"
+      setToast({ message, type: 'error' })
+      return { success: false, error: message }
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase, cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory])
 
   // Auto-clear toast
   useEffect(() => {
@@ -308,6 +336,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   const value = {
     products, cart, loading, selectedBranch, branchName, userRole, allBranches,
     selectedCustomer, customerResults, searchingCustomer, toast, invoiceNumber, currentDate, totals,
+    isLocked, setIsLocked,
     addToCart, removeFromCart, updateQty, clearCart, setToast, 
     searchCustomers, selectCustomer, setSelectedCustomer, executeCheckout, refreshInventory, changeBranch
   }

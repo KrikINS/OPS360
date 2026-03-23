@@ -7,6 +7,7 @@ import { PosHeader } from '@/components/pos/PosHeader'
 import { ProductCatalog } from '@/components/pos/ProductCatalog'
 import { CartSidebar } from '@/components/pos/CartSidebar'
 import { CheckoutModal } from '@/components/pos/CheckoutModal'
+import { TerminalLockOverlay } from '@/components/pos/TerminalLockOverlay'
 import { usePosHotkeys } from '@/hooks/usePosHotkeys'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ function POSContent() {
 
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC] overflow-hidden relative">
+      <TerminalLockOverlay />
       {/* Toast Notification */}
       {toast && (
         <div className={cn(

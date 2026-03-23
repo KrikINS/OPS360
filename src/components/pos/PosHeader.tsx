@@ -1,15 +1,68 @@
-"use client"
-
-import React from 'react'
-import { Zap, Settings, User } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Zap, Settings, User, Home, LayoutGrid, Maximize, Minimize, Lock } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { BranchSwitcher } from './BranchSwitcher'
+import { usePos } from '@/context/PosContext'
+import { usePosHotkeys } from '@/hooks/usePosHotkeys'
 
 export function PosHeader() {
+  const router = useRouter()
+  const { userRole, setIsLocked } = usePos()
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handleFsChange)
+    return () => document.removeEventListener('fullscreenchange', handleFsChange)
+  }, [])
+
+  const handleExit = () => router.push('/')
+  
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen()
+    } else {
+      document.exitFullscreen()
+    }
+  }
+
+  usePosHotkeys([
+    { key: 'escape', action: handleExit },
+    { key: 'f', ctrl: true, alt: true, action: toggleFullscreen },
+    { key: 'l', ctrl: true, action: () => setIsLocked(true) }
+  ])
 
   return (
     <header className="h-16 flex items-center justify-between px-6 bg-[#001529] text-white shrink-0 shadow-lg z-20">
       <div className="flex items-center gap-6">
+        {/* Exit Toggle */}
+        <div className="flex items-center gap-2">
+          {userRole === 'admin' ? (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExit}
+              className="bg-white/5 border-white/10 hover:bg-white/20 text-white gap-2 h-10 px-3 rounded-xl transition-all active:scale-95"
+            >
+              <LayoutGrid className="h-4 w-4 text-blue-400" />
+              <div className="flex flex-col items-start leading-none">
+                <span className="text-[10px] font-black uppercase tracking-widest">Dashboard</span>
+                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Exit (ESC)</span>
+              </div>
+            </Button>
+          ) : (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleExit}
+              className="text-slate-400 hover:text-white hover:bg-white/10"
+            >
+              <Home className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
+
         <div className="flex items-center gap-3">
           <div className="bg-blue-500 p-2 rounded-lg">
             <Zap className="h-5 w-5 text-white fill-white" />
@@ -23,6 +76,16 @@ export function PosHeader() {
         <div className="h-8 w-px bg-white/10 hidden md:block" />
         
         <BranchSwitcher />
+
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setIsLocked(true)}
+          className="text-slate-400 hover:text-white hover:bg-white/10 ml-2"
+          title="Lock Terminal (Ctrl+L)"
+        >
+          <Lock className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="flex items-center gap-4">
@@ -41,6 +104,16 @@ export function PosHeader() {
           </div>
         </div>
         
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={toggleFullscreen}
+          className="text-slate-400 hover:text-white hover:bg-white/10"
+          title={isFullscreen ? "Exit Fullscreen (Ctrl+Alt+F)" : "Enter Fullscreen (Ctrl+Alt+F)"}
+        >
+          {isFullscreen ? <Minimize className="h-5 w-5 text-blue-400" /> : <Maximize className="h-5 w-5" />}
+        </Button>
+
         <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white hover:bg-white/10">
           <Settings className="h-5 w-5" />
         </Button>

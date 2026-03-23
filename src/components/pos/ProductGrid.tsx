@@ -61,7 +61,7 @@ export function ProductGrid() {
             <p className="text-[10px] uppercase tracking-wider mt-1 opacity-60">Check criteria or sync inventory</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} onAdd={() => addToCart(product)} />
             ))}
