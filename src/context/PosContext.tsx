@@ -34,12 +34,19 @@ export type Customer = {
 
 export type Toast = { message: string, type: 'success' | 'error' } | null
 
+export type Branch = {
+  id: string
+  name: string
+}
+
 interface PosContextType {
   products: Product[]
   cart: CartItem[]
   loading: boolean
   selectedBranch: string | null
   branchName: string
+  userRole: string | null
+  allBranches: Branch[]
   selectedCustomer: Customer | null
   customerResults: Customer[]
   searchingCustomer: boolean
@@ -65,6 +72,7 @@ interface PosContextType {
   setSelectedCustomer: (customer: Customer | null) => void
   executeCheckout: () => Promise<void>
   refreshInventory: () => Promise<void>
+  changeBranch: (branchId: string) => Promise<void>
 }
 
 // --- Context & Hook ---
@@ -85,6 +93,8 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
   const [branchName, setBranchName] = useState("Main Terminal")
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [allBranches, setAllBranches] = useState<Branch[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
   const [searchingCustomer, setSearchingCustomer] = useState(false)
@@ -142,16 +152,26 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('branch_id, branches(name)')
+          .select('role, assigned_branch_id, branches(name)')
           .eq('id', session.user.id)
           .single()
         
-        if (profile?.branch_id) {
-          const bId = profile.branch_id
-          const bName = (profile.branches as unknown as { name: string })?.name || "Main Terminal"
-          setSelectedBranch(bId)
-          setBranchName(bName)
-          await fetchInventory(bId)
+        if (profile) {
+          setUserRole(profile.role)
+          
+          if (profile.assigned_branch_id) {
+            const bId = profile.assigned_branch_id
+            const bName = (profile.branches as unknown as { name: string })?.name || "Main Terminal"
+            setSelectedBranch(bId)
+            setBranchName(bName)
+            await fetchInventory(bId)
+          }
+
+          // If Admin, fetch all branches for the switcher
+          if (profile.role === 'admin') {
+            const { data: branches } = await supabase.from('branches').select('id, name')
+            if (branches) setAllBranches(branches)
+          }
         }
       }
 
@@ -163,7 +183,6 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
         .single()
       if (walkIn) setSelectedCustomer(walkIn as Customer)
       
-      // Initialize dynamic values here to avoid hydration mismatch
       setInvoiceNumber(`INV-${new Date().getTime().toString().slice(-6)}`)
       setCurrentDate(new Date().toLocaleDateString('en-IN', { 
         day: '2-digit', month: 'short', year: 'numeric' 
@@ -189,6 +208,21 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   }, [cart])
 
   // 4. Core Actions
+  const changeBranch = useCallback(async (branchId: string) => {
+    if (userRole !== 'admin' && selectedBranch) return // Lock logic for non-admins
+    
+    setLoading(true)
+    const { data: branch } = await supabase.from('branches').select('name').eq('id', branchId).single()
+    if (branch) {
+      setSelectedBranch(branchId)
+      setBranchName(branch.name)
+      setCart([]) // Clear cart for new logistical context
+      await fetchInventory(branchId)
+      setToast({ message: `Switched to ${branch.name}`, type: 'success' })
+    }
+    setLoading(false)
+  }, [supabase, userRole, selectedBranch, fetchInventory])
+
   const addToCart = useCallback((product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id)
@@ -259,10 +293,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     setToast({ message: "Sale Executed Successfully!", type: 'success' })
     clearCart()
     if (selectedBranch) await fetchInventory(selectedBranch)
-    
-    // Refresh invoice number for next sale
     setInvoiceNumber(`INV-${new Date().getTime().toString().slice(-6)}`)
-    
     setLoading(false)
   }, [clearCart, selectedBranch, fetchInventory])
 
@@ -275,10 +306,10 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   }, [toast])
 
   const value = {
-    products, cart, loading, selectedBranch, branchName, selectedCustomer, 
-    customerResults, searchingCustomer, toast, invoiceNumber, currentDate, totals,
+    products, cart, loading, selectedBranch, branchName, userRole, allBranches,
+    selectedCustomer, customerResults, searchingCustomer, toast, invoiceNumber, currentDate, totals,
     addToCart, removeFromCart, updateQty, clearCart, setToast, 
-    searchCustomers, selectCustomer, setSelectedCustomer, executeCheckout, refreshInventory
+    searchCustomers, selectCustomer, setSelectedCustomer, executeCheckout, refreshInventory, changeBranch
   }
 
   return <PosContext.Provider value={value}>{children}</PosContext.Provider>

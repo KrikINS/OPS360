@@ -1,12 +1,11 @@
 "use client"
 
 import React from 'react'
-import { Zap, Monitor, Settings, User } from 'lucide-react'
+import { Zap, Settings, User } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { usePos } from '@/context/PosContext'
+import { BranchSwitcher } from './BranchSwitcher'
 
 export function PosHeader() {
-  const { branchName } = usePos()
 
   return (
     <header className="h-16 flex items-center justify-between px-6 bg-[#001529] text-white shrink-0 shadow-lg z-20">
@@ -23,13 +22,7 @@ export function PosHeader() {
         
         <div className="h-8 w-px bg-white/10 hidden md:block" />
         
-        <div className="hidden md:flex flex-col">
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Terminal</span>
-          <span className="text-sm font-bold flex items-center gap-2">
-            <Monitor className="h-3 w-3 text-emerald-400" />
-            {branchName}
-          </span>
-        </div>
+        <BranchSwitcher />
       </div>
 
       <div className="flex items-center gap-4">
