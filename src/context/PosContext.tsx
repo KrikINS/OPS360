@@ -69,6 +69,7 @@ interface PosContextType {
     grandTotal: number
   }
   isLocked: boolean
+  printInvoiceId: string | null
 
   // --- Actions ---
   setIsLocked: (locked: boolean) => void
@@ -80,9 +81,11 @@ interface PosContextType {
   searchCustomers: (term: string) => Promise<void>
   selectCustomer: (customer: Customer) => void
   setSelectedCustomer: (customer: Customer | null) => void
-  executeCheckout: () => Promise<{ success: boolean; invoiceId?: string; error?: string }>
+  executeCheckout: () => Promise<{ success: boolean; invoiceId?: string; invoiceNumber?: string; error?: string }>
   refreshInventory: () => Promise<void>
   changeBranch: (branchId: string) => Promise<void>
+  triggerInvoicePrint: (id: string) => void
+  setPrintInvoiceId: (id: string | null) => void
 }
 
 // --- Context & Hook ---
@@ -110,6 +113,11 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
   const [searchingCustomer, setSearchingCustomer] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
+  const [printInvoiceId, setPrintInvoiceId] = useState<string | null>(null)
+
+  const triggerInvoicePrint = useCallback((id: string) => {
+    setPrintInvoiceId(id)
+  }, [])
   const [toast, setToast] = useState<Toast>(null)
   const [invoiceNumber, setInvoiceNumber] = useState("")
   const [currentDate, setCurrentDate] = useState("")
@@ -319,7 +327,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     if (cart.length === 0) return { success: false, error: 'Cart is empty' }
     setLoading(true)
     try {
-      const { data: invoiceId, error } = await supabase.rpc('process_pos_sale', {
+      const { data, error } = await supabase.rpc('process_pos_sale', {
         p_customer_id: selectedCustomer?.id || '00000000-0000-0000-0000-000000000000',
         p_branch_id: selectedBranch,
         p_items: cart.map(item => ({
@@ -335,11 +343,13 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
 
-      setToast({ message: `Sale Finalized! Inv: ${invoiceId.slice(0, 8)}`, type: 'success' })
+      const result = data as { id: string, invoice_number: string }
+
+      setToast({ message: `Sale Finalized! Inv: ${result.invoice_number}`, type: 'success' })
       clearCart()
       if (selectedBranch) await fetchInventory(selectedBranch)
-      setInvoiceNumber(`INV-${invoiceId.slice(0, 8).toUpperCase()}`)
-      return { success: true, invoiceId: invoiceId as string }
+      setInvoiceNumber(result.invoice_number)
+      return { success: true, invoiceId: result.id, invoiceNumber: result.invoice_number }
     } catch (err) {
       const error = err as { message?: string }
       console.error('Checkout Error:', error)
@@ -361,8 +371,12 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     products, cart, loading, selectedBranch, branchName, currentBranchDetails, userRole, allBranches,
-    selectedCustomer, customerResults, searchingCustomer, toast, invoiceNumber, currentDate, totals,
-    isLocked, setIsLocked,
+    selectedCustomer, customerResults, searchingCustomer, toast, invoiceNumber, currentDate,        totals,
+        isLocked,
+        setIsLocked,
+        printInvoiceId,
+        triggerInvoicePrint,
+        setPrintInvoiceId,
     addToCart, removeFromCart, updateQty, clearCart, setToast, 
     searchCustomers, selectCustomer, setSelectedCustomer, executeCheckout, refreshInventory, changeBranch
   }

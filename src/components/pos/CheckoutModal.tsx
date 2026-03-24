@@ -18,6 +18,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [status, setStatus] = useState<CheckoutStatus>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [invoiceId, setInvoiceId] = useState<string | null>(null)
+  const [invoiceNumberDisplay, setInvoiceNumberDisplay] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string | null>("cash")
   const [receivedAmount, setReceivedAmount] = useState<string>("")
   const componentRef = React.useRef<HTMLDivElement>(null)
@@ -33,6 +34,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
         setStatus('idle')
         setErrorMsg(null)
         setInvoiceId(null)
+        setInvoiceNumberDisplay(null)
         setReceivedAmount("")
       }, 300)
     }
@@ -51,9 +53,10 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
     
     if (result.success) {
       setInvoiceId(result.invoiceId!)
+      setInvoiceNumberDisplay(result.invoiceNumber!)
       setStatus('success')
       // Trigger print after success screen is visible
-      setTimeout(() => window.print(), 1000)
+      setTimeout(() => handlePrint(), 1000)
     } else {
       setErrorMsg(result.error || "Transaction failed")
       setStatus('error')
@@ -158,13 +161,13 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <Check className="h-12 w-12 text-white stroke-[4px]" />
             </div>
             <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Sale Confirmed</h2>
-            <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-[0.2em] mb-8">Transaction Seal: {invoiceId?.slice(0, 16).toUpperCase()}</p>
+            <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-[0.2em] mb-8">Transaction Seal: {status === 'success' && invoiceNumberDisplay ? invoiceNumberDisplay : invoiceId?.slice(0, 16).toUpperCase()}</p>
             
             <div className="bg-black/10 rounded-2xl p-6 w-full mb-8 border border-white/10">
               <span className="text-white/60 text-[9px] font-black uppercase tracking-widest block mb-4">Invoice Generated</span>
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Printer className="h-4 w-4 text-emerald-200" />
-                <span className="text-white text-lg font-mono font-black">{invoiceId?.slice(0, 12).toUpperCase()}</span>
+                <span className="text-white text-lg font-mono font-black">{invoiceNumberDisplay || invoiceId?.slice(0, 12).toUpperCase()}</span>
               </div>
               <span className="text-emerald-200 text-[8px] font-bold uppercase">Physical Copy Preparing...</span>
             </div>
@@ -186,8 +189,8 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </Button>
             </div>
             
-            {/* Hidden template for printing */}
-            <div className="hidden">
+            {/* Off-screen template for reliable printing */}
+            <div className="fixed top-[-10000px] left-[-10000px] opacity-0 pointer-events-none z-[-100]">
               <InvoiceTemplate ref={componentRef} />
             </div>
           </div>

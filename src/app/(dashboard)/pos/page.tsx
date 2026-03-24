@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { CheckCircle2, XCircle, ShoppingCart } from 'lucide-react'
 import { PosProvider, usePos } from '@/context/PosContext'
 import { PosHeader } from '@/components/pos/PosHeader'
@@ -11,11 +11,18 @@ import { TerminalLockOverlay } from '@/components/pos/TerminalLockOverlay'
 import { usePosHotkeys } from '@/hooks/usePosHotkeys'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
+import { useReactToPrint } from 'react-to-print'
 
 function POSContent() {
-  const { toast, cart, clearCart } = usePos()
+  const { toast, cart, clearCart, printInvoiceId, setPrintInvoiceId } = usePos()
   const [showCheckout, setShowCheckout] = useState(false)
   const [mobileCartOpen, setMobileCartOpen] = useState(false)
+
+  const registryPrintRef = useRef<HTMLDivElement>(null)
+  const handleRegistryPrint = useReactToPrint({
+    contentRef: registryPrintRef,
+  })
 
   // Hotkeys Configuration
   usePosHotkeys([
@@ -90,6 +97,21 @@ function POSContent() {
       </Button>
 
       <CheckoutModal open={showCheckout} onOpenChange={setShowCheckout} />
+
+      {/* Centralized Print Provider for Re-printing from Registry */}
+      <div className="fixed top-[-10000px] left-[-10000px] opacity-0 pointer-events-none z-[-200]">
+        {printInvoiceId && (
+          <InvoiceTemplate 
+            ref={registryPrintRef} 
+            invoiceId={printInvoiceId} 
+            onReady={() => {
+              handleRegistryPrint()
+              // Reset after printing
+              setTimeout(() => setPrintInvoiceId(null), 1000)
+            }}
+          />
+        )}
+      </div>
     </div>
   )
 }

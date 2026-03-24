@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap, Settings, User, Home, LayoutGrid, Maximize, Minimize, Lock, BarChart3 } from 'lucide-react'
+import { Zap, Settings, User, Home, LayoutGrid, Maximize, Minimize, Lock, History } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { BranchSwitcher } from './BranchSwitcher'
 import { usePos } from '@/context/PosContext'
 import { usePosHotkeys } from '@/hooks/usePosHotkeys'
+import { PosSalesHistoryDrawer } from './PosSalesHistoryDrawer'
 
 export function PosHeader() {
   const router = useRouter()
   const { userRole, setIsLocked } = usePos()
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   useEffect(() => {
     const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement)
@@ -30,7 +32,8 @@ export function PosHeader() {
   usePosHotkeys([
     { key: 'escape', action: handleExit },
     { key: 'f', ctrl: true, alt: true, action: toggleFullscreen },
-    { key: 'l', ctrl: true, action: () => setIsLocked(true) }
+    { key: 'l', ctrl: true, action: () => setIsLocked(true) },
+    { key: 'h', ctrl: true, action: () => setHistoryOpen(true) }
   ])
 
   return (
@@ -82,12 +85,13 @@ export function PosHeader() {
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => window.open('/admin/sales-registry', '_blank')}
+          onClick={() => setHistoryOpen(true)}
+          title="Sales Register Audit (Ctrl+H)"
           className="text-slate-400 hover:text-white hover:bg-white/10 gap-2 h-10 px-3 rounded-xl transition-all"
         >
-          <BarChart3 className="h-4 w-4 text-emerald-400" />
+          <History className="h-4 w-4 text-emerald-400" />
           <div className="flex flex-col items-start leading-none hidden md:flex">
-            <span className="text-[10px] font-black uppercase tracking-widest text-left">Registry</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-left">Register</span>
             <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Sales Audit</span>
           </div>
         </Button>
@@ -136,6 +140,10 @@ export function PosHeader() {
           <User className="h-4 w-4 text-white" />
         </div>
       </div>
+      <PosSalesHistoryDrawer 
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+      />
     </header>
   )
 }

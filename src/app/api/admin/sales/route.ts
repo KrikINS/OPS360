@@ -3,8 +3,10 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const branchId = searchParams.get('branchId')
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,9 +41,11 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // 3. Fetch from the V4 RPC (supports user session for branch filtering)
+    // 3. Fetch from the V5 RPC (supports optional branch filtering)
     const { data, error } = await supabase
-      .rpc('get_sales_registry_v4')
+      .rpc('get_sales_registry_v5', {
+        p_branch_id: branchId || null
+      })
 
     if (error) throw error
 

@@ -14,6 +14,7 @@ import { Loader2, Package } from "lucide-react"
 
 interface SaleDetailsDrawerProps {
   saleId: string | null
+  invoiceNumber?: string | null
   open: boolean
   onClose: () => void
 }
@@ -30,7 +31,7 @@ interface SaleItem {
   total_line_amount: number
 }
 
-export function SaleDetailsDrawer({ saleId, open, onClose }: SaleDetailsDrawerProps) {
+export function SaleDetailsDrawer({ saleId, invoiceNumber, open, onClose }: SaleDetailsDrawerProps) {
   const [items, setItems] = useState<SaleItem[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -62,7 +63,7 @@ export function SaleDetailsDrawer({ saleId, open, onClose }: SaleDetailsDrawerPr
             Invoice Details
           </SheetTitle>
           <SheetDescription>
-            {saleId ? `Registry #INV-${saleId.slice(0, 8).toUpperCase()}` : 'Viewing line items'}
+            {invoiceNumber || (saleId && saleId !== 'undefined' ? `Registry #INV-${saleId.slice(0, 8).toUpperCase()}` : 'Viewing line items')}
           </SheetDescription>
         </SheetHeader>
 

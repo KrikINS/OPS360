@@ -48,7 +48,8 @@ export function numberToWords(num: number): string {
     count++
     chunk = integerPart % 100
     if (chunk > 0) {
-      result = convertChunk(chunk) + scales[count] + ' ' + result
+      const scaleStr = count < scales.length ? ' ' + scales[count] : ''
+      result = convertChunk(chunk) + scaleStr + ' ' + result
     }
     integerPart = Math.floor(integerPart / 100)
   }

@@ -7,9 +7,10 @@ import { numberToWords } from '@/utils/numberToWords'
 
 interface InvoiceTemplateProps {
   invoiceId?: string
+  onReady?: () => void
 }
 
-export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ invoiceId }, ref) => {
+export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ invoiceId, onReady }, ref) => {
   const posContext = useContext(PosContext)
   
   // Local state for archival/re-print mode
@@ -26,6 +27,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   useEffect(() => {
     if (invoiceId && typeof invoiceId === 'string' && invoiceId !== 'undefined') {
       const fetchData = async () => {
+        setArchivalData(null) // Reset for new ID
         setLoading(true)
         try {
           // 1. Fetch Items via Admin API (bypasses RLS issues)
@@ -64,7 +66,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             },
             branch: branch,
             customer: customer || { full_name: 'Walk-in Customer' },
-            invoiceNumber: invoice.id.slice(0, 8).toUpperCase(),
+            invoiceNumber: invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase(),
             date: new Date(invoice.created_at).toLocaleDateString('en-IN', {
               day: '2-digit',
               month: 'short',
@@ -75,11 +77,13 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           console.error("Failed to fetch archival invoice:", err)
         } finally {
           setLoading(false)
+          // Small delay to ensure render is committed before printing
+          setTimeout(() => onReady?.(), 100)
         }
       }
       fetchData()
     }
-  }, [invoiceId])
+  }, [invoiceId, onReady])
 
   // Use either context or archival data
   const cart = (invoiceId ? archivalData?.cart : posContext?.cart) || []
