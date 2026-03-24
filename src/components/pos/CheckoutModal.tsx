@@ -1,11 +1,15 @@
+"use client"
+// v1.0.2 - IDE Module Sync Fix
 import React, { useState, useMemo, useEffect } from 'react'
-import { Printer, CheckCircle2, Loader2, Banknote, CreditCard, Smartphone, Building2, Check, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Printer, CheckCircle2, Loader2, Banknote, CreditCard, Smartphone, Building2, Check, AlertTriangle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription } from "../ui/alert"
 import { usePos } from '@/context/PosContext'
+import { useReactToPrint } from 'react-to-print'
+import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
 
 type CheckoutStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -16,6 +20,11 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [invoiceId, setInvoiceId] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string | null>("cash")
   const [receivedAmount, setReceivedAmount] = useState<string>("")
+  const componentRef = React.useRef<HTMLDivElement>(null)
+
+  const handlePrint = useReactToPrint({
+    contentRef: componentRef,
+  })
 
   // Reset state on close
   useEffect(() => {
@@ -160,13 +169,27 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <span className="text-emerald-200 text-[8px] font-bold uppercase">Physical Copy Preparing...</span>
             </div>
 
-            <Button 
-              className="w-full h-14 bg-white text-emerald-700 hover:bg-emerald-50 text-[11px] font-black uppercase tracking-[0.2em] rounded-xl shadow-2xl"
-              onClick={() => onOpenChange(false)}
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              New Sale / Next Counter
-            </Button>
+            <div className="flex gap-3 w-full mb-4">
+              <Button 
+                variant="outline"
+                className="flex-1 h-14 bg-white/10 border-white/20 text-white hover:bg-white/20 text-[11px] font-black uppercase tracking-[0.2em] rounded-xl"
+                onClick={() => handlePrint()}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print Invoice
+              </Button>
+              <Button 
+                className="flex-1 h-14 bg-white text-emerald-700 hover:bg-emerald-50 text-[11px] font-black uppercase tracking-[0.2em] rounded-xl shadow-2xl"
+                onClick={() => onOpenChange(false)}
+              >
+                Next Sale
+              </Button>
+            </div>
+            
+            {/* Hidden template for printing */}
+            <div className="hidden">
+              <InvoiceTemplate ref={componentRef} />
+            </div>
           </div>
         )}
       </DialogContent>

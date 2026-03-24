@@ -6,27 +6,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
   Users, 
   ShieldCheck, 
-  Activity, 
-  CheckCircle2, 
-  XCircle, 
   Lock,
-  UserCheck,
   Building2,
-  Clock
+  TrendingUp,
+  ShoppingBag,
+  AlertCircle,
+  BarChart3,
+  Loader2,
+  CheckCircle2
 } from "lucide-react"
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer,
+  Cell
+} from 'recharts'
 import { cn } from "@/lib/utils"
-
-interface AdminStats {
-  activeUsers: number
-  systemStatus: "Healthy" | "Degraded" | "Down"
-  securityStatus: string
-  systemLoad: string
-}
-
-interface UserRole {
-  role: string
-  count: number
-}
+import { formatCurrency } from "@/utils/format"
 
 interface RecentUser {
   id: string
@@ -36,201 +36,210 @@ interface RecentUser {
   created_at: string
 }
 
-interface BranchSummary {
-  id: string
-  name: string
-  location: string
-  status: string
+interface DashboardMetrics {
+  today_revenue: number
+  today_invoices: number
+  total_inventory_value: number
+  branch_performance: { name: string, value: number }[]
+  low_stock_alerts: { model_name: string, brand: string, branch_name: string, available_quantity: number }[]
 }
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<AdminStats>({
-    activeUsers: 0,
-    systemStatus: "Healthy",
-    securityStatus: "Active",
-    systemLoad: "Low"
-  })
-  const [roles, setRoles] = useState<UserRole[]>([])
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [loading, setLoading] = useState(true)
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([])
-  const [branches, setBranches] = useState<BranchSummary[]>([])
 
   const supabase = createClient()
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true)
       
-      // 1. Fetch Active Users Count (Simplified: total profiles)
-      const { count: userCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
+      const [metricsRes, recentRes] = await Promise.all([
+        supabase.rpc('get_admin_dashboard_metrics'),
+        supabase
+          .from("profiles")
+          .select("id, full_name, email, role, created_at")
+          .order("created_at", { ascending: false })
+          .limit(5)
+      ])
+
+      if (metricsRes.data) setMetrics(metricsRes.data)
+      if (recentRes.data) setRecentUsers(recentRes.data as RecentUser[])
       
-      // 2. Fetch User Role Breakdown
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("role")
-      
-      const roleCounts = (profileData || []).reduce((acc: Record<string, number>, curr: { role: string }) => {
-        acc[curr.role] = (acc[curr.role] || 0) + 1
-        return acc
-      }, {})
-
-      const roleList = Object.entries(roleCounts).map(([role, count]) => ({
-        role: role as string,
-        count: count as number
-      }))
-
-      // 3. Recent Accounts
-      const { data: recent } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, role, created_at")
-        .order("created_at", { ascending: false })
-        .limit(5)
-
-      // 4. Branches Summary
-      const { data: branchData } = await supabase
-        .from("branches")
-        .select("id, name, location")
-        .limit(5)
-
-      setStats({
-        activeUsers: userCount || 0,
-        systemStatus: "Healthy",
-        securityStatus: "Active",
-        systemLoad: "Low"
-      })
-      setRoles(roleList)
-      setRecentUsers((recent || []) as RecentUser[])
-      setBranches((branchData || []).map((b: {id: string, name: string, location: string}) => ({ ...b, status: "Active" })))
+      setLoading(false)
     }
 
     fetchData()
   }, [supabase])
 
+  const COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#F59E0B', '#EF4444']
+
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
+    <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-[#001529]">Admin Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-1 font-medium">Enterprise oversight, security protocols, and system heartbeat.</p>
+          <h1 className="text-4xl font-black tracking-tight text-[#001529] uppercase">Admin Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1 font-bold uppercase tracking-widest opacity-70">Showroom Analytics & Protocol Oversight</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 rounded-full border border-emerald-100">
+        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm">
           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">System Operational</span>
+          <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">System Live: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Live Revenue & Stock Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          label="Active Users" 
-          value={stats.activeUsers} 
-          icon={Users} 
-          color="bg-blue-600" 
-          description="Live verified accounts"
+          label="Today's Revenue" 
+          value={loading ? "..." : `₹${metrics?.today_revenue.toLocaleString()}`} 
+          icon={TrendingUp} 
+          color="bg-indigo-600" 
+          description="Gross sales from all branches"
+        />
+        <StatCard 
+          label="Today's Invoices" 
+          value={loading ? "..." : metrics?.today_invoices || 0} 
+          icon={ShoppingBag} 
+          color="bg-blue-600"
+          description="Finalized transactions"
+        />
+        <StatCard 
+          label="Inventory Value" 
+          value={loading ? "..." : `₹${metrics?.total_inventory_value.toLocaleString()}`} 
+          icon={Building2} 
+          color="bg-emerald-600"
+          description="Total Stock @ Base Price"
         />
         <StatCard 
           label="Security Status" 
-          value={stats.securityStatus} 
+          value="Healthy" 
           icon={ShieldCheck} 
-          color="bg-emerald-600"
-          description="RLS & JWT Encryption"
-        />
-        <StatCard 
-          label="System Health" 
-          value={stats.systemStatus} 
-          icon={stats.systemStatus === "Healthy" ? CheckCircle2 : XCircle} 
-          color={stats.systemStatus === "Healthy" ? "bg-emerald-600" : "bg-red-600"}
-          description="Real-time uptime monitoring"
-        />
-        <StatCard 
-          label="Server Load" 
-          value={stats.systemLoad} 
-          icon={Activity} 
-          color="bg-amber-600"
-          description="Current CPU/Memory spike"
+          color="bg-slate-800"
+          description="RLS & JWT Protocols Active"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* User Role Breakdown */}
-        <Card className="lg:col-span-1 shadow-sm border-slate-200">
-          <CardHeader className="bg-slate-50/50 border-b">
-            <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-blue-600" />
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-600">User Role Breakdown</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Branch Performance Chart */}
+        <Card className="lg:col-span-2 shadow-xl border-none overflow-hidden">
+          <CardHeader className="bg-[#001529] text-white p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-lg font-black uppercase tracking-wider flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-indigo-400" />
+                  Branch Performance
+                </CardTitle>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Revenue distribution by showroom</p>
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              {roles.map((r) => (
-                <div key={r.role} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "h-2 w-2 rounded-full",
-                      r.role === "Admin" ? "bg-red-500" : r.role === "Manager" ? "bg-amber-500" : "bg-blue-500"
-                    )} />
-                    <span className="text-sm font-bold text-slate-700 uppercase">{r.role}</span>
+          <CardContent className="p-8 h-[350px]">
+            {loading ? (
+              <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400">
+                <Loader2 className="h-10 w-10 animate-spin" />
+                <p className="text-xs font-black uppercase tracking-widest">Hydrating Chart Data...</p>
+              </div>
+            ) : metrics?.branch_performance && metrics.branch_performance.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={metrics.branch_performance}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 10, fontWeight: 800 }} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 10, fontWeight: 800 }}
+                    tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
+                  />
+                  <RechartsTooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
+                    formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+                    {metrics.branch_performance.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2">
+                <BarChart3 className="h-12 w-12 opacity-20" />
+                <p className="text-xs font-bold uppercase tracking-widest">No Sales Data for Branch Analysis</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Low Stock Alerts */}
+        <Card className="lg:col-span-1 shadow-xl border-none flex flex-col">
+          <CardHeader className="bg-red-600 text-white p-6 shrink-0">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              <CardTitle className="text-lg font-black uppercase tracking-wider">Critical Stock Alerts</CardTitle>
+            </div>
+            <p className="text-[10px] text-red-100 font-bold uppercase tracking-widest mt-1">Refilling required immediately (Qty &lt; 3)</p>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 overflow-auto max-h-[350px]">
+            <div className="divide-y divide-slate-100">
+              {loading ? (
+                <div className="p-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-red-200" /></div>
+              ) : metrics?.low_stock_alerts && metrics.low_stock_alerts.length > 0 ? (
+                metrics.low_stock_alerts.map((alert, idx) => (
+                  <div key={idx} className="p-4 hover:bg-red-50/50 transition-colors flex items-center justify-between border-l-4 border-l-red-500">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <h4 className="font-black text-[#001529] text-[11px] truncate uppercase tracking-tighter" title={alert.model_name}>
+                        {alert.model_name}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase">{alert.brand}</span>
+                        <span className="text-[10px] text-red-600 font-black tracking-tight">{alert.branch_name}</span>
+                      </div>
+                    </div>
+                    <div className="bg-red-100 text-red-700 px-3 py-1 rounded-lg font-black text-xs">
+                      {alert.available_quantity} U
+                    </div>
                   </div>
-                  <Badge variant="outline" className="font-black border-slate-200 text-slate-900 bg-slate-50">{r.count}</Badge>
+                ))
+              ) : (
+                <div className="p-12 text-center text-slate-300 space-y-2">
+                  <CheckCircle2 className="h-10 w-10 mx-auto opacity-20" />
+                  <p className="text-xs font-bold uppercase tracking-widest">Inventory Levels Healthy</p>
                 </div>
-              ))}
-              {roles.length === 0 && <p className="text-xs text-muted-foreground italic">No roles detected.</p>}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* RBAC Access Matrix - Simplified Visual Representation */}
-        <Card className="lg:col-span-2 shadow-sm border-slate-200">
-          <CardHeader className="bg-slate-50/50 border-b">
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-red-600" />
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-600">RBAC Access Matrix</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-[11px] font-bold">
-                <thead>
-                  <tr className="bg-slate-50/80 text-slate-400 uppercase tracking-widest border-b">
-                    <th className="py-3 px-4 text-left">Module</th>
-                    <th className="py-3 px-4 text-center">Admin</th>
-                    <th className="py-3 px-4 text-center">Manager</th>
-                    <th className="py-3 px-4 text-center">Sales</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-600">
-                  <MatrixRow label="Product Master" admin="Full" manager="Edit" sales="View" />
-                  <MatrixRow label="Inventory Management" admin="Full" manager="Full" sales="View" />
-                  <MatrixRow label="Supplier Records" admin="Full" manager="Edit" sales="None" />
-                  <MatrixRow label="Financial Ledger" admin="Full" manager="View" sales="None" />
-                  <MatrixRow label="Admin Center" admin="Full" manager="None" sales="None" />
-                </tbody>
-              </table>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Accounts */}
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader className="bg-slate-50/50 border-b">
+        <Card className="shadow-lg border-none overflow-hidden rounded-2xl">
+          <CardHeader className="bg-slate-50 border-b border-slate-100 p-6 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-600">Recent Accounts</CardTitle>
+              <Users className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700">Recent Accounts</CardTitle>
             </div>
+            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="space-y-0 divide-y divide-slate-100">
+            <div className="space-y-0 divide-y divide-slate-50">
               {recentUsers.map((user) => (
-                <div key={user.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between">
+                <div key={user.id} className="p-4 hover:bg-slate-50/80 transition-all flex items-center justify-between group">
                   <div>
-                    <div className="font-bold text-slate-900 uppercase text-xs">{user.full_name}</div>
-                    <div className="text-[10px] text-slate-400 font-medium">{user.email}</div>
+                    <div className="font-black text-slate-900 uppercase text-xs group-hover:text-blue-600 transition-colors">{user.full_name || user.email.split('@')[0]}</div>
+                    <div className="text-[10px] text-slate-400 font-medium font-mono">{user.email}</div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Badge className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 bg-slate-100 text-slate-900 border-none">{user.role}</Badge>
-                    <span className="text-[9px] text-slate-400">{new Date(user.created_at).toLocaleDateString()}</span>
+                    <Badge className="text-[9px] font-black uppercase tracking-widest h-5 px-3 bg-blue-50 text-blue-700 border-none">{user.role || 'Sales'}</Badge>
+                    <span className="text-[9px] text-slate-400 font-bold font-mono">{new Date(user.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))}
@@ -239,27 +248,30 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Registered Branches */}
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader className="bg-slate-50/50 border-b">
+        {/* Access Matrix Preview */}
+        <Card className="shadow-lg border-none overflow-hidden rounded-2xl">
+          <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
             <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-emerald-600" />
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-600">Active Branches</CardTitle>
+              <Lock className="h-5 w-5 text-red-600" />
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700">RBAC Security Pulse</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="space-y-0 divide-y divide-slate-100">
-              {branches.map((branch) => (
-                <div key={branch.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between">
-                  <div>
-                    <div className="font-bold text-slate-900 uppercase text-xs">{branch.name}</div>
-                    <div className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">{branch.location}</div>
-                  </div>
-                  <Badge className="bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase border-none h-6">Operational</Badge>
-                </div>
-              ))}
-              {branches.length === 0 && <p className="p-10 text-center text-xs text-muted-foreground italic">No branches registered.</p>}
-            </div>
+            <table className="w-full text-[10px] font-bold">
+              <thead>
+                <tr className="bg-slate-50/50 text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                  <th className="py-4 px-6 text-left">Module Protocol</th>
+                  <th className="py-4 px-6 text-center">Admin</th>
+                  <th className="py-4 px-6 text-center">Manager</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 text-slate-600">
+                <MatrixRow label="Sales Registry" admin="Full" manager="View" />
+                <MatrixRow label="Active Inventory" admin="Full" manager="Edit" />
+                <MatrixRow label="Financial Audits" admin="Full" manager="None" />
+                <MatrixRow label="System Branding" admin="Full" manager="None" />
+              </tbody>
+            </table>
           </CardContent>
         </Card>
       </div>
@@ -269,19 +281,19 @@ export default function AdminDashboardPage() {
 
 function StatCard({ label, value, icon: Icon, color, description }: { label: string, value: string | number, icon: React.ElementType, color: string, description: string }) {
   return (
-    <Card className="border-none shadow-sm overflow-hidden">
+    <Card className="border-none shadow-lg overflow-hidden group hover:-translate-y-1 transition-all duration-300">
       <CardContent className="p-0">
-        <div className="flex">
-          <div className={cn("w-2", color)} />
-          <div className="p-5 flex-1 bg-white">
+        <div className="flex h-24">
+          <div className={cn("w-1.5", color)} />
+          <div className="p-5 flex-1 bg-white relative overflow-hidden">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
-              <div className={cn("p-1.5 rounded-lg bg-slate-50 text-slate-400")}>
-                <Icon className="h-4 w-4" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-80">{label}</span>
+              <div className={cn("p-2 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-slate-100 transition-colors shadow-sm")}>
+                <Icon className={cn("h-4 w-4", color.replace('bg-', 'text-'))} />
               </div>
             </div>
-            <div className="text-2xl font-black text-[#001529] tracking-tight">{value}</div>
-            <p className="text-[10px] text-slate-400 font-medium mt-1">{description}</p>
+            <div className="text-2xl font-black text-[#001529] tracking-tighter">{value}</div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1 opacity-60">{description}</p>
           </div>
         </div>
       </CardContent>
@@ -289,18 +301,19 @@ function StatCard({ label, value, icon: Icon, color, description }: { label: str
   )
 }
 
-function MatrixRow({ label, admin, manager, sales }: { label: string, admin: string, manager: string, sales: string }) {
+function MatrixRow({ label, admin, manager }: { label: string, admin: string, manager: string }) {
   return (
     <tr className="hover:bg-slate-50 transition-colors">
-      <td className="py-3 px-4 text-slate-900 uppercase tracking-tighter">{label}</td>
-      <td className="py-3 px-4 text-center">
-        <span className={cn("px-2 py-0.5 rounded text-[9px] font-black", admin === "Full" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-500")}>{admin}</span>
+      <td className="py-4 px-6 text-slate-900 uppercase tracking-tighter">{label}</td>
+      <td className="py-4 px-6 text-center">
+        <span className="px-3 py-1 rounded bg-blue-50 text-blue-700 text-[9px] font-black uppercase shadow-sm">{admin}</span>
       </td>
-      <td className="py-3 px-4 text-center">
-        <span className={cn("px-2 py-0.5 rounded text-[9px] font-black", manager === "Full" ? "bg-blue-50 text-blue-700" : manager === "Edit" ? "bg-emerald-50 text-emerald-700" : manager === "View" ? "bg-slate-50 text-slate-600" : "bg-red-50 text-red-700")}>{manager}</span>
-      </td>
-      <td className="py-3 px-4 text-center">
-        <span className={cn("px-2 py-0.5 rounded text-[9px] font-black", sales === "View" ? "bg-slate-50 text-slate-600" : "bg-red-50 text-red-700")}>{sales}</span>
+      <td className="py-4 px-6 text-center">
+        <span className={cn(
+          "px-3 py-1 rounded text-[9px] font-black uppercase shadow-sm",
+          manager === "Edit" ? "bg-emerald-50 text-emerald-700" : 
+          manager === "View" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"
+        )}>{manager}</span>
       </td>
     </tr>
   )
@@ -309,7 +322,7 @@ function MatrixRow({ label, admin, manager, sales }: { label: string, admin: str
 function Badge({ className, variant, children }: { className?: string, variant?: "outline", children: React.ReactNode }) {
   return (
     <span className={cn(
-      "inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border",
+      "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border",
       variant === "outline" ? "border-slate-200 text-slate-900" : "bg-slate-100 text-slate-900 border-transparent",
       className
     )}>

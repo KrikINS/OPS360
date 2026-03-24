@@ -20,7 +20,7 @@ function Checkbox({ className, onCheckedChange, ...props }: React.ComponentProps
   }
 
   return (
-    <div className="relative flex items-center">
+    <div className="relative inline-flex items-center justify-center h-4 w-4">
       <input
         type="checkbox"
         className={cn(
@@ -31,7 +31,7 @@ function Checkbox({ className, onCheckedChange, ...props }: React.ComponentProps
         checked={checked}
         {...props}
       />
-      <Check className="absolute h-3 w-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 left-0.5" />
+      <Check className="absolute h-3.5 w-3.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
     </div>
   )
 }

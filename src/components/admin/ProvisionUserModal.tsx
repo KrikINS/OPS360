@@ -1,0 +1,203 @@
+"use client"
+
+import React, { useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Loader2, UserPlus, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+
+interface Branch {
+  id: string
+  name: string
+}
+
+interface ProvisionUserModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  branches: Branch[]
+  onSuccess: () => void
+}
+
+export function ProvisionUserModal({ 
+  open, 
+  onOpenChange, 
+  branches,
+  onSuccess 
+}: ProvisionUserModalProps) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    role: "staff",
+    branchId: "",
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/admin/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to provision user")
+      }
+
+      onSuccess()
+      onOpenChange(false)
+      setFormData({
+        email: "",
+        password: "",
+        fullName: "",
+        role: "staff",
+        branchId: "",
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-black uppercase tracking-tight text-[#001529]">
+            Provision New Account
+          </DialogTitle>
+          <DialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Deploy immediate access credentials across the network.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          {error && (
+            <Alert variant="destructive" className="py-2.5">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs font-bold uppercase">{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Full Name</Label>
+              <Input
+                id="fullName"
+                placeholder="e.g. Anees Ahad"
+                required
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                className="h-9 text-xs font-bold border-slate-200"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Identity (Email)</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="identity@ethan-home.com"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="h-9 text-xs font-bold border-slate-200"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Security Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="h-9 text-xs font-bold border-slate-200"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="role" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Access Role</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(val) => setFormData({ ...formData, role: val || "" })}
+                >
+                  <SelectTrigger className="h-9 text-xs font-bold border-slate-200 uppercase">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin" className="text-xs font-bold uppercase">Admin</SelectItem>
+                    <SelectItem value="manager" className="text-xs font-bold uppercase">Manager</SelectItem>
+                    <SelectItem value="staff" className="text-xs font-bold uppercase">Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="branch" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Primary Allotment</Label>
+                <Select
+                  value={formData.branchId}
+                  onValueChange={(val) => setFormData({ ...formData, branchId: val || "" })}
+                >
+                  <SelectTrigger className="h-9 text-xs font-bold border-slate-200 uppercase">
+                    <SelectValue placeholder="Select Branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id || ""} className="text-xs font-bold uppercase">
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#001529] hover:bg-[#002a52] text-xs font-bold uppercase h-10 gap-2"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <UserPlus className="h-4 w-4" />
+              )}
+              {loading ? "Authorizing Deployment..." : "Execute Provisioning"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -23,11 +23,13 @@ export type CartItem = {
   qty: number
   base_price: number
   gst_rate: number
+  hsn_code?: string
 }
 
 export type Customer = {
   id: string
   name: string
+  full_name?: string
   phone: string
   gstin?: string
 }
@@ -37,6 +39,11 @@ export type Toast = { message: string, type: 'success' | 'error' } | null
 export type Branch = {
   id: string
   name: string
+  full_address?: string
+  city?: string
+  state?: string
+  pincode?: string
+  gstin?: string
 }
 
 interface PosContextType {
@@ -45,6 +52,7 @@ interface PosContextType {
   loading: boolean
   selectedBranch: string | null
   branchName: string
+  currentBranchDetails: Branch | null
   userRole: string | null
   allBranches: Branch[]
   selectedCustomer: Customer | null
@@ -79,7 +87,7 @@ interface PosContextType {
 
 // --- Context & Hook ---
 
-const PosContext = createContext<PosContextType | undefined>(undefined)
+export const PosContext = createContext<PosContextType | undefined>(undefined)
 
 export function usePos() {
   const context = useContext(PosContext)
@@ -95,6 +103,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
   const [branchName, setBranchName] = useState("Main Terminal")
+  const [currentBranchDetails, setCurrentBranchDetails] = useState<Branch | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [allBranches, setAllBranches] = useState<Branch[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -155,7 +164,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, assigned_branch_id, branches(name)')
+          .select('role, assigned_branch_id, branches(*)')
           .eq('id', session.user.id)
           .single()
         
@@ -164,16 +173,17 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
           
           if (profile.assigned_branch_id) {
             const bId = profile.assigned_branch_id
-            const bName = (profile.branches as unknown as { name: string })?.name || "Main Terminal"
+            const bDetails = profile.branches as unknown as Branch
             setSelectedBranch(bId)
-            setBranchName(bName)
+            setBranchName(bDetails?.name || "Main Terminal")
+            setCurrentBranchDetails(bDetails)
             await fetchInventory(bId)
           }
 
           // If Admin, fetch all branches for the switcher
           if (profile.role === 'admin') {
-            const { data: branches } = await supabase.from('branches').select('id, name')
-            if (branches) setAllBranches(branches)
+            const { data: branches } = await supabase.from('branches').select('*')
+            if (branches) setAllBranches(branches as Branch[])
           }
         }
       }
@@ -215,10 +225,11 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     if (userRole !== 'admin' && selectedBranch) return // Lock logic for non-admins
     
     setLoading(true)
-    const { data: branch } = await supabase.from('branches').select('name').eq('id', branchId).single()
+    const { data: branch } = await supabase.from('branches').select('*').eq('id', branchId).single()
     if (branch) {
       setSelectedBranch(branchId)
       setBranchName(branch.name)
+      setCurrentBranchDetails(branch as Branch)
       setCart([]) // Clear cart for new logistical context
       await fetchInventory(branchId)
       setToast({ message: `Switched to ${branch.name}`, type: 'success' })
@@ -245,6 +256,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
         model_name: product.model_name,
         base_price: product.base_price,
         gst_rate: product.gst_rate,
+        hsn_code: product.hsn_code,
         qty: 1
       }]
     })
@@ -334,7 +346,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   }, [toast])
 
   const value = {
-    products, cart, loading, selectedBranch, branchName, userRole, allBranches,
+    products, cart, loading, selectedBranch, branchName, currentBranchDetails, userRole, allBranches,
     selectedCustomer, customerResults, searchingCustomer, toast, invoiceNumber, currentDate, totals,
     isLocked, setIsLocked,
     addToCart, removeFromCart, updateQty, clearCart, setToast, 

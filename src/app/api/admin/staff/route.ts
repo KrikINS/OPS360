@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         email: email,
         full_name: fullName,
         role: role,
-        branch_id: branchId || null,
+        assigned_branch_id: branchId || null,
         force_password_change: forcePasswordChange === true,
       })
 

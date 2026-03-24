@@ -61,6 +61,7 @@ type InventoryItem = {
   price: number
   landed_cost: number
   created_at: string
+  available_quantity: number
   product: ProductMetadata
 }
 
@@ -126,7 +127,8 @@ export default function InventoryDashboard() {
             min_stock_level,
             tracking_type
           ),
-          branch:branches!left (*)
+          branch:branches!left (*),
+          available_quantity
         `)
       
       // Condition branch filtering
@@ -181,7 +183,7 @@ export default function InventoryDashboard() {
   const filteredInventory = inventory.filter(item => {
     // 1. Tab Level Filtering
     const isActiveTab = activeTab === 'active'
-    const isItemActive = item.status === 'Available' || item.status === 'In-Transit'
+    const isItemActive = (item.status === 'Available' || item.status === 'In-Transit') && (item.available_quantity > 0)
     
     if (isActiveTab && !isItemActive) return false
     if (!isActiveTab && isItemActive) return false
@@ -220,7 +222,7 @@ export default function InventoryDashboard() {
         };
       }
       groups[key].items.push(item);
-      groups[key].total_stock++;
+      groups[key].total_stock += (item.available_quantity || 0);
       const days = calculateDaysInStock(item.created_at);
       if (days > groups[key].max_aging) groups[key].max_aging = days;
       groups[key].total_landed_cost += (item.landed_cost || item.price);
@@ -231,9 +233,9 @@ export default function InventoryDashboard() {
     });
   }, [filteredInventory, branches, sortOrder]);
 
-  const availableStock = inventory.filter(i => i.status === "Available").length
-  const inTransit = inventory.filter(i => i.status === "In-Transit").length
-  const soldStock = inventory.filter(i => i.status === "Sold").length
+  const availableStock = inventory.filter(i => i.status === "Available").reduce((sum, item) => sum + (item.available_quantity || 0), 0)
+  const inTransit = inventory.filter(i => i.status === "In-Transit").reduce((sum, item) => sum + (item.available_quantity || 0), 0)
+  const soldStock = inventory.filter(i => i.status === "Sold").reduce((sum, item) => sum + (item.available_quantity || 0), 0)
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

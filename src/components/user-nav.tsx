@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { LogOut, Settings, Loader2 } from "lucide-react"
+import { LogOut, Settings, Loader2, KeyRound } from "lucide-react"
 
 type UserNavProps = {
   profile: {
@@ -110,6 +110,13 @@ export function UserNav({ profile }: UserNavProps) {
             >
               <Settings className="mr-2 h-4 w-4" />
               <span>Update Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="cursor-pointer font-bold text-[10px] uppercase tracking-wider h-9" 
+              onSelect={() => router.push("/auth/reset-password")}
+            >
+              <KeyRound className="mr-2 h-4 w-4" />
+              <span>Change Password</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />

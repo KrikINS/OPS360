@@ -50,7 +50,7 @@ interface Product {
   min_stock_level: number
   tracking_type: string
   description: string
-  tax_rate?: number
+  gst_rate?: number
   warranty_months?: number
   is_archived?: boolean
 }
@@ -74,7 +74,7 @@ export default function ProductsPage() {
     setLoading(true)
     const { data } = await supabase
       .from("products")
-      .select("id, model_name, brand, category, product_code, base_price, hsn_code, min_stock_level, tracking_type, description, tax_rate, warranty_months, is_archived")
+      .select("id, model_name, brand, category, product_code, base_price, hsn_code, min_stock_level, tracking_type, description, gst_rate, warranty_months, is_archived")
       .eq("is_archived", showArchived)
       .order("model_name")
     
@@ -317,7 +317,7 @@ export default function ProductsPage() {
                         <code className="text-[10px] font-mono font-semibold text-[#001529] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{p.product_code || "---"}</code>
                       </td>
                       <td className="py-2 px-4 text-slate-400 font-semibold">{p.hsn_code || "---"}</td>
-                      <td className="py-2 px-1 text-center font-bold text-slate-500 text-[10px]">{p.tax_rate ?? 18}%</td>
+                      <td className="py-2 px-1 text-center font-bold text-slate-500 text-[10px]">{p.gst_rate ?? 18}%</td>
                       <td className="py-2 px-4 font-bold text-right text-[#001529] text-xs">₹{p.base_price.toLocaleString("en-IN")}</td>
                       <td className="py-2 px-4 text-center">
                         <span className="font-semibold text-slate-900 border border-slate-100 px-1.5 py-0.5 rounded bg-slate-50">{p.min_stock_level || 0}</span>

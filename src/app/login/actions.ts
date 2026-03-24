@@ -19,9 +19,22 @@ export async function login(formData: FormData) {
       return { error: error.message };
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('force_password_change')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.force_password_change) {
+        return { success: true, forcePasswordChange: true };
+      }
+    }
+
     revalidatePath('/', 'layout');
     return { success: true };
-  } catch (err: any) {
+  } catch (err) {
     console.error('Login action error:', err);
     return { error: 'An unexpected internal error occurred' };
   }

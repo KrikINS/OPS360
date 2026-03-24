@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { login } from "@/app/login/actions"
 import { Button } from "@/components/ui/button"
@@ -51,7 +51,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [stage, setStage] = useState<AnimationStage>("loading")
   const [progress, setProgress] = useState(0)
+  const progressRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  // Set progress width via ref to avoid inline style lint issues
+  useEffect(() => {
+    if (progressRef.current) {
+      progressRef.current.style.width = `${progress}%`
+    }
+  }, [progress])
 
   // 1. Loading Step
   useEffect(() => {
@@ -91,7 +99,11 @@ export default function LoginPage() {
         setErrorMessage(result.error)
         setLoading(false)
       } else if (result?.success) {
-        router.push('/')
+        if (result.forcePasswordChange) {
+          router.push('/auth/reset-password')
+        } else {
+          router.push('/')
+        }
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "An unexpected error occurred")
@@ -108,8 +120,8 @@ export default function LoginPage() {
           </div>
           <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
             <div 
+              ref={progressRef}
               className="h-full bg-[#00AEEF] transition-all duration-300 ease-out" 
-              style={{ width: `${progress}%` }}
             />
           </div>
           <p className="text-[#7FD1E3]/40 text-[9px] font-mono text-center tracking-widest uppercase">{progress}% SECURE LINK ESTABLISHED</p>
@@ -189,7 +201,7 @@ export default function LoginPage() {
               </div>
 
               <div className="flex justify-end pt-1">
-                <a href="#" className="text-[11px] text-[#7FD1E3]/70 hover:text-[#7FD1E3] font-semibold transition-colors uppercase tracking-widest">
+                <a href="/login/forgot-password" className="text-[11px] text-[#7FD1E3]/70 hover:text-[#7FD1E3] font-semibold transition-colors uppercase tracking-widest">
                   Forgot Password?
                 </a>
               </div>
@@ -224,7 +236,7 @@ export default function LoginPage() {
           <div className="relative">
             <span className="text-[#00AEEF] text-2xl font-black tracking-tighter">INS</span>
             {/* Loop Spinner for INS */}
-            <div className="absolute -inset-1 border border-[#00AEEF]/0 border-t-[#00AEEF] rounded-md animate-spin duration-[2000ms]" style={{ animationIterationCount: 'infinite' }} />
+            <div className="absolute -inset-1 border border-[#00AEEF]/0 border-t-[#00AEEF] rounded-md animate-spin duration-[2000ms]" />
           </div>
         </div>
       </div>
