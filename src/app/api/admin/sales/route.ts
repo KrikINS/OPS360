@@ -21,19 +21,27 @@ export async function GET() {
       }
     )
 
-    // Verify admin role using the ADMIN CLIENT (bypasses RLS)
+    // 1. Get User
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    // 2. Verify Admin Role using the dedicated join-free RPC (passing explicit user ID)
-    const { data: isAdmin } = await supabaseAdmin.rpc('check_is_admin_v3', { p_user_id: user.id })
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Forbidden. Admin access required." }, { status: 403 })
+    // 2. Allow access based on role or branch allotment
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role, assigned_branch_ids')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
+    const allowedRoles = ['admin', 'manager', 'staff']
+    if (!allowedRoles.includes(profile.role || "")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // 3. Fetch from the Master RPC (bypasses all View/Join resolution issues)
-    const { data, error } = await supabaseAdmin
-      .rpc('get_sales_registry_v3')
+    // 3. Fetch from the V4 RPC (supports user session for branch filtering)
+    const { data, error } = await supabase
+      .rpc('get_sales_registry_v4')
 
     if (error) throw error
 

@@ -164,26 +164,38 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, assigned_branch_id, branches(*)')
+          .select('role, assigned_branch_id, assigned_branch_ids')
           .eq('id', session.user.id)
           .single()
         
         if (profile) {
           setUserRole(profile.role)
           
-          if (profile.assigned_branch_id) {
-            const bId = profile.assigned_branch_id
-            const bDetails = profile.branches as unknown as Branch
-            setSelectedBranch(bId)
-            setBranchName(bDetails?.name || "Main Terminal")
-            setCurrentBranchDetails(bDetails)
-            await fetchInventory(bId)
+          const branchIds = (profile.assigned_branch_ids as string[]) || (profile.assigned_branch_id ? [profile.assigned_branch_id] : [])
+          
+          if (branchIds.length > 0) {
+            const initialBranchId = branchIds[0]
+            setSelectedBranch(initialBranchId)
+            
+            // If they have multiple branches, we need the names for the switcher
+            const { data: allotBranches } = await supabase
+              .from('branches')
+              .select('*')
+              .in('id', branchIds)
+            
+            if (allotBranches) {
+              const current = (allotBranches as Branch[]).find((b: Branch) => b.id === initialBranchId)
+              setBranchName(current?.name || "Main Terminal")
+              setCurrentBranchDetails(current as Branch)
+              setAllBranches(allotBranches as Branch[])
+              await fetchInventory(initialBranchId)
+            }
           }
 
-          // If Admin, fetch all branches for the switcher
+          // If Admin, fetch ALL branches regardless
           if (profile.role === 'admin') {
-            const { data: branches } = await supabase.from('branches').select('*')
-            if (branches) setAllBranches(branches as Branch[])
+            const { data: allB } = await supabase.from('branches').select('*')
+            if (allB) setAllBranches(allB as Branch[])
           }
         }
       }
@@ -222,7 +234,9 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
 
   // 4. Core Actions
   const changeBranch = useCallback(async (branchId: string) => {
-    if (userRole !== 'admin' && selectedBranch) return // Lock logic for non-admins
+    // Check if user is allotted to this branch OR is admin
+    const isAllotted = allBranches.some(b => b.id === branchId)
+    if (userRole !== 'admin' && !isAllotted) return
     
     setLoading(true)
     const { data: branch } = await supabase.from('branches').select('*').eq('id', branchId).single()
@@ -235,7 +249,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       setToast({ message: `Switched to ${branch.name}`, type: 'success' })
     }
     setLoading(false)
-  }, [supabase, userRole, selectedBranch, fetchInventory])
+  }, [supabase, userRole, allBranches, fetchInventory])
 
   const addToCart = useCallback((product: Product) => {
     setCart(prev => {

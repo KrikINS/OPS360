@@ -6,7 +6,7 @@ import { Users, UserPlus, Loader2, LucideIcon, Edit2, Trash2, ShieldCheck, Activ
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/utils/supabase/client"
 
-import { 
+import {
   Table, 
   TableBody, 
   TableCell, 
@@ -15,16 +15,10 @@ import {
   TableRow 
 } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { ProvisionUserModal } from "@/components/admin/ProvisionUserModal"
 import { EditUserModal } from "@/components/admin/EditUserModal"
+import { MultiSelect } from "@/components/ui/multi-select"
 
 interface Profile {
   id: string
@@ -32,6 +26,7 @@ interface Profile {
   full_name: string | null
   role: string | null
   assigned_branch_id: string | null
+  assigned_branch_ids: string[] | null
   permissions: Record<string, boolean>
   is_active: boolean
 }
@@ -106,16 +101,18 @@ export default function UserManagementPage() {
     setUpdatingId(null)
   }
 
-  const assignBranch = async (profileId: string, branchId: string | null) => {
-    if (!branchId || !profileId) return
+  const assignBranches = async (profileId: string, branchIds: string[]) => {
     setUpdatingId(`${profileId}-branch`)
     const { error } = await supabase
       .from('profiles')
-      .update({ assigned_branch_id: branchId })
+      .update({ 
+        assigned_branch_ids: branchIds,
+        assigned_branch_id: branchIds.length > 0 ? branchIds[0] : null
+      })
       .eq('id', profileId)
     
     if (!error) {
-      setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, assigned_branch_id: branchId } : p))
+      setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, assigned_branch_ids: branchIds, assigned_branch_id: branchIds.length > 0 ? branchIds[0] : null } : p))
     }
     setUpdatingId(null)
   }
@@ -238,23 +235,14 @@ export default function UserManagementPage() {
                       />
                     </TableCell>
                   ))}
-                  <TableCell>
-                    <Select 
-                      value={profile.assigned_branch_id || ""} 
-                      onValueChange={(val) => assignBranch(profile.id, val)}
-                      disabled={updatingId === `${profile.id}-branch`}
-                    >
-                      <SelectTrigger className="w-[140px] h-8 text-[10px] font-bold uppercase tracking-tight border-slate-200 focus:ring-0">
-                        <SelectValue placeholder="No Branch">
-                          {branches.find(b => b.id === profile.assigned_branch_id)?.name}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {branches.map(b => (
-                          <SelectItem key={b.id} value={b.id} className="text-xs font-bold uppercase">{b.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <TableCell className="w-[200px]">
+                    <MultiSelect
+                      options={branches.map(b => ({ label: b.name, value: b.id }))}
+                      selected={profile.assigned_branch_ids || (profile.assigned_branch_id ? [profile.assigned_branch_id] : [])}
+                      onChange={(vals) => assignBranches(profile.id, vals)}
+                      placeholder="No Branch"
+                      className="w-full h-8"
+                    />
                   </TableCell>
                   <TableCell className="pr-6 text-right">
                     <div className="flex items-center justify-end gap-2">

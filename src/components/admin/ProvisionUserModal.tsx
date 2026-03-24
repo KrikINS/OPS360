@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Loader2, UserPlus, AlertCircle } from "lucide-react"
+import { MultiSelect } from "@/components/ui/multi-select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface Branch {
@@ -47,7 +48,7 @@ export function ProvisionUserModal({
     password: "",
     fullName: "",
     role: "staff",
-    branchId: "",
+    branchIds: [] as string[],
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +76,7 @@ export function ProvisionUserModal({
         password: "",
         fullName: "",
         role: "staff",
-        branchId: "",
+        branchIds: [],
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -161,23 +162,15 @@ export function ProvisionUserModal({
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="branch" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Primary Allotment</Label>
-                <Select
-                  value={formData.branchId}
-                  onValueChange={(val) => setFormData({ ...formData, branchId: val || "" })}
-                >
-                  <SelectTrigger className="h-9 text-xs font-bold border-slate-200 uppercase">
-                    <SelectValue placeholder="Select Branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id || ""} className="text-xs font-bold uppercase">
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid gap-2 overflow-hidden">
+                <Label htmlFor="branch" className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Branches Allotted</Label>
+                <MultiSelect
+                  options={branches.map(b => ({ label: b.name, value: b.id }))}
+                  selected={formData.branchIds}
+                  onChange={(vals) => setFormData({ ...formData, branchIds: vals })}
+                  placeholder="Select Branches"
+                  className="h-9 min-h-0 [&>div]:min-h-[36px] [&>div]:py-1"
+                />
               </div>
             </div>
           </div>

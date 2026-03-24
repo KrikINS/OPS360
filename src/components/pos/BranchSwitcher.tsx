@@ -14,7 +14,7 @@ import {
 export function BranchSwitcher() {
   const { userRole, allBranches, selectedBranch, branchName, changeBranch, loading } = usePos()
 
-  if (userRole !== 'admin') {
+  if (userRole !== 'admin' && allBranches.length <= 1) {
     return (
       <div className="hidden md:flex flex-col">
         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Terminal</span>

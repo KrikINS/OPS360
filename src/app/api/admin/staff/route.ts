@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     // 2. Extract payload
     const body = await request.json()
-    const { email, password, fullName, role, branchId, forcePasswordChange } = body
+    const { email, password, fullName, role, branchId, branchIds, forcePasswordChange } = body
 
     if (!email || !password || !fullName || !role) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 })
@@ -86,7 +86,8 @@ export async function POST(request: Request) {
         email: email,
         full_name: fullName,
         role: role,
-        assigned_branch_id: branchId || null,
+        assigned_branch_id: (branchIds && branchIds.length > 0) ? branchIds[0] : (branchId || null),
+        assigned_branch_ids: branchIds || (branchId ? [branchId] : []),
         force_password_change: forcePasswordChange === true,
       })
 

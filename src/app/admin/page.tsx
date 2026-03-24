@@ -155,12 +155,12 @@ export default function AdminDashboardPage() {
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fill: '#64748b', fontSize: 10, fontWeight: 800 }}
-                    tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
+                    tickFormatter={(val) => `₹${(Number(val ?? 0) / 1000).toFixed(0)}k`}
                   />
                   <RechartsTooltip 
                     cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
-                    formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+                    formatter={(value) => [formatCurrency(Number(value ?? 0)), 'Revenue']}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
                     {metrics.branch_performance.map((entry, index) => (

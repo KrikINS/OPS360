@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Loader2, Save, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { MultiSelect } from "@/components/ui/multi-select"
 
 interface Branch {
   id: string
@@ -33,6 +34,7 @@ interface Profile {
   full_name: string | null
   role: string | null
   assigned_branch_id: string | null
+  assigned_branch_ids: string[] | null
 }
 
 interface EditUserModalProps {
@@ -57,7 +59,7 @@ export function EditUserModal({
   const [formData, setFormData] = useState({
     fullName: "",
     role: "staff",
-    branchId: "",
+    branchIds: [] as string[],
   })
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function EditUserModal({
       setFormData({
         fullName: profile.full_name || "",
         role: profile.role || "staff",
-        branchId: profile.assigned_branch_id || "",
+        branchIds: profile.assigned_branch_ids || (profile.assigned_branch_id ? [profile.assigned_branch_id] : []),
       })
     }
   }, [profile])
@@ -81,7 +83,8 @@ export function EditUserModal({
       const { error: updateError } = await onUpdate(profile.id, {
         full_name: formData.fullName,
         role: formData.role,
-        assigned_branch_id: formData.branchId || null
+        assigned_branch_ids: formData.branchIds,
+        assigned_branch_id: formData.branchIds.length > 0 ? formData.branchIds[0] : null
       })
 
       if (updateError) throw updateError
@@ -153,23 +156,15 @@ export function EditUserModal({
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="edit-branch" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Branch Allotment</Label>
-                <Select
-                  value={formData.branchId}
-                  onValueChange={(val) => setFormData({ ...formData, branchId: val || "" })}
-                >
-                  <SelectTrigger className="h-9 text-xs font-bold border-slate-200 uppercase">
-                    <SelectValue placeholder="Select Branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id || ""} className="text-xs font-bold uppercase">
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid gap-2 overflow-hidden">
+                <Label htmlFor="edit-branch" className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Branches Allotted</Label>
+                <MultiSelect
+                  options={branches.map(b => ({ label: b.name, value: b.id }))}
+                  selected={formData.branchIds}
+                  onChange={(vals) => setFormData({ ...formData, branchIds: vals })}
+                  placeholder="Select Branches"
+                  className="h-9 min-h-0 [&>div]:min-h-[36px] [&>div]:py-1"
+                />
               </div>
             </div>
           </div>
