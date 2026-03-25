@@ -2,20 +2,22 @@
 // v1.0.3 - RPC & Header API Definitive Fix
 import React, { forwardRef, useEffect, useState, useContext } from 'react'
 import { PosContext } from '@/context/PosContext'
-import type { Branch, Customer } from '@/context/PosContext'
+import { cn } from '@/lib/utils'
+import type { Branch, Customer, InvoiceData } from '@/context/PosContext'
 import { numberToWords } from '@/utils/numberToWords'
 
 interface InvoiceTemplateProps {
   invoiceId?: string
+  initialData?: InvoiceData | null
   onReady?: () => void
 }
 
-export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ invoiceId, onReady }, ref) => {
+export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ invoiceId, initialData, onReady }, ref) => {
   const posContext = useContext(PosContext)
   
   // Local state for archival/re-print mode
   const [archivalData, setArchivalData] = useState<{
-    cart: { model_name: string; hsn_code: string; qty: number; base_price: number; gst_rate: number; gst_amount: number }[]
+    cart: { model_name: string; hsn_code: string; qty: number; base_price: number; gst_rate: number; gst_amount: number; serial_number?: string }[]
     totals: { subtotal: number; totalGst: number; cgst: number; sgst: number; grandTotal: number }
     branch: Branch | null
     customer: Customer | null
@@ -23,9 +25,39 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
     date: string
   } | null>(null)
   const [loading, setLoading] = useState(!!invoiceId)
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    if (invoiceId && typeof invoiceId === 'string' && invoiceId !== 'undefined') {
+    if (initialData) {
+      setArchivalData({
+        cart: initialData.items.map((item: any) => ({
+          model_name: item.model_name || 'Unknown Product',
+          hsn_code: item.hsn_code || '8415',
+          qty: item.quantity,
+          base_price: Number(item.unit_price),
+          gst_rate: Number(item.gst_rate || 18),
+          gst_amount: Number(item.gst_amount),
+          serial_number: item.serial_number
+        })),
+        totals: {
+          subtotal: Number(initialData.net_amount),
+          totalGst: Number(initialData.tax_amount),
+          cgst: Number(initialData.tax_amount) / 2,
+          sgst: Number(initialData.tax_amount) / 2,
+          grandTotal: Number(initialData.total_amount)
+        },
+        branch: initialData.branch || initialData.branches,
+        customer: initialData.customer || initialData.customers || { full_name: 'Walk-in Customer' },
+        invoiceNumber: initialData.invoice_number,
+        date: new Date(initialData.created_at).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        })
+      })
+      setLoading(false)
+      setIsReady(true)
+    } else if (invoiceId && typeof invoiceId === 'string' && invoiceId !== 'undefined') {
       const fetchData = async () => {
         setArchivalData(null) // Reset for new ID
         setLoading(true)
@@ -46,13 +78,14 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           const branch = invoice.branches
           const customer = invoice.customers
 
-          const mappedCart = items.map((item: { model_name: string; hsn_code: string; quantity: number; unit_price: number; gst_rate: number; gst_amount: number }) => ({
+          const mappedCart = items.map((item: { model_name: string; hsn_code: string; quantity: number; unit_price: number; gst_rate: number; gst_amount: number; serial_number?: string }) => ({
              model_name: item.model_name || 'Unknown Product',
              hsn_code: item.hsn_code || '8415',
              qty: item.quantity,
              base_price: Number(item.unit_price),
              gst_rate: Number(item.gst_rate || 18),
-             gst_amount: Number(item.gst_amount)
+             gst_amount: Number(item.gst_amount),
+             serial_number: item.serial_number
           }))
 
           setArchivalData({
@@ -77,13 +110,23 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           console.error("Failed to fetch archival invoice:", err)
         } finally {
           setLoading(false)
-          // Small delay to ensure render is committed before printing
-          setTimeout(() => onReady?.(), 100)
+          setIsReady(true)
         }
       }
       fetchData()
+    } else {
+      // If no invoiceId, we're printing from current context
+      setIsReady(true)
     }
-  }, [invoiceId, onReady])
+  }, [invoiceId])
+
+  // Trigger onReady only after isReady is true
+  useEffect(() => {
+    if (isReady && !loading) {
+      const timer = setTimeout(() => onReady?.(), 200)
+      return () => clearTimeout(timer)
+    }
+  }, [isReady, loading, onReady])
 
   // Use either context or archival data
   const cart = (invoiceId ? archivalData?.cart : posContext?.cart) || []
@@ -93,126 +136,186 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   const invoiceNo = invoiceId ? archivalData?.invoiceNumber : posContext?.invoiceNumber
   const displayDate = invoiceId ? archivalData?.date : posContext?.currentDate
 
+  const isThermal = posContext?.printerType === 'Thermal'
+
   return (
-    <div ref={ref} className={`p-10 bg-white text-slate-800 font-sans text-xs w-[210mm] min-h-[297mm] mx-auto print:block shadow-2xl ${(!invoiceId || loading) ? 'opacity-0 h-0 w-0 pointer-events-none' : ''}`}>
+    <div 
+      ref={ref} 
+      className={cn(
+        "bg-white text-slate-800 font-sans mx-auto print:block shadow-2xl transition-all duration-300 overflow-hidden",
+        isThermal ? "w-[80mm] max-w-[80mm] p-2 text-[10px]" : "w-[210mm] p-10 text-xs min-h-[297mm]",
+        (!isReady || loading) ? 'opacity-0' : 'opacity-100'
+      )}
+    >
       {loading ? (
         <div className="p-20 text-center text-slate-300">Preparing invoice...</div>
       ) : (
         <>
           {/* Header */}
-          <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-10">
-            <div className="flex items-center gap-6">
-              <div className="h-16 w-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-xl">EHA</div>
-              <div className="space-y-1">
-                <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Ethan Home Appliances</h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-tight">
+          <div className={cn(
+            "flex justify-between items-start border-b-4 border-slate-900 pb-4 mb-6",
+            isThermal && "flex-col gap-4 text-center items-center pb-2 mb-4"
+          )}>
+            <div className={cn("flex items-center gap-4", isThermal && "flex-col")}>
+              <div className="h-12 w-12 bg-slate-900 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg">EHA</div>
+              <div className={cn("space-y-0.5", isThermal && "text-center")}>
+                <h1 className={cn("text-2xl font-black tracking-tight text-slate-900 uppercase", isThermal && "text-lg")}>Ethan Home Appliances</h1>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
                   {branch?.full_address || 'Main Showroom'}<br />
-                  {branch?.city}, {branch?.state} - {branch?.pincode}<br />
+                  {branch?.city}, {branch?.state}<br />
                   GSTIN: <span className="text-slate-900">{branch?.gstin || 'EXEMPTED'}</span>
                 </p>
               </div>
             </div>
-            <div className="text-right space-y-1">
-              <h2 className="text-xl font-black text-slate-900 uppercase">Tax Invoice</h2>
+            <div className={cn("text-right space-y-0.5", isThermal && "text-center w-full pt-2 border-t border-slate-100")}>
+              <h2 className="text-sm font-black text-slate-900 uppercase">Tax Invoice</h2>
               <p className="font-bold text-slate-500">Invoice: <span className="text-slate-900">{invoiceNo}</span></p>
               <p className="font-bold text-slate-500">Date: <span className="text-slate-900">{displayDate}</span></p>
             </div>
           </div>
 
           {/* Customer & Billing Info */}
-          <div className="grid grid-cols-2 gap-10 mb-8 pb-8 border-b border-slate-100">
+          <div className={cn(
+            "grid gap-6 mb-6 pb-6 border-b border-slate-100",
+            isThermal ? "grid-cols-1 gap-2" : "grid-cols-2 gap-10"
+          )}>
             <div>
-              <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Billed To</span>
-              <p className="text-sm font-black text-slate-900">{customer?.full_name || customer?.name || 'Walk-in Customer'}</p>
+              <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Billed To</span>
+              <p className="text-xs font-black text-slate-900">{customer?.full_name || customer?.name || 'Walk-in Customer'}</p>
               <p className="font-bold text-slate-500">Phone: {customer?.phone || 'N/A'}</p>
               {customer?.gstin && <p className="font-bold text-slate-500">GSTIN: {customer.gstin}</p>}
             </div>
-            <div className="text-right">
-              <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Payment Mode</span>
-              <p className="text-sm font-black text-slate-900 uppercase">Verified Transaction</p>
-              <p className="font-bold text-slate-500 lowercase">status: paid / settled</p>
+            <div className={cn(isThermal ? "text-left pt-2 border-t border-slate-50" : "text-right")}>
+              <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Mode</span>
+              <p className="text-xs font-black text-slate-900 uppercase">Verified Transaction</p>
+              <p className="font-bold text-slate-500 lowercase opacity-60">status: settled</p>
             </div>
           </div>
 
           {/* Line Items Table */}
-          <table className="w-full mb-10">
+          <table className={cn("w-full mb-6", isThermal && "table-fixed border-collapse")}>
             <thead>
-              <tr className="border-b-2 border-slate-900 text-[9px] font-black uppercase text-slate-400">
-                <th className="py-3 text-left">Description</th>
-                <th className="py-3 text-center">HSN</th>
-                <th className="py-3 text-center">Qty</th>
-                <th className="py-3 text-right">Unit Price</th>
-                <th className="py-3 text-center">GST %</th>
-                <th className="py-3 text-right">Amount</th>
+              <tr className="border-b border-slate-900 text-[8px] font-black uppercase text-slate-400">
+                <th className={cn("py-2 text-left", isThermal ? "w-[45%]" : "w-[40%]")}>Description</th>
+                {!isThermal && <th className="py-2 text-center w-[15%]">HSN</th>}
+                <th className={cn("py-2 text-center", isThermal ? "w-[15%]" : "w-[10%]")}>Qty</th>
+                <th className={cn("py-2 text-right", isThermal ? "w-[20%]" : "w-[15%]")}>Price</th>
+                {!isThermal && <th className="py-2 text-center w-[10%]">GST</th>}
+                <th className={cn("py-2 text-right font-black text-slate-900", isThermal ? "w-[20%]" : "w-[10%]")}>Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {cart.map((item, idx) => (
-                <tr key={idx} className="font-bold">
-                  <td className="py-4 text-slate-900">{item.model_name}</td>
-                  <td className="py-4 text-center text-slate-500">{item.hsn_code || '8415'}</td>
-                  <td className="py-4 text-center">{item.qty}</td>
-                  <td className="py-4 text-right">₹{item.base_price.toLocaleString()}</td>
-                  <td className="py-4 text-center">{item.gst_rate}%</td>
-                  <td className="py-4 text-right text-slate-900 font-black">₹{(item.base_price * item.qty).toLocaleString()}</td>
+                <tr key={idx} className="font-bold text-[9px]">
+                  <td className="py-2 text-slate-900 break-words pr-2">
+                    <div>{item.model_name}</div>
+                    {/* Serial Numbers (Archival or Draft) */}
+                    {item.serial_number && (
+                      <div className="text-[7px] text-slate-400 font-mono mt-0.5 leading-tight">S/N: {item.serial_number}</div>
+                    )}
+                    {!(item as any).serial_number && (item as any).selectedUnits && Object.values((item as any).selectedUnits).some((u: any) => u !== null) && (
+                      <div className="mt-0.5 space-y-0.5">
+                        {Object.values((item as any).selectedUnits)
+                          .filter((u: any) => u !== null && u.serial)
+                          .map((u: any, sIdx: number) => (
+                            <div key={sIdx} className="text-[7px] text-slate-400 font-mono leading-tight">
+                              S/N: {u?.serial}
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
+                  </td>
+                  {!isThermal && <td className="py-2 text-center text-slate-500">{item.hsn_code || '8415'}</td>}
+                  <td className="py-2 text-center">{item.qty}</td>
+                  <td className="py-2 text-right">₹{item.base_price.toLocaleString()}</td>
+                  {!isThermal && <td className="py-2 text-center">{item.gst_rate}%</td>}
+                  <td className="py-2 text-right text-slate-900 font-extrabold">₹{(item.base_price * item.qty).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
           {/* Totals & Tax Summary */}
-          <div className="grid grid-cols-2 gap-10 mb-10">
-            <div className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Tax Analysis (50/50 Split)</span>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] text-slate-500 uppercase font-black">CGST ({(cart[0]?.gst_rate || 18) / 2}%)</p>
-                    <p className="font-black text-slate-900">₹{totals.cgst.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-500 uppercase font-black">SGST ({(cart[0]?.gst_rate || 18) / 2}%)</p>
-                    <p className="font-black text-slate-900">₹{totals.sgst.toLocaleString()}</p>
-                  </div>
+          <div className={cn(
+            "grid gap-6 mb-6",
+            isThermal ? "grid-cols-1" : "grid-cols-2 gap-10"
+          )}>
+            <div className="space-y-3">
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Tax Breakdown (HSN Slabs)</span>
+                <div className="space-y-2">
+                  {Object.entries(
+                    cart.reduce((acc, item) => {
+                      const rate = item.gst_rate;
+                      if (!acc[rate]) acc[rate] = { taxable: 0, tax: 0 };
+                      acc[rate].taxable += item.base_price * item.qty;
+                      acc[rate].tax += (item.base_price * item.qty * rate) / 100;
+                      return acc;
+                    }, {} as Record<number, { taxable: number, tax: number }>)
+                  ).map(([rate, data]) => (
+                    <div key={rate} className="border-b border-slate-200/50 last:border-0 pb-1.5 last:pb-0">
+                      <div className="flex justify-between items-center text-[8px] mb-1">
+                        <span className="text-slate-400 font-bold uppercase tracking-tighter">GST {rate}% Slab (Taxable: ₹{Math.round(data.taxable).toLocaleString()})</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex justify-between items-center text-[9px]">
+                          <span className="text-slate-500 uppercase font-black">CGST ({Number(rate) / 2}%)</span>
+                          <span className="font-black text-slate-900">₹{(data.tax / 2).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[9px]">
+                          <span className="text-slate-500 uppercase font-black">SGST ({Number(rate) / 2}%)</span>
+                          <span className="font-black text-slate-900">₹{(data.tax / 2).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="px-1 italic text-slate-500 text-[10px]">
-                <strong>Total in Words:</strong> {numberToWords(totals.grandTotal)}
+              <div className="px-1 italic text-slate-500 text-[9px] leading-relaxed break-words">
+                <strong className="not-italic text-slate-400 uppercase text-[8px] block mb-0.5">Total in Words</strong>
+                {numberToWords(totals.grandTotal)}
               </div>
             </div>
             
-            <div className="space-y-3">
-              <div className="flex justify-between font-bold">
-                <span className="text-slate-400 capitalize">Subtotal (Excl. Tax)</span>
+            <div className="space-y-2 pt-2 border-t border-slate-100 border-dashed">
+              <div className="flex justify-between font-bold text-[9px]">
+                <span className="text-slate-400">Subtotal</span>
                 <span>₹{totals.subtotal.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between font-bold border-b border-slate-100 pb-3">
-                <span className="text-slate-400 capitalize">Total Tax (GST)</span>
+              <div className="flex justify-between font-bold text-[9px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400">Total Tax</span>
                 <span>₹{totals.totalGst.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-baseline pt-2">
-                <span className="text-[11px] font-black uppercase text-slate-900 tracking-widest">Grand Total</span>
-                <span className="text-3xl font-black text-slate-900 tracking-tighter font-mono">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Net Amount</span>
+                <span className={cn("font-black text-slate-900 tracking-tighter font-mono", isThermal ? "text-xl" : "text-3xl")}>₹{Math.round(totals.grandTotal).toLocaleString()}</span>
               </div>
             </div>
           </div>
 
           {/* Footer / Terms */}
-          <div className="mt-auto pt-10 border-t border-slate-200">
-            <div className="grid grid-cols-2 gap-10">
-              <div className="text-[8px] text-slate-400 space-y-1">
-                <p className="font-black uppercase text-slate-500">Terms & Conditions</p>
-                <p>1. Goods once sold will not be taken back or exchanged.</p>
-                <p>2. Subject to Kochi Jurisdiction only.</p>
-                <p>3. This is a computer-generated invoice and requires no physical signature.</p>
+          <div className={cn(
+            "mt-auto pt-6 border-t border-slate-200 border-dashed",
+            isThermal && "pt-4"
+          )}>
+            <div className={cn(
+              "grid gap-6",
+              isThermal ? "grid-cols-1" : "grid-cols-2"
+            )}>
+              <div className="text-[8px] text-slate-400 space-y-1 break-words">
+                <p className="font-black uppercase text-slate-500 mb-1">Terms & Conditions</p>
+                <p>1. No returns/exchange once sold.</p>
+                <p>2. Subject to Kochi Jurisdiction.</p>
+                <p>3. Computer-generated; no signature required.</p>
               </div>
-              <div className="text-right flex flex-col items-end">
-                <div className="h-16 w-32 border-b border-slate-300 mb-2"></div>
+              <div className={cn("flex flex-col", isThermal ? "items-center text-center pt-4 border-t border-slate-50" : "items-end text-right")}>
+                <div className={cn("h-12 w-32 border-b border-slate-300 mb-2", isThermal && "w-40")}></div>
                 <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Authorized Signatory</p>
               </div>
             </div>
-            <div className="mt-8 text-center py-4 bg-slate-900 rounded-lg">
-              <p className="text-white text-[9px] font-black uppercase tracking-[0.3em]">Thank you for choosing Ethan Home Appliances</p>
+            <div className={cn("mt-6 text-center py-3 bg-slate-900 rounded-lg", isThermal && "mt-4 py-2")}>
+              <p className="text-white text-[8px] font-black uppercase tracking-[0.2em]">Thank you for shopping with EHA</p>
             </div>
           </div>
         </>

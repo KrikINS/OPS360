@@ -15,6 +15,12 @@ export type Product = {
   gst_rate: number
   available_quantity: number
   product_code: string
+  tracking_type?: string
+}
+
+export type SelectedUnit = {
+  id: string
+  serial: string
 }
 
 export type CartItem = {
@@ -24,6 +30,9 @@ export type CartItem = {
   base_price: number
   gst_rate: number
   hsn_code?: string
+  tracking_type?: string
+  selectedUnits?: Record<number, SelectedUnit | null>
+  serial_number?: string
 }
 
 export type Customer = {
@@ -36,6 +45,10 @@ export type Customer = {
 
 export type Toast = { message: string, type: 'success' | 'error' } | null
 
+export type PrinterType = 'A4' | 'Thermal'
+
+export type SessionStats = { count: number, revenue: number }
+
 export type Branch = {
   id: string
   name: string
@@ -44,6 +57,34 @@ export type Branch = {
   state?: string
   pincode?: string
   gstin?: string
+}
+
+export type InvoiceData = {
+  id: string
+  invoice_number: string
+  created_at: string | Date
+  net_amount: number
+  tax_amount: number
+  total_amount: number
+  customer?: { full_name: string, phone: string, gstin?: string }
+  branch?: { name: string, full_address: string, city: string, state: string, gstin: string }
+  items: Array<{
+    model_name: string
+    hsn_code: string
+    quantity: number
+    unit_price: number
+    gst_amount: number
+    serial_number?: string
+    gst_rate: number
+  }>
+}
+  
+interface Profile {
+  role: string
+  full_name?: string
+  pos_pin?: string | null
+  assigned_branch_id?: string | null
+  assigned_branch_ids?: string[] | null
 }
 
 interface PosContextType {
@@ -70,6 +111,11 @@ interface PosContextType {
   }
   isLocked: boolean
   printInvoiceId: string | null
+  printerType: PrinterType
+  isDarkMode: boolean
+  sessionUser: { name: string, role: string, id: string, pin?: string | null }
+  sessionStats: SessionStats
+  isCartValid: boolean
 
   // --- Actions ---
   setIsLocked: (locked: boolean) => void
@@ -78,14 +124,22 @@ interface PosContextType {
   updateQty: (productId: string, delta: number) => void
   clearCart: () => void
   setToast: (toast: Toast) => void
+  setPrinterType: (type: PrinterType) => void
+  setIsDarkMode: (dark: boolean) => void
+  refreshSessionStats: () => Promise<void>
+  logout: () => Promise<void>
   searchCustomers: (term: string) => Promise<void>
   selectCustomer: (customer: Customer) => void
   setSelectedCustomer: (customer: Customer | null) => void
-  executeCheckout: () => Promise<{ success: boolean; invoiceId?: string; invoiceNumber?: string; error?: string }>
+  executeCheckout: () => Promise<{ success: boolean; invoiceData?: InvoiceData; error?: string }>
   refreshInventory: () => Promise<void>
+  fetchAvailableSerials: (productId: string) => Promise<{ id: string, serial_number: string }[]>
+  assignSerialToUnit: (productId: string, slotIndex: number, unit: SelectedUnit | null) => void
   changeBranch: (branchId: string) => Promise<void>
   triggerInvoicePrint: (id: string) => void
   setPrintInvoiceId: (id: string | null) => void
+  updatePosPin: (newPin: string) => Promise<{ success: boolean; error?: string }>
+  fetchInvoiceById: (id: string, retries?: number) => Promise<InvoiceData | null>
 }
 
 // --- Context & Hook ---
@@ -114,6 +168,19 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   const [searchingCustomer, setSearchingCustomer] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [printInvoiceId, setPrintInvoiceId] = useState<string | null>(null)
+  const [printerType, setPrinterType] = useState<PrinterType>('Thermal')
+  const [isDarkMode, setIsDarkModeState] = useState(false)
+  const [sessionUser, setSessionUser] = useState<{name: string, role: string, id: string, pin?: string | null}>({ name: "User", role: "staff", id: "", pin: null })
+  const [sessionStats, setSessionStats] = useState<SessionStats>({ count: 0, revenue: 0 })
+
+  const setIsDarkMode = useCallback((dark: boolean) => {
+    setIsDarkModeState(dark)
+    if (dark) {
+      document.body.classList.add('dark')
+    } else {
+      document.body.classList.remove('dark')
+    }
+  }, [])
 
   const triggerInvoicePrint = useCallback((id: string) => {
     setPrintInvoiceId(id)
@@ -124,12 +191,60 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
 
   const supabase = useMemo(() => createClient(), [])
 
+  const refreshSessionStats = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await supabase.rpc('get_user_pos_stats')
+
+    if (!error && data && data.length > 0) {
+      const stats = data[0] as { full_name: string, today_sales_count: number, today_revenue: number }
+      setSessionStats({
+        count: Number(stats.today_sales_count),
+        revenue: Number(stats.today_revenue)
+      })
+      if (stats.full_name) {
+        setSessionUser(prev => ({ 
+          ...prev, 
+          name: stats.full_name,
+        }))
+      }
+    }
+  }, [supabase])
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }, [supabase])
+
+  const updatePosPin = useCallback(async (newPin: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ pos_pin: newPin })
+      .eq('id', user.id)
+
+    if (error) return { success: false, error: error.message }
+    setSessionUser(prev => ({ ...prev, pin: newPin }))
+    return { success: true }
+  }, [supabase])
+
+  // Auto-refresh stats every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshSessionStats()
+    }, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [refreshSessionStats])
+
   // 1. Fetch Products Logic (Reusable)
   const fetchInventory = useCallback(async (branchId: string) => {
     const { data, error } = await supabase
       .from('products')
       .select(`
-        id, model_name, brand, category, hsn_code, base_price, gst_rate, product_code,
+        id, model_name, brand, category, hsn_code, base_price, gst_rate, product_code, tracking_type,
         inventory!inner(available_quantity)
       `)
       .eq('inventory.branch_id', branchId)
@@ -145,6 +260,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
         base_price: number;
         gst_rate: number;
         product_code: string;
+        tracking_type: string;
         inventory: Array<{ available_quantity: number }>;
       }>).map((p) => ({
         id: p.id,
@@ -155,6 +271,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
         base_price: p.base_price,
         gst_rate: p.gst_rate,
         product_code: p.product_code,
+        tracking_type: p.tracking_type,
         available_quantity: p.inventory?.[0]?.available_quantity || 0
       }))
       setProducts(transformed)
@@ -172,13 +289,20 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, assigned_branch_id, assigned_branch_ids')
+          .select('role, full_name, assigned_branch_id, assigned_branch_ids, pos_pin')
           .eq('id', session.user.id)
           .single()
         
         if (profile) {
           setUserRole(profile.role)
+          setSessionUser({
+            id: session.user.id,
+            name: (profile as Profile).full_name || "User",
+            role: profile.role,
+            pin: (profile as Profile).pos_pin
+          })
           
+          await refreshSessionStats()
           const branchIds = (profile.assigned_branch_ids as string[]) || (profile.assigned_branch_id ? [profile.assigned_branch_id] : [])
           
           if (branchIds.length > 0) {
@@ -224,9 +348,8 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     }
     init()
-  }, [supabase, fetchInventory])
+  }, [supabase, fetchInventory, refreshSessionStats])
 
-  // 3. Financial Auditor's Math Engine
   const totals = useMemo(() => {
     const subtotal = cart.reduce((acc, item) => acc + (item.base_price * item.qty), 0)
     const totalGst = cart.reduce((acc, item) => acc + (item.base_price * item.qty * item.gst_rate / 100), 0)
@@ -238,6 +361,14 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       sgst: totalGst / 2,
       grandTotal: subtotal + totalGst
     }
+  }, [cart])
+
+  const isCartValid = useMemo(() => {
+    return cart.every(item => {
+      if (item.tracking_type !== 'Stocked') return true
+      const units = Object.values(item.selectedUnits || {})
+      return units.length === item.qty && units.every(u => u !== null)
+    })
   }, [cart])
 
   // 4. Core Actions
@@ -279,10 +410,53 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
         base_price: product.base_price,
         gst_rate: product.gst_rate,
         hsn_code: product.hsn_code,
-        qty: 1
+        tracking_type: product.tracking_type,
+        qty: 1,
+        selectedUnits: product.tracking_type === 'Stocked' ? { 0: null } : undefined
       }]
     })
   }, [])
+
+  const assignSerialToUnit = useCallback((productId: string, slotIndex: number, unit: SelectedUnit | null) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === productId) {
+        return {
+          ...item,
+          selectedUnits: {
+            ...item.selectedUnits,
+            [slotIndex]: unit
+          }
+        }
+      }
+      return item
+    }))
+  }, [])
+
+  const fetchAvailableSerials = useCallback(async (productId: string) => {
+    if (!selectedBranch) return []
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('id, serial_number, serial_numbers')
+      .eq('product_id', productId)
+      .eq('branch_id', selectedBranch)
+      .eq('status', 'Available')
+
+    if (error || !data) return []
+
+    const flattened: { id: string, serial_number: string }[] = []
+    
+    data.forEach((row: { id: string, serial_number: string | null, serial_numbers: string[] | null }) => {
+      if (row.serial_number) {
+        flattened.push({ id: row.id, serial_number: row.serial_number })
+      } else if (Array.isArray(row.serial_numbers)) {
+        row.serial_numbers.forEach((s: string) => {
+          if (s) flattened.push({ id: row.id, serial_number: s })
+        })
+      }
+    })
+
+    return flattened
+  }, [supabase, selectedBranch])
 
   const updateQty = useCallback((productId: string, delta: number) => {
     const product = products.find(p => p.id === productId)
@@ -295,7 +469,22 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
           setToast({ message: "Cannot exceed available stock", type: 'error' })
           return item
         }
-        return { ...item, qty: newQty }
+        
+        let newUnits = item.selectedUnits
+        if (item.tracking_type === 'Stocked' && delta !== 0) {
+          newUnits = { ...item.selectedUnits }
+          if (delta > 0) {
+            for (let i = 0; i < delta; i++) {
+              newUnits[item.qty + i] = null
+            }
+          } else {
+            for (let i = 0; i < Math.abs(delta); i++) {
+              delete newUnits[item.qty - 1 - i]
+            }
+          }
+        }
+
+        return { ...item, qty: newQty, selectedUnits: newUnits }
       }
       return item
     }))
@@ -327,15 +516,37 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     if (cart.length === 0) return { success: false, error: 'Cart is empty' }
     setLoading(true)
     try {
+      const processedItems = []
+      for (const item of cart) {
+        if (item.tracking_type === 'Stocked') {
+          // Flatten into one entry per unit for serialized items
+          const units = Object.values(item.selectedUnits || {}) as SelectedUnit[]
+          for (const unit of units) {
+            if (unit) {
+              processedItems.push({
+                product_id: item.id,
+                inventory_id: unit.id,
+                qty: 1,
+                unit_price: item.base_price,
+                gst_amount: (item.base_price * (item.gst_rate / 100)),
+                serial_number: unit.serial
+              })
+            }
+          }
+        } else {
+          processedItems.push({
+            product_id: item.id,
+            qty: item.qty,
+            unit_price: item.base_price,
+            gst_amount: (item.base_price * (item.gst_rate / 100)) * item.qty
+          })
+        }
+      }
+
       const { data, error } = await supabase.rpc('process_pos_sale', {
         p_customer_id: selectedCustomer?.id || '00000000-0000-0000-0000-000000000000',
         p_branch_id: selectedBranch,
-        p_items: cart.map(item => ({
-          product_id: item.id,
-          qty: item.qty,
-          unit_price: item.base_price,
-          gst_amount: (item.base_price * (item.gst_rate / 100)) * item.qty
-        })),
+        p_items: processedItems,
         p_net_amount: totals.subtotal,
         p_tax_amount: totals.totalGst,
         p_total_amount: totals.grandTotal
@@ -343,23 +554,42 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
 
-      const result = data as { id: string, invoice_number: string }
-
-      setToast({ message: `Sale Finalized! Inv: ${result.invoice_number}`, type: 'success' })
+      setInvoiceNumber(data.invoice_number)
+      setToast({ message: `Sale completed: ${data.invoice_number}`, type: 'success' })
+      
       clearCart()
       if (selectedBranch) await fetchInventory(selectedBranch)
-      setInvoiceNumber(result.invoice_number)
-      return { success: true, invoiceId: result.id, invoiceNumber: result.invoice_number }
-    } catch (err) {
-      const error = err as { message?: string }
-      console.error('Checkout Error:', error)
-      const message = error.message || "Execution Failed"
-      setToast({ message, type: 'error' })
-      return { success: false, error: message }
+      await refreshSessionStats()
+      return { success: true, invoiceData: data }
+    } catch (err: any) {
+      console.error('Checkout failed:', err)
+      setToast({ message: err.message || 'Payment processing failed', type: 'error' })
+      return { success: false, error: err.message }
     } finally {
       setLoading(false)
     }
-  }, [supabase, cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory])
+  }, [supabase, cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats])
+
+  // Helper with retry logic for fetching full invoice state
+  const fetchInvoiceById = useCallback(async (id: string, retries = 3): Promise<any> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const { data: header } = await supabase.from('sales_invoices').select('*, branches(*), customers(*)').eq('id', id).single()
+        const { data: items } = await supabase.from('view_invoice_details').select('*').eq('invoice_id', id)
+        
+        if (header && items && items.length > 0) {
+          return { ...header, items }
+        }
+      } catch (e) {
+        console.warn(`Fetch attempt ${i + 1} failed`, e)
+      }
+      
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    }
+    return null
+  }, [supabase])
 
   // Auto-clear toast
   useEffect(() => {
@@ -371,14 +601,24 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     products, cart, loading, selectedBranch, branchName, currentBranchDetails, userRole, allBranches,
-    selectedCustomer, customerResults, searchingCustomer, toast, invoiceNumber, currentDate,        totals,
-        isLocked,
-        setIsLocked,
-        printInvoiceId,
-        triggerInvoicePrint,
-        setPrintInvoiceId,
+    selectedCustomer, customerResults, searchingCustomer, toast, invoiceNumber, currentDate, totals,
+    isLocked, isCartValid,
+    setIsLocked,
+    printInvoiceId,
+    triggerInvoicePrint,
+    setPrintInvoiceId,
+    printerType,
+    setPrinterType,
+    isDarkMode,
+    setIsDarkMode,
+    sessionUser,
+    sessionStats,
+    refreshSessionStats,
+    logout,
+    updatePosPin,
     addToCart, removeFromCart, updateQty, clearCart, setToast, 
-    searchCustomers, selectCustomer, setSelectedCustomer, executeCheckout, refreshInventory, changeBranch
+    searchCustomers, selectCustomer, setSelectedCustomer, executeCheckout, refreshInventory, changeBranch,
+    fetchAvailableSerials, assignSerialToUnit, fetchInvoiceById
   }
 
   return <PosContext.Provider value={value}>{children}</PosContext.Provider>
