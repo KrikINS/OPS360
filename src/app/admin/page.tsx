@@ -140,6 +140,13 @@ export default function AdminDashboardPage() {
           color="blue" 
         />
         <ModuleCard 
+          title="Customer Registry" 
+          href="/admin/customers" 
+          icon={Users} 
+          description="Manage buyer profiles & data" 
+          color="emerald" 
+        />
+        <ModuleCard 
           title="Organization" 
           href="/admin/organization" 
           icon={Building2} 

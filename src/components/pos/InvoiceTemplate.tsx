@@ -23,6 +23,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
     customer: Customer | null
     invoiceNumber: string
     date: string
+    paymentMethod?: string
   } | null>(null)
   const [loading, setLoading] = useState(!!invoiceId)
   const [isReady, setIsReady] = useState(false)
@@ -47,13 +48,14 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           grandTotal: Number(initialData.total_amount)
         },
         branch: initialData.branch || null,
-        customer: initialData.customer || { id: 'walk-in', name: 'Walk-in Customer', full_name: 'Walk-in Customer', phone: '' },
+        customer: initialData.customer || { id: 'walk-in', full_name: 'Walk-in Customer', phone_number: '' },
         invoiceNumber: initialData.invoice_number,
         date: new Date(initialData.created_at).toLocaleDateString('en-IN', {
           day: '2-digit',
           month: 'short',
           year: 'numeric'
-        })
+        }),
+        paymentMethod: initialData.payment_method
       })
       setLoading(false)
       setIsReady(true)
@@ -98,13 +100,14 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               grandTotal: Number(invoice.total_amount)
             },
             branch: branch,
-            customer: customer || { full_name: 'Walk-in Customer' },
+            customer: customer || { full_name: 'Walk-in Customer', phone_number: '' },
             invoiceNumber: invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase(),
             date: new Date(invoice.created_at).toLocaleDateString('en-IN', {
               day: '2-digit',
               month: 'short',
               year: 'numeric'
-            })
+            }),
+            paymentMethod: invoice.payment_method
           })
         } catch (err) {
           console.error("Failed to fetch archival invoice:", err)
@@ -135,6 +138,18 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   const customer = invoiceId ? archivalData?.customer : posContext?.selectedCustomer
   const invoiceNo = invoiceId ? archivalData?.invoiceNumber : posContext?.invoiceNumber
   const displayDate = invoiceId ? archivalData?.date : posContext?.currentDate
+  const paymentMethodRaw = invoiceId ? archivalData?.paymentMethod : posContext?.cart?.length ? 'cash' : undefined // Fallback for context is handled by initialData if available
+  
+  // Mapping for readable payment method
+  const getPaymentMethodDisplay = (method?: string) => {
+    switch(method) {
+      case 'cash': return 'Cash'
+      case 'card': return 'Credit/Debit Card'
+      case 'upi': return 'UPI / QR Scan'
+      case 'transfer': return 'Bank Transfer'
+      default: return method || 'Cash'
+    }
+  }
 
   const isThermal = posContext?.printerType === 'Thermal'
 
@@ -182,13 +197,15 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             <div>
               <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Billed To</span>
               <p className="text-xs font-black text-slate-900">{customer?.full_name || customer?.name || 'Walk-in Customer'}</p>
-              <p className="font-bold text-slate-500">Phone: {customer?.phone || 'N/A'}</p>
+              <p className="font-bold text-slate-500">Phone: {customer?.phone_number || 'N/A'}</p>
               {customer?.gstin && <p className="font-bold text-slate-500">GSTIN: {customer.gstin}</p>}
             </div>
             <div className={cn(isThermal ? "text-left pt-2 border-t border-slate-50" : "text-right")}>
               <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Mode</span>
-              <p className="text-xs font-black text-slate-900 uppercase">Verified Transaction</p>
-              <p className="font-bold text-slate-500 lowercase opacity-60">status: settled</p>
+              <p className="text-xs font-black text-slate-900 uppercase">
+                {getPaymentMethodDisplay(paymentMethodRaw || initialData?.payment_method)}
+              </p>
+              <p className="font-bold text-slate-500 lowercase opacity-60 text-[9px]">status: settled</p>
             </div>
           </div>
 
@@ -306,7 +323,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               <div className="text-[8px] text-slate-400 space-y-1 break-words">
                 <p className="font-black uppercase text-slate-500 mb-1">Terms & Conditions</p>
                 <p>1. No returns/exchange once sold.</p>
-                <p>2. Subject to Kochi Jurisdiction.</p>
+                <p>2. Subject to Ethan Home Appliances local Jurisdiction.</p>
                 <p>3. Computer-generated; no signature required.</p>
               </div>
               <div className={cn("flex flex-col", isThermal ? "items-center text-center pt-4 border-t border-slate-50" : "items-end text-right")}>

@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 interface Customer {
   id: string
   full_name: string
-  phone: string
+  phone_number: string
 }
 
 interface Product {
@@ -70,7 +70,7 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .from('service_jobs')
         .select(`
           *,
-          customer:customers(id, full_name, phone),
+          customer:customers(id, full_name, phone_number),
           product:products(id, model_name, brand),
           technician:profiles!service_jobs_technician_id_fkey(full_name)
         `)

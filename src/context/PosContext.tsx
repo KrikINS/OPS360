@@ -37,9 +37,11 @@ export type CartItem = {
 
 export type Customer = {
   id: string
-  name: string
-  full_name?: string
-  phone: string
+  name?: string
+  full_name: string
+  phone_number: string
+  email?: string
+  city?: string
   gstin?: string
 }
 
@@ -77,6 +79,7 @@ export type InvoiceData = {
     serial_number?: string
     gst_rate: number
   }>
+  payment_method?: string
 }
   
 interface Profile {
@@ -99,6 +102,12 @@ interface PosContextType {
   selectedCustomer: Customer | null
   customerResults: Customer[]
   searchingCustomer: boolean
+  customerSearchQuery: string
+  phoneQuery: string
+  setCustomerSearchQuery: (val: string) => void
+  setPhoneQuery: (val: string) => void
+  resetCustomerContext: () => void
+  selectWalkInCustomer: () => void
   toast: Toast
   invoiceNumber: string
   currentDate: string
@@ -131,7 +140,7 @@ interface PosContextType {
   searchCustomers: (term: string) => Promise<void>
   selectCustomer: (customer: Customer) => void
   setSelectedCustomer: (customer: Customer | null) => void
-  executeCheckout: () => Promise<{ success: boolean; invoiceData?: InvoiceData; error?: string }>
+  executeCheckout: (paymentMethod?: string) => Promise<{ success: boolean; invoiceData?: InvoiceData; error?: string }>
   refreshInventory: () => Promise<void>
   fetchAvailableSerials: (productId: string) => Promise<{ id: string, serial_number: string }[]>
   assignSerialToUnit: (productId: string, slotIndex: number, unit: SelectedUnit | null) => void
@@ -143,6 +152,7 @@ interface PosContextType {
 }
 
 // --- Context & Hook ---
+export const SYSTEM_WALKIN_ID = '00000000-0000-0000-0000-000000000000'
 
 export const PosContext = createContext<PosContextType | undefined>(undefined)
 
@@ -166,6 +176,9 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
   const [searchingCustomer, setSearchingCustomer] = useState(false)
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("")
+  const [phoneQuery, setPhoneQuery] = useState("")
+  const [walkInCustomer, setWalkInCustomer] = useState<Customer | null>(null)
   const [isLocked, setIsLocked] = useState(false)
   const [printInvoiceId, setPrintInvoiceId] = useState<string | null>(null)
   const [printerType, setPrinterType] = useState<PrinterType>('Thermal')
@@ -336,9 +349,20 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       const { data: walkIn } = await supabase
         .from('customers')
         .select('*')
-        .eq('phone', '0000000000')
+        .eq('id', SYSTEM_WALKIN_ID)
         .single()
-      if (walkIn) setSelectedCustomer(walkIn as Customer)
+      
+      if (walkIn) {
+        setWalkInCustomer(walkIn as Customer)
+      } else {
+        // Fallback search by phone if UUID record isn't created yet
+        const { data: fallback } = await supabase.from('customers').select('*').eq('phone_number', '0000000000').single()
+        if (fallback) {
+          setWalkInCustomer(fallback as Customer)
+        }
+      }
+      
+      setSelectedCustomer(null) // Start with empty customer state
       
       setInvoiceNumber(`INV-${new Date().getTime().toString().slice(-6)}`)
       setCurrentDate(new Date().toLocaleDateString('en-IN', { 
@@ -349,6 +373,22 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     }
     init()
   }, [supabase, fetchInventory, refreshSessionStats])
+  
+  const resetCustomerContext = useCallback(() => {
+    setSelectedCustomer(null)
+    setCustomerResults([])
+    setCustomerSearchQuery("")
+    setPhoneQuery("")
+  }, [])
+
+  const selectWalkInCustomer = useCallback(() => {
+    if (walkInCustomer) {
+      setSelectedCustomer(walkInCustomer)
+      setCustomerResults([])
+      setCustomerSearchQuery("")
+      setPhoneQuery("")
+    }
+  }, [walkInCustomer])
 
   const totals = useMemo(() => {
     const subtotal = cart.reduce((acc, item) => acc + (item.base_price * item.qty), 0)
@@ -502,6 +542,18 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       return
     }
     setSearchingCustomer(true)
+    
+    // Try search by phone first if it looks like a number
+    if (/^\+?[\d\s-]+$/.test(term) && term.replace(/\D/g, '').length >= 7) {
+      const { data, error } = await supabase.rpc('search_customer_by_phone', { p_phone: term })
+      if (!error && data) {
+        setCustomerResults(data as Customer[])
+        setSearchingCustomer(false)
+        return
+      }
+    }
+
+    // Fallback to name search
     const { data, error } = await supabase.rpc('search_pos_customers', { search_term: term })
     if (!error && data) setCustomerResults(data as Customer[])
     setSearchingCustomer(false)
@@ -512,7 +564,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     setCustomerResults([])
   }, [])
 
-  const executeCheckout = useCallback(async () => {
+  const executeCheckout = useCallback(async (paymentMethod: string = 'cash') => {
     if (cart.length === 0) return { success: false, error: 'Cart is empty' }
     setLoading(true)
     try {
@@ -544,12 +596,13 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { data, error } = await supabase.rpc('process_pos_sale', {
-        p_customer_id: selectedCustomer?.id || '00000000-0000-0000-0000-000000000000',
+        p_customer_id: selectedCustomer?.id || SYSTEM_WALKIN_ID,
         p_branch_id: selectedBranch,
         p_items: processedItems,
         p_net_amount: totals.subtotal,
         p_tax_amount: totals.totalGst,
-        p_total_amount: totals.grandTotal
+        p_total_amount: totals.grandTotal,
+        p_payment_method: paymentMethod
       })
 
       if (error) throw error
@@ -558,6 +611,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       setToast({ message: `Sale completed: ${data.invoice_number}`, type: 'success' })
       
       clearCart()
+      resetCustomerContext()
       if (selectedBranch) await fetchInventory(selectedBranch)
       await refreshSessionStats()
       return { success: true, invoiceData: data }
@@ -569,7 +623,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [supabase, cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats])
+  }, [supabase, cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats, resetCustomerContext])
 
   // Helper with retry logic for fetching full invoice state
   const fetchInvoiceById = useCallback(async (id: string, retries = 3): Promise<InvoiceData | null> => {
@@ -600,9 +654,11 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toast])
 
-  const value = {
+  const value: PosContextType = {
     products, cart, loading, selectedBranch, branchName, currentBranchDetails, userRole, allBranches,
-    selectedCustomer, customerResults, searchingCustomer, toast, invoiceNumber, currentDate, totals,
+    selectedCustomer, customerResults, searchingCustomer, customerSearchQuery, phoneQuery,
+    setCustomerSearchQuery, setPhoneQuery, resetCustomerContext, selectWalkInCustomer,
+    toast, invoiceNumber, currentDate, totals,
     isLocked, isCartValid,
     setIsLocked,
     printInvoiceId,

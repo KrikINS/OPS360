@@ -41,9 +41,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // 3. Fetch from the V5 RPC (supports optional branch filtering)
+    // 3. Fetch from the V8 RPC (supports customer IDs and names)
     const { data, error } = await supabase
-      .rpc('get_sales_registry_v7', {
+      .rpc('get_sales_registry_v8', {
         p_branch_id: branchId || null
       })
 

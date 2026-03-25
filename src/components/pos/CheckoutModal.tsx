@@ -53,7 +53,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
     setStatus('loading')
     setErrorMsg(null)
     
-    const result = await executeCheckout()
+    const result = await executeCheckout(paymentMethod || 'cash')
     
     if (result.success && result.invoiceData) {
       setInvoiceId(result.invoiceData.id)

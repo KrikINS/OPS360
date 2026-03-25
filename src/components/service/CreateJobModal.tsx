@@ -13,7 +13,7 @@ import { createClient } from "@/utils/supabase/client"
 interface Customer {
   id: string
   full_name: string
-  phone: string
+  phone_number: string
 }
 
 interface Product {
@@ -138,7 +138,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
                   </div>
                   <div>
                     <p className="font-bold text-slate-800 text-sm">{selectedCustomer.full_name}</p>
-                    <p className="text-xs text-emerald-600 font-medium">{selectedCustomer.phone}</p>
+                    <p className="text-xs text-emerald-600 font-medium">{selectedCustomer.phone_number}</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedCustomer(null)} className="text-emerald-700 hover:bg-emerald-100">Change</Button>
@@ -161,7 +161,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
                         onClick={() => setSelectedCustomer(c)}
                       >
                         <span className="font-bold text-sm text-slate-800">{c.full_name}</span>
-                        <span className="text-xs text-slate-500">{c.phone}</span>
+                        <span className="text-xs text-slate-500">{c.phone_number}</span>
                       </button>
                     ))}
                   </div>

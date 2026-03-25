@@ -54,6 +54,7 @@ const adminItems = [
   { title: "Admin Dashboard",       url: "/admin",         icon: ShieldAlert },
   { title: "Sales Registry",        url: "/admin/sales-registry", icon: BarChart3 },
   { title: "User Management",       url: "/admin/users",   icon: UserCog },
+  { title: "Customer Registry",     url: "/admin/customers", icon: Users },
   { title: "Organization",          url: "/admin/organization", icon: Building2 },
   { title: "Global Masters",        url: "/admin/masters",      icon: FolderTree },
   { title: "Branding",              url: "/admin/branding",     icon: Palette },

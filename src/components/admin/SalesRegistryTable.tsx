@@ -18,6 +18,7 @@ import {
   Loader2
 } from "lucide-react"
 import { SaleDetailsDrawer } from './SaleDetailsDrawer'
+import { CustomerHistoryDrawer } from './CustomerHistoryDrawer'
 import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
 import { useReactToPrint } from 'react-to-print'
 
@@ -26,6 +27,7 @@ interface Sale {
   invoice_number?: string;
   created_at: string;
   total_amount: number;
+  customer_id: string;
   customer_name: string;
   branch_name: string;
   items_sold?: {
@@ -33,6 +35,7 @@ interface Sale {
     quantity: number;
     serial_number: string;
   }[];
+  payment_method?: string;
   search_meta?: string;
 }
 
@@ -47,6 +50,11 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null)
   const [selectedInvoiceNumber, setSelectedInvoiceNumber] = useState<string | null>(null)
   
+  // Customer History State
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+  const [selectedCustomerName, setSelectedCustomerName] = useState<string | null>(null)
+
   // Local printing state (for Admin page where no onPrint is passed)
   const [printId, setPrintId] = useState<string | null>(null)
   const [printingId, setPrintingId] = useState<string | null>(null)
@@ -59,6 +67,13 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
     setSelectedSaleId(id)
     setSelectedInvoiceNumber(invoiceNum || null)
     setDrawerOpen(true)
+  }
+
+  const openCustomerHistory = (id: string, name: string) => {
+    if (!id || name === 'Walk-in Customer') return
+    setSelectedCustomerId(id)
+    setSelectedCustomerName(name)
+    setHistoryOpen(true)
   }
 
   const triggerPrint = (id: string) => {
@@ -109,6 +124,7 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
               <TableHead className="font-bold">Items Sold</TableHead>
               <TableHead className="font-bold">Serial Numbers</TableHead>
               <TableHead className="font-bold">Branch</TableHead>
+              <TableHead className="font-bold">Mode</TableHead>
               <TableHead className="font-bold text-right sticky right-0 bg-slate-50/50 z-20 w-[120px] shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -122,8 +138,25 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
                   {new Date(sale.created_at).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  <div className="font-bold text-slate-900">{sale.customer_name || 'Walk-in Customer'}</div>
-                  <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider italic">Verified ID</div>
+                  <button 
+                    onClick={() => openCustomerHistory(sale.customer_id, sale.customer_name)}
+                    disabled={!sale.customer_id || sale.customer_name === 'Walk-in Customer'}
+                    className={`text-left group/link ${
+                      (!sale.customer_id || sale.customer_name === 'Walk-in Customer') 
+                        ? 'cursor-default' 
+                        : 'hover:text-blue-600'
+                    }`}
+                  >
+                    <div className="font-bold text-slate-900 transition-colors">{sale.customer_name}</div>
+                    <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider italic flex items-center gap-1">
+                      {sale.customer_name === 'Walk-in Customer' ? 'Guest Profile' : (
+                        <>
+                          Verified ID
+                          <span className="opacity-0 group-hover/link:opacity-100 transition-opacity text-blue-500 underline decoration-blue-500/30 underline-offset-2">View History</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="font-black text-slate-900">₹{Number(sale.total_amount).toLocaleString()}</div>
@@ -159,6 +192,14 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                     <span className="font-bold text-slate-700 whitespace-nowrap">{sale.branch_name}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">
+                      {sale.payment_method || 'Cash'}
+                    </span>
+                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Settled</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right sticky right-0 bg-white z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-l border-slate-100">
@@ -197,6 +238,13 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
         saleId={selectedSaleId}
         invoiceNumber={selectedInvoiceNumber || undefined}
         onClose={() => setDrawerOpen(false)}
+      />
+
+      <CustomerHistoryDrawer
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        customerId={selectedCustomerId}
+        customerName={selectedCustomerName}
       />
 
       <div className="fixed top-[-10000px] left-[-10000px] opacity-0 pointer-events-none z-[-100]">
