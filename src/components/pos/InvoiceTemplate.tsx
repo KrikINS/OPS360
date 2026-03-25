@@ -46,8 +46,8 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           sgst: Number(initialData.tax_amount) / 2,
           grandTotal: Number(initialData.total_amount)
         },
-        branch: initialData.branch || initialData.branches,
-        customer: initialData.customer || initialData.customers || { full_name: 'Walk-in Customer' },
+        branch: initialData.branch || null,
+        customer: initialData.customer || { id: 'walk-in', name: 'Walk-in Customer', full_name: 'Walk-in Customer', phone: '' },
         invoiceNumber: initialData.invoice_number,
         date: new Date(initialData.created_at).toLocaleDateString('en-IN', {
           day: '2-digit',

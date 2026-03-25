@@ -66,8 +66,8 @@ export type InvoiceData = {
   net_amount: number
   tax_amount: number
   total_amount: number
-  customer?: { full_name: string, phone: string, gstin?: string }
-  branch?: { name: string, full_address: string, city: string, state: string, gstin: string }
+  customer?: Customer
+  branch?: Branch
   items: Array<{
     model_name: string
     hsn_code: string
