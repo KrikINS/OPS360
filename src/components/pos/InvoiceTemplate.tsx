@@ -3,7 +3,7 @@
 import React, { forwardRef, useEffect, useState, useContext } from 'react'
 import { PosContext } from '@/context/PosContext'
 import { cn } from '@/lib/utils'
-import type { Branch, Customer, InvoiceData } from '@/context/PosContext'
+import type { Branch, Customer, InvoiceData, CartItem } from '@/context/PosContext'
 import { numberToWords } from '@/utils/numberToWords'
 
 interface InvoiceTemplateProps {
@@ -30,7 +30,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   useEffect(() => {
     if (initialData) {
       setArchivalData({
-        cart: initialData.items.map((item: any) => ({
+        cart: initialData.items.map((item) => ({
           model_name: item.model_name || 'Unknown Product',
           hsn_code: item.hsn_code || '8415',
           qty: item.quantity,
@@ -118,7 +118,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
       // If no invoiceId, we're printing from current context
       setIsReady(true)
     }
-  }, [invoiceId])
+  }, [invoiceId, initialData])
 
   // Trigger onReady only after isReady is true
   useEffect(() => {
@@ -213,13 +213,13 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                     {item.serial_number && (
                       <div className="text-[7px] text-slate-400 font-mono mt-0.5 leading-tight">S/N: {item.serial_number}</div>
                     )}
-                    {!(item as any).serial_number && (item as any).selectedUnits && Object.values((item as any).selectedUnits).some((u: any) => u !== null) && (
+                    {!(item as { serial_number?: string }).serial_number && (item as CartItem).selectedUnits && Object.values((item as CartItem).selectedUnits || {}).some((u) => u !== null) && (
                       <div className="mt-0.5 space-y-0.5">
-                        {Object.values((item as any).selectedUnits)
-                          .filter((u: any) => u !== null && u.serial)
-                          .map((u: any, sIdx: number) => (
+                        {Object.values((item as CartItem).selectedUnits || {})
+                          .filter((u): u is { id: string; serial: string } => u !== null && typeof u.serial === 'string')
+                          .map((u, sIdx) => (
                             <div key={sIdx} className="text-[7px] text-slate-400 font-mono leading-tight">
-                              S/N: {u?.serial}
+                              S/N: {u.serial}
                             </div>
                           ))
                         }

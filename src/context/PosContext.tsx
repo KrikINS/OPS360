@@ -561,17 +561,18 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       if (selectedBranch) await fetchInventory(selectedBranch)
       await refreshSessionStats()
       return { success: true, invoiceData: data }
-    } catch (err: any) {
-      console.error('Checkout failed:', err)
-      setToast({ message: err.message || 'Payment processing failed', type: 'error' })
-      return { success: false, error: err.message }
+    } catch (err: unknown) {
+      const error = err as Error
+      console.error('Checkout failed:', error)
+      setToast({ message: error.message || 'Payment processing failed', type: 'error' })
+      return { success: false, error: error.message }
     } finally {
       setLoading(false)
     }
   }, [supabase, cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats])
 
   // Helper with retry logic for fetching full invoice state
-  const fetchInvoiceById = useCallback(async (id: string, retries = 3): Promise<any> => {
+  const fetchInvoiceById = useCallback(async (id: string, retries = 3): Promise<InvoiceData | null> => {
     for (let i = 0; i < retries; i++) {
       try {
         const { data: header } = await supabase.from('sales_invoices').select('*, branches(*), customers(*)').eq('id', id).single()
