@@ -43,15 +43,18 @@ export async function GET(request: Request) {
 
     // 3. Fetch from the V5 RPC (supports optional branch filtering)
     const { data, error } = await supabase
-      .rpc('get_sales_registry_v5', {
+      .rpc('get_sales_registry_v7', {
         p_branch_id: branchId || null
       })
 
-    if (error) throw error
+    if (error) {
+      console.error("Supabase RPC Error:", error)
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
 
     return NextResponse.json(data)
-  } catch (err) {
+  } catch (err: any) {
     console.error("Sales Registry Fetch Error:", err)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 })
   }
 }

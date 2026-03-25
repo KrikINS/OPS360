@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input"
 import { 
   Eye, 
   Printer, 
-  Search
+  Search,
+  Loader2
 } from "lucide-react"
 import { SaleDetailsDrawer } from './SaleDetailsDrawer'
 import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
@@ -27,6 +28,12 @@ interface Sale {
   total_amount: number;
   customer_name: string;
   branch_name: string;
+  items_sold?: {
+    name: string;
+    quantity: number;
+    serial_number: string;
+  }[];
+  search_meta?: string;
 }
 
 interface SaleRegistryTableProps {
@@ -42,6 +49,7 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
   
   // Local printing state (for Admin page where no onPrint is passed)
   const [printId, setPrintId] = useState<string | null>(null)
+  const [printingId, setPrintingId] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -54,8 +62,11 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
   }
 
   const triggerPrint = (id: string) => {
+    setPrintingId(id)
     if (onPrint) {
       onPrint(id)
+      // Auto-clear after 2.5s for fire-and-forget prints
+      setTimeout(() => setPrintingId(null), 2500)
     } else {
       setPrintId(id)
     }
@@ -65,7 +76,12 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
     sale.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     sale.sale_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     sale.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sale.branch_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    sale.branch_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sale.search_meta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sale.items_sold?.some(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.serial_number.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   )
 
   return (
@@ -86,12 +102,14 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
         <Table>
           <TableHeader className="bg-slate-50/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-bold w-[150px]">Invoice ID</TableHead>
-              <TableHead className="font-bold">Date</TableHead>
+              <TableHead className="font-bold w-[130px]">Invoice ID</TableHead>
+              <TableHead className="font-bold w-[100px]">Date</TableHead>
               <TableHead className="font-bold">Customer</TableHead>
-              <TableHead className="font-bold">Branch</TableHead>
               <TableHead className="font-bold text-right">Amount</TableHead>
-              <TableHead className="font-bold text-right w-[150px]">Actions</TableHead>
+              <TableHead className="font-bold">Items Sold</TableHead>
+              <TableHead className="font-bold">Serial Numbers</TableHead>
+              <TableHead className="font-bold">Branch</TableHead>
+              <TableHead className="font-bold text-right sticky right-0 bg-slate-50/50 z-20 w-[120px] shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -107,22 +125,48 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
                   <div className="font-bold text-slate-900">{sale.customer_name || 'Walk-in Customer'}</div>
                   <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider italic">Verified ID</div>
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                    <span className="font-bold text-slate-700">{sale.branch_name}</span>
-                  </div>
-                </TableCell>
                 <TableCell className="text-right">
                   <div className="font-black text-slate-900">₹{Number(sale.total_amount).toLocaleString()}</div>
                   <div className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest">Paid</div>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <TableCell>
+                  <div className="flex flex-col gap-0.5 max-w-[180px]">
+                    {sale.items_sold?.slice(0, 3).map((item, idx) => (
+                      <div key={idx} className="text-[10px] font-bold text-slate-700 truncate" title={item.name}>
+                        {item.quantity}x {item.name}
+                      </div>
+                    ))}
+                    {sale.items_sold && sale.items_sold.length > 3 && (
+                      <div className="text-[9px] font-black text-primary uppercase mt-0.5">+{sale.items_sold.length - 3} More Items</div>
+                    )}
+                    {(!sale.items_sold || sale.items_sold.length === 0) && <span className="text-slate-300">---</span>}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-0.5 max-w-[180px]">
+                    {sale.items_sold?.slice(0, 3).map((item, idx) => (
+                      <div key={idx} className="text-[10px] font-mono text-slate-400 truncate" title={item.serial_number}>
+                        {item.serial_number || '---'}
+                      </div>
+                    ))}
+                    {sale.items_sold && sale.items_sold.length > 3 && (
+                      <div className="text-[9px] font-mono text-slate-300 uppercase mt-0.5">...</div>
+                    )}
+                    {(!sale.items_sold || sale.items_sold.length === 0) && <span className="text-slate-300">---</span>}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <span className="font-bold text-slate-700 whitespace-nowrap">{sale.branch_name}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right sticky right-0 bg-white z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-l border-slate-100">
+                  <div className="flex justify-end gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-xl hover:bg-white hover:shadow-md hover:text-primary transition-all text-slate-400"
+                      className="h-9 w-9 rounded-xl hover:bg-slate-100 transition-all text-slate-400 hover:text-primary"
                       onClick={() => openDetails(sale.sale_id, sale.invoice_number)}
                     >
                       <Eye className="h-4 w-4" />
@@ -130,10 +174,15 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-xl hover:bg-white hover:shadow-md hover:text-primary transition-all text-slate-400"
+                      className="h-9 w-9 rounded-xl hover:bg-slate-100 transition-all text-slate-400 hover:text-primary"
                       onClick={() => triggerPrint(sale.sale_id)}
+                      disabled={!!printingId}
                     >
-                      <Printer className="h-4 w-4" />
+                      {printingId === sale.sale_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      ) : (
+                        <Printer className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </TableCell>
@@ -157,7 +206,10 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
             invoiceId={printId} 
             onReady={() => {
               handlePrint()
-              setTimeout(() => setPrintId(null), 1000)
+              setTimeout(() => {
+                setPrintId(null)
+                setPrintingId(null)
+              }, 1000)
             }} 
           />
         )}

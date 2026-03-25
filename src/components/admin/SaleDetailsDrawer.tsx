@@ -29,6 +29,7 @@ interface SaleItem {
   unit_price: number
   gst_amount: number
   total_line_amount: number
+  serial_number?: string
 }
 
 export function SaleDetailsDrawer({ saleId, invoiceNumber, open, onClose }: SaleDetailsDrawerProps) {
@@ -99,6 +100,9 @@ export function SaleDetailsDrawer({ saleId, invoiceNumber, open, onClose }: Sale
                     Quantity: <span className="font-bold text-slate-900">{item.quantity}</span>
                   </div>
                   <div className="text-right">
+                    {item.serial_number && (
+                      <p className="text-[10px] text-blue-600 font-bold font-mono mb-1 underline decoration-dotted">SN: {item.serial_number}</p>
+                    )}
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Line Total (incl. Tax)</p>
                     <p className="font-black text-slate-900">₹{Number(item.total_line_amount).toLocaleString()}</p>
                   </div>

@@ -15,7 +15,7 @@ import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
 import { useReactToPrint } from 'react-to-print'
 
 function POSContent() {
-  const { toast, cart, clearCart, printInvoiceId, setPrintInvoiceId } = usePos()
+  const { toast, cart, clearCart, printInvoiceId, setPrintInvoiceId, isDarkMode, isCartValid } = usePos()
   const [showCheckout, setShowCheckout] = useState(false)
   const [mobileCartOpen, setMobileCartOpen] = useState(false)
 
@@ -28,7 +28,7 @@ function POSContent() {
   usePosHotkeys([
     { key: 's', alt: true, action: () => document.getElementById('pos-product-search')?.focus() },
     { key: 'n', alt: true, action: () => document.getElementById('pos-customer-search')?.focus() },
-    { key: 'Enter', alt: true, action: () => cart.length > 0 && setShowCheckout(true) },
+    { key: 'Enter', alt: true, action: () => cart.length > 0 && isCartValid && setShowCheckout(true) },
     { key: 'c', alt: true, action: () => clearCart() },
     { key: 'Escape', action: () => {
       setShowCheckout(false)
@@ -37,7 +37,10 @@ function POSContent() {
   ])
 
   return (
-    <div className="flex flex-col h-screen bg-[#F8FAFC] overflow-hidden relative">
+    <div className={cn(
+      "flex flex-col h-screen bg-[#F8FAFC] dark:bg-slate-950 overflow-hidden relative",
+      isDarkMode && "dark"
+    )}>
       <TerminalLockOverlay />
       {/* Toast Notification */}
       {toast && (
@@ -99,7 +102,7 @@ function POSContent() {
       <CheckoutModal open={showCheckout} onOpenChange={setShowCheckout} />
 
       {/* Centralized Print Provider for Re-printing from Registry */}
-      <div className="fixed top-[-10000px] left-[-10000px] opacity-0 pointer-events-none z-[-200]">
+      <div className="invisible absolute top-[-5000px] left-[-5000px] pointer-events-none z-[-200]">
         {printInvoiceId && (
           <InvoiceTemplate 
             ref={registryPrintRef} 

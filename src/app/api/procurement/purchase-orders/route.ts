@@ -82,7 +82,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  const { vendor_id, branch_id, items, terms_content, status = 'draft', payment_terms } = body
+  const { vendor_id, branch_id, items, terms_content, status = 'draft', payment_terms, is_partial_billing = false } = body
 
   if (!vendor_id || !branch_id || !items || items.length === 0) {
     return NextResponse.json({ error: "Vendor, branch, and items are required" }, { status: 400 })
@@ -145,6 +145,7 @@ export async function POST(request: Request) {
       created_by: user.id,
       terms_content,
       payment_terms,
+      is_partial_billing,
       total_amount: items.reduce((acc: number, item: { unit_price: number, quantity: number, tax_rate: number }) => 
         acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0)
     })
@@ -235,7 +236,7 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const updateData: Record<string, string | number | null> = { status }
+  const updateData: Record<string, string | number | boolean | null> = { status }
   if (status === 'approved') updateData.approved_by = user.id
   if (vendor_id) updateData.vendor_id = vendor_id
   if (branch_id) updateData.branch_id = branch_id
@@ -246,6 +247,7 @@ export async function PATCH(request: Request) {
   // Store revision notes when sending back, clear them on resubmit
   if (status === 'needs_revision') updateData.revision_notes = revision_notes || null
   if (status === 'pending_approval') updateData.revision_notes = null
+  if ('is_partial_billing' in body) updateData.is_partial_billing = body.is_partial_billing
 
   // If items are provided, we need to update items (Revise & Approve flow)
   if (items && items.length > 0) {

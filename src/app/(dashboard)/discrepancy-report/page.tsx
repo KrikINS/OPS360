@@ -47,6 +47,7 @@ type Discrepancy = {
     }>
   };
   vendor?: { name: string };
+  product?: { model_name: string };
 };
 
 export default function DiscrepancyReportPage() {
@@ -86,7 +87,8 @@ export default function DiscrepancyReportPage() {
           total_amount,
           items:purchase_order_items(id, unit_price, quantity, received_quantity)
         ),
-        vendor:vendors(name)
+        vendor:vendors(name),
+        product:products(model_name)
       `)
       .order('created_at', { ascending: false })
 
@@ -209,6 +211,7 @@ export default function DiscrepancyReportPage() {
     const searchMatch = !searchTerm || 
       item.po?.po_number?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       item.vendor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.product?.model_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.id.toLowerCase().includes(searchTerm.toLowerCase())
     
     const statusMatch = statusFilter === "all" || item.status === statusFilter
@@ -323,7 +326,7 @@ export default function DiscrepancyReportPage() {
             <TableHeader className="bg-slate-50 border-b">
               <TableRow>
                 <TableHead className="py-3 px-6 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Discrepancy ID</TableHead>
-                <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">PO Reference</TableHead>
+                <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Reference / Product</TableHead>
                 <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Vendor</TableHead>
                 <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Discrepancy Type</TableHead>
                 <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-right">Detected Gap</TableHead>
@@ -338,7 +341,12 @@ export default function DiscrepancyReportPage() {
                     {item.display_id || `EHA-DR-${(allSortedDiscrepancies.findIndex(d => d.id === item.id) + 1).toString().padStart(4, '0')}`}
                   </TableCell>
                   <TableCell className="py-4 px-4 font-bold text-[#001529] font-mono border-r border-slate-100/50">
-                    {item.po?.po_number}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[11px]">{item.po?.po_number || "NO_REF"}</span>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase truncate max-w-[120px]">
+                        {item.product?.model_name || "Unknown Product"}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="py-4 px-4 font-bold text-slate-600 border-r border-slate-100/50">
                     {item.vendor?.name}

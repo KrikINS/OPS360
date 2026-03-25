@@ -62,23 +62,32 @@ type InventoryItem = {
   landed_cost: number
   created_at: string
   available_quantity: number
+  serial_numbers: string[]
   product: ProductMetadata
 }
 
-interface InventoryGroup {
-  key: string;
-  product?: ProductMetadata;
+interface BranchGroup {
   branch_id: string;
   branch_name: string;
   total_stock: number;
+  total_landed_cost: number;
+  max_aging: number;
   items: InventoryItem[];
   status: string;
-  max_aging: number;
-  total_landed_cost: number;
+}
+
+interface ProductGroup {
+  key: string; // product_code
+  product?: ProductMetadata;
+  total_network_stock: number;
+  total_network_landed_cost: number;
+  max_network_aging: number;
+  branches: BranchGroup[];
   brand: string;
   product_code: string;
   model_name: string;
   category: string;
+  status: string; // Aggregate status
 }
 
 export default function InventoryDashboard() {
@@ -92,10 +101,18 @@ export default function InventoryDashboard() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  const [expandedBranches, setExpandedBranches] = useState<Record<string, boolean>>({})
   const [activeTab, setActiveTab] = useState<'active' | 'dispositions'>('active')
 
   const toggleRow = (key: string) => {
     setExpandedRows(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }))
+  }
+
+  const toggleBranch = (key: string) => {
+    setExpandedBranches(prev => ({
       ...prev,
       [key]: !prev[key]
     }))
@@ -201,35 +218,59 @@ export default function InventoryDashboard() {
   })
 
   const groupedInventory = useMemo(() => {
-    const groups: Record<string, InventoryGroup> = {};
+    const productGroups: Record<string, ProductGroup> = {};
+    
     filteredInventory.forEach(item => {
-      const key = `${item.branch_id}-${item.product?.product_code}-${item.status}`;
-      if (!groups[key]) {
-        groups[key] = {
-          key,
+      const pCode = item.product?.product_code || '---';
+      const bId = item.branch_id;
+      const status = item.status;
+      
+      // Initialize Product Group
+      if (!productGroups[pCode]) {
+        productGroups[pCode] = {
+          key: pCode,
           product: item.product,
-          branch_id: item.branch_id,
-          branch_name: branches.find(b => b.id === item.branch_id)?.name || "—",
-          total_stock: 0,
-          items: [],
-          status: item.status,
-          max_aging: 0,
-          total_landed_cost: 0,
+          total_network_stock: 0,
+          total_network_landed_cost: 0,
+          max_network_aging: 0,
+          branches: [],
           brand: item.product?.brand || "Generic",
-          product_code: item.product?.product_code || '---',
+          product_code: pCode,
           model_name: item.product?.model_name || "Unknown Item",
-          category: item.product?.category || "Misc"
+          category: item.product?.category || "Misc",
+          status: status
         };
       }
-      groups[key].items.push(item);
-      groups[key].total_stock += (item.available_quantity || 0);
+      
+      const pg = productGroups[pCode];
+      pg.total_network_stock += (item.available_quantity || 0);
+      pg.total_network_landed_cost += (item.landed_cost || item.price);
       const days = calculateDaysInStock(item.created_at);
-      if (days > groups[key].max_aging) groups[key].max_aging = days;
-      groups[key].total_landed_cost += (item.landed_cost || item.price);
+      if (days > pg.max_network_aging) pg.max_network_aging = days;
+
+      // Find or Create Branch Group within Product
+      let bg = pg.branches.find(b => b.branch_id === bId && b.status === status);
+      if (!bg) {
+        bg = {
+          branch_id: bId,
+          branch_name: branches.find(b => b.id === bId)?.name || "—",
+          total_stock: 0,
+          total_landed_cost: 0,
+          max_aging: 0,
+          items: [],
+          status: status
+        };
+        pg.branches.push(bg);
+      }
+      
+      bg.items.push(item);
+      bg.total_stock += (item.available_quantity || 0);
+      bg.total_landed_cost += (item.landed_cost || item.price);
+      if (days > bg.max_aging) bg.max_aging = days;
     });
 
-    return Object.values(groups).sort((a, b) => {
-      return sortOrder === 'oldest' ? b.max_aging - a.max_aging : a.max_aging - b.max_aging;
+    return Object.values(productGroups).sort((a, b) => {
+      return sortOrder === 'oldest' ? b.max_network_aging - a.max_network_aging : a.max_network_aging - b.max_network_aging;
     });
   }, [filteredInventory, branches, sortOrder]);
 
@@ -426,18 +467,18 @@ export default function InventoryDashboard() {
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-24">Brand</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">EHA Code</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name & Specification</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Total Stock</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Network Stock</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-28">Category</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-32">Branch</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-32">Distribution</TableHead>
                 <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Status</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">Value (LC)</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right w-24">Primary Aging</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">Avg Value (LC)</TableHead>
+                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right w-24">Max Aging</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-64 text-center">
+                  <TableCell colSpan={10} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                       <p className="text-xs font-bold text-slate-400 tracking-wider">Hydrating Registry...</p>
@@ -455,11 +496,12 @@ export default function InventoryDashboard() {
                 </TableRow>
               ) : groupedInventory.map((group) => {
                 const isExpanded = expandedRows[group.key]
-                const avgLandedCost = group.total_landed_cost / group.total_stock
-                const formattedCount = new Intl.NumberFormat('en-IN').format(group.total_stock)
+                const avgLandedCost = group.total_network_stock > 0 ? group.total_network_landed_cost / group.total_network_stock : 0
+                const formattedCount = new Intl.NumberFormat('en-IN').format(group.total_network_stock)
 
                 return (
                   <React.Fragment key={group.key}>
+                    {/* LEVEL 1: PRODUCT BUNDLE */}
                     <TableRow 
                       className={cn(
                         "group hover:bg-slate-50/80 transition-all border-b last:border-0 cursor-pointer",
@@ -487,8 +529,8 @@ export default function InventoryDashboard() {
                       </TableCell>
                       <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-xs font-black text-[#001529]">{formattedCount}</span>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Units</span>
+                          <span className="text-xs font-black text-blue-600">{formattedCount}</span>
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Network</span>
                         </div>
                       </TableCell>
                       <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
@@ -496,8 +538,7 @@ export default function InventoryDashboard() {
                       </TableCell>
                       <TableCell className="py-3 px-4 border-r border-slate-100/50">
                         <div className="flex items-center gap-1.5 font-semibold text-slate-600 text-[11px]">
-                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
-                          {group.branch_name}
+                          <Badge variant="outline" className="text-[9px] font-bold py-0">{group.branches.length} Branches</Badge>
                         </div>
                       </TableCell>
                       <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
@@ -516,61 +557,147 @@ export default function InventoryDashboard() {
                       <TableCell className="py-3 px-4 text-right pr-6">
                         <Tooltip>
                           <TooltipTrigger>
-                            <div className={cn("flex items-center justify-end gap-1.5 cursor-default", getAgingColor(group.max_aging))}>
-                              {group.max_aging > 60 && <AlertCircle className="h-3 w-3" />}
+                            <div className={cn("flex items-center justify-end gap-1.5 cursor-default", getAgingColor(group.max_network_aging))}>
+                              {group.max_network_aging > 60 && <AlertCircle className="h-3 w-3" />}
                               <Clock className="h-3 w-3 opacity-50" />
-                              <span className="text-xs">{group.max_aging}d</span>
+                              <span className="text-xs">{group.max_network_aging}d</span>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent className="bg-slate-900 text-white border-none font-bold text-[10px]">
-                            {group.max_aging > 60 ? "SLOW MOVER PROTOCOL ACTIVE" : "Active Stock Aging Overview"}
+                            {group.max_network_aging > 60 ? "SLOW MOVER PROTOCOL ACTIVE" : "Active Stock Aging Overview"}
                           </TooltipContent>
                         </Tooltip>
                       </TableCell>
                     </TableRow>
 
+                    {/* LEVEL 2: BRANCH NESTING */}
                     {isExpanded && (
                       <TableRow className="bg-slate-50/30 border-b border-slate-100">
                         <TableCell colSpan={10} className="p-0">
-                          <div className="px-16 py-4 bg-white/50 animate-in slide-in-from-top-2 duration-300">
-                            {group.product?.description && (
-                              <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
-                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5">Model Specification / Description</h4>
-                                <p className="text-xs text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">{group.product.description}</p>
-                              </div>
-                            )}
-                            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-inner">
+                          <div className="px-12 py-3 bg-white/50 animate-in slide-in-from-top-2 duration-300">
+                            <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white">
                               <Table>
-                                <TableHeader className="bg-slate-100/50">
-                                  <TableRow className="hover:bg-transparent">
-                                    <TableHead className="h-8 text-[8px] font-black text-slate-500 uppercase tracking-widest px-4">Serial Number</TableHead>
-                                    <TableHead className="h-8 text-[8px] font-black text-slate-500 uppercase tracking-widest px-4">Landed Cost</TableHead>
-                                    <TableHead className="h-8 text-[8px] font-black text-slate-500 uppercase tracking-widest px-4">Registry Date</TableHead>
-                                    <TableHead className="h-8 text-[8px] font-black text-slate-500 uppercase tracking-widest px-4 text-right">Aging</TableHead>
+                                <TableHeader className="bg-slate-50">
+                                  <TableRow className="hover:bg-transparent h-8">
+                                    <TableHead className="w-10"></TableHead>
+                                    <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4">Branch Outlet</TableHead>
+                                    <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4 text-center">Branch Stock</TableHead>
+                                    <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4">Landed Cost (Avg)</TableHead>
+                                    <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4 text-right">Aging</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {group.items.map((item: InventoryItem) => {
-                                    const days = calculateDaysInStock(item.created_at)
+                                  {group.branches.map((branch) => {
+                                    const branchKey = `${group.key}-${branch.branch_id}`;
+                                    const isBranchExpanded = expandedBranches[branchKey];
                                     return (
-                                      <TableRow key={item.id} className="hover:bg-slate-50 transition-colors border-slate-100">
-                                        <TableCell className="py-2 px-4">
-                                          <code className="bg-[#001529]/5 text-[#001529] px-2 py-0.5 rounded font-mono text-[10px] font-bold">
-                                            {item.serial_number}
-                                          </code>
-                                        </TableCell>
-                                        <TableCell className="py-2 px-4 text-[10px] font-bold text-slate-600">{formatCurrency(item.landed_cost || item.price)}</TableCell>
-                                        <TableCell className="py-2 px-4 text-[10px] text-slate-400 font-medium">
-                                          {new Date(item.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                        </TableCell>
-                                        <TableCell className="py-2 px-4 text-right pr-6">
-                                          <div className={cn("inline-flex items-center gap-1 font-bold text-[10px]", getAgingColor(days))}>
-                                            <Clock className="h-2.5 w-2.5 opacity-50" />
-                                            {days} Days
-                                          </div>
-                                        </TableCell>
-                                      </TableRow>
-                                    )
+                                      <React.Fragment key={branchKey}>
+                                        <TableRow 
+                                          className="hover:bg-slate-50/50 transition-colors cursor-pointer border-slate-100"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleBranch(branchKey);
+                                          }}
+                                        >
+                                          <TableCell className="py-2 px-2 text-center w-8">
+                                            {isBranchExpanded ? <ChevronDown className="h-3 w-3 text-blue-600" /> : <ChevronRight className="h-3 w-3 text-slate-300" />}
+                                          </TableCell>
+                                          <TableCell className="py-2 px-4">
+                                            <div className="flex items-center gap-1.5 font-bold text-slate-700 text-[10px]">
+                                              <div className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                                              {branch.branch_name}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="py-2 px-4 text-center font-black text-[#001529] text-[10px]">
+                                            {branch.total_stock} Units
+                                          </TableCell>
+                                          <TableCell className="py-2 px-4 text-[10px] font-bold text-slate-500">
+                                            {formatCurrency(branch.total_stock > 0 ? branch.total_landed_cost / branch.total_stock : 0)}
+                                          </TableCell>
+                                          <TableCell className="py-2 px-4 text-right">
+                                            <span className={cn("text-[10px] font-bold", getAgingColor(branch.max_aging))}>
+                                              {branch.max_aging} Days
+                                            </span>
+                                          </TableCell>
+                                        </TableRow>
+
+                                        {/* LEVEL 3: UNIT REGISTRY TABLE */}
+                                        {isBranchExpanded && (
+                                          <TableRow className="bg-slate-50/20">
+                                            <TableCell colSpan={5} className="p-0">
+                                              <div className="px-10 py-2 border-l-2 border-blue-100 bg-slate-50/10">
+                                                <Table>
+                                                  <TableHeader className="bg-slate-100/30">
+                                                    <TableRow className="h-7 border-0">
+                                                      <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400">Serial Number</TableHead>
+                                                      <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400">Landed Cost (LCI)</TableHead>
+                                                      <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400">Status</TableHead>
+                                                      <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400 text-right">Aging</TableHead>
+                                                    </TableRow>
+                                                  </TableHeader>
+                                                  <TableBody>
+                                                    {branch.items.flatMap((item) => {
+                                                      const units = [];
+                                                      const days = calculateDaysInStock(item.created_at);
+                                                      
+                                                      // Expansion Logic: If serial_numbers array exists, create rows for each
+                                                      if (item.serial_numbers && item.serial_numbers.length > 0) {
+                                                        item.serial_numbers.forEach(sn => {
+                                                          units.push({
+                                                            id: `${item.id}-${sn}`,
+                                                            sn: sn,
+                                                            lc: item.landed_cost || item.price,
+                                                            status: item.status,
+                                                            days: days
+                                                          });
+                                                        });
+                                                      } else {
+                                                        // Otherwise, create rows based on available_quantity (for non-serialized)
+                                                        const count = item.available_quantity || 1;
+                                                        for(let i=0; i<count; i++) {
+                                                          units.push({
+                                                            id: `${item.id}-${i}`,
+                                                            sn: item.serial_number || "[NOT SERIALIZED]",
+                                                            lc: item.landed_cost || item.price,
+                                                            status: item.status,
+                                                            days: days
+                                                          });
+                                                        }
+                                                      }
+                                                      return units;
+                                                    }).map((unit) => (
+                                                      <TableRow key={unit.id} className="hover:bg-white border-b border-slate-100/50 last:border-0">
+                                                        <TableCell className="py-1.5 px-4">
+                                                          <code className="text-[9px] font-mono font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded">
+                                                            {unit.sn}
+                                                          </code>
+                                                        </TableCell>
+                                                        <TableCell className="py-1.5 px-4 text-[9px] font-bold text-slate-600">
+                                                          {formatCurrency(unit.lc)}
+                                                        </TableCell>
+                                                        <TableCell className="py-1.5 px-4">
+                                                          <span className={cn(
+                                                            "px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter",
+                                                            unit.status === "Available" ? "bg-green-100 text-green-700" : 
+                                                            unit.status === "Reserved" ? "bg-amber-100 text-amber-700" :
+                                                            "bg-slate-100 text-slate-700"
+                                                          )}>
+                                                            {unit.status}
+                                                          </span>
+                                                        </TableCell>
+                                                        <TableCell className="py-1.5 px-4 text-right text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                                          {unit.days}d
+                                                        </TableCell>
+                                                      </TableRow>
+                                                    ))}
+                                                  </TableBody>
+                                                </Table>
+                                              </div>
+                                            </TableCell>
+                                          </TableRow>
+                                        )}
+                                      </React.Fragment>
+                                    );
                                   })}
                                 </TableBody>
                               </Table>

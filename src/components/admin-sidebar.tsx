@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Building2,
   FolderTree,
+  BarChart3,
 } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
@@ -22,6 +23,12 @@ const adminNavItems = [
     url: "/admin",
     icon: LayoutDashboard,
     description: "Overview & system health",
+  },
+  {
+    title: "Sales Registry",
+    url: "/admin/sales-registry",
+    icon: BarChart3,
+    description: "Audit trail & serial tracking",
   },
   {
     title: "Organization Registry",

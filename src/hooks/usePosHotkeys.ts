@@ -13,6 +13,7 @@ type Shortcut = {
 export function usePosHotkeys(shortcuts: Shortcut[]) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.key) return;
       shortcuts.forEach(s => {
         const keyMatch = e.key.toLowerCase() === s.key.toLowerCase()
         const altMatch = s.alt ? e.altKey : !e.altKey

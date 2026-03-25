@@ -163,7 +163,8 @@ type PurchaseOrder = {
     override_reason?: string
     product: { model_name: string, hsn_code: string, product_code: string }
   }[]
-  }
+  is_partial_billing?: boolean
+}
   
   type POTermsTemplate = {
     id: string
@@ -233,6 +234,7 @@ export default function ProcurementGRNPage() {
   const [poTerms, setPoTerms] = useState({ gstin: "", terms: "" })
   const [expectedDelivery, setExpectedDelivery] = useState("")
   const [poItems, setPoItems] = useState<POItem[]>([])
+  const [isPartialBilling, setIsPartialBilling] = useState(false)
 
   const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -568,6 +570,7 @@ export default function ProcurementGRNPage() {
     setPoItems([])
     setRevisionPO(null)
     setCreationTerms("")
+    setIsPartialBilling(false)
   }
 
   const handleGeneratePO = async () => {
@@ -584,6 +587,7 @@ export default function ProcurementGRNPage() {
         vendor_id: selectedVendor.id,
         branch_id: selectedBranch,
         expected_delivery: expectedDelivery || null,
+        is_partial_billing: isPartialBilling,
         items: poItems.map((item, idx) => ({
           ...item,
           override_reason: overrideReasons[idx] || item.override_reason || null,
@@ -719,6 +723,7 @@ export default function ProcurementGRNPage() {
       }
     })))
     setCreationTerms(po.terms_content || "")
+    setIsPartialBilling(po.is_partial_billing || false)
     setIsCreatingPO(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -742,6 +747,15 @@ export default function ProcurementGRNPage() {
     if (!uploadBillPO || !billNumber || !billAmount) {
       alert("Please fill all invoice details")
       return
+    }
+
+    // Lead Architect: Prevent SUM for non-partial POs if a bill already exists
+    if (!uploadBillPO.is_partial_billing && uploadBillPO.vendor_bills?.length > 0) {
+      if (!confirm(`This PO is NOT marked for Partial Billing, and a bill (${uploadBillPO.vendor_bills[0].bill_number}) already exists. 
+      
+Uploading another bill will cause a price discrepancy alert. 
+
+Are you sure you want to proceed?`)) return;
     }
 
     setIsUploadingBill(true)
@@ -888,11 +902,29 @@ export default function ProcurementGRNPage() {
     if (!confirm("Are you sure you want to delete this bill record? This action cannot be undone.")) return
 
     try {
+      // Lead Architect: Update state locally for immediate feedback
+      setActivePOs(prev => prev.map(p => {
+        if (p.id === poId) {
+          return {
+            ...p,
+            vendor_bills: p.vendor_bills.filter(b => b.id !== billId)
+          }
+        }
+        return p
+      }))
+
+      if (viewingInvoices && viewingInvoices.id === poId) {
+        setViewingInvoices(prev => prev ? ({
+          ...prev,
+          vendor_bills: prev.vendor_bills.filter(b => b.id !== billId)
+        }) : null)
+      }
+
       const supabase = createClient()
       const { error } = await supabase.from('vendor_bills').delete().eq('id', billId)
       if (error) throw error
 
-      // Refresh data
+      // Background refresh to sync with triggers
       const poRes = await fetch('/api/procurement/purchase-orders')
       const pos = await poRes.json()
       setActivePOs(pos)
@@ -1008,8 +1040,33 @@ export default function ProcurementGRNPage() {
                   type="date"
                   value={expectedDelivery}
                   onChange={(e) => setExpectedDelivery(e.target.value)}
-                  className="w-full h-10"
+                  className="w-full h-10 border-slate-200"
                 />
+              </div>
+              <div className="space-y-4 flex flex-col justify-end">
+                <div className="flex items-center space-x-2 pb-2">
+                  <input
+                    type="checkbox"
+                    id="partial-billing"
+                    title="Allow Partial Billing"
+                    checked={isPartialBilling}
+                    onChange={(e) => setIsPartialBilling(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="partial-billing" className="text-sm font-medium leading-none cursor-pointer">
+                    Allow Partial Billing
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <ShieldAlert className="h-3.5 w-3.5 text-slate-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-[10px]">When enabled, multiple vendor bills will be summed. When disabled, only the latest bill is compared against the PO total.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             </div>
 
@@ -1554,13 +1611,34 @@ export default function ProcurementGRNPage() {
                                         <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                       </DropdownMenuItem>
 
-                                      {po.vendor_bills && po.vendor_bills.length > 0 && (
+                                      {po.vendor_bills && po.vendor_bills.length > 0 ? (
                                         <DropdownMenuItem 
                                           onSelect={(e) => e.preventDefault()}
                                           onClick={() => setViewingInvoices(po)} 
                                           className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                         >
                                           <FileCheck className="h-4 w-4 mr-2" /> View Voice/Bill
+                                        </DropdownMenuItem>
+                                      ) : (
+                                        (po.status === 'approved' || po.status === 'partially_received' || po.status === 'received' || po.status === 'PARTIALLY_RETURNED') && (
+                                          <DropdownMenuItem 
+                                            onSelect={(e) => e.preventDefault()}
+                                            onClick={() => setUploadBillPO(po)} 
+                                            className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                          >
+                                            <Upload className="h-4 w-4 mr-2" /> Upload Bill Details
+                                          </DropdownMenuItem>
+                                        )
+                                      )}
+                                      
+                                      {/* Lead Architect: Always allow additional uploads if bills exist but it's a Partial Billing PO */}
+                                      {po.vendor_bills && po.vendor_bills.length > 0 && po.is_partial_billing && (
+                                        <DropdownMenuItem 
+                                          onSelect={(e) => e.preventDefault()}
+                                          onClick={() => setUploadBillPO(po)} 
+                                          className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" /> Upload Addl. Bill
                                         </DropdownMenuItem>
                                       )}
                                   </DropdownMenuContent>
@@ -2073,15 +2151,13 @@ export default function ProcurementGRNPage() {
                                       </>
                                     )}
                                       
-                                    {!hasBill && (
-                                      <DropdownMenuItem 
-                                        onSelect={(e) => e.preventDefault()}
-                                        onClick={() => setUploadBillPO(po)} 
-                                        className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-amber-600 focus:text-amber-600"
-                                      >
-                                        <Upload className="h-4 w-4 mr-2" /> Upload Bill Details
-                                      </DropdownMenuItem>
-                                    )}
+                                    <DropdownMenuItem 
+                                      onSelect={(e) => e.preventDefault()}
+                                      onClick={() => setUploadBillPO(po)} 
+                                      className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-amber-600 focus:text-amber-600"
+                                    >
+                                      <Upload className="h-4 w-4 mr-2" /> {hasBill ? "Upload Addl. Bill" : "Upload Bill Details"}
+                                    </DropdownMenuItem>
 
                                     <DropdownMenuItem 
                                       onSelect={(e) => e.preventDefault()}

@@ -1,17 +1,97 @@
-"use client"
-
-import React from 'react'
-import { ShoppingCart, Plus, Minus, Trash2, Printer, ArrowRight } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { ShoppingCart, Plus, Minus, Trash2, Printer, ArrowRight, Scan, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { usePos } from '@/context/PosContext'
+import { usePos, SelectedUnit } from '@/context/PosContext'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
-  const { cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals } = usePos()
+function SerialSelector({ productId, index, onSelect }: { productId: string, index: number, onSelect: (unit: SelectedUnit | null) => void }) {
+  const { fetchAvailableSerials, cart } = usePos()
+  const [serials, setSerials] = useState<{id: string, serial_number: string}[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const currentItem = cart.find(i => i.id === productId)
+  const currentUnit = currentItem?.selectedUnits?.[index]
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const data = await fetchAvailableSerials(productId)
+      // Filter out serials already selected in other slots of THIS item
+      const alreadySelected = Object.values(currentItem?.selectedUnits || {})
+        .filter((u, i) => u !== null && i !== index)
+        .map(u => u?.id)
+      
+      const available = data.filter(s => !alreadySelected.includes(s.id))
+      setSerials(available)
+      
+      // Auto-populate if only one serial is available and nothing is selected yet
+      if (available.length === 1 && !currentUnit) {
+        onSelect({ id: available[0].id, serial: available[0].serial_number })
+      }
+      
+      setLoading(false)
+    }
+    load()
+  }, [productId, fetchAvailableSerials, currentItem?.selectedUnits, index, currentUnit, onSelect])
 
   return (
-    <section className="w-full lg:w-[400px] flex flex-col bg-white border-l border-slate-200 h-full">
+    <div className="flex flex-col gap-1 mt-2">
+      <div className="flex items-center gap-2">
+        <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Unit #{index + 1}</span>
+        {currentUnit ? (
+          <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] h-4 px-1 gap-1">
+            <CheckCircle2 className="h-2 w-2" /> Linked
+          </Badge>
+        ) : (
+          <Badge className="bg-amber-50 text-amber-600 border-amber-100 text-[8px] h-4 px-1 gap-1">
+            <AlertCircle className="h-2 w-2" /> Select Serial
+          </Badge>
+        )}
+      </div>
+      <Select 
+        value={currentUnit ? `${currentUnit.id}|${currentUnit.serial}` : "none"} 
+        onValueChange={(val) => {
+          if (!val || val === "none") {
+            onSelect(null)
+          } else {
+            const [id, ...serialParts] = val.split('|')
+            const serial = serialParts.join('|') // Handle serials that might contain pipes
+            onSelect({ id, serial })
+          }
+        }}
+      >
+        <SelectTrigger className="h-8 text-[10px] bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10">
+          <SelectValue placeholder={loading ? "Loading..." : "Assign Serial..."}>
+            {currentUnit?.serial}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none" className="text-[10px]">-- Deselect --</SelectItem>
+          {serials.map((s, idx) => (
+            <SelectItem 
+              key={`${s.id}-${s.serial_number}-${idx}`} 
+              value={`${s.id}|${s.serial_number}`} 
+              className="text-[10px] font-mono"
+            >
+              {s.serial_number}
+            </SelectItem>
+          ))}
+          {serials.length === 0 && !loading && (
+            <div className="p-2 text-[10px] text-slate-400 italic">No available serials</div>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
+  const { cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals, assignSerialToUnit, isCartValid } = usePos()
+
+  return (
+    <section className="w-full lg:w-[400px] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/5 h-full transition-colors duration-300">
       <div className="p-4 bg-slate-900 flex items-center justify-between shrink-0">
         <div>
           <h2 className="text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
@@ -49,48 +129,64 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                 const finalAmount = lineTotal + lineGst
 
                 return (
-                  <TableRow key={item.id} className="border-b border-slate-50 group hover:bg-slate-50/50">
-                    <TableCell className="w-8 py-4 pl-0 shrink-0">
-                      <div className="flex flex-col items-center gap-1">
-                        <button 
-                          title="Increase Quantity"
-                          onClick={() => updateQty(item.id, 1)} 
-                          className="bg-slate-100 p-1 rounded hover:bg-blue-600 hover:text-white transition-colors"
-                        >
-                          <Plus className="h-2.5 w-2.5" />
-                        </button>
-                        <span className="text-[10px] font-black tabular-nums">{item.qty}</span>
-                        <button 
-                          title="Decrease Quantity"
-                          onClick={() => updateQty(item.id, -1)} 
-                          className="bg-slate-100 p-1 rounded hover:bg-rose-600 hover:text-white transition-colors"
-                        >
-                          <Minus className="h-2.5 w-2.5" />
-                        </button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 px-2">
-                      <div className="flex flex-col gap-0.5 max-w-[180px]">
-                        <span className="text-xs font-bold text-slate-800 leading-tight truncate">{item.model_name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-bold text-slate-400">₹{item.base_price.toLocaleString()}</span>
-                          <Badge className="bg-blue-50 text-blue-600 text-[8px] px-1.5 border-none h-4">{Math.round(item.gst_rate)}% GST</Badge>
+                  <React.Fragment key={item.id}>
+                    <TableRow className="border-b border-slate-50 dark:border-white/5 group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                      <TableCell className="w-8 py-4 pl-0 shrink-0">
+                        <div className="flex flex-col items-center gap-1">
+                          <button 
+                            title="Increase Quantity"
+                            onClick={() => updateQty(item.id, 1)} 
+                            className="bg-slate-100 dark:bg-white/5 p-1 rounded hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-colors"
+                          >
+                            <Plus className="h-2.5 w-2.5" />
+                          </button>
+                          <span className="text-[10px] font-black tabular-nums">{item.qty}</span>
+                          <button 
+                            title="Decrease Quantity"
+                            onClick={() => updateQty(item.id, -1)} 
+                            className="bg-slate-100 dark:bg-white/5 p-1 rounded hover:bg-rose-600 dark:hover:bg-rose-600 hover:text-white transition-colors"
+                          >
+                            <Minus className="h-2.5 w-2.5" />
+                          </button>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 text-right pr-0 font-black text-slate-900 tabular-nums shrink-0">
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-xs font-black">₹{Math.round(finalAmount).toLocaleString()}</span>
-                        <button 
-                          title="Remove item"
-                          onClick={() => removeFromCart(item.id)} 
-                          className="text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                      <TableCell className="py-4 px-2">
+                        <div className="flex flex-col gap-0.5 max-w-[180px]">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight truncate">{item.model_name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-bold text-slate-400">₹{item.base_price.toLocaleString()}</span>
+                            <Badge className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] px-1.5 border-none h-4">{Math.round(item.gst_rate)}% GST</Badge>
+                          </div>
+                          
+                          {/* Unit Selectors for Serialized Items */}
+                          {item.tracking_type === 'Stocked' && (
+                            <div className="space-y-3 mt-1 border-l-2 border-slate-100 dark:border-white/5 pl-2">
+                              {Array.from({ length: item.qty }).map((_, idx) => (
+                                <SerialSelector 
+                                  key={idx} 
+                                  productId={item.id} 
+                                  index={idx} 
+                                  onSelect={(unit) => assignSerialToUnit(item.id, idx, unit)} 
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 text-right pr-0 font-black text-slate-900 tabular-nums shrink-0">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-xs font-black">₹{Math.round(finalAmount).toLocaleString()}</span>
+                          <button 
+                            title="Remove item"
+                            onClick={() => removeFromCart(item.id)} 
+                            className="text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
                 )
               })}
             </TableBody>
@@ -99,34 +195,37 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
       </div>
 
       {/* Footer - Always Visible */}
-      <div className="p-6 bg-slate-50 border-t border-slate-200 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500">
-          <div className="flex justify-between uppercase"><span>Taxable Value</span><span>₹{Math.round(totals.subtotal).toLocaleString()}</span></div>
-          <div className="flex justify-between uppercase text-slate-400 border-l-2 border-slate-200 pl-3"><span>CGST ({totals.totalGst > 0 ? 'Split' : '0%'})</span><span>₹{Math.round(totals.cgst).toLocaleString()}</span></div>
-          <div className="flex justify-between uppercase text-slate-400 border-l-2 border-slate-200 pl-3"><span>SGST ({totals.totalGst > 0 ? 'Split' : '0%'})</span><span>₹{Math.round(totals.sgst).toLocaleString()}</span></div>
-          <div className="h-px bg-slate-200 my-2" />
+      <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-white/5 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors">
+        <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex justify-between uppercase"><span>Taxable Value</span><span className="text-slate-900 dark:text-slate-200">₹{Math.round(totals.subtotal).toLocaleString()}</span></div>
+          <div className="flex justify-between uppercase text-slate-400 dark:text-slate-500 border-l-2 border-slate-200 dark:border-white/10 pl-3"><span>CGST ({totals.totalGst > 0 ? 'Split' : '0%'})</span><span>₹{Math.round(totals.cgst).toLocaleString()}</span></div>
+          <div className="flex justify-between uppercase text-slate-400 dark:text-slate-500 border-l-2 border-slate-200 dark:border-white/10 pl-3"><span>SGST ({totals.totalGst > 0 ? 'Split' : '0%'})</span><span>₹{Math.round(totals.sgst).toLocaleString()}</span></div>
+          <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-              <span className="text-2xl font-black text-slate-900 tracking-tighter leading-none">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
+              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
             </div>
           </div>
         </div>
 
         <Button 
-          className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg group transition-all active:scale-[0.98] ring-offset-2 focus:ring-2 focus:ring-blue-500" 
-          disabled={cart.length === 0 || loading} 
+          className={`w-full h-14 rounded-xl shadow-lg group transition-all active:scale-[0.98] ring-offset-2 focus:ring-2 ${
+            isCartValid && cart.length > 0
+              ? "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500" 
+              : "bg-slate-200 dark:bg-white/10 text-slate-400 cursor-not-allowed"
+          }`} 
+          disabled={!isCartValid || cart.length === 0 || loading} 
           onClick={onCheckout}
         >
           <div className="flex items-center justify-between w-full px-2">
             <div className="flex items-center gap-3">
-              <Printer className="h-5 w-5" />
-              <div className="text-left">
-                <span className="block text-xs font-black uppercase tracking-widest">Execute Checkout</span>
-                <span className="text-[9px] font-bold text-blue-200 uppercase tracking-widest leading-none">Finalize & Print Invoice</span>
-              </div>
+              {isCartValid ? <Printer className="h-5 w-5" /> : <Scan className="h-5 w-5" />}
+              <span className="text-sm font-black uppercase tracking-widest">
+                {!isCartValid ? "Assign Serials" : "CHECKOUT"}
+              </span>
             </div>
-            <ArrowRight className="h-4 w-4 group-hover:translate-x-1" />
+            {isCartValid && <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />}
           </div>
         </Button>
       </div>

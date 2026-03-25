@@ -7,7 +7,8 @@ import { usePos } from '@/context/PosContext'
 import { cn } from "@/lib/utils"
 
 export function TerminalLockOverlay() {
-  const { isLocked, setIsLocked, branchName } = usePos()
+  const { isLocked, setIsLocked, branchName, sessionUser } = usePos()
+  const userPin = sessionUser.pin || "1234" // Default for first-time if not set
   const [pin, setPin] = useState("")
   const [error, setError] = useState(false)
   const [time, setTime] = useState(new Date())
@@ -21,9 +22,8 @@ export function TerminalLockOverlay() {
   if (!isLocked) return null
 
   const handleUnlock = () => {
-    // Current requirement: "current user re-entering their PIN or Password"
-    // For demo: hardcoded to 1234
-    if (pin === "1234") {
+    // Check against real user PIN
+    if (pin === userPin) {
       setIsLocked(false)
       setPin("")
       setError(false)
@@ -130,6 +130,12 @@ export function TerminalLockOverlay() {
             <ShieldAlert className="h-4 w-4" />
             <span className="text-[10px] font-black uppercase tracking-widest">Invalid Security PIN</span>
           </div>
+        )}
+
+        {!sessionUser.pin && (
+          <p className="text-[9px] text-slate-500 text-center font-bold uppercase tracking-widest mt-4">
+            Default PIN active (1234) • Please set your custom PIN in Profile
+          </p>
         )}
       </div>
 

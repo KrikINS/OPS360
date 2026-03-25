@@ -13,8 +13,11 @@ import {
   AlertCircle,
   BarChart3,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  ChevronRight,
+  FolderTree,
 } from "lucide-react"
+import Link from 'next/link'
 import { 
   BarChart, 
   Bar, 
@@ -117,6 +120,38 @@ export default function AdminDashboardPage() {
           icon={ShieldCheck} 
           color="bg-slate-800"
           description="RLS & JWT Protocols Active"
+        />
+      </div>
+
+      {/* Module Hub Quick Links */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <ModuleCard 
+          title="Sales Registry" 
+          href="/admin/sales-registry" 
+          icon={BarChart3} 
+          description="Audit sales & serial numbers" 
+          color="indigo" 
+        />
+        <ModuleCard 
+          title="Users & Access" 
+          href="/admin/users" 
+          icon={Users} 
+          description="Staff roles & branch access" 
+          color="blue" 
+        />
+        <ModuleCard 
+          title="Organization" 
+          href="/admin/organization" 
+          icon={Building2} 
+          description="Branch registry & locations" 
+          color="emerald" 
+        />
+        <ModuleCard 
+          title="Global Masters" 
+          href="/admin/masters" 
+          icon={FolderTree} 
+          description="Brands, models & categories" 
+          color="amber" 
         />
       </div>
 
@@ -276,6 +311,32 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+function ModuleCard({ title, href, icon: Icon, description, color }: { title: string, href: string, icon: React.ElementType, description: string, color: 'indigo' | 'blue' | 'emerald' | 'amber' }) {
+  const colorMaps: Record<string, string> = {
+    indigo: "hover:bg-indigo-50 border-indigo-100 text-indigo-600",
+    blue: "hover:bg-blue-50 border-blue-100 text-blue-600",
+    emerald: "hover:bg-emerald-50 border-emerald-100 text-emerald-600",
+    amber: "hover:bg-amber-50 border-amber-100 text-amber-600",
+  }
+
+  return (
+    <Link href={href}>
+      <Card className={cn("transition-all duration-200 border cursor-pointer hover:shadow-md h-full group", colorMaps[color])}>
+        <CardContent className="p-4 flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-white shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{title}</h4>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-70 mt-0.5">{description}</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-current transition-colors" />
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
 
