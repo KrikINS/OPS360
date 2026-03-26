@@ -136,6 +136,72 @@ export default function InventoryDocs() {
         </div>
       </div>
 
+      <div className="bg-white border rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+            <span className="text-indigo-600">06</span>
+          </div>
+          Enterprise Logistics & Waybills
+        </h3>
+        <p className="text-sm text-slate-600 mb-6">
+          Ops360 uses a synchronous waybill protocol to ensure 100% stock accuracy during inter-branch movements.
+        </p>
+        
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <div className="h-5 w-5 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-[#001529]">Fulfillment Bridge</h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Approved <strong>Stock Requests</strong> can be fulfilled with one click. This bridges the demand manifest directly into a new Transfer Waybill, pre-filling quantities to eliminate manual entry errors.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <div className="h-5 w-5 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-[#001529]">Deterministic Numbering</h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Waybills follow a <code>ST-YYYY-####</code> sequence. The counter resets annually, providing a clean audit trail across fiscal years.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <div className="h-5 w-5 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-[#001529]">Physical Handover (Waybills)</h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Thermal-ready and A4 PDFs contain ST-Number barcodes. Receiving managers use the search filter to locate digital records in seconds using these physical references.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="h-5 w-5 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-[#001529]">Atomic Receipt Logic</h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  The <code>receive_stock_transfer</code> protocol uses elevated security levels to ensure cross-table atomicity, locking the transfer record while simultaneously updating branch inventories and logging audit trails.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-[#001529] rounded-xl p-8 text-white relative overflow-hidden">
         <div className="relative z-10">
           <h2 className="text-xl font-bold mb-2">Pedigree Tracking</h2>

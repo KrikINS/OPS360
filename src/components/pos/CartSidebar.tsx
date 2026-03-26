@@ -159,7 +159,7 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                           </div>
                           
                           {/* Unit Selectors for Serialized Items */}
-                          {item.tracking_type === 'Stocked' && (
+                          {item.tracking_type?.toLowerCase() === 'serial' && (
                             <div className="space-y-3 mt-1 border-l-2 border-slate-100 dark:border-white/5 pl-2">
                               {Array.from({ length: item.qty }).map((_, idx) => (
                                 <SerialSelector 

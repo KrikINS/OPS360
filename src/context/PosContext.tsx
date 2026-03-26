@@ -82,14 +82,6 @@ export type InvoiceData = {
   payment_method?: string
 }
   
-interface Profile {
-  role: string
-  full_name?: string
-  pos_pin?: string | null
-  assigned_branch_id?: string | null
-  assigned_branch_ids?: string[] | null
-}
-
 interface PosContextType {
   products: Product[]
   cart: CartItem[]
@@ -254,38 +246,32 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Fetch Products Logic (Reusable)
   const fetchInventory = useCallback(async (branchId: string) => {
-    const { data, error } = await supabase
+    // We need to aggregate stock sum across all matching inventory records for each product
+    const { data: inventoryData, error: invError } = await supabase
+      .from('inventory')
+      .select('product_id, available_quantity')
+      .eq('branch_id', branchId)
+      .eq('status', 'Available')
+
+    if (invError) return
+
+    // Create a local map of product_id -> sum of available_quantity
+    const stockMap: Record<string, number> = {}
+    inventoryData?.forEach((invItem: { product_id: string; available_quantity: number }) => {
+      stockMap[invItem.product_id] = (stockMap[invItem.product_id] || 0) + (invItem.available_quantity || 0)
+    })
+
+    const { data: productData, error: prodError } = await supabase
       .from('products')
       .select(`
-        id, model_name, brand, category, hsn_code, base_price, gst_rate, product_code, tracking_type,
-        inventory!inner(available_quantity)
+        id, model_name, brand, category, hsn_code, base_price, gst_rate, product_code, tracking_type
       `)
-      .eq('inventory.branch_id', branchId)
       .eq('is_archived', false)
 
-    if (!error && data) {
-      const transformed: Product[] = (data as unknown as Array<{
-        id: string;
-        model_name: string;
-        brand: string;
-        category: string;
-        hsn_code: string;
-        base_price: number;
-        gst_rate: number;
-        product_code: string;
-        tracking_type: string;
-        inventory: Array<{ available_quantity: number }>;
-      }>).map((p) => ({
-        id: p.id,
-        model_name: p.model_name,
-        brand: p.brand,
-        category: p.category,
-        hsn_code: p.hsn_code,
-        base_price: p.base_price,
-        gst_rate: p.gst_rate,
-        product_code: p.product_code,
-        tracking_type: p.tracking_type,
-        available_quantity: p.inventory?.[0]?.available_quantity || 0
+    if (!prodError && productData) {
+      const transformed: Product[] = (productData as Product[]).map((pItem: Product) => ({
+        ...pItem,
+        available_quantity: stockMap[pItem.id] || 0
       }))
       setProducts(transformed)
     }
@@ -307,16 +293,17 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
           .single()
         
         if (profile) {
-          setUserRole(profile.role)
+          const profileData = profile as { role: string; full_name?: string; assigned_branch_id?: string; assigned_branch_ids?: string[]; pos_pin?: string }
+          setUserRole(profileData.role)
           setSessionUser({
             id: session.user.id,
-            name: (profile as Profile).full_name || "User",
-            role: profile.role,
-            pin: (profile as Profile).pos_pin
+            name: profileData.full_name || "User",
+            role: profileData.role,
+            pin: profileData.pos_pin
           })
           
           await refreshSessionStats()
-          const branchIds = (profile.assigned_branch_ids as string[]) || (profile.assigned_branch_id ? [profile.assigned_branch_id] : [])
+          const branchIds = profileData.assigned_branch_ids || (profileData.assigned_branch_id ? [profileData.assigned_branch_id] : [])
           
           if (branchIds.length > 0) {
             const initialBranchId = branchIds[0]
@@ -405,9 +392,9 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
 
   const isCartValid = useMemo(() => {
     return cart.every(item => {
-      if (item.tracking_type !== 'Stocked') return true
-      const units = Object.values(item.selectedUnits || {})
-      return units.length === item.qty && units.every(u => u !== null)
+      if (item.tracking_type?.toLowerCase() !== 'serial') return true
+      const unitsArray = Object.values(item.selectedUnits || {})
+      return unitsArray.length === item.qty && unitsArray.every(u => u !== null)
     })
   }, [cart])
 
@@ -440,8 +427,14 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
         return prev
       }
 
+      const initialSelectedUnits = product.tracking_type?.toLowerCase() === 'serial' ? { 0: null } : undefined
+
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item)
+        let updatedUnits = existing.selectedUnits
+        if (product.tracking_type === 'Serial') {
+          updatedUnits = { ...existing.selectedUnits, [existing.qty]: null }
+        }
+        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1, selectedUnits: updatedUnits } : item)
       }
 
       return [...prev, {
@@ -452,7 +445,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
         hsn_code: product.hsn_code,
         tracking_type: product.tracking_type,
         qty: 1,
-        selectedUnits: product.tracking_type === 'Stocked' ? { 0: null } : undefined
+        selectedUnits: initialSelectedUnits
       }]
     })
   }, [])
@@ -499,35 +492,37 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, selectedBranch])
 
   const updateQty = useCallback((productId: string, delta: number) => {
-    const product = products.find(p => p.id === productId)
-    if (!product) return
+    setCart(prev => {
+      const itemToUpdate = prev.find(i => i.id === productId)
+      if (!itemToUpdate) return prev
 
-    setCart(prev => prev.map(item => {
-      if (item.id === productId) {
-        const newQty = Math.max(1, item.qty + delta)
-        if (newQty > product.available_quantity) {
-          setToast({ message: "Cannot exceed available stock", type: 'error' })
-          return item
-        }
-        
-        let newUnits = item.selectedUnits
-        if (item.tracking_type === 'Stocked' && delta !== 0) {
-          newUnits = { ...item.selectedUnits }
-          if (delta > 0) {
-            for (let i = 0; i < delta; i++) {
-              newUnits[item.qty + i] = null
-            }
-          } else {
-            for (let i = 0; i < Math.abs(delta); i++) {
-              delete newUnits[item.qty - 1 - i]
-            }
+      const product = products.find(p => p.id === productId)
+      if (!product) return prev
+
+      const newQty = Math.max(1, itemToUpdate.qty + delta)
+      if (newQty > product.available_quantity) {
+        setToast({ message: "Cannot exceed available stock", type: 'error' })
+        return prev
+      }
+      
+      let newUnits = itemToUpdate.selectedUnits
+      if (itemToUpdate.tracking_type?.toLowerCase() === 'serial' && delta !== 0) {
+        newUnits = { ...itemToUpdate.selectedUnits }
+        if (delta > 0) {
+          // Increase Qty -> Add null slots
+          for (let i = 0; i < delta; i++) {
+            newUnits[itemToUpdate.qty + i] = null
+          }
+        } else {
+          // Decrease Qty -> Remove slots from end
+          for (let i = 0; i < Math.abs(delta); i++) {
+            delete newUnits[itemToUpdate.qty - 1 - i]
           }
         }
-
-        return { ...item, qty: newQty, selectedUnits: newUnits }
       }
-      return item
-    }))
+
+      return prev.map(item => item.id === productId ? { ...item, qty: newQty, selectedUnits: newUnits } : item)
+    })
   }, [products])
 
   const removeFromCart = useCallback((productId: string) => {
@@ -570,10 +565,10 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     try {
       const processedItems = []
       for (const item of cart) {
-        if (item.tracking_type === 'Stocked') {
+        if (item.tracking_type === 'Serial') {
           // Flatten into one entry per unit for serialized items
-          const units = Object.values(item.selectedUnits || {}) as SelectedUnit[]
-          for (const unit of units) {
+          const unitsArray = Object.values(item.selectedUnits || {}) as SelectedUnit[]
+          for (const unit of unitsArray) {
             if (unit) {
               processedItems.push({
                 product_id: item.id,
@@ -616,10 +611,10 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       await refreshSessionStats()
       return { success: true, invoiceData: data }
     } catch (err: unknown) {
-      const error = err as Error
-      console.error('Checkout failed:', error)
-      setToast({ message: error.message || 'Payment processing failed', type: 'error' })
-      return { success: false, error: error.message }
+      const errorStr = (err as Error).message
+      console.error('Checkout failed:', errorStr)
+      setToast({ message: errorStr || 'Payment processing failed', type: 'error' })
+      return { success: false, error: errorStr }
     } finally {
       setLoading(false)
     }

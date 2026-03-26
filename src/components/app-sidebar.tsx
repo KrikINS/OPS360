@@ -38,10 +38,10 @@ import { cn } from "@/lib/utils"
 
 const erpItems = [
   { title: "Product Master",        url: "/products",      icon: Archive },
-  { title: "Inventory",             url: "/",              icon: Package },
+  { title: "Inventory Register",    url: "/",              icon: Package },
   { title: "Procurement",           url: "/procurement",   icon: Truck },
   { title: "POS",                   url: "/pos",           icon: ShoppingCart },
-  { title: "Inter-Branch Transfer", url: "/transfer",      icon: ArrowRightLeft },
+  { title: "Transfer Control Center", url: "/transfer",    icon: ArrowRightLeft },
   { title: "Accounting",            url: "/accounting",    icon: Calculator },
   { title: "Staff",                 url: "/staff",         icon: Users },
   { title: "Service",               url: "/service",       icon: Wrench },

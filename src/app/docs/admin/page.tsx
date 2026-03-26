@@ -4,7 +4,8 @@ import {
   Users, 
   ImageIcon, 
   ShieldCheck, 
-  ChevronRight 
+  ChevronRight,
+  Hash
 } from "lucide-react"
 
 export default function AdminDocs() {
@@ -106,6 +107,33 @@ export default function AdminDocs() {
               <span><strong>Identity:</strong> System-wide name and tagline settings.</span>
             </li>
           </ul>
+        </div>
+      </div>
+
+      {/* ID Standardization */}
+      <div className="bg-[#001529] border rounded-xl p-6 shadow-sm text-white">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-indigo-500/20 text-[#7FD1E3]">
+            <Hash className="h-5 w-5" />
+          </div>
+          <h3 className="text-lg font-bold">Standardized ID Protocols</h3>
+        </div>
+        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+          Ops360 enforces a deterministic numbering strategy across all operational documents to ensure fiscal clarity and auditability.
+        </p>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#7FD1E3] mb-2">Sequential Logic</h4>
+            <p className="text-xs text-slate-400">Documents follow the <code>PREFIX-YYYY-####</code> format (e.g., ST-2026-0001). This provides an immediate temporal reference for every record.</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#7FD1E3] mb-2">Annual Resets</h4>
+            <p className="text-xs text-slate-400">Counters automatically reset to 0001 at the start of each fiscal year (January 1st), preventing excessively long ID strings over time.</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#7FD1E3] mb-2">Coverage</h4>
+            <p className="text-xs text-slate-400">Applies globally to <strong>Purchase Orders (PO)</strong>, <strong>Stock Requests (SR)</strong>, <strong>Stock Transfers (ST)</strong>, and <strong>Debit Notes (DN)</strong>.</p>
+          </div>
         </div>
       </div>
 
