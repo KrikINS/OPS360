@@ -266,6 +266,20 @@ export function StockTransfersView({
       alert("Please ensure both source and destination branches are selected and at least one item is added.")
       return
     }
+
+    // Strict Validation for Requests
+    if (prefillRequest) {
+      const isMet = prefillRequest.items.every(reqItem => {
+        const addedCount = transferCart.filter(cartItem => cartItem.product.id === reqItem.product_id).length
+        return addedCount === reqItem.quantity
+      })
+
+      if (!isMet) {
+        alert("CRITICAL: You must manifest the EXACT quantity requested before shipping. Please add the required serial numbers.")
+        return
+      }
+    }
+
     setSubmitting(true)
     try {
       const rpcName = prefillRequest ? 'fulfill_stock_request' : 'process_stock_transfer_send'
@@ -560,7 +574,14 @@ export function StockTransfersView({
                 <Button 
                   className="bg-blue-600 hover:bg-blue-700 font-black px-8 h-12 rounded-xl shadow-lg shadow-blue-200"
                   onClick={submitTransfer}
-                  disabled={submitting || transferCart.length === 0 || !destId}
+                  disabled={
+                    !!(submitting || 
+                    transferCart.length === 0 || 
+                    !destId ||
+                    (prefillRequest && !prefillRequest.items.every(reqItem => 
+                      transferCart.filter(cartItem => cartItem.product.id === reqItem.product_id).length === reqItem.quantity
+                    )))
+                  }
                 >
                   {submitting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                   CONFIRM SHIPMENT

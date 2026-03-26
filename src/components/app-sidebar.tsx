@@ -1,6 +1,6 @@
 "use client"
 
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import {
@@ -14,67 +14,115 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import {
-  Package,
-  Truck,
-  Calculator,
-  Users,
-  Wrench,
-  ShoppingCart,
-  ArrowRightLeft,
-  ShieldAlert,
-  BarChart3,
-  BookOpen,
+  Database,
+  Laptop,
+  List,
+  UserSquare,
+  Star,
+  Banknote,
+  Receipt,
+  CheckCircle2,
+  ShieldCheck,
+  RotateCcw,
+  AlertCircle,
+  FileText,
+  CreditCard,
+  ChevronRight,
+  Package as PackageIcon,
   Archive,
-  Building2,
-  FolderTree,
-  Palette,
-  UserCog,
+  ArrowRightLeft,
+  ShoppingCart,
+  Users,
+  BarChart3,
+  Wrench,
+  ShieldAlert,
+  Loader2,
   ArrowLeft,
-  Loader2
+  BookOpen
 } from "lucide-react"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-const erpItems = [
-  { title: "Product Master",        url: "/products",      icon: Archive },
-  { title: "Inventory Register",    url: "/",              icon: Package },
-  { title: "Procurement",           url: "/procurement",   icon: Truck },
-  { title: "POS",                   url: "/pos",           icon: ShoppingCart },
-  { title: "Transfer Control Center", url: "/transfer",    icon: ArrowRightLeft },
-  { title: "Accounting",            url: "/accounting",    icon: Calculator },
-  { title: "Staff",                 url: "/staff",         icon: Users },
-  { title: "Service",               url: "/service",       icon: Wrench },
-  { title: "Vendors",               url: "/vendors",       icon: ShoppingCart },
-  { title: "Analytics",             url: "/analytics",     icon: BarChart3 },
-  { title: "Admin Center",          url: "/admin",         icon: ShieldAlert },
-]
-
-const adminItems = [
-  { title: "Admin Dashboard",       url: "/admin",         icon: ShieldAlert },
-  { title: "Sales Registry",        url: "/admin/sales-registry", icon: BarChart3 },
-  { title: "User Management",       url: "/admin/users",   icon: UserCog },
-  { title: "Customer Registry",     url: "/admin/customers", icon: Users },
-  { title: "Organization",          url: "/admin/organization", icon: Building2 },
-  { title: "Global Masters",        url: "/admin/masters",      icon: FolderTree },
-  { title: "Branding",              url: "/admin/branding",     icon: Palette },
+const navigationGroups = [
+  {
+    title: "Inventory Management",
+    icon: Database,
+    items: [
+      { title: "Inventory Registry", url: "/", icon: PackageIcon },
+      { title: "Product Master", url: "/products", icon: Archive },
+      { title: "Transfer Control Center", url: "/transfer", icon: ArrowRightLeft },
+    ]
+  },
+  {
+    title: "Procurement Management",
+    icon: ShoppingCart,
+    items: [
+      { title: "PO Registry", url: "/procurement", icon: FileText },
+      { title: "GRN Registry", url: "/procurement?tab=pending", icon: CheckCircle2 },
+      { title: "3-WAY Match Audit", url: "/procurement?tab=audit", icon: ShieldCheck },
+      { title: "Purchase Returns", url: "/procurement?tab=returns", icon: RotateCcw },
+      { title: "Discrepancy Report Registry", url: "/procurement?tab=discrepancies", icon: AlertCircle },
+      { title: "Vendor Management", url: "/vendors", icon: Users },
+    ]
+  },
+  {
+    title: "Sales Management",
+    icon: CreditCard,
+    items: [
+      { title: "POS", url: "/pos", icon: Laptop },
+      { title: "Sales Registry", url: "/admin/sales-registry", icon: List },
+      { title: "Sales Return", url: "/sales/returns", icon: RotateCcw },
+      { title: "Customer Registry", url: "/admin/customers", icon: UserSquare },
+      { title: "Loyalty Points", url: "/sales/loyalty", icon: Star },
+    ]
+  },
+  {
+    title: "Finance Management",
+    icon: Banknote,
+    items: [
+      { title: "Branch-Wise P&L", url: "/finance/pl", icon: BarChart3 },
+      { title: "Expense Tracker", url: "/finance/expenses", icon: Receipt },
+    ]
+  },
+  {
+    title: "Service and Maintenance",
+    icon: Wrench,
+    items: [
+      { title: "Job Card / Work Orders", url: "/service", icon: FileText },
+      { title: "Warranty Management", url: "/service/warranty", icon: ShieldCheck },
+    ]
+  },
+  {
+    title: "Admin Center",
+    url: "/admin",
+    icon: ShieldAlert,
+    items: []
+  },
+  {
+    title: "HR Management",
+    icon: Users,
+    items: [
+      { title: "Personnel Registry", url: "/hr", icon: Users },
+    ]
+  }
 ]
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [logoUrl, setLogoUrl] = useState("/ethan-logo.png")
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
-  const [prevPathname, setPrevPathname] = useState(pathname)
-
-  // Reset loading state when navigation completes
-  if (pathname !== prevPathname) {
-    setPrevPathname(pathname)
-    setNavigatingTo(null)
+  const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
+  
+  if (navigatingTo && currentUrl === navigatingTo) {
+    setNavigatingTo(null);
   }
-
-  // Check if we are in admin section
-  const isAdminMode = pathname.startsWith("/admin")
-
 
   useEffect(() => {
     supabase
@@ -87,8 +135,7 @@ export function AppSidebar() {
       })
   }, [])
 
-  const currentItems = isAdminMode ? adminItems : erpItems
-  const groupLabel = isAdminMode ? "Admin Functions" : "Core Modules"
+  const isAdminMode = pathname.startsWith("/admin")
 
   return (
     <Sidebar className="border-r-0">
@@ -104,9 +151,9 @@ export function AppSidebar() {
               className="object-contain p-0.5"
             />
           </div>
-          <div className="flex flex-col leading-tight min-w-0">
-            <span className="text-white font-semibold text-[13px] tracking-wide truncate">Ethan Home Appliances</span>
-            <span className="text-[#7FD1E3] text-[10px] font-medium uppercase tracking-widest">Ops360 ERP</span>
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="text-white font-semibold text-[14px] tracking-tight truncate">Ethan</span>
+            <span className="text-[#7FD1E3] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap opacity-80">Ops360 ERP</span>
           </div>
         </div>
       </SidebarHeader>
@@ -114,44 +161,83 @@ export function AppSidebar() {
       {/* ── Navigation ── */}
       <SidebarContent className="px-2 py-3">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold px-3 mb-1">
-            {groupLabel}
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold px-3 mb-1 truncate whitespace-nowrap">
+            Enterprise Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-0.5">
-              {currentItems.map((item) => {
-                const isActive =
-                  item.url === "/"
-                    ? pathname === "/"
-                    : pathname === item.url || (item.url !== "/admin" && pathname.startsWith(item.url))
+            <SidebarMenu className="space-y-2">
+              {navigationGroups.map((group) => {
+                const isGroupActive = group.items.some(item => 
+                  item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
+                )
+                
+                const hasItems = group.items && group.items.length > 0;
+                
+                if (!hasItems) {
+                  const isActive = currentUrl === group.url || pathname === group.url?.split('?')[0];
+                  return (
+                    <SidebarMenuItem key={group.title}>
+                      <Link
+                        href={group.url || "#"}
+                        onClick={() => setNavigatingTo(group.url || "#")}
+                        className={cn(
+                          "flex w-full items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150 relative",
+                          isActive ? "text-white bg-[#002a52]/50" : "text-slate-400 hover:text-white hover:bg-[#002244]"
+                        )}
+                      >
+                        <group.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-500")} />
+                        <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
+                      </Link>
+                    </SidebarMenuItem>
+                  )
+                }
 
                 return (
-                  <SidebarMenuItem key={item.title}>
-                    <Link
-                      href={item.url}
-                      onClick={() => setNavigatingTo(item.url)}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
-                        "sidebar-item",
-                        isActive
-                          ? "bg-[#002a52] text-white border-l-[3px] border-l-[#7FD1E3] pl-[9px]"
-                          : "text-slate-400 hover:text-white hover:bg-[#002244] border-l-[3px] border-l-transparent",
-                        navigatingTo === item.url && "opacity-70"
-                      )}
-                    >
-                      {navigatingTo === item.url ? (
-                        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#7FD1E3]" />
-                      ) : (
-                        <item.icon
-                          className={cn(
-                            "h-4 w-4 shrink-0",
-                            isActive ? "text-[#7FD1E3]" : "text-slate-500"
-                          )}
-                        />
-                      )}
-                      <span className={cn(navigatingTo === item.url && "animate-pulse")}>{item.title}</span>
-                    </Link>
-                  </SidebarMenuItem>
+                  <Collapsible
+                    key={`${group.title}-${isGroupActive}`}
+                    defaultOpen={isGroupActive}
+                    className="group/collapsible"
+                  >
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger className={cn(
+                        "flex w-full items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150",
+                        isGroupActive ? "text-white bg-[#002a52]/50" : "text-slate-400 hover:text-white hover:bg-[#002244]"
+                      )}>
+                        <group.icon className={cn("h-4 w-4 shrink-0", isGroupActive ? "text-[#7FD1E3]" : "text-slate-500")} />
+                        <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
+                        <ChevronRight className="h-3 w-3 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-slate-600" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenu className="mt-1 ml-4 border-l border-slate-800 space-y-0.5">
+                          {group.items.map((item) => {
+                            const isActive = currentUrl === item.url || pathname === item.url.split('?')[0];
+
+                            return (
+                              <SidebarMenuItem key={item.title}>
+                                <Link
+                                  href={item.url}
+                                  onClick={() => setNavigatingTo(item.url)}
+                                  className={cn(
+                                    "flex items-center gap-3 px-3 py-1 rounded-md text-[13px] font-medium transition-all duration-150 relative",
+                                    isActive
+                                      ? "text-white bg-[#002a52] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[2px] before:h-4 before:bg-[#7FD1E3]"
+                                      : "text-slate-500 hover:text-slate-300"
+                                  )}
+                                >
+                                  {navigatingTo === item.url ? (
+                                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#7FD1E3]" />
+                                  ) : (
+                                    <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-600")} />
+                                  )}
+                                  <span className={cn(navigatingTo === item.url && "animate-pulse")}>{item.title}</span>
+                                </Link>
+                              </SidebarMenuItem>
+                            )
+                          })}
+                        </SidebarMenu>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
                 )
               })}
             </SidebarMenu>

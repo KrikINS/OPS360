@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { 
   Package, Clock, Plus, Search, Loader2, 
   ArrowRight,
-  Trash2, Send, CheckCircle2
+  Trash2, Send, CheckCircle2, XCircle
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { Badge } from "@/components/ui/badge"
@@ -91,6 +91,10 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
   const [availableSerials, setAvailableSerials] = useState<Record<string, InventoryUnit[]>>({})
   const [selectedUnits, setSelectedUnits] = useState<Record<string, string[]>>({}) // item.id -> inventory_ids[]
   const [fulfillmentLoading, setFulfillmentLoading] = useState(false)
+  
+  // Detail Modal State
+  const [viewingRequest, setViewingRequest] = useState<StockRequest | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
@@ -272,6 +276,25 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
       alert((err as Error).message || "Fulfillment failed")
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const cancelRequest = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this request?")) return
+    setCancelling(true)
+    try {
+      const { error } = await supabase
+        .from('stock_requests')
+        .update({ status: 'Cancelled' })
+        .eq('id', id)
+      
+      if (error) throw error
+      setViewingRequest(null)
+      fetchRequests()
+    } catch (err: unknown) {
+      alert((err as Error).message || "Failed to cancel request")
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -476,7 +499,11 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
               </Card>
             ) : (
               requests.filter(r => r.requesting_branch_id === userBranchId).map(req => (
-                <Card key={req.id} className="hover:shadow-md transition-all group border-slate-100 overflow-hidden">
+                <Card 
+                  key={req.id} 
+                  className="hover:shadow-md transition-all group border-slate-100 overflow-hidden cursor-pointer active:scale-[0.99]"
+                  onClick={() => setViewingRequest(req)}
+                >
                   <div className="flex items-center">
                     <div className={cn("w-1 self-stretch", 
                       req.status === 'Fulfilled' ? "bg-emerald-500" :
@@ -549,7 +576,11 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
                   </TableRow>
                 ) : (
                   requests.filter(r => r.source_branch_id === userBranchId).map((req) => (
-                    <TableRow key={req.id} className="hover:bg-white group transition-colors h-14 border-slate-100">
+                    <TableRow 
+                      key={req.id} 
+                      className="hover:bg-white group transition-colors h-14 border-slate-100 cursor-pointer"
+                      onClick={() => setViewingRequest(req)}
+                    >
                       <TableCell className="px-4">
                         <span className="text-[10px] font-black text-slate-900">{req.request_number}</span>
                       </TableCell>
@@ -597,6 +628,103 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Stock Request Detail Modal */}
+      <Dialog open={!!viewingRequest} onOpenChange={() => setViewingRequest(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between pr-6">
+              <div className="flex flex-col">
+                <DialogTitle className="text-2xl font-black">{viewingRequest?.request_number}</DialogTitle>
+                <DialogDescription>Demand Order Detail</DialogDescription>
+              </div>
+              <Badge className={cn("text-[10px] font-black h-7 px-4", viewingRequest && getStatusColor(viewingRequest.status))}>
+                {viewingRequest?.status}
+              </Badge>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Requesting Branch</span>
+                <p className="text-sm font-black text-[#001529]">{viewingRequest?.requesting_branch?.name}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">{viewingRequest?.requesting_branch?.code}</p>
+              </div>
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Source Target</span>
+                <p className="text-sm font-black text-[#001529]">{viewingRequest?.source_branch?.name}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">{viewingRequest?.source_branch?.code}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-400">Items Requested</label>
+              <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+                <Table>
+                  <TableBody>
+                    {viewingRequest?.items.map(item => (
+                      <TableRow key={item.id} className="border-b last:border-0 h-14">
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">{item.product.product_code}</span>
+                            <span className="text-xs font-black text-slate-800">{item.product.model_name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-black text-xs text-slate-900 pr-6">
+                          x{item.quantity}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {viewingRequest?.notes && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-slate-400">Logistics Notes</label>
+                <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-lg text-xs text-slate-600 italic">
+                  &quot;{viewingRequest.notes}&quot;
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="bg-slate-50 -mx-6 -mb-6 p-6 mt-4 border-t border-slate-100">
+            {/* Show Cancel for Requester */}
+            {viewingRequest?.requesting_branch_id === userBranchId && viewingRequest?.status === 'Pending' && (
+              <Button 
+                variant="outline"
+                className="font-black text-rose-500 border-rose-100 hover:bg-rose-50 rounded-xl px-6"
+                onClick={() => cancelRequest(viewingRequest.id)}
+                disabled={cancelling}
+              >
+                {cancelling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+                CANCEL REQUEST
+              </Button>
+            )}
+
+            <div className="flex-1" />
+
+            {/* Show Fulfill for Source */}
+            {viewingRequest?.source_branch_id === userBranchId && viewingRequest?.status === 'Pending' && (
+              <Button 
+                className="bg-emerald-600 hover:bg-emerald-700 font-black px-8 h-12 rounded-xl text-white shadow-lg"
+                onClick={() => {
+                  setViewingRequest(null);
+                  onFulfill?.(viewingRequest);
+                }}
+              >
+                <CheckCircle2 className="h-5 w-5 mr-2" />
+                FULFILL REQUEST
+              </Button>
+            )}
+
+            <Button variant="ghost" onClick={() => setViewingRequest(null)} className="font-bold text-slate-500 px-6">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Fulfillment Modal */}
       <Dialog open={!!fulfillingRequest} onOpenChange={() => setFulfillingRequest(null)}>

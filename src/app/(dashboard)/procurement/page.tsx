@@ -1252,7 +1252,7 @@ Are you sure you want to proceed?`)) return;
                   className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group relative border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
                 >
                   <Clock className="h-3.5 w-3.5 group-data-active:text-amber-400 transition-colors" />
-                  Pending Fulfilment
+                  GRN Registry
                   {pendingFulfilmentCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
                       {pendingFulfilmentCount}
@@ -1669,7 +1669,7 @@ Are you sure you want to proceed?`)) return;
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <CardTitle className="text-lg flex items-center gap-2 text-white">
                       <Clock className="h-5 w-5 text-amber-400" />
-                      Pending Fulfilment Registry
+                      GRN Registry
                     </CardTitle>
                     <div className="flex items-center gap-3">
                       <Button

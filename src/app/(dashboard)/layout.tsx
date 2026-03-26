@@ -15,25 +15,59 @@ export default async function DashboardLayout({
     redirect("/login")
   }
 
-  // Fetch HR metadata
+  // Fetch Profile & Primary Branch Access
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single()
 
-  // Graceful fallback and Branch retrieval map
-  const rawProfile = profile || { id: user.id, full_name: "Unknown User", email: user.email, role: "sales", branch_id: "" }
-  let branchName = ""
+  // Fetch All Assigned Branches from user_branch_access
+  const { data: branchAccess } = await supabase
+    .from("user_branch_access")
+    .select(`
+      branch_id,
+      is_primary,
+      branches (
+        name
+      )
+    `)
+    .eq("user_id", user.id)
 
-  if (rawProfile.branch_id) {
-     const { data: branchData } = await supabase.from("branches").select("name").eq("id", rawProfile.branch_id).single()
-     if (branchData) branchName = branchData.name
+  const rawProfile = profile || { id: user.id, full_name: "Unknown User", email: user.email, role: "sales", assigned_branch_id: "" }
+  
+  // Determine Primary Branch
+  const typedBranchAccess = (branchAccess || []) as unknown as Array<{
+    branch_id: string;
+    is_primary: boolean;
+    branches: { name: string } | { name: string }[] | null;
+  }>;
+
+  const primaryAccess = typedBranchAccess.find(ba => ba.is_primary) || typedBranchAccess[0]
+  const branchId = primaryAccess?.branch_id || (rawProfile as { assigned_branch_id?: string }).assigned_branch_id || ""
+  
+  // Normalized branch name extraction
+  let branchName = ""
+  if (primaryAccess?.branches) {
+    branchName = Array.isArray(primaryAccess.branches) 
+      ? primaryAccess.branches[0]?.name 
+      : primaryAccess.branches.name;
   }
 
   const profileWithBranchName = {
      ...rawProfile,
-     branch_name: branchName
+     branch_id: branchId,
+     branch_name: branchName,
+     all_branches: typedBranchAccess.map(ba => {
+       const bName = Array.isArray(ba.branches) 
+         ? ba.branches[0]?.name 
+         : ba.branches?.name;
+       return {
+         id: ba.branch_id,
+         name: bName || "",
+         is_primary: ba.is_primary
+       };
+     })
   }
 
   return (

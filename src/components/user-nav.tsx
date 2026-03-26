@@ -33,6 +33,11 @@ type UserNavProps = {
     role: string
     branch_id: string
     branch_name?: string
+    all_branches?: Array<{
+      id: string
+      name: string
+      is_primary: boolean
+    }>
   }
 }
 
@@ -92,13 +97,33 @@ export function UserNav({ profile }: UserNavProps) {
               </div>
             </div>
           </DropdownMenuGroup>
-          <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem className="text-muted-foreground cursor-default flex justify-between">
-              <span>Assigned Branch:</span>
-              <span className="font-medium text-foreground">{profile.branch_name || profile.branch_id}</span>
-            </DropdownMenuItem>
+            <div className="px-2 py-1.5 flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Active Branch</span>
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-emerald-500/5 border border-emerald-500/10">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-semibold text-emerald-700 truncate">{profile.branch_name || "No Branch Assigned"}</span>
+              </div>
+            </div>
           </DropdownMenuGroup>
+          
+          {profile.all_branches && profile.all_branches.length > 1 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <div className="px-2 py-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-1 block">Other Assignments</span>
+                  <div className="flex flex-col gap-1">
+                    {profile.all_branches.filter(b => b.id !== profile.branch_id).map(branch => (
+                      <div key={branch.id} className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded transition-colors cursor-default">
+                        {branch.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </DropdownMenuGroup>
+            </>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuGroup className="font-bold text-[10px] uppercase tracking-wider">
             <DropdownMenuItem 
