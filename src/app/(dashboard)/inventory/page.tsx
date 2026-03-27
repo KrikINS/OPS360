@@ -25,7 +25,7 @@ import {
   Send,
   FileSpreadsheet
 } from "lucide-react"
-import { exportToCSV } from "@/lib/export-utils"
+import { exportToExcel } from "@/lib/export-utils"
 import { 
   Tooltip,
   TooltipContent,
@@ -221,7 +221,7 @@ export default function InventoryDashboard() {
       const { data, error } = await supabase.rpc('get_export_data', { p_type: 'stock_ledger' })
       if (error) throw error
       if (data) {
-        exportToCSV(data as Record<string, any>[], 'Stock_Ledger')
+        exportToExcel(data as Record<string, unknown>[], 'Inventory')
       }
     } catch (err) {
       console.error("Export failed", err)

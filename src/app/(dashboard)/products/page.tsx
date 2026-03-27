@@ -17,7 +17,7 @@ import {
   History,
   FileSpreadsheet
 } from "lucide-react"
-import { exportToCSV } from "@/lib/export-utils"
+import { exportToExcel } from "@/lib/export-utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -104,7 +104,7 @@ export default function ProductsPage() {
       const { data, error } = await supabase.rpc('get_export_data', { p_type: 'product_master' })
       if (error) throw error
       if (data) {
-        exportToCSV(data as Record<string, any>[], 'Product_Master')
+        exportToExcel(data as Record<string, unknown>[], 'Products')
       }
     } catch (err) {
       console.error("Export failed", err)

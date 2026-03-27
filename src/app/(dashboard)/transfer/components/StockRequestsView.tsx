@@ -9,7 +9,7 @@ import {
   ArrowRight,
   Trash2, Send, CheckCircle2, XCircle, FileSpreadsheet
 } from "lucide-react"
-import { exportToCSV } from "@/lib/export-utils"
+import { exportToExcel } from "@/lib/export-utils"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { Badge } from "@/components/ui/badge"
@@ -219,7 +219,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
       const { data, error } = await supabase.rpc('get_export_data', { p_type: 'stock_demands' })
       if (error) throw error
       if (data) {
-        exportToCSV(data as Record<string, unknown>[], 'Stock_Requests_Demands')
+        exportToExcel(data as Record<string, unknown>[], 'Logistics')
       }
     } catch (err) {
       console.error("Export failed", err)

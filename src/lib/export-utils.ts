@@ -1,22 +1,40 @@
+import * as XLSX from 'xlsx';
+
 /**
- * Utility to export data to CSV format
+ * Utility to export data to XLSX format
  */
-export const exportToCSV = (data: Array<Record<string, unknown>>, filename: string) => {
+export const exportToExcel = (data: Array<Record<string, unknown>>, moduleName: string) => {
   if (!data || data.length === 0) {
     console.error("No data available for export");
     return;
   }
 
-  // Get headers from the first object
+  // Create a worksheet
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // Create a workbook
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+
+  // Format filename: EHA_[ModuleName]_YYYY-MM-DD.xlsx
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `EHA_${moduleName}_${timestamp}.xlsx`;
+
+  // Process data for export
+  XLSX.writeFile(workbook, filename);
+};
+
+/**
+ * Legacy support or quick CSV exports if needed
+ * Note: Recommending exportToExcel for production quality
+ */
+export const exportToCSV = (data: Array<Record<string, unknown>>, filename: string) => {
+  // Keeping this for potential uses where raw text is needed
+  if (!data || data.length === 0) return;
+  
   const headers = Object.keys(data[0]);
+  const csvRows = [headers.join(',')];
   
-  // Create CSV content
-  const csvRows = [];
-  
-  // Add header row
-  csvRows.push(headers.join(','));
-  
-  // Add data rows
   for (const row of data) {
     const values = headers.map(header => {
       const val = row[header];
@@ -26,20 +44,11 @@ export const exportToCSV = (data: Array<Record<string, unknown>>, filename: stri
     csvRows.push(values.join(','));
   }
   
-  const csvString = csvRows.join('\n');
-  
-  // Create download link
-  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  
-  const timestamp = new Date().toISOString().split('T')[0];
   link.setAttribute('href', url);
-  link.setAttribute('download', `${filename}_${timestamp}.csv`);
-  link.style.visibility = 'hidden';
-  
-  document.body.appendChild(link);
+  link.setAttribute('download', `${filename}.csv`);
   link.click();
-  document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };

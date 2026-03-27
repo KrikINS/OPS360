@@ -10,7 +10,7 @@ import {
   AlertTriangle as AlertIcon, CheckCircle2, ChevronRight as ChevronIcon, Clock as ClockIcon, History as HistoryIcon, Loader2, 
   Package, Plus, Printer, Search, Send, ShieldCheck as ShieldIcon, FileSpreadsheet
 } from "lucide-react"
-import { exportToCSV } from "@/lib/export-utils"
+import { exportToExcel } from "@/lib/export-utils"
 import { createClient } from "@/utils/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { type StockRequest } from "./StockRequestsView"

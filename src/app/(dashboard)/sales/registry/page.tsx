@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
 import { createClient } from "@/utils/supabase/client"
-import { exportToCSV } from "@/lib/export-utils"
+import { exportToExcel } from "@/lib/export-utils"
 
 interface Sale {
   sale_id: string;
@@ -81,7 +81,7 @@ export default function SalesRegistryPage() {
       const { data, error } = await supabase.rpc('get_export_data', { p_type: 'sales_registry' })
       if (error) throw error
       if (data) {
-        exportToCSV(data as Record<string, any>[], 'Sales_Registry')
+        exportToExcel(data as Record<string, unknown>[], 'Sales')
       }
     } catch (err) {
       console.error("Export failed", err)
@@ -157,7 +157,12 @@ export default function SalesRegistryPage() {
           <p className="text-slate-500 font-bold animate-pulse">Syncing Sales Registry...</p>
         </div>
       ) : (
-        <SalesRegistryTable sales={sales} onExport={handleExport} canExport={canExport} />
+        <SalesRegistryTable 
+          sales={sales} 
+          onExport={handleExport} 
+          canExport={canExport} 
+          exporting={exporting}
+        />
       )}
     </div>
   )
