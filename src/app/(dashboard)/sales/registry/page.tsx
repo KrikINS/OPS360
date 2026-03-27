@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { SalesRegistryTable } from '@/components/admin/SalesRegistryTable'
+import { SalesRegistryTable } from '@/components/sales/SalesRegistryTable'
 import { 
   ShoppingBag, 
   TrendingUp, 
@@ -12,8 +12,25 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
 
+interface Sale {
+  sale_id: string;
+  invoice_number?: string;
+  created_at: string;
+  total_amount: number;
+  customer_id: string;
+  customer_name: string;
+  branch_name: string;
+  items_sold?: {
+    name: string;
+    quantity: number;
+    serial_number: string;
+  }[];
+  payment_method?: string;
+  search_meta?: string;
+}
+
 export default function SalesRegistryPage() {
-  const [sales, setSales] = useState<any[]>([])
+  const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalSales: 0,
@@ -24,12 +41,12 @@ export default function SalesRegistryPage() {
   const fetchSales = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/sales')
+      const res = await fetch('/api/sales/registry')
       if (!res.ok) throw new Error("Failed to fetch sales")
       const data = await res.json()
       setSales(data)
       
-      const total = data.reduce((acc: number, s: any) => acc + Number(s.total_amount), 0)
+      const total = data.reduce((acc: number, s: Sale) => acc + Number(s.total_amount), 0)
       setStats({
         totalSales: total,
         invoiceCount: data.length,

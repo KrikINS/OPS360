@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import { UserNav } from "@/components/user-nav"
+import { cookies } from "next/headers"
 
 export default async function AdminLayout({
   children,
@@ -19,17 +20,33 @@ export default async function AdminLayout({
     .eq("id", user.id)
     .single()
 
-  if (profile?.role !== "admin") redirect("/unauthorized")
+  if (profile?.role !== "Admin/Owner") redirect("/unauthorized")
+
+  const cookieStore = await cookies()
+  const activeBranchId = cookieStore.get("active_branch_id")?.value || profile?.branch_id || ""
 
   let branchName = ""
-  if (profile?.branch_id) {
-    const { data: b } = await supabase.from("branches").select("name").eq("id", profile.branch_id).single()
+  if (activeBranchId) {
+    const { data: b } = await supabase.from("branches").select("name").eq("id", activeBranchId).single()
     if (b) branchName = b.name
+  } else if (profile?.role === "Admin/Owner") {
+    branchName = "Global Access"
+  }
+
+  // Load all branches for switching if Admin
+  let allBranches: { id: string; name: string; is_primary: boolean }[] | undefined = undefined
+  if (profile?.role === "Admin/Owner") {
+    const { data: b_list } = await supabase.from("branches").select("id, name").order("name")
+    if (b_list) {
+      allBranches = b_list.map(b => ({ id: b.id, name: b.name, is_primary: b.id === activeBranchId }))
+    }
   }
 
   const profileWithBranch = {
     ...profile,
+    branch_id: activeBranchId,
     branch_name: branchName,
+    all_branches: allBranches,
     email: user.email ?? profile?.email ?? "",
   }
 

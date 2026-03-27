@@ -2,9 +2,30 @@
 
 import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Users, UserPlus, Loader2, LucideIcon, Edit2, Trash2, ShieldCheck, Activity } from "lucide-react"
+import { Users, UserPlus, Loader2, LucideIcon, ShieldCheck, Activity, Save, CheckCircle2, XCircle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectGroup,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
+import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 import {
   Table, 
@@ -14,20 +35,19 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
 import { ProvisionUserModal } from "@/components/admin/ProvisionUserModal"
-import { EditUserModal } from "@/components/admin/EditUserModal"
-import { MultiSelect } from "@/components/ui/multi-select"
+import { UserProfileModal } from "@/components/admin/UserProfileModal"
 
-interface Profile {
+export interface Profile {
   id: string
   email: string
   full_name: string | null
+  phone: string | null
   role: string | null
   assigned_branch_id: string | null
   assigned_branch_ids: string[] | null
   permissions: Record<string, boolean>
+  register_permissions: Record<string, Record<string, 'view' | 'edit'>> | null
   is_active: boolean
 }
 
@@ -36,7 +56,8 @@ interface Branch {
   name: string
 }
 
-const MODULES = ["pos", "inventory", "procurement", "products", "transfers", "staff", "finance", "admin"] as const;
+const MODULES = ["pos", "inventory", "procurement", "sales", "finance", "service", "admin", "hr"] as const;
+const ROLES = ["Admin/Owner", "Branch Manager", "Sales Rep", "Accounts Keeper", "Technician", "HR Manager", "Driver"] as const;
 
 export default function UserManagementPage() {
   const [stats, setStats] = useState({
@@ -47,11 +68,14 @@ export default function UserManagementPage() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [loading, setLoading] = useState(true)
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
+  const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null)
+  const [modifiedUserIds, setModifiedUserIds] = useState<Set<string>>(new Set())
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
   const supabase = createClient()
+  const router = useRouter()
 
   const refreshData = React.useCallback(async () => {
     setLoading(true)
@@ -64,22 +88,26 @@ export default function UserManagementPage() {
     if (statsRes.data) setStats(statsRes.data)
     if (profilesRes.data) setProfiles(profilesRes.data as Profile[])
     if (branchesRes.data) setBranches(branchesRes.data as Branch[])
+    setModifiedUserIds(new Set())
     setLoading(false)
   }, [supabase])
 
   useEffect(() => {
     let mounted = true
     async function init() {
-      const [statsRes, profilesRes, branchesRes] = await Promise.all([
+      const { data: { user } } = await supabase.auth.getUser()
+      const [statsRes, profilesRes, branchesRes, userProfileRes] = await Promise.all([
         supabase.rpc('get_admin_dashboard_stats'),
         supabase.from('profiles').select('*').order('email'),
-        supabase.from('branches').select('id, name')
+        supabase.from('branches').select('id, name'),
+        user ? supabase.from('profiles').select('*').eq('id', user.id).single() : Promise.resolve({ data: null })
       ])
 
       if (mounted) {
         if (statsRes.data) setStats(statsRes.data)
         if (profilesRes.data) setProfiles(profilesRes.data as Profile[])
         if (branchesRes.data) setBranches(branchesRes.data as Branch[])
+        if (userProfileRes.data) setCurrentUserProfile(userProfileRes.data)
         setLoading(false)
       }
     }
@@ -87,71 +115,160 @@ export default function UserManagementPage() {
     return () => { mounted = false }
   }, [supabase])
 
-  const togglePermission = async (profileId: string, currentPerms: Record<string, boolean>, module: string, checked: boolean) => {
-    setUpdatingId(`${profileId}-${module}`)
+  const togglePermission = (profileId: string, currentPerms: Record<string, boolean>, module: string, checked: boolean) => {
     const nextPerms = { ...(currentPerms || {}), [module]: checked }
-    const { error } = await supabase
-      .from('profiles')
-      .update({ permissions: nextPerms })
-      .eq('id', profileId)
-    
-    if (!error) {
-      setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, permissions: nextPerms } : p))
-    }
-    setUpdatingId(null)
+    setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, permissions: nextPerms } : p))
+    setModifiedUserIds(prev => new Set(prev).add(profileId))
   }
 
-  const assignBranches = async (profileId: string, branchIds: string[]) => {
-    setUpdatingId(`${profileId}-branch`)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        assigned_branch_ids: branchIds,
-        assigned_branch_id: branchIds.length > 0 ? branchIds[0] : null
-      })
-      .eq('id', profileId)
+  const handleRoleChange = (profileId: string, newRole: string) => {
+    const nextPerms: Record<string, boolean> = {}
     
-    if (!error) {
-      setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, assigned_branch_ids: branchIds, assigned_branch_id: branchIds.length > 0 ? branchIds[0] : null } : p))
+    if (newRole === "Admin/Owner") {
+      MODULES.forEach(m => nextPerms[m] = true)
+    } else if (newRole === "Accounts Keeper") {
+      MODULES.forEach(m => nextPerms[m] = false)
+      nextPerms["finance"] = true
+    } else if (newRole === "HR Manager") {
+      MODULES.forEach(m => nextPerms[m] = false)
+      nextPerms["hr"] = true
+    } else {
+      MODULES.forEach(m => nextPerms[m] = false)
     }
-    setUpdatingId(null)
+
+    setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, role: newRole, permissions: nextPerms } : p))
+    setModifiedUserIds(prev => new Set(prev).add(profileId))
   }
 
-  const archiveUser = async (profileId: string) => {
-    if (!confirm("Are you sure you want to deactivate this user? This will revoke all access instantly.")) return
-    
-    setUpdatingId(`${profileId}-archive`)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_active: false })
-      .eq('id', profileId)
-    
-    if (!error) {
-      setProfiles(prev => prev.filter(p => p.id !== profileId))
-    }
-    setUpdatingId(null)
+  const assignBranches = (profileId: string, branchIds: string[]) => {
+    setProfiles(prev => prev.map(p => p.id === profileId ? { 
+      ...p, 
+      assigned_branch_ids: branchIds, 
+      assigned_branch_id: branchIds.length > 0 ? branchIds[0] : null 
+    } : p))
+    setModifiedUserIds(prev => new Set(prev).add(profileId))
   }
 
-  const updateUserProfile = async (profileId: string, updates: Partial<Profile>) => {
-    return await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', profileId)
+  const handleSelectAllBranches = (profileId: string) => {
+    const allIds = branches.map(b => b.id)
+    assignBranches(profileId, allIds)
+  }
+
+  const handleSaveBatch = async () => {
+    if (modifiedUserIds.size === 0) return
+    
+    setLoading(true)
+    try {
+      const updates = profiles.filter(p => modifiedUserIds.has(p.id))
+      
+      // Clean up before saving
+      const cleanUpdates = updates.map(({ ...rest }) => rest)
+      
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(cleanUpdates)
+
+      if (error) {
+        if (error.code === '42501') {
+          setToast({ message: "Security Error: You do not have permission to update these user profiles.", type: 'error' })
+        } else {
+          setToast({ message: `Error saving changes: ${error.message}`, type: 'error' })
+        }
+      } else {
+        setToast({ message: `Access protocols successfully updated for ${modifiedUserIds.size} users`, type: 'success' })
+        setModifiedUserIds(new Set())
+        await refreshData()
+        router.refresh()
+        setTimeout(() => setToast(null), 3000)
+      }
+    } catch (err) {
+      const error = err as Error
+      setToast({ message: `System error: ${error.message || "Unknown error during save"}`, type: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOpenProfileModal = (profile: Profile) => {
+    setSelectedProfile(profile)
+    setIsProfileModalOpen(true)
+  }
+
+  const handleSaveProfileFromModal = async (updated: Profile) => {
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: updated.full_name,
+          email: updated.email,
+          register_permissions: updated.register_permissions
+        })
+        .eq('id', updated.id)
+
+      if (error) {
+        if (error.code === '42501') {
+          setToast({ message: "Security Error: You do not have permission to modify this profile.", type: 'error' })
+        } else {
+          setToast({ message: `Error updating profile: ${error.message}`, type: 'error' })
+        }
+      } else {
+        setToast({ message: "Identity metadata successfully synchronized", type: 'success' })
+        await refreshData()
+        router.refresh()
+        setTimeout(() => setToast(null), 3000)
+      }
+    } catch (err) {
+      const error = err as Error
+      setToast({ message: `System error: ${error.message || "Unknown error during update"}`, type: 'error' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-[#001529] uppercase">User Management</h1>
-          <p className="text-slate-500 text-xs font-bold mt-1 uppercase tracking-widest">Verify live accounts, assign protocols, and audit permissions.</p>
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-[#001529] uppercase">User Management</h1>
+            <p className="text-slate-500 text-xs font-bold mt-1 uppercase tracking-widest">Verify live accounts, assign protocols, and audit permissions.</p>
+          </div>
+
+          {/* Toast Notification Container */}
+          {toast && (
+            <div className={cn(
+              "fixed bottom-6 right-6 z-50 animate-in slide-in-from-right-10 duration-500 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border backdrop-blur-md transition-all",
+              toast.type === 'success' ? "bg-emerald-500/90 border-emerald-400/50 text-white" : "bg-rose-500/90 border-rose-400/50 text-white"
+            )}>
+              {toast.type === 'success' ? (
+                <CheckCircle2 className="h-5 w-5 animate-bounce" />
+              ) : (
+                <XCircle className="h-5 w-5 animate-pulse" />
+              )}
+              <div className="flex flex-col">
+                <span className="font-black text-[10px] uppercase tracking-widest opacity-70">
+                  {toast.type === 'success' ? "System Success" : "Protocol Deviation"}
+                </span>
+                <span className="font-bold text-sm tracking-tight">{toast.message}</span>
+              </div>
+              <button 
+                onClick={() => setToast(null)}
+                className="ml-4 p-1 hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Close notification"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 uppercase text-xs"
+          >
+            <UserPlus className="h-4 w-4" /> Provision New User
+          </Button>
         </div>
-        <Button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 uppercase text-xs"
-        >
-          <UserPlus className="h-4 w-4" /> Provision New User
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -180,99 +297,137 @@ export default function UserManagementPage() {
 
       <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden">
         <CardHeader className="bg-slate-50 border-b flex flex-row items-center justify-between py-4">
-          <div>
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700 text-left">Access Control Matrix (ACM)</CardTitle>
-            <CardDescription className="text-[10px] font-bold text-slate-400 uppercase text-left">Enterprise identity layer and module-level permissions.</CardDescription>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => refreshData()} disabled={loading} className="h-8 w-8 p-0">
-            <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50/50">
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="w-[180px] text-[10px] font-bold uppercase tracking-widest text-slate-400 pl-6 h-10">User Identity</TableHead>
-                <TableHead className="w-[180px] text-[10px] font-bold uppercase tracking-widest text-slate-400 h-10">Full Name</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400 h-10 text-center">Role</TableHead>
-                {MODULES.map(m => (
-                  <TableHead key={m} className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-400 h-10">{m}</TableHead>
-                ))}
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400 h-10">Branch Allotment</TableHead>
-                <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest text-slate-400 pr-6 h-10">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading && profiles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={MODULES.length + 3} className="h-48 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-slate-200 mx-auto" />
-                  </TableCell>
-                </TableRow>
-              ) : profiles.map((profile) => (
-                <TableRow key={profile.id} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors h-14">
-                  <TableCell className="pl-6 font-medium text-slate-700">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold leading-none">{profile.email.split('@')[0]}</span>
-                      <span className="text-[9px] text-slate-400 mt-1 font-mono">{profile.email}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium text-slate-700">
-                    <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{profile.full_name || "—"}</span>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary" className="bg-slate-100 text-[9px] font-black uppercase text-slate-600 border-none px-2 h-4">
-                      {profile.role || 'GUEST'}
-                    </Badge>
-                  </TableCell>
-                  {MODULES.map(m => (
-                    <TableCell key={m} className="text-center">
-                      <Checkbox 
-                        checked={profile.permissions?.[m] || false}
-                        onCheckedChange={(checked) => togglePermission(profile.id, profile.permissions, m, !!checked)}
-                        disabled={updatingId === `${profile.id}-${m}`}
-                        className="border-slate-300 data-[state=checked]:bg-[#001529] data-[state=checked]:border-[#001529] mx-auto"
-                      />
-                    </TableCell>
+            <div>
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-700 text-left">Access Control Matrix (ACM)</CardTitle>
+              <CardDescription className="text-[10px] font-bold text-slate-400 uppercase text-left">Real-time module authorization and branch allotment.</CardDescription>
+            </div>
+            <div className="flex items-center gap-3">
+              {modifiedUserIds.size > 0 && (
+                <Button 
+                  onClick={handleSaveBatch}
+                  disabled={loading}
+                  className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 font-bold shadow-md h-8 px-4 uppercase text-[10px]"
+                >
+                  {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                  Save Updates ({modifiedUserIds.size})
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => refreshData()} disabled={loading} className="h-8 w-8 p-0">
+                <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                    <TableHead className="w-[200px] text-[10px] font-bold uppercase tracking-widest text-slate-400 pl-6 h-12">User Identity</TableHead>
+                    <TableHead className="w-[180px] text-[10px] font-bold uppercase tracking-widest text-slate-400 h-10">Role</TableHead>
+                    {MODULES.map(m => (
+                      <TableHead key={m} className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-400 h-10 p-0 w-12">{m}</TableHead>
+                    ))}
+                    <TableHead className="w-[180px] text-[10px] font-bold uppercase tracking-widest text-slate-400 h-10">Branch Access</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading && profiles.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={MODULES.length + 3} className="h-48 text-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-slate-200 mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : profiles.map((profile) => (
+                    <TableRow key={profile.id} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors h-16">
+                      <TableCell className="pl-6">
+                        <button 
+                          onClick={() => handleOpenProfileModal(profile)}
+                          className="flex flex-col group text-left outline-none"
+                        >
+                          <span className="text-xs font-black text-slate-700 uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                            {profile.full_name || "Unassigned Identity"}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{profile.email}</span>
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <Select value={profile.role || ""} onValueChange={(val) => val && handleRoleChange(profile.id, val)}>
+                          <SelectTrigger className="w-full h-8 text-[10px] font-black uppercase tracking-tight bg-slate-50 border-slate-200">
+                            <SelectValue placeholder="No Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {ROLES.map(role => (
+                                <SelectItem key={role} value={role} className="text-[10px] uppercase font-bold">{role}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      {MODULES.map(m => (
+                        <TableCell key={m} className="p-0 text-center">
+                          <Switch 
+                            checked={profile.permissions?.[m] || false}
+                            onCheckedChange={(checked) => togglePermission(profile.id, profile.permissions, m, checked)}
+                            className="scale-75 mx-auto"
+                          />
+                        </TableCell>
+                      ))}
+                      <TableCell className="pr-6">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            className={cn(
+                              "flex w-full items-center justify-between gap-1.5 rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-2 pl-2.5 text-[10px] whitespace-nowrap outline-none select-none focus-visible:border-blue-500 transition-colors h-8 font-black uppercase tracking-tight"
+                            )}
+                          >
+                            <span className="truncate">
+                              {(profile.assigned_branch_ids?.length === branches.length && branches.length > 0)
+                                ? "All Branches"
+                                : `${profile.assigned_branch_ids?.length || 0}/${branches.length} Selected`}
+                            </span>
+                            <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuGroup>
+                              <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Branch Access Control</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuCheckboxItem
+                                checked={profile.assigned_branch_ids?.length === branches.length && branches.length > 0}
+                                onCheckedChange={(checked) => {
+                                  if (checked) handleSelectAllBranches(profile.id)
+                                  else assignBranches(profile.id, [])
+                                }}
+                                className="text-[10px] font-black uppercase"
+                              >
+                                Select All Branches
+                              </DropdownMenuCheckboxItem>
+                              <DropdownMenuSeparator />
+                              {branches.map((branch) => (
+                                <DropdownMenuCheckboxItem
+                                  key={branch.id}
+                                  checked={profile.assigned_branch_ids?.includes(branch.id) || false}
+                                  onCheckedChange={(checked) => {
+                                    const current = profile.assigned_branch_ids || []
+                                    const next = checked 
+                                      ? [...current, branch.id]
+                                      : current.filter(id => id !== branch.id)
+                                    assignBranches(profile.id, next)
+                                  }}
+                                  className="text-[10px] font-bold uppercase"
+                                >
+                                  {branch.name}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                  <TableCell className="w-[200px]">
-                    <MultiSelect
-                      options={branches.map(b => ({ label: b.name, value: b.id }))}
-                      selected={profile.assigned_branch_ids || (profile.assigned_branch_id ? [profile.assigned_branch_id] : [])}
-                      onChange={(vals) => assignBranches(profile.id, vals)}
-                      placeholder="No Branch"
-                      className="w-full h-8"
-                    />
-                  </TableCell>
-                  <TableCell className="pr-6 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedProfile(profile)
-                          setIsEditModalOpen(true)
-                        }}
-                        className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => archiveUser(profile.id)}
-                        disabled={updatingId === `${profile.id}-archive`}
-                        className="h-8 w-8 p-0 hover:bg-red-50 text-slate-400 hover:text-red-500"
-                      >
-                        {updatingId === `${profile.id}-archive` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
       </Card>
 
       <ProvisionUserModal
@@ -282,14 +437,15 @@ export default function UserManagementPage() {
         onSuccess={() => refreshData()}
       />
 
-      <EditUserModal
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        branches={branches}
-        profile={selectedProfile}
-        onSuccess={() => refreshData()}
-        onUpdate={updateUserProfile}
-      />
+      {selectedProfile && (
+        <UserProfileModal
+          open={isProfileModalOpen}
+          onOpenChange={setIsProfileModalOpen}
+          profile={selectedProfile}
+          currentUserRole={currentUserProfile?.role || null}
+          onSave={handleSaveProfileFromModal}
+        />
+      )}
     </div>
   )
 }

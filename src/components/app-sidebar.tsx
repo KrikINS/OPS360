@@ -8,25 +8,21 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import {
-  Database,
-  Laptop,
+  LayoutGrid,
   List,
   UserSquare,
   Star,
-  Banknote,
   Receipt,
   CheckCircle2,
   ShieldCheck,
   RotateCcw,
   AlertCircle,
   FileText,
-  CreditCard,
   ChevronRight,
   Package as PackageIcon,
   Archive,
@@ -35,7 +31,7 @@ import {
   Users,
   BarChart3,
   Wrench,
-  ShieldAlert,
+  Wallet,
   Loader2,
   ArrowLeft,
   BookOpen
@@ -52,7 +48,7 @@ import { cn } from "@/lib/utils"
 const navigationGroups = [
   {
     title: "Inventory Management",
-    icon: Database,
+    icon: PackageIcon,
     items: [
       { title: "Inventory Registry", url: "/", icon: PackageIcon },
       { title: "Product Master", url: "/products", icon: Archive },
@@ -60,7 +56,7 @@ const navigationGroups = [
     ]
   },
   {
-    title: "Procurement Management",
+    title: "Procurement Portal",
     icon: ShoppingCart,
     items: [
       { title: "PO Registry", url: "/procurement", icon: FileText },
@@ -72,26 +68,26 @@ const navigationGroups = [
     ]
   },
   {
-    title: "Sales Management",
-    icon: CreditCard,
+    title: "Sales Hub",
+    icon: BarChart3,
     items: [
-      { title: "POS", url: "/pos", icon: Laptop },
-      { title: "Sales Registry", url: "/admin/sales-registry", icon: List },
+      { title: "POS", url: "/pos", icon: Receipt },
+      { title: "Sales Registry", url: "/sales/registry", icon: List },
       { title: "Sales Return", url: "/sales/returns", icon: RotateCcw },
       { title: "Customer Registry", url: "/admin/customers", icon: UserSquare },
       { title: "Loyalty Points", url: "/sales/loyalty", icon: Star },
     ]
   },
   {
-    title: "Finance Management",
-    icon: Banknote,
+    title: "Finance & Accounts",
+    icon: Wallet,
     items: [
       { title: "Branch-Wise P&L", url: "/finance/pl", icon: BarChart3 },
       { title: "Expense Tracker", url: "/finance/expenses", icon: Receipt },
     ]
   },
   {
-    title: "Service and Maintenance",
+    title: "Service & Support",
     icon: Wrench,
     items: [
       { title: "Job Card / Work Orders", url: "/service", icon: FileText },
@@ -99,13 +95,13 @@ const navigationGroups = [
     ]
   },
   {
-    title: "Admin Center",
+    title: "System Administration",
     url: "/admin",
-    icon: ShieldAlert,
+    icon: ShieldCheck,
     items: []
   },
   {
-    title: "HR Management",
+    title: "Human Resources",
     icon: Users,
     items: [
       { title: "Personnel Registry", url: "/hr", icon: Users },
@@ -156,16 +152,49 @@ export function AppSidebar() {
             <span className="text-[#7FD1E3] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap opacity-80">Ops360 ERP</span>
           </div>
         </div>
+
+        <div className="mt-6 px-1">
+          <Link
+            href="/launchpad"
+            onClick={() => setNavigatingTo("/launchpad")}
+            className={cn(
+              "flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-[#7FD1E3]/30 hover:border-[#7FD1E3] transition-all duration-300 group/nav",
+              pathname === "/launchpad" 
+                ? "bg-[#7FD1E3]/10 border-[#7FD1E3] shadow-[0_0_15px_rgba(127,209,227,0.1)]" 
+                : "bg-transparent"
+            )}
+          >
+            {navigatingTo === "/launchpad" ? (
+              <Loader2 className="h-4 w-4 animate-spin text-[#7FD1E3]" />
+            ) : (
+              <LayoutGrid className={cn(
+                "h-4 w-4 transition-colors duration-300",
+                pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-500 group-hover/nav:text-[#7FD1E3]"
+              )} />
+            )}
+            <span className={cn(
+              "text-[11px] font-bold uppercase tracking-wider transition-colors duration-300",
+              pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-400 group-hover/nav:text-white"
+            )}>
+              Return to Launchpad
+            </span>
+          </Link>
+        </div>
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className="px-2 py-3">
+      <SidebarContent className="px-2 pt-2 pb-3">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold px-3 mb-1 truncate whitespace-nowrap">
-            Enterprise Navigation
-          </SidebarGroupLabel>
+          <div className="px-4 mb-3 space-y-0.5 pointer-events-none select-none">
+            <h2 className="text-[8px] font-black uppercase tracking-[0.3em] text-white/30">
+              Authenticated Access
+            </h2>
+            <p className="text-[14px] font-bold tracking-tight text-white leading-tight">
+              Command Center
+            </p>
+          </div>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
+            <SidebarMenu className="space-y-3">
               {navigationGroups.map((group) => {
                 const isGroupActive = group.items.some(item => 
                   item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
@@ -181,8 +210,10 @@ export function AppSidebar() {
                         href={group.url || "#"}
                         onClick={() => setNavigatingTo(group.url || "#")}
                         className={cn(
-                          "flex w-full items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150 relative",
-                          isActive ? "text-white bg-[#002a52]/50" : "text-slate-400 hover:text-white hover:bg-[#002244]"
+                          "flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium transition-all duration-150 relative tracking-tight",
+                          isActive 
+                            ? "text-white bg-[#002a52]/50 border-l-[3px] border-l-[#7FD1E3] rounded-l-none" 
+                            : "text-slate-400 hover:text-white hover:bg-[#002244]"
                         )}
                       >
                         <group.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-500")} />
@@ -200,15 +231,17 @@ export function AppSidebar() {
                   >
                     <SidebarMenuItem>
                       <CollapsibleTrigger className={cn(
-                        "flex w-full items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150",
-                        isGroupActive ? "text-white bg-[#002a52]/50" : "text-slate-400 hover:text-white hover:bg-[#002244]"
+                        "flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 tracking-tight",
+                        isGroupActive 
+                          ? "text-white bg-[#002a52]/50 border-l-[3px] border-l-[#7FD1E3] rounded-l-none" 
+                          : "text-slate-400 hover:text-white hover:bg-[#002244]"
                       )}>
                         <group.icon className={cn("h-4 w-4 shrink-0", isGroupActive ? "text-[#7FD1E3]" : "text-slate-500")} />
                         <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
                         <ChevronRight className="h-3 w-3 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-slate-600" />
                       </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <SidebarMenu className="mt-1 ml-4 border-l border-slate-800 space-y-0.5">
+                        <SidebarMenu className="mt-1 ml-4 border-l border-slate-800 space-y-1">
                           {group.items.map((item) => {
                             const isActive = currentUrl === item.url || pathname === item.url.split('?')[0];
 
@@ -218,10 +251,10 @@ export function AppSidebar() {
                                   href={item.url}
                                   onClick={() => setNavigatingTo(item.url)}
                                   className={cn(
-                                    "flex items-center gap-3 px-3 py-1 rounded-md text-[13px] font-medium transition-all duration-150 relative",
+                                    "flex items-center gap-3 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 relative",
                                     isActive
-                                      ? "text-white bg-[#002a52] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[2px] before:h-4 before:bg-[#7FD1E3]"
-                                      : "text-slate-500 hover:text-slate-300"
+                                      ? "text-white bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_0_15px_rgba(127,209,227,0.1)] font-bold"
+                                      : "text-slate-500 hover:text-slate-300 font-medium"
                                   )}
                                 >
                                   {navigatingTo === item.url ? (
@@ -229,7 +262,7 @@ export function AppSidebar() {
                                   ) : (
                                     <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-600")} />
                                   )}
-                                  <span className={cn(navigatingTo === item.url && "animate-pulse")}>{item.title}</span>
+                                  <span className={cn(navigatingTo === item.url && "animate-pulse", "tracking-tight")}>{item.title}</span>
                                 </Link>
                               </SidebarMenuItem>
                             )

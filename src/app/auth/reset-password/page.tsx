@@ -47,9 +47,10 @@ export default function ResetPasswordPage() {
     setError(null)
 
     try {
-      // 1. Update Auth Password
+      // 1. Update Auth Password & clear metadata flag
       const { error: resetError } = await supabase.auth.updateUser({ 
-        password: password 
+        password: password,
+        data: { requires_password_change: false }
       })
 
       if (resetError) throw resetError

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import { CheckCircle2, XCircle, ShoppingCart } from 'lucide-react'
-import { PosProvider, usePos } from '@/context/PosContext'
+import { usePos } from '@/context/PosContext'
 import { PosHeader } from '@/components/pos/PosHeader'
 import { ProductCatalog } from '@/components/pos/ProductCatalog'
 import { CartSidebar } from '@/components/pos/CartSidebar'
@@ -121,8 +121,6 @@ function POSContent() {
 
 export default function RetailFastPOS() {
   return (
-    <PosProvider>
-      <POSContent />
-    </PosProvider>
+    <POSContent />
   )
 }

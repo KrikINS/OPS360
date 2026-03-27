@@ -149,7 +149,7 @@ export function EditUserModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin" className="text-xs font-bold uppercase">Admin</SelectItem>
+                    <SelectItem value="Admin/Owner" className="text-xs font-bold uppercase">Admin/Owner</SelectItem>
                     <SelectItem value="manager" className="text-xs font-bold uppercase">Manager</SelectItem>
                     <SelectItem value="staff" className="text-xs font-bold uppercase">Staff</SelectItem>
                   </SelectContent>

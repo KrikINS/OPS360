@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { UserNav } from "@/components/user-nav"
+import { PosProvider } from "@/context/PosContext"
 import Link from "next/link"
 import { HelpCircle } from "lucide-react"
 
@@ -26,9 +27,11 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
 
   if (isPos) {
     return (
-      <div className="flex-1 overflow-hidden h-screen flex flex-col bg-slate-900">
-        {children}
-      </div>
+      <PosProvider initialBranchId={profile.branch_id}>
+        <div className="flex-1 overflow-hidden h-screen flex flex-col bg-slate-900">
+          {children}
+        </div>
+      </PosProvider>
     )
   }
 

@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { ShieldAlert, Loader2, Search, Settings2, X, CheckCircle2, RotateCcw, AlertTriangle, MessageSquare } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { formatCurrency } from "@/utils/format"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -281,9 +281,11 @@ export default function DiscrepancyReportPage() {
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#001529] border-white/10 text-white">
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Price Mismatch">Price Mismatch</SelectItem>
-                    <SelectItem value="Quantity Mismatch">Quantity Mismatch</SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="Price Mismatch">Price Mismatch</SelectItem>
+                      <SelectItem value="Quantity Mismatch">Quantity Mismatch</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
@@ -295,10 +297,12 @@ export default function DiscrepancyReportPage() {
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#001529] border-white/10 text-white">
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="Investigating">Investigating</SelectItem>
-                    <SelectItem value="Resolved">Resolved</SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="Open">Open</SelectItem>
+                      <SelectItem value="Investigating">Investigating</SelectItem>
+                      <SelectItem value="Resolved">Resolved</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
@@ -434,19 +438,17 @@ export default function DiscrepancyReportPage() {
                             >
                               <PencilLine className="h-4 w-4 mr-2" /> Edit Gap Value
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator className="my-1 bg-slate-100" />
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setSelectedDiscrepancy(item);
+                                setViewNoteModalOpen(true);
+                              }}
+                              className="text-slate-600 focus:text-slate-900 focus:bg-slate-50 cursor-pointer font-bold text-[10px] uppercase tracking-wider py-2.5 rounded-lg"
+                            >
+                              <Eye className="h-4 w-4 mr-2" /> View Resolution Note
+                            </DropdownMenuItem>
                           </DropdownMenuGroup>
-                          
-                          <DropdownMenuSeparator className="my-1 bg-slate-100" />
-                          
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              setSelectedDiscrepancy(item);
-                              setViewNoteModalOpen(true);
-                            }}
-                            className="text-slate-600 focus:text-slate-900 focus:bg-slate-50 cursor-pointer font-bold text-[10px] uppercase tracking-wider py-2.5 rounded-lg"
-                          >
-                            <Eye className="h-4 w-4 mr-2" /> View Resolution Note
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

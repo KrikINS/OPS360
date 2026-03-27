@@ -25,32 +25,39 @@ export async function GET(
       }
     )
 
-    // 1. Verify Authentication using the standard client
+    // 1. Verify Authentication
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    // 2. Verify Admin Role using the dedicated join-free RPC (passing explicit user ID)
-    const { data: isAdmin } = await supabaseAdmin.rpc('check_is_admin_v3', { p_user_id: user.id })
-    if (!isAdmin) {
-        return NextResponse.json({ error: "Forbidden. Admin access required." }, { status: 403 })
+    // 2. Allow access based on role
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
+    const allowedRoles = ['admin', 'manager', 'staff']
+    if (!allowedRoles.includes(profile.role || "")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // 3. Fetch Invoice Header with branch and customer details (bypasses RLS)
+    // 3. Fetch line items using the Flattened View
     const { data, error } = await supabaseAdmin
-      .from('sales_invoices')
-      .select(`
-        *,
-        branches(*),
-        customers(*)
-      `)
-      .eq('id', id)
-      .single()
+      .from('view_invoice_details')
+      .select('*')
+      .eq('invoice_id', id)
 
     if (error) throw error
 
     return NextResponse.json(data)
-  } catch (err) {
-    console.error("Invoice Header Fetch Error:", err)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  } catch (err: unknown) {
+    const error = err as Error
+    console.error("Invoice Items Fetch Error:", error)
+    return NextResponse.json({ 
+      error: "Internal Server Error", 
+      details: error?.message
+    }, { status: 500 })
   }
 }

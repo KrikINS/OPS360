@@ -126,13 +126,6 @@ export default function AdminDashboardPage() {
       {/* Module Hub Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <ModuleCard 
-          title="Sales Registry" 
-          href="/admin/sales-registry" 
-          icon={BarChart3} 
-          description="Audit sales & serial numbers" 
-          color="indigo" 
-        />
-        <ModuleCard 
           title="Users & Access" 
           href="/admin/users" 
           icon={Users} 
@@ -308,7 +301,6 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 text-slate-600">
-                <MatrixRow label="Sales Registry" admin="Full" manager="View" />
                 <MatrixRow label="Active Inventory" admin="Full" manager="Edit" />
                 <MatrixRow label="Financial Audits" admin="Full" manager="None" />
                 <MatrixRow label="System Branding" admin="Full" manager="None" />

@@ -156,7 +156,7 @@ export function usePos() {
 
 // --- Provider Component ---
 
-export function PosProvider({ children }: { children: React.ReactNode }) {
+export function PosProvider({ children, initialBranchId }: { children: React.ReactNode, initialBranchId?: string }) {
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -306,8 +306,8 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
           const branchIds = profileData.assigned_branch_ids || (profileData.assigned_branch_id ? [profileData.assigned_branch_id] : [])
           
           if (branchIds.length > 0) {
-            const initialBranchId = branchIds[0]
-            setSelectedBranch(initialBranchId)
+            const initialBranchIdToUse = initialBranchId || branchIds[0]
+            setSelectedBranch(initialBranchIdToUse)
             
             // If they have multiple branches, we need the names for the switcher
             const { data: allotBranches } = await supabase
@@ -316,11 +316,11 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
               .in('id', branchIds)
             
             if (allotBranches) {
-              const current = (allotBranches as Branch[]).find((b: Branch) => b.id === initialBranchId)
+              const current = (allotBranches as Branch[]).find((b: Branch) => b.id === initialBranchIdToUse)
               setBranchName(current?.name || "Main Terminal")
               setCurrentBranchDetails(current as Branch)
               setAllBranches(allotBranches as Branch[])
-              await fetchInventory(initialBranchId)
+              await fetchInventory(initialBranchIdToUse)
             }
           }
 
@@ -359,7 +359,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     }
     init()
-  }, [supabase, fetchInventory, refreshSessionStats])
+  }, [supabase, fetchInventory, refreshSessionStats, initialBranchId])
   
   const resetCustomerContext = useCallback(() => {
     setSelectedCustomer(null)

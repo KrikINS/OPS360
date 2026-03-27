@@ -53,8 +53,9 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(data)
-  } catch (err: any) {
-    console.error("Sales Registry Fetch Error:", err)
-    return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 })
+  } catch (err: unknown) {
+    const error = err as Error
+    console.error("Sales Registry Fetch Error:", error)
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 })
   }
 }

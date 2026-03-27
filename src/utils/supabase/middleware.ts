@@ -83,28 +83,28 @@ export async function updateSession(request: NextRequest) {
       const path = url.pathname
 
       if (path.startsWith('/admin') || path.startsWith('/staff')) {
-        if (role !== 'admin') {
+        if (role !== 'Admin/Owner') {
           url.pathname = '/unauthorized'
           return NextResponse.redirect(url)
         }
       }
 
       if (path.startsWith('/transfer')) {
-        if (role !== 'admin' && role !== 'manager') {
+        if (role !== 'Admin/Owner' && role !== 'manager') {
           url.pathname = '/unauthorized'
           return NextResponse.redirect(url)
         }
       }
 
       if (path.startsWith('/pos') || path.startsWith('/vendors')) {
-        if (role !== 'admin' && role !== 'manager' && role !== 'sales') {
+        if (role !== 'Admin/Owner' && role !== 'manager' && role !== 'sales') {
           url.pathname = '/unauthorized'
           return NextResponse.redirect(url)
         }
       }
 
       if (path.startsWith('/service')) {
-        if (role !== 'admin' && role !== 'manager' && role !== 'technician') {
+        if (role !== 'Admin/Owner' && role !== 'manager' && role !== 'technician') {
           url.pathname = '/unauthorized'
           return NextResponse.redirect(url)
         }

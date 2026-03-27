@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { logout } from "@/app/login/actions"
+import { setActiveBranchAction } from "@/app/actions/branch"
 import { createClient } from "@/utils/supabase/client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -23,7 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { LogOut, Settings, Loader2, KeyRound } from "lucide-react"
+import { LogOut, Settings, Loader2, KeyRound, Check } from "lucide-react"
 
 type UserNavProps = {
   profile: {
@@ -46,6 +47,7 @@ export function UserNav({ profile }: UserNavProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [fullName, setFullName] = useState(profile.full_name || "")
   const [isSaving, setIsSaving] = useState(false)
+  const [switchingBranchId, setSwitchingBranchId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState("")
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -70,6 +72,20 @@ export function UserNav({ profile }: UserNavProps) {
       setErrorMsg((err as Error).message)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleSwitchBranch = async (branchId: string) => {
+    if (branchId === profile.branch_id) return
+    setSwitchingBranchId(branchId)
+    try {
+      await setActiveBranchAction(branchId)
+      // setActiveBranchAction calls revalidatePath('/'), 
+      // which triggers a server refresh of the layout
+    } catch (err) {
+      console.error("Failed to switch branch:", err)
+    } finally {
+      setSwitchingBranchId(null)
     }
   }
 
@@ -112,13 +128,27 @@ export function UserNav({ profile }: UserNavProps) {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <div className="px-2 py-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-1 block">Other Assignments</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-1 block">Switch Location</span>
                   <div className="flex flex-col gap-1">
-                    {profile.all_branches.filter(b => b.id !== profile.branch_id).map(branch => (
-                      <div key={branch.id} className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded transition-colors cursor-default">
-                        {branch.name}
-                      </div>
-                    ))}
+                    {profile.all_branches.map(branch => {
+                      const isActive = branch.id === profile.branch_id
+                      const isSwitching = switchingBranchId === branch.id
+
+                      return (
+                        <DropdownMenuItem
+                          key={branch.id}
+                          disabled={isActive || switchingBranchId !== null}
+                          className={`flex items-center justify-between text-[11px] px-2 py-1.5 rounded transition-colors cursor-pointer ${
+                            isActive ? 'bg-primary/5 text-primary font-semibold' : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                          onSelect={() => handleSwitchBranch(branch.id)}
+                        >
+                          <span className="truncate max-w-[180px]">{branch.name}</span>
+                          {isActive && <Check className="h-3 w-3" />}
+                          {isSwitching && <Loader2 className="h-3 w-3 animate-spin" />}
+                        </DropdownMenuItem>
+                      )
+                    })}
                   </div>
                 </div>
               </DropdownMenuGroup>

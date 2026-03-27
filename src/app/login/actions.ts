@@ -23,13 +23,19 @@ export async function login(formData: FormData) {
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('force_password_change')
+        .select('force_password_change, role, permissions')
         .eq('id', user.id)
         .single();
       
-      if (profile?.force_password_change) {
+      if (profile?.force_password_change || user.user_metadata?.requires_password_change) {
         return { success: true, forcePasswordChange: true };
       }
+
+      return { 
+        success: true, 
+        userId: user.id, 
+        permissions: profile?.permissions as Record<string, boolean> || {} 
+      };
     }
 
     revalidatePath('/', 'layout');

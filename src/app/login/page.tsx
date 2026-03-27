@@ -9,47 +9,68 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import { Loader2, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { ModuleLaunchpad } from "@/components/dashboard/ModuleLaunchpad"
 
-type AnimationStage = "loading" | "intro" | "form"
+type AnimationStage = "loading" | "intro" | "form" | "launchpad"
 
-// Common Logo & Title Component to handle transitions
-const BrandIdentity = ({ isForm, stage }: { isForm: boolean, stage: string }) => (
-  <div className={`flex flex-col items-center transition-all duration-1000 ease-in-out ${
-    isForm ? "-mb-2 scale-[0.75]" : "scale-100 mb-0"
-  } ${stage === "loading" ? "opacity-0" : "opacity-100"}`}>
-    <div className={`transition-all duration-1000 ease-in-out relative ${
-      isForm ? "opacity-100" : "animate-in fade-in zoom-in duration-1000"
-    }`}>
-      <Image 
-        src="/ethan-logo-final.png" 
-        alt="Ethan Logo" 
-        width={400} 
-        height={400} 
-        priority 
-        className="drop-shadow-[0_0_50px_rgba(127,209,227,0.25)] bg-transparent object-contain" 
-      />
-    </div>
-    <div className={`text-center space-y-2 mt-6 transition-all duration-1000 ${isForm ? "opacity-100" : ""}`}>
-      <div className="relative inline-block group">
-        <h1 className={`font-bold uppercase font-[family-name:var(--font-outfit)] transition-all duration-1000 ${
-          isForm ? "text-3xl text-white tracking-normal" : "text-5xl text-white/60 tracking-normal"
-        }`}>
-          Ops360 ERP
-        </h1>
-        {/* Flashy Premium Underline */}
-        <div className={`absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#7fd1e3] to-transparent shadow-[0_0_10px_rgba(127,209,227,0.5)] transition-all duration-1000 ${
-          stage === "loading" ? "w-0 opacity-0" : "w-full opacity-100"
-        }`} />
+const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
+  const isLaunchpad = stage === "launchpad";
+  
+  return (
+    <div className={cn(
+      "flex flex-col items-center transition-all duration-1000 ease-in-out",
+      stage === "loading" && "opacity-0",
+      stage === "intro" && "scale-100 mb-0 opacity-100",
+      stage === "form" && "-mb-2 scale-[0.75] opacity-100",
+      stage === "launchpad" && "scale-[0.5] mb-0 opacity-100 fixed top-8 left-1/2 -translate-x-1/2 z-50 mt-0"
+    )}>
+      <div className={cn(
+        "transition-all duration-1000 ease-in-out relative",
+        stage !== "loading" && stage !== "intro" ? "opacity-100" : "animate-in fade-in zoom-in duration-1000"
+      )}>
+        <Image 
+          src="/ethan-logo-final.png" 
+          alt="Ethan Logo" 
+          width={400} 
+          height={400} 
+          priority 
+          className={cn(
+            "drop-shadow-[0_0_50px_rgba(127,209,227,0.25)] bg-transparent object-contain transition-all duration-1000",
+            isLaunchpad && "drop-shadow-[0_0_20px_rgba(127,209,227,0.15)]"
+          )}
+        />
+      </div>
+      <div className={cn(
+        "text-center space-y-2 transition-all duration-1000",
+        isLaunchpad ? "mt-2" : "mt-6"
+      )}>
+        <div className="relative inline-block group">
+          <h1 className={cn(
+            "font-bold uppercase font-[family-name:var(--font-outfit)] transition-all duration-1000",
+            stage === "intro" && "text-5xl text-white/60 tracking-normal",
+            stage === "form" && "text-3xl text-white tracking-normal",
+            stage === "launchpad" && "text-xl text-white/40 tracking-[0.2em]"
+          )}>
+            Ops360 ERP
+          </h1>
+          <div className={cn(
+            "absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#7fd1e3] to-transparent shadow-[0_0_10px_rgba(127,209,227,0.5)] transition-all duration-1000",
+            stage === "loading" ? "w-0 opacity-0" : "w-full opacity-100",
+            stage === "launchpad" && "opacity-0 scale-x-0"
+          )} />
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [stage, setStage] = useState<AnimationStage>("loading")
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({})
   const [progress, setProgress] = useState(0)
   const progressRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -102,7 +123,9 @@ export default function LoginPage() {
         if (result.forcePasswordChange) {
           router.push('/auth/reset-password')
         } else {
-          router.push('/')
+          setPermissions(result.permissions || {})
+          setStage("launchpad")
+          setLoading(false)
         }
       }
     } catch (err: unknown) {
@@ -137,16 +160,18 @@ export default function LoginPage() {
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00AEEF]/5 rounded-full blur-[100px]" />
 
       {/* Brand Identity - Moves based on stage */}
-      <div className={`transition-all duration-1000 ease-in-out flex flex-col items-center ${
+      <div className={cn(
+        "transition-all duration-1000 ease-in-out flex flex-col items-center",
         stage === "intro" ? "translate-y-0" : "flex-shrink-0"
-      }`}>
-        <BrandIdentity isForm={stage === "form"} stage={stage} />
+      )}>
+        <BrandIdentity stage={stage} />
       </div>
 
       {/* Login Card - Slides up */}
-      <div className={`w-full max-w-[360px] transition-all duration-1000 ease-out ${
-        stage === "form" ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20 pointer-events-none"
-      }`}>
+      <div className={cn(
+        "w-full max-w-[360px] transition-all duration-1000 ease-out",
+        stage === "form" ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-20 scale-95 pointer-events-none absolute"
+      )}>
         <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
           <div className="h-1 w-full bg-gradient-to-r from-transparent via-[#7FD1E3] to-transparent opacity-50" />
           <CardContent className="p-8">
@@ -226,6 +251,14 @@ export default function LoginPage() {
             </form>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Module Launchpad - Appears after login */}
+      <div className={cn(
+        "w-full transition-all duration-1000 delay-500",
+        stage === "launchpad" ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none absolute"
+      )}>
+        <ModuleLaunchpad permissions={permissions} isVisible={stage === "launchpad"} />
       </div>
 
       {/* Developer Watermark */}
