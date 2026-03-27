@@ -113,7 +113,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-white dark:bg-slate-900 border-none shadow-2xl">
+      <DialogContent className="md:max-w-[600px] p-0 overflow-hidden bg-white dark:bg-slate-900 border-none shadow-2xl">
         <DialogHeader className="p-6 bg-[#001529] text-white">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-blue-500 rounded-xl shadow-lg ring-4 ring-blue-500/10">

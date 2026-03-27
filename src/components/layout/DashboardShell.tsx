@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { usePathname } from 'next/navigation'
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { UserNav } from "@/components/user-nav"
 import { PosProvider } from "@/context/PosContext"
@@ -38,7 +38,7 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <main className="flex-1 overflow-hidden h-screen flex flex-col">
+      <SidebarInset className="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out">
         <header className="h-14 flex items-center justify-between px-5 border-b bg-white shadow-sm gap-4 shrink-0 z-10">
           <div className="flex items-center gap-3">
             <SidebarTrigger className="text-slate-500 hover:text-primary transition-colors" />
@@ -61,7 +61,7 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
         <div className="flex-1 overflow-auto bg-[linear-gradient(135deg,#f8fafc_0%,#f1f5f9_100%)]">
           {children}
         </div>
-      </main>
+      </SidebarInset>
     </SidebarProvider>
   )
 }

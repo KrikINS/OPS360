@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { 
   Package, 
   ShoppingCart, 
@@ -93,11 +93,13 @@ const MODULES: Module[] = [
 
 interface ModuleLaunchpadProps {
   permissions: Record<string, boolean>
+  role?: string
   isVisible: boolean
 }
 
-export function ModuleLaunchpad({ permissions, isVisible }: ModuleLaunchpadProps) {
+export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpadProps) {
   const [mounted, setMounted] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     if (isVisible) {
@@ -105,23 +107,25 @@ export function ModuleLaunchpad({ permissions, isVisible }: ModuleLaunchpadProps
     }
   }, [isVisible])
 
-  // Retail POS uses the 'pos' permission flag
-  const allowedModules = MODULES.filter(m => permissions?.[m.id])
+  // Admins always see all modules; others filter by permissions
+  const allowedModules = role === "Admin/Owner" 
+    ? MODULES 
+    : MODULES.filter(m => permissions?.[m.id])
 
   if (!isVisible) return null
 
   return (
     <div className="w-full flex-1 flex flex-col items-center justify-center min-h-[70vh] px-6 py-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl w-full">
         {allowedModules.map((module, index) => (
-          <Link 
+          <div 
             key={module.id} 
-            href={module.path}
+            onClick={() => router.push(module.path)}
             className={cn(
-              "group relative block transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) hover:-translate-y-1 hover:scale-[1.03]",
-              mounted ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-90"
+              "group relative block cursor-pointer transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) hover:-translate-y-1 hover:scale-[1.03]",
+              mounted ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-90",
+              `[transition-delay:${index * 80}ms]`
             )}
-            style={{ transitionDelay: `${index * 80}ms` }}
           >
             <div className={cn(
               "absolute inset-0 bg-gradient-to-br rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500",
@@ -149,7 +153,7 @@ export function ModuleLaunchpad({ permissions, isVisible }: ModuleLaunchpadProps
                 Initialize Module <ArrowRight className="h-2.5 w-2.5" />
               </div>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
     </div>

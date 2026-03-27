@@ -1098,88 +1098,90 @@ Are you sure you want to proceed?`)) return;
                 </div>
 
                 {poItems.length > 0 && (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[30%] min-w-[200px] whitespace-normal">Product</TableHead>
-                        <TableHead>HSN</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Unit Price</TableHead>
-                        <TableHead>Tax %</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {poItems.map((item, idx: number) => (
-                        <TableRow key={item.id || idx}>
-                          <TableCell className="w-[30%] min-w-[200px] whitespace-normal break-words align-top pt-4">
-                            {item.product?.model_name || 'Item'}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs align-top pt-4">{item.product?.hsn_code || '---'}</TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              className="w-20"
-                              value={item.quantity}
-                              min="1"
-                              onChange={(e) => {
-                                const newItems = [...poItems];
-                                newItems[idx].quantity = Math.max(1, Number(e.target.value));
-                                setPoItems(newItems);
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[30%] min-w-[200px] whitespace-normal">Product</TableHead>
+                          <TableHead>HSN</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Unit Price</TableHead>
+                          <TableHead>Tax %</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {poItems.map((item, idx: number) => (
+                          <TableRow key={item.id || idx}>
+                            <TableCell className="w-[30%] min-w-[200px] whitespace-normal break-words align-top pt-4">
+                              {item.product?.model_name || 'Item'}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs align-top pt-4">{item.product?.hsn_code || '---'}</TableCell>
+                            <TableCell>
                               <Input
                                 type="number"
-                                className="w-24 h-8"
-                                value={item.tax_rate}
-                                disabled={!managerOverride[idx]}
+                                className="w-20"
+                                value={item.quantity}
+                                min="1"
                                 onChange={(e) => {
                                   const newItems = [...poItems];
-                                  newItems[idx].tax_rate = Number(e.target.value);
+                                  newItems[idx].quantity = Math.max(1, Number(e.target.value));
                                   setPoItems(newItems);
                                 }}
                               />
-                              <label className="flex items-center gap-1 text-[10px] cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={!!managerOverride[idx]}
+                            </TableCell>
+                            <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <Input
+                                  type="number"
+                                  className="w-24 h-8"
+                                  value={item.tax_rate}
+                                  disabled={!managerOverride[idx]}
                                   onChange={(e) => {
-                                    const checked = e.target.checked;
-                                    setManagerOverride(prev => ({ ...prev, [idx]: checked }));
-                                    if (!checked) {
-                                      setOverrideReasons(prev => {
-                                        const updated = { ...prev };
-                                        delete updated[idx];
-                                        return updated;
-                                      });
-                                    }
+                                    const newItems = [...poItems];
+                                    newItems[idx].tax_rate = Number(e.target.value);
+                                    setPoItems(newItems);
                                   }}
                                 />
-                                Override GST
-                              </label>
-                              {managerOverride[idx] && (
-                                <Input
-                                  placeholder="Reason for change..."
-                                  className="text-[10px] h-6 mt-1 border-amber-200 bg-amber-50"
-                                  value={overrideReasons[idx] || ""}
-                                  onChange={(e) => setOverrideReasons(prev => ({ ...prev, [idx]: e.target.value }))}
-                                />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">₹{(item.unit_price * item.quantity).toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => setPoItems(poItems.filter((_, i: number) => i !== idx))}>Remove</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                                <label className="flex items-center gap-1 text-[10px] cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!managerOverride[idx]}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setManagerOverride(prev => ({ ...prev, [idx]: checked }));
+                                      if (!checked) {
+                                        setOverrideReasons(prev => {
+                                          const updated = { ...prev };
+                                          delete updated[idx];
+                                          return updated;
+                                        });
+                                      }
+                                    }}
+                                  />
+                                  Override GST
+                                </label>
+                                {managerOverride[idx] && (
+                                  <Input
+                                    placeholder="Reason for change..."
+                                    className="text-[10px] h-6 mt-1 border-amber-200 bg-amber-50"
+                                    value={overrideReasons[idx] || ""}
+                                    onChange={(e) => setOverrideReasons(prev => ({ ...prev, [idx]: e.target.value }))}
+                                  />
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">₹{(item.unit_price * item.quantity).toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm" onClick={() => setPoItems(poItems.filter((_, i: number) => i !== idx))}>Remove</Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
 
                 <div className="space-y-4 pt-6">
@@ -1402,263 +1404,265 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader className="bg-slate-50 border-b">
-                      <TableRow>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Payment</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPOs
-                        .map((po) => (
-                          <TableRow
-                            key={po.id}
-                            className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs"
-                          >
-                            <TableCell
-                              className="py-2 px-4 font-bold text-[#001529] font-mono cursor-pointer hover:underline border-r border-slate-100/50"
-                              onClick={() => setViewingPO(po)}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-slate-50 border-b">
+                        <TableRow>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Payment</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
+                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPOs
+                          .map((po) => (
+                            <TableRow
+                              key={po.id}
+                              className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs"
                             >
-                              {po.po_number}
-                            </TableCell>
-                            <TableCell className="py-2 px-4 font-semibold text-slate-600 border-r border-slate-100/50">{po.vendor?.name}</TableCell>
-                            <TableCell className="py-2 px-4 border-r border-slate-100/50">
-                              <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">
-                                {po.payment_terms || po.vendor?.payment_terms || 'Immediate'}
-                              </span>
-                            </TableCell>
-                            <TableCell className="py-2 px-4 text-slate-500 border-r border-slate-100/50">
-                              <div className="font-semibold text-slate-700 truncate max-w-[140px]">
-                                {po.items[0]?.product?.model_name || '---'}
-                              </div>
-                              {po.items.length > 1 && (
-                                <div className="text-[9px] text-slate-400 font-bold uppercase">
-                                  + {po.items.length - 1} OTHER ITEMS
+                              <TableCell
+                                className="py-2 px-4 font-bold text-[#001529] font-mono cursor-pointer hover:underline border-r border-slate-100/50"
+                                onClick={() => setViewingPO(po)}
+                              >
+                                {po.po_number}
+                              </TableCell>
+                              <TableCell className="py-2 px-4 font-semibold text-slate-600 border-r border-slate-100/50">{po.vendor?.name}</TableCell>
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                                <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">
+                                  {po.payment_terms || po.vendor?.payment_terms || 'Immediate'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-2 px-4 text-slate-500 border-r border-slate-100/50">
+                                <div className="font-semibold text-slate-700 truncate max-w-[140px]">
+                                  {po.items[0]?.product?.model_name || '---'}
                                 </div>
-                              )}
-                            </TableCell>
-                            <TableCell className="py-2 px-4 border-r border-slate-100/50">
-                              <Badge className={
-                                po.status === 'received' ? "bg-green-100 text-green-700 hover:bg-green-200 text-[9px] px-1.5 py-0 font-bold" :
-                                  po.status === 'approved' ? "bg-blue-100 text-blue-700 hover:bg-blue-200 text-[9px] px-1.5 py-0 font-bold" :
-                                    po.status === 'cancelled' ? "bg-red-100 text-red-700 hover:bg-red-200 text-[9px] px-1.5 py-0 font-bold" :
-                                      po.status === 'partially_received' ? "bg-amber-100 text-amber-700 hover:bg-amber-200 text-[9px] px-1.5 py-0 font-bold" :
-                                        po.status === 'needs_revision' ? "bg-orange-100 text-orange-700 hover:bg-orange-200 text-[9px] px-1.5 py-0 font-bold border border-orange-200" :
-                                          po.status === 'PARTIALLY_RETURNED' ? "bg-pink-100 text-pink-700 hover:bg-pink-200 text-[9px] px-1.5 py-0 font-bold" :
-                                            po.status === 'RETURNED' ? "bg-rose-100 text-rose-700 hover:bg-rose-200 text-[9px] px-1.5 py-0 font-bold" :
-                                              "bg-slate-100 text-slate-700 hover:bg-slate-200 text-[9px] px-1.5 py-0 font-bold"
-                              }>
-                                {po.status === 'partially_received' ? 'PARTIAL' : po.status === 'needs_revision' ? 'NEEDS REVISION' : po.status.toUpperCase()}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="py-2 px-4 font-bold text-[#001529] border-r border-slate-100/50">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger render={
-                                    <span className="cursor-help hover:text-blue-600 transition-colors">
-                                      {formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0))}
-                                    </span>
-                                  } />
-                                  <TooltipContent className="bg-[#001529] text-white border-slate-700 w-64">
-                                    <div className="space-y-2 text-[10px]">
-                                      <div className="flex justify-between gap-4">
-                                        <span className="text-white/60 uppercase font-bold tracking-wider text-[8px]">Excl. Tax</span>
-                                        <span className="font-mono">{formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity)), 0))}</span>
+                                {po.items.length > 1 && (
+                                  <div className="text-[9px] text-slate-400 font-bold uppercase">
+                                    + {po.items.length - 1} OTHER ITEMS
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                                <Badge className={
+                                  po.status === 'received' ? "bg-green-100 text-green-700 hover:bg-green-200 text-[9px] px-1.5 py-0 font-bold" :
+                                    po.status === 'approved' ? "bg-blue-100 text-blue-700 hover:bg-blue-200 text-[9px] px-1.5 py-0 font-bold" :
+                                      po.status === 'cancelled' ? "bg-red-100 text-red-700 hover:bg-red-200 text-[9px] px-1.5 py-0 font-bold" :
+                                        po.status === 'partially_received' ? "bg-amber-100 text-amber-700 hover:bg-amber-200 text-[9px] px-1.5 py-0 font-bold" :
+                                          po.status === 'needs_revision' ? "bg-orange-100 text-orange-700 hover:bg-orange-200 text-[9px] px-1.5 py-0 font-bold border border-orange-200" :
+                                            po.status === 'PARTIALLY_RETURNED' ? "bg-pink-100 text-pink-700 hover:bg-pink-200 text-[9px] px-1.5 py-0 font-bold" :
+                                              po.status === 'RETURNED' ? "bg-rose-100 text-rose-700 hover:bg-rose-200 text-[9px] px-1.5 py-0 font-bold" :
+                                                "bg-slate-100 text-slate-700 hover:bg-slate-200 text-[9px] px-1.5 py-0 font-bold"
+                                }>
+                                  {po.status === 'partially_received' ? 'PARTIAL' : po.status === 'needs_revision' ? 'NEEDS REVISION' : po.status.toUpperCase()}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-2 px-4 font-bold text-[#001529] border-r border-slate-100/50">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger render={
+                                      <span className="cursor-help hover:text-blue-600 transition-colors">
+                                        {formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0))}
+                                      </span>
+                                    } />
+                                    <TooltipContent className="bg-[#001529] text-white border-slate-700 w-64">
+                                      <div className="space-y-2 text-[10px]">
+                                        <div className="flex justify-between gap-4">
+                                          <span className="text-white/60 uppercase font-bold tracking-wider text-[8px]">Excl. Tax</span>
+                                          <span className="font-mono">{formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity)), 0))}</span>
+                                        </div>
+                                        <div className="space-y-1 border-t border-white/10 pt-2">
+                                          <p className="text-[8px] font-black uppercase text-blue-400 tracking-widest mb-1">GST Breakdown</p>
+                                          {Object.entries(
+                                            po.items.reduce((acc: Record<number, { tax: number }>, item) => {
+                                              const rate = Number(item.tax_rate);
+                                              const tax = Number(item.unit_price) * Number(item.quantity) * (rate / 100);
+                                              if (!acc[rate]) acc[rate] = { tax: 0 };
+                                              acc[rate].tax += tax;
+                                              return acc;
+                                            }, {} as Record<number, { tax: number }>)
+                                          ).map(([rate, data]) => (
+                                            <div key={rate} className="flex justify-between text-[9px]">
+                                              <span className="opacity-60">Rate @ {rate}%:</span>
+                                              <span className="font-mono">{formatCurrency(data.tax / 2)} + {formatCurrency(data.tax / 2)}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <div className="flex justify-between gap-4 border-t border-white/20 pt-1 font-black text-blue-400">
+                                          <span className="uppercase tracking-wider text-[8px]">Total GST</span>
+                                          <span className="font-mono">{formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * Number(item.tax_rate) / 100), 0))}</span>
+                                        </div>
                                       </div>
-                                      <div className="space-y-1 border-t border-white/10 pt-2">
-                                        <p className="text-[8px] font-black uppercase text-blue-400 tracking-widest mb-1">GST Breakdown</p>
-                                        {Object.entries(
-                                          po.items.reduce((acc: Record<number, { tax: number }>, item) => {
-                                            const rate = Number(item.tax_rate);
-                                            const tax = Number(item.unit_price) * Number(item.quantity) * (rate / 100);
-                                            if (!acc[rate]) acc[rate] = { tax: 0 };
-                                            acc[rate].tax += tax;
-                                            return acc;
-                                          }, {} as Record<number, { tax: number }>)
-                                        ).map(([rate, data]) => (
-                                          <div key={rate} className="flex justify-between text-[9px]">
-                                            <span className="opacity-60">Rate @ {rate}%:</span>
-                                            <span className="font-mono">{formatCurrency(data.tax / 2)} + {formatCurrency(data.tax / 2)}</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                      <div className="flex justify-between gap-4 border-t border-white/20 pt-1 font-black text-blue-400">
-                                        <span className="uppercase tracking-wider text-[8px]">Total GST</span>
-                                        <span className="font-mono">{formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * Number(item.tax_rate) / 100), 0))}</span>
-                                      </div>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </TableCell>
-                            <TableCell className="text-left py-4">
-                              <div className="flex items-center gap-2">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger render={
-                                    <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
-                                      Actions <ChevronDown className="h-3 w-3" />
-                                    </Button>
-                                  } />
-                                  <DropdownMenuContent align="end" className="w-56">
-                                    {po.status === 'pending_approval' && (
-                                      <>
-                                        {userRole === 'admin' && (
-                                          <>
-                                            <DropdownMenuItem 
-                                              onClick={() => handleApprovePO(po.id)}
-                                              className="text-green-600 focus:text-green-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                              disabled={approvingId === po.id}
-                                            >
-                                              <CheckCircle2 className="h-4 w-4 mr-2" /> Approve PO
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem 
-                                              onClick={() => {
-                                                setRevisionDialogPO(po)
-                                                setRevisionNotesInput("")
-                                              }}
-                                              className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                            >
-                                              <RotateCcw className="h-4 w-4 mr-2" /> Revise PO
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem 
-                                              onClick={() => handleRejectPO(po.id)}
-                                              className="text-red-600 focus:text-red-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                            >
-                                              <XCircle className="h-4 w-4 mr-2" /> Reject PO
-                                            </DropdownMenuItem>
-                                          </>
-                                        )}
-                                      </>
-                                    )}
-                                    {po.status === 'needs_revision' && (
-                                      <DropdownMenuItem 
-                                        onClick={() => handleEditResubmit(po)}
-                                        className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                      >
-                                        <RotateCcw className="h-4 w-4 mr-2" /> Edit &amp; Resubmit
-                                      </DropdownMenuItem>
-                                    )}
-
-                                    {po.status === 'draft' && (
-                                      <DropdownMenuItem
-                                        onClick={async () => {
-                                          const res = await fetch('/api/procurement/purchase-orders', {
-                                            method: 'PATCH',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ id: po.id, status: 'pending_approval' })
-                                          })
-                                          if (res.ok) {
-                                            const poRes = await fetch('/api/procurement/purchase-orders')
-                                            setActivePOs(await poRes.json())
-                                          }
-                                        }}
-                                        className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                      >
-                                        <CheckCircle2 className="h-4 w-4 mr-2" /> Submit for Approval
-                                      </DropdownMenuItem>
-                                    )}
-
-                                    {(po.status === 'approved' || po.status === 'partially_received') && (
-                                      <DropdownMenuItem 
-                                        onClick={(e) => { e.stopPropagation(); setSelectedPO(po); }}
-                                        className="text-[#001529] focus:text-[#001529] cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                      >
-                                        <Truck className="h-4 w-4 mr-2" /> Process GRN
-                                      </DropdownMenuItem>
-                                    )}
-
-                                    {(po.status === 'received' || po.status === 'partially_received' || po.status === 'RETURNED' || po.status === 'PARTIALLY_RETURNED') && (
-                                      <>
-                                        {po.grns && po.grns.length > 0 ? (
-                                          po.grns.map((grn) => (
-                                            <DropdownMenuItem 
-                                              key={grn.id}
-                                              onSelect={(e) => e.preventDefault()}
-                                              onClick={() => handleDownloadGRN(po, grn.id)}
-                                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                              disabled={isDownloading === grn.id + '_grn'}
-                                            >
-                                              {isDownloading === grn.id + '_grn' ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-2" />}
-                                              {po.grns && po.grns.length > 1 ? `View GRN: ${grn.grn_number}` : "View GRN"}
-                                            </DropdownMenuItem>
-                                          ))
-                                        ) : (
-                                          <DropdownMenuItem 
-                                            onSelect={(e) => e.preventDefault()}
-                                            onClick={() => handleDownloadGRN(po)}
-                                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                            disabled={isDownloading === po.id + '_grn'}
-                                          >
-                                            {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
-                                            View GRN
-                                          </DropdownMenuItem>
-                                        )}
-                                      </>
-                                    )}
-
-
-                                      <DropdownMenuItem 
-                                        onSelect={(e) => e.preventDefault()}
-                                        onClick={() => setViewingPO(po)} 
-                                        className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-slate-700"
-                                      >
-                                        <FileText className="h-4 w-4 mr-2" /> View Purchase Order
-                                      </DropdownMenuItem>
-
-                                      {po.vendor_bills && po.vendor_bills.length > 0 ? (
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </TableCell>
+                              <TableCell className="text-left py-4">
+                                <div className="flex items-center gap-2">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger render={
+                                      <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
+                                        Actions <ChevronDown className="h-3 w-3" />
+                                      </Button>
+                                    } />
+                                    <DropdownMenuContent align="end" className="w-56">
+                                      {po.status === 'pending_approval' && (
+                                        <>
+                                          {userRole === 'admin' && (
+                                            <>
+                                              <DropdownMenuItem 
+                                                onClick={() => handleApprovePO(po.id)}
+                                                className="text-green-600 focus:text-green-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                                disabled={approvingId === po.id}
+                                              >
+                                                <CheckCircle2 className="h-4 w-4 mr-2" /> Approve PO
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem 
+                                                onClick={() => {
+                                                  setRevisionDialogPO(po)
+                                                  setRevisionNotesInput("")
+                                                }}
+                                                className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                              >
+                                                <RotateCcw className="h-4 w-4 mr-2" /> Revise PO
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem 
+                                                onClick={() => handleRejectPO(po.id)}
+                                                className="text-red-600 focus:text-red-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                              >
+                                                <XCircle className="h-4 w-4 mr-2" /> Reject PO
+                                              </DropdownMenuItem>
+                                            </>
+                                          )}
+                                        </>
+                                      )}
+                                      {po.status === 'needs_revision' && (
                                         <DropdownMenuItem 
-                                          onSelect={(e) => e.preventDefault()}
-                                          onClick={() => setViewingInvoices(po)} 
+                                          onClick={() => handleEditResubmit(po)}
+                                          className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                        >
+                                          <RotateCcw className="h-4 w-4 mr-2" /> Edit &amp; Resubmit
+                                        </DropdownMenuItem>
+                                      )}
+
+                                      {po.status === 'draft' && (
+                                        <DropdownMenuItem
+                                          onClick={async () => {
+                                            const res = await fetch('/api/procurement/purchase-orders', {
+                                              method: 'PATCH',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({ id: po.id, status: 'pending_approval' })
+                                            })
+                                            if (res.ok) {
+                                              const poRes = await fetch('/api/procurement/purchase-orders')
+                                              setActivePOs(await poRes.json())
+                                            }
+                                          }}
                                           className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                         >
-                                          <FileCheck className="h-4 w-4 mr-2" /> View Voice/Bill
+                                          <CheckCircle2 className="h-4 w-4 mr-2" /> Submit for Approval
                                         </DropdownMenuItem>
-                                      ) : (
-                                        (po.status === 'approved' || po.status === 'partially_received' || po.status === 'received' || po.status === 'PARTIALLY_RETURNED') && (
+                                      )}
+
+                                      {(po.status === 'approved' || po.status === 'partially_received') && (
+                                        <DropdownMenuItem 
+                                          onClick={(e) => { e.stopPropagation(); setSelectedPO(po); }}
+                                          className="text-[#001529] focus:text-[#001529] cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                        >
+                                          <Truck className="h-4 w-4 mr-2" /> Process GRN
+                                        </DropdownMenuItem>
+                                      )}
+
+                                      {(po.status === 'received' || po.status === 'partially_received' || po.status === 'RETURNED' || po.status === 'PARTIALLY_RETURNED') && (
+                                        <>
+                                          {po.grns && po.grns.length > 0 ? (
+                                            po.grns.map((grn) => (
+                                              <DropdownMenuItem 
+                                                key={grn.id}
+                                                onSelect={(e) => e.preventDefault()}
+                                                onClick={() => handleDownloadGRN(po, grn.id)}
+                                                className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                                disabled={isDownloading === grn.id + '_grn'}
+                                              >
+                                                {isDownloading === grn.id + '_grn' ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-2" />}
+                                                {po.grns && po.grns.length > 1 ? `View GRN: ${grn.grn_number}` : "View GRN"}
+                                              </DropdownMenuItem>
+                                            ))
+                                          ) : (
+                                            <DropdownMenuItem 
+                                              onSelect={(e) => e.preventDefault()}
+                                              onClick={() => handleDownloadGRN(po)}
+                                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                              disabled={isDownloading === po.id + '_grn'}
+                                            >
+                                              {isDownloading === po.id + '_grn' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                                              View GRN
+                                            </DropdownMenuItem>
+                                          )}
+                                        </>
+                                      )}
+
+
+                                        <DropdownMenuItem 
+                                          onSelect={(e) => e.preventDefault()}
+                                          onClick={() => setViewingPO(po)} 
+                                          className="cursor-pointer font-bold text-[10px] uppercase tracking-wider text-slate-700"
+                                        >
+                                          <FileText className="h-4 w-4 mr-2" /> View Purchase Order
+                                        </DropdownMenuItem>
+
+                                        {po.vendor_bills && po.vendor_bills.length > 0 ? (
+                                          <DropdownMenuItem 
+                                            onSelect={(e) => e.preventDefault()}
+                                            onClick={() => setViewingInvoices(po)} 
+                                            className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                          >
+                                            <FileCheck className="h-4 w-4 mr-2" /> View Voice/Bill
+                                          </DropdownMenuItem>
+                                        ) : (
+                                          (po.status === 'approved' || po.status === 'partially_received' || po.status === 'received' || po.status === 'PARTIALLY_RETURNED') && (
+                                            <DropdownMenuItem 
+                                              onSelect={(e) => e.preventDefault()}
+                                              onClick={() => setUploadBillPO(po)} 
+                                              className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                            >
+                                              <Upload className="h-4 w-4 mr-2" /> Upload Bill Details
+                                            </DropdownMenuItem>
+                                          )
+                                        )}
+                                        
+                                        {/* Lead Architect: Always allow additional uploads if bills exist but it's a Partial Billing PO */}
+                                        {po.vendor_bills && po.vendor_bills.length > 0 && po.is_partial_billing && (
                                           <DropdownMenuItem 
                                             onSelect={(e) => e.preventDefault()}
                                             onClick={() => setUploadBillPO(po)} 
                                             className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
                                           >
-                                            <Upload className="h-4 w-4 mr-2" /> Upload Bill Details
+                                            <Plus className="h-4 w-4 mr-2" /> Upload Addl. Bill
                                           </DropdownMenuItem>
-                                        )
-                                      )}
-                                      
-                                      {/* Lead Architect: Always allow additional uploads if bills exist but it's a Partial Billing PO */}
-                                      {po.vendor_bills && po.vendor_bills.length > 0 && po.is_partial_billing && (
-                                        <DropdownMenuItem 
-                                          onSelect={(e) => e.preventDefault()}
-                                          onClick={() => setUploadBillPO(po)} 
-                                          className="text-amber-600 focus:text-amber-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                        >
-                                          <Plus className="h-4 w-4 mr-2" /> Upload Addl. Bill
-                                        </DropdownMenuItem>
-                                      )}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                        )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        {activePOs.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-16">
+                              <div className="flex flex-col items-center gap-2 grayscale opacity-50">
+                                <PackageSearch className="h-12 w-12" />
+                                <p className="text-slate-500">No purchase orders found</p>
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))}
-                      {activePOs.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-16">
-                            <div className="flex flex-col items-center gap-2 grayscale opacity-50">
-                              <PackageSearch className="h-12 w-12" />
-                              <p className="text-slate-500">No purchase orders found</p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1737,7 +1741,8 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
+                  <div className="overflow-x-auto">
+                    <Table>
                     <TableHeader className="bg-slate-50 border-b">
                       <TableRow>
                         <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
@@ -1878,7 +1883,8 @@ Are you sure you want to proceed?`)) return;
                       )}
                     </TableBody>
                   </Table>
-                </CardContent>
+                </div>
+              </CardContent>
               </Card>
             </TabsContent>
         <TabsContent value="reconciliation" className="animate-in slide-in-from-right-2 duration-300 mt-0">
@@ -1960,7 +1966,8 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
+                  <div className="overflow-x-auto">
+                    <Table>
                     <TableHeader className="bg-slate-50 border-b">
                         <TableRow>
                           <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>
@@ -2185,7 +2192,8 @@ Are you sure you want to proceed?`)) return;
                         })}
                     </TableBody>
                   </Table>
-                </CardContent>
+                </div>
+              </CardContent>
               </Card>
             </TabsContent>
         <TabsContent value="returns" className="animate-in slide-in-from-right-2 duration-300 mt-0">
@@ -2333,55 +2341,57 @@ Are you sure you want to proceed?`)) return;
                   Line Item Breakdown
                 </h4>
                 <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
-                  <Table>
-                    <TableHeader className="bg-slate-50/50">
-                      <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                        <TableHead className="w-[50px] text-center font-black uppercase text-[9px] tracking-tight text-black">#</TableHead>
-                        <TableHead className="w-[25%] min-w-[150px] font-black uppercase text-[9px] tracking-tight text-black">Model Specification</TableHead>
-                        <TableHead className="font-black uppercase text-[9px] tracking-tight text-black">HSN/SAC</TableHead>
-                        <TableHead className="text-center font-black uppercase text-[9px] tracking-tight text-black">Qty</TableHead>
-                        <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Unit Price</TableHead>
-                        <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black min-w-[100px]">Tax Slab</TableHead>
-                        <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Total GST</TableHead>
-                        <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Subtotal</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {viewingPO.items.map((item: POItem, idx: number) => {
-                        const qty = Number(item.quantity)
-                        const price = Number(item.unit_price)
-                        const rate = Number(item.tax_rate)
-                        const taxable = price * qty
-                        const taxTotal = taxable * (rate / 100)
-                        const lineTotal = taxable + taxTotal
-
-                        return (
-                          <TableRow key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
-                            <TableCell className="text-center font-bold text-slate-400 text-xs align-top pt-4">{idx + 1}</TableCell>
-                            <TableCell className="w-[25%] align-top pt-4 pb-4">
-                              <div className="font-bold text-slate-900 text-xs whitespace-normal break-words leading-tight">{item.product?.model_name || 'Item'}</div>
-                              <div className="text-[10px] font-bold text-blue-500 uppercase tracking-tighter mt-1">SKU: {item.product?.product_code}</div>
-                            </TableCell>
-                            <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter align-top pt-4">{item.product?.hsn_code || '---'}</TableCell>
-                            <TableCell className="text-center font-black text-slate-900 text-sm align-top pt-4">{qty}</TableCell>
-                            <TableCell className="text-right font-bold text-slate-600 align-top pt-4">{formatCurrency(price)}</TableCell>
-                            <TableCell className="text-right align-top pt-4">
-                              <div className="flex flex-col items-end">
-                                <span className="text-[10px] font-bold text-[#001529]">GST @ {rate}%</span>
-                                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">({rate/2}% + {rate/2}%)</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right font-bold text-slate-500 align-top pt-4">
-                              {formatCurrency(taxTotal)}
-                            </TableCell>
-                            <TableCell className="text-right font-black text-[#001529] align-top pt-4">
-                              {formatCurrency(lineTotal)}
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-slate-50/50">
+                        <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                          <TableHead className="w-[50px] text-center font-black uppercase text-[9px] tracking-tight text-black">#</TableHead>
+                          <TableHead className="w-[25%] min-w-[150px] font-black uppercase text-[9px] tracking-tight text-black">Model Specification</TableHead>
+                          <TableHead className="font-black uppercase text-[9px] tracking-tight text-black">HSN/SAC</TableHead>
+                          <TableHead className="text-center font-black uppercase text-[9px] tracking-tight text-black">Qty</TableHead>
+                          <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Unit Price</TableHead>
+                          <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black min-w-[100px]">Tax Slab</TableHead>
+                          <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Total GST</TableHead>
+                          <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Subtotal</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewingPO.items.map((item: POItem, idx: number) => {
+                          const qty = Number(item.quantity)
+                          const price = Number(item.unit_price)
+                          const rate = Number(item.tax_rate)
+                          const taxable = price * qty
+                          const taxTotal = taxable * (rate / 100)
+                          const lineTotal = taxable + taxTotal
+  
+                          return (
+                            <TableRow key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                              <TableCell className="text-center font-bold text-slate-400 text-xs align-top pt-4">{idx + 1}</TableCell>
+                              <TableCell className="w-[25%] align-top pt-4 pb-4">
+                                <div className="font-bold text-slate-900 text-xs whitespace-normal break-words leading-tight">{item.product?.model_name || 'Item'}</div>
+                                <div className="text-[10px] font-bold text-blue-500 uppercase tracking-tighter mt-1">SKU: {item.product?.product_code}</div>
+                              </TableCell>
+                              <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter align-top pt-4">{item.product?.hsn_code || '---'}</TableCell>
+                              <TableCell className="text-center font-black text-slate-900 text-sm align-top pt-4">{qty}</TableCell>
+                              <TableCell className="text-right font-bold text-slate-600 align-top pt-4">{formatCurrency(price)}</TableCell>
+                              <TableCell className="text-right align-top pt-4">
+                                <div className="flex flex-col items-end">
+                                  <span className="text-[10px] font-bold text-[#001529]">GST @ {rate}%</span>
+                                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">({rate/2}% + {rate/2}%)</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-bold text-slate-500 align-top pt-4">
+                                {formatCurrency(taxTotal)}
+                              </TableCell>
+                              <TableCell className="text-right font-black text-[#001529] align-top pt-4">
+                                {formatCurrency(lineTotal)}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
 
 
@@ -2562,37 +2572,39 @@ Are you sure you want to proceed?`)) return;
               </div>
 
               <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                <Table>
-                  <TableHeader className="bg-slate-50">
-                    <TableRow>
-                      <TableHead className="w-[60px] text-center font-bold text-[10px] uppercase tracking-widest">#</TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-widest">Item Description</TableHead>
-                      <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest">Received Qty</TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-widest">Storage Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {viewingGRN.items.map((item, idx: number) => (
-                      <TableRow key={idx} className="border-b last:border-0">
-                        <TableCell className="text-center font-bold text-slate-400">{idx + 1}</TableCell>
-                        <TableCell>
-                          <div className="font-bold text-slate-900">{item.product.model_name}</div>
-                          {item.serial_numbers && item.serial_numbers.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {item.serial_numbers.map((sn: string, sidx: number) => (
-                                <Badge key={sidx} variant="outline" className="text-[8px] py-0 font-mono bg-white">{sn}</Badge>
-                              ))}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center font-black text-emerald-700">{item.quantity} Unit(s)</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[8px] uppercase border-emerald-200 text-emerald-700 bg-emerald-50">Verified & In-Stock</Badge>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="w-[60px] text-center font-bold text-[10px] uppercase tracking-widest">#</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase tracking-widest">Item Description</TableHead>
+                        <TableHead className="text-center font-bold text-[10px] uppercase tracking-widest">Received Qty</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase tracking-widest">Storage Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {viewingGRN.items.map((item, idx: number) => (
+                        <TableRow key={idx} className="border-b last:border-0">
+                          <TableCell className="text-center font-bold text-slate-400">{idx + 1}</TableCell>
+                          <TableCell>
+                            <div className="font-bold text-slate-900">{item.product.model_name}</div>
+                            {item.serial_numbers && item.serial_numbers.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {item.serial_numbers.map((sn: string, sidx: number) => (
+                                  <Badge key={sidx} variant="outline" className="text-[8px] py-0 font-mono bg-white">{sn}</Badge>
+                                ))}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center font-black text-emerald-700">{item.quantity} Unit(s)</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[8px] uppercase border-emerald-200 text-emerald-700 bg-emerald-50">Verified & In-Stock</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </div>
 

@@ -71,7 +71,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`sm:max-w-[480px] p-0 overflow-hidden border-none shadow-2xl transition-all duration-500 ${status === 'success' ? 'bg-emerald-600' : 'bg-white dark:bg-slate-900'}`}>
+      <DialogContent className={`md:max-w-[480px] p-0 overflow-hidden border-none shadow-2xl transition-all duration-500 ${status === 'success' ? 'bg-emerald-600' : 'bg-white dark:bg-slate-900'}`}>
         
         {status !== 'success' ? (
           <>
@@ -162,7 +162,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
               </div>
             </div>
 
-            <DialogFooter className="p-6 pt-0">
+            <DialogFooter className="mt-4">
               <div className="flex gap-3 w-full">
                 <Button variant="ghost" className="flex-1 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 dark:hover:bg-white/5" onClick={() => onOpenChange(false)} disabled={status === 'loading'}>Abort</Button>
                 <Button 

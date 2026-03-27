@@ -53,25 +53,28 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-background p-4 text-sm ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed z-50 flex flex-col bg-background text-sm ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "inset-0 h-full w-full rounded-none overflow-y-auto p-0", // Mobile: Fullscreen
+          "md:top-1/2 md:left-1/2 md:h-auto md:max-h-[calc(100%-4rem)] md:w-full md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:p-6", // Tablet/Desktop
           className
         )}
         {...props}
       >
-        {children}
+        <div className="flex flex-col h-full md:h-auto">
+          {children}
+        </div>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
             render={
               <Button
                 variant="ghost"
-                className="absolute top-2 right-2"
+                className="absolute top-4 right-4 md:top-2 md:right-2 z-50"
                 size="icon-sm"
               />
             }
           >
-            <X
-            />
+            <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}
@@ -102,7 +105,9 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2 border-t p-4 sm:flex-row sm:justify-end",
+        "sticky bottom-0 z-20 mt-auto bg-background/95 backdrop-blur-md", // Mobile sticky
+        "md:relative md:mt-4 md:bg-transparent md:backdrop-blur-none md:border-none md:p-0 md:-mx-0 md:-mb-0", // Reset for desktop
         className
       )}
       {...props}

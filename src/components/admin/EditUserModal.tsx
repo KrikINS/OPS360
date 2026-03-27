@@ -100,7 +100,7 @@ export function EditUserModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="md:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-black uppercase tracking-tight text-[#001529]">
             Update User Profile

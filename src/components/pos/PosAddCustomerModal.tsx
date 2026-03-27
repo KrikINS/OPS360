@@ -94,7 +94,7 @@ export function PosAddCustomerModal({ open, onOpenChange, initialPhone }: PosAdd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-2xl bg-white dark:bg-slate-900">
+      <DialogContent className="sm:max-w-[400px] border-none shadow-2xl bg-white dark:bg-slate-900">
         <DialogHeader className="p-6 bg-blue-600 dark:bg-blue-700 text-white">
           <div className="flex items-center gap-3">
             <UserPlus className="h-5 w-5" />

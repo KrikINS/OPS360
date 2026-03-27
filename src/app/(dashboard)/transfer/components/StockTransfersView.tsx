@@ -395,7 +395,7 @@ export function StockTransfersView({
               </Button>
             }
           />
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="md:max-w-4xl md:max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-black tracking-tight">New Stock Transfer</DialogTitle>
               <DialogDescription>Move physical units from one branch to another.</DialogDescription>
@@ -549,7 +549,7 @@ export function StockTransfersView({
               </div>
             </div>
 
-            <DialogFooter className="bg-slate-50 -mx-6 -mb-6 p-6 mt-4 border-t border-slate-100 flex items-center justify-between">
+            <DialogFooter className="mt-4 flex items-center justify-between">
               <div className="flex gap-2">
                 <Button variant="ghost" onClick={() => {
                   setIsCreating(false)
@@ -750,7 +750,7 @@ export function StockTransfersView({
 
       {/* Receiving Dialog */}
       <Dialog open={!!receivingTx} onOpenChange={() => setReceivingTx(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="md:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-black flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-emerald-600" />
@@ -795,7 +795,7 @@ export function StockTransfersView({
             )}
           </div>
 
-          <DialogFooter className="bg-slate-50 -mx-6 -mb-6 p-4 border-t border-slate-100">
+          <DialogFooter className="mt-4">
             <Button onClick={confirmReceipt} disabled={submitting} className="w-full bg-emerald-600 hover:bg-emerald-700 font-black h-12 rounded-xl">
               {submitting ? 'SYNCING...' : 'CONFIRM RECEIPT'}
             </Button>

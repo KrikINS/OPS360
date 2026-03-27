@@ -334,7 +334,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
               </Button>
             }
           />
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="md:max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-2xl font-black">Create Demand Order</DialogTitle>
               <DialogDescription>Specify the products and quantities needed from a target source.</DialogDescription>
@@ -459,7 +459,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
               </div>
             </div>
 
-            <DialogFooter className="bg-slate-50 -mx-6 -mb-6 p-6 mt-4 border-t border-slate-100">
+            <DialogFooter className="mt-4">
               <Button variant="ghost" onClick={() => setIsCreating(false)} className="font-bold text-slate-500">Later</Button>
               <Button 
                 className="bg-slate-900 hover:bg-black font-black px-8 h-12 rounded-xl"
@@ -631,7 +631,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
 
       {/* Stock Request Detail Modal */}
       <Dialog open={!!viewingRequest} onOpenChange={() => setViewingRequest(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="md:max-w-xl">
           <DialogHeader>
             <div className="flex items-center justify-between pr-6">
               <div className="flex flex-col">
@@ -691,7 +691,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
             )}
           </div>
 
-          <DialogFooter className="bg-slate-50 -mx-6 -mb-6 p-6 mt-4 border-t border-slate-100">
+          <DialogFooter className="mt-4">
             {/* Show Cancel for Requester */}
             {viewingRequest?.requesting_branch_id === userBranchId && viewingRequest?.status === 'Pending' && (
               <Button 
@@ -728,7 +728,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
 
       {/* Fulfillment Modal */}
       <Dialog open={!!fulfillingRequest} onOpenChange={() => setFulfillingRequest(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="md:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black">Shipment Fulfillment</DialogTitle>
             <DialogDescription>Assign specific serial numbers to fulfill this demand order.</DialogDescription>
@@ -790,7 +790,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
             })}
           </div>
 
-          <DialogFooter className="bg-slate-50 -mx-6 -mb-6 p-6 mt-4 border-t border-slate-100">
+          <DialogFooter className="mt-4">
             <Button variant="ghost" onClick={() => setFulfillingRequest(null)} className="font-bold text-slate-500">Cancel</Button>
             <Button 
               className="bg-blue-600 hover:bg-blue-700 font-black px-8 h-12 rounded-xl"

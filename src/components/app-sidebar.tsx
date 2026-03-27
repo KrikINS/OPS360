@@ -11,6 +11,9 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   LayoutGrid,
@@ -34,7 +37,9 @@ import {
   Wallet,
   Loader2,
   ArrowLeft,
-  BookOpen
+  BookOpen,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react"
 import {
   Collapsible,
@@ -47,6 +52,7 @@ import { cn } from "@/lib/utils"
 
 const navigationGroups = [
   {
+    id: "inventory",
     title: "Inventory Management",
     icon: PackageIcon,
     items: [
@@ -56,6 +62,7 @@ const navigationGroups = [
     ]
   },
   {
+    id: "procurement",
     title: "Procurement Portal",
     icon: ShoppingCart,
     items: [
@@ -68,10 +75,10 @@ const navigationGroups = [
     ]
   },
   {
+    id: "sales",
     title: "Sales Hub",
     icon: BarChart3,
     items: [
-      { title: "POS", url: "/pos", icon: Receipt },
       { title: "Sales Registry", url: "/sales/registry", icon: List },
       { title: "Sales Return", url: "/sales/returns", icon: RotateCcw },
       { title: "Customer Registry", url: "/admin/customers", icon: UserSquare },
@@ -79,6 +86,14 @@ const navigationGroups = [
     ]
   },
   {
+    id: "pos",
+    title: "Retail POS",
+    icon: Receipt,
+    url: "/pos",
+    items: []
+  },
+  {
+    id: "finance",
     title: "Finance & Accounts",
     icon: Wallet,
     items: [
@@ -87,6 +102,7 @@ const navigationGroups = [
     ]
   },
   {
+    id: "service",
     title: "Service & Support",
     icon: Wrench,
     items: [
@@ -95,12 +111,14 @@ const navigationGroups = [
     ]
   },
   {
+    id: "admin",
     title: "System Administration",
     url: "/admin",
     icon: ShieldCheck,
     items: []
   },
   {
+    id: "hr",
     title: "Human Resources",
     icon: Users,
     items: [
@@ -112,6 +130,8 @@ const navigationGroups = [
 export function AppSidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const { state, toggleSidebar } = useSidebar()
+  const isCollapsed = state === "collapsed"
   const [logoUrl, setLogoUrl] = useState("/ethan-logo.png")
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
@@ -134,10 +154,10 @@ export function AppSidebar() {
   const isAdminMode = pathname.startsWith("/admin")
 
   return (
-    <Sidebar className="border-r-0">
+    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#001529]/80 backdrop-blur-xl">
       {/* ── Logo Header ── */}
-      <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
+      <SidebarHeader className={cn("px-4 py-5 border-b border-white/5", isCollapsed && "px-2")}>
+        <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
           <div className="relative h-10 w-10 bg-white rounded-lg shadow-sm shrink-0 overflow-hidden">
             <Image
               src={logoUrl}
@@ -147,13 +167,15 @@ export function AppSidebar() {
               className="object-contain p-0.5"
             />
           </div>
-          <div className="flex items-baseline gap-2 min-w-0">
-            <span className="text-white font-semibold text-[14px] tracking-tight truncate">Ethan</span>
-            <span className="text-[#7FD1E3] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap opacity-80">Ops360 ERP</span>
-          </div>
+          {!isCollapsed && (
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className="text-white font-semibold text-[14px] tracking-tight truncate">Ethan</span>
+              <span className="text-[#7FD1E3] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap opacity-80">Ops360 ERP</span>
+            </div>
+          )}
         </div>
 
-        <div className="mt-6 px-1">
+        <div className={cn("mt-6 px-1", isCollapsed && "px-0")}>
           <Link
             href="/launchpad"
             onClick={() => setNavigatingTo("/launchpad")}
@@ -161,8 +183,10 @@ export function AppSidebar() {
               "flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-[#7FD1E3]/30 hover:border-[#7FD1E3] transition-all duration-300 group/nav",
               pathname === "/launchpad" 
                 ? "bg-[#7FD1E3]/10 border-[#7FD1E3] shadow-[0_0_15px_rgba(127,209,227,0.1)]" 
-                : "bg-transparent"
+                : "bg-transparent",
+              isCollapsed && "px-0"
             )}
+            title={isCollapsed ? "Command Center" : undefined}
           >
             {navigatingTo === "/launchpad" ? (
               <Loader2 className="h-4 w-4 animate-spin text-[#7FD1E3]" />
@@ -172,12 +196,14 @@ export function AppSidebar() {
                 pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-500 group-hover/nav:text-[#7FD1E3]"
               )} />
             )}
-            <span className={cn(
-              "text-[11px] font-bold uppercase tracking-wider transition-colors duration-300",
-              pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-400 group-hover/nav:text-white"
-            )}>
-              Return to Launchpad
-            </span>
+            {!isCollapsed && (
+              <span className={cn(
+                "text-[11px] font-bold uppercase tracking-wider transition-colors duration-300",
+                pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-400 group-hover/nav:text-white"
+              )}>
+                Command Center
+              </span>
+            )}
           </Link>
         </div>
       </SidebarHeader>
@@ -195,53 +221,71 @@ export function AppSidebar() {
           </div>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-3">
-              {navigationGroups.map((group) => {
-                const isGroupActive = group.items.some(item => 
-                  item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
-                )
-                
-                const hasItems = group.items && group.items.length > 0;
-                
-                if (!hasItems) {
-                  const isActive = currentUrl === group.url || pathname === group.url?.split('?')[0];
-                  return (
-                    <SidebarMenuItem key={group.title}>
+            {navigationGroups.map((group) => {
+              const isGroupActive = group.items.some(item => 
+                item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
+              )
+              
+              const hasItems = group.items && group.items.length > 0;
+              
+              if (!hasItems) {
+                const isActive = currentUrl === group.url || pathname === group.url?.split('?')[0];
+                return (
+                  <SidebarMenuItem key={group.title}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      tooltip={group.title}
+                      asChild
+                      className={cn(
+                        "h-11 w-full gap-3 px-3 transition-all duration-150 relative tracking-tight",
+                        isActive 
+                          ? "text-white bg-[#7FD1E3]/10 border-l-[4px] border-l-[#7FD1E3] rounded-l-none" 
+                          : "text-slate-400 hover:text-white hover:bg-white/5"
+                      )}
+                    >
                       <Link
                         href={group.url || "#"}
                         onClick={() => setNavigatingTo(group.url || "#")}
-                        className={cn(
-                          "flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium transition-all duration-150 relative tracking-tight",
-                          isActive 
-                            ? "text-white bg-[#002a52]/50 border-l-[3px] border-l-[#7FD1E3] rounded-l-none" 
-                            : "text-slate-400 hover:text-white hover:bg-[#002244]"
-                        )}
                       >
                         <group.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-500")} />
-                        <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
+                        {!isCollapsed && <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>}
                       </Link>
-                    </SidebarMenuItem>
-                  )
-                }
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              }
 
-                return (
-                  <Collapsible
-                    key={`${group.title}-${isGroupActive}`}
-                    defaultOpen={isGroupActive}
-                    className="group/collapsible"
-                  >
-                    <SidebarMenuItem>
-                      <CollapsibleTrigger className={cn(
-                        "flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150 tracking-tight",
+              return (
+                <Collapsible
+                  key={`${group.title}-${isGroupActive}`}
+                  defaultOpen={isGroupActive}
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={isGroupActive}
+                      tooltip={group.title}
+                      asChild
+                      className={cn(
+                        "h-11 w-full gap-3 px-3 transition-all duration-150 relative tracking-tight",
                         isGroupActive 
-                          ? "text-white bg-[#002a52]/50 border-l-[3px] border-l-[#7FD1E3] rounded-l-none" 
-                          : "text-slate-400 hover:text-white hover:bg-[#002244]"
-                      )}>
+                          ? "text-white bg-[#7FD1E3]/10 border-l-[4px] border-l-[#7FD1E3] rounded-l-none" 
+                          : "text-slate-400 hover:text-white hover:bg-white/5"
+                      )}
+                    >
+                      <CollapsibleTrigger>
                         <group.icon className={cn("h-4 w-4 shrink-0", isGroupActive ? "text-[#7FD1E3]" : "text-slate-500")} />
-                        <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
-                        <ChevronRight className="h-3 w-3 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-slate-600" />
+                        {!isCollapsed && (
+                          <>
+                            <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
+                            <ChevronRight className="h-3 w-3 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-slate-600" />
+                          </>
+                        )}
                       </CollapsibleTrigger>
+                    </SidebarMenuButton>
+                    {!isCollapsed && (
                       <CollapsibleContent>
-                        <SidebarMenu className="mt-1 ml-4 border-l border-slate-800 space-y-1">
+                        <SidebarMenu className="mt-1 ml-4 border-l border-white/5 space-y-1">
                           {group.items.map((item) => {
                             const isActive = currentUrl === item.url || pathname === item.url.split('?')[0];
 
@@ -253,7 +297,7 @@ export function AppSidebar() {
                                   className={cn(
                                     "flex items-center gap-3 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 relative",
                                     isActive
-                                      ? "text-white bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_0_15px_rgba(127,209,227,0.1)] font-bold"
+                                      ? "text-white bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_0_15px_rgba(127,209,227,0.1)] font-bold border-l-[4px] border-l-[#7FD1E3] rounded-l-none"
                                       : "text-slate-500 hover:text-slate-300 font-medium"
                                   )}
                                 >
@@ -269,11 +313,12 @@ export function AppSidebar() {
                           })}
                         </SidebarMenu>
                       </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
-                )
-              })}
-            </SidebarMenu>
+                    )}
+                  </SidebarMenuItem>
+                </Collapsible>
+              )
+            })}
+          </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
@@ -318,11 +363,28 @@ export function AppSidebar() {
       </div>
 
       {/* ── Footer branding ── */}
-      <div className="mt-auto px-4 py-3 border-t border-sidebar-border">
-        <p className="text-[10px] text-slate-600 text-center">
-          © {new Date().getFullYear()} Ethan Home Appliances
-        </p>
-      </div>
+      <SidebarFooter className="border-t border-white/5 p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={toggleSidebar}
+              tooltip={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              className="w-full justify-center text-slate-400 hover:text-[#7FD1E3] hover:bg-white/5"
+            >
+              {isCollapsed ? <ChevronsRight className="h-4 w-4" /> : (
+                <div className="flex items-center gap-3 w-full px-1">
+                  <ChevronsLeft className="h-4 w-4" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Minimize Sidebar</span>
+                </div>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+
+        <div className="mt-2 text-[10px] text-slate-600 text-center uppercase tracking-tighter opacity-50 px-2 leading-tight">
+          {!isCollapsed ? `© ${new Date().getFullYear()} Ethan Home Appliances` : `© ${new Date().getFullYear()}`}
+        </div>
+      </SidebarFooter>
     </Sidebar>
   )
 }

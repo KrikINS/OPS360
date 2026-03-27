@@ -122,7 +122,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="md:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Product: {product?.model_name}</DialogTitle>
         </DialogHeader>

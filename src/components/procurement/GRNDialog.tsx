@@ -157,7 +157,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl p-0 overflow-hidden h-fit max-h-[85vh] flex flex-col border-none shadow-2xl">
+      <DialogContent className="md:max-w-4xl p-0 overflow-hidden h-fit max-h-[85vh] flex flex-col border-none shadow-2xl">
         <DialogHeader className="bg-[#001529] text-white p-6 space-y-1">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <CheckCircle2 className="h-6 w-6 text-blue-400" />

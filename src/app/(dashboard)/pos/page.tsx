@@ -60,17 +60,20 @@ function POSContent() {
 
       <PosHeader />
 
-      <main className="flex-1 flex overflow-hidden relative">
-        <ProductCatalog />
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <ProductCatalog />
+        </div>
         
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:flex w-[400px]">
+        {/* Optimized Tablet & Desktop Sidebar */}
+        {/* On tablet (md to lg) it stacks below, on Desktop (lg+) it is a side panel */}
+        <div className="hidden md:flex flex-col border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 w-full lg:w-[400px] h-[400px] lg:h-full overflow-y-auto">
           <CartSidebar onCheckout={() => setShowCheckout(true)} />
         </div>
 
-        {/* Mobile Cart Overlay */}
+        {/* Mobile Cart Overlay (Below md) */}
         <div className={cn(
-          "fixed inset-0 z-50 lg:hidden transition-transform duration-300",
+          "fixed inset-0 z-50 md:hidden transition-transform duration-300",
           mobileCartOpen ? "translate-x-0" : "translate-x-full"
         )}>
           <div className="absolute inset-0 bg-black/20" onClick={() => setMobileCartOpen(false)} />

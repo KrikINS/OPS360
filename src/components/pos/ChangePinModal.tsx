@@ -75,7 +75,7 @@ export function ChangePinModal({ open, onOpenChange }: ChangePinModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[360px] bg-slate-900 border-white/10 text-white p-0 overflow-hidden">
+      <DialogContent className="md:max-w-[360px] bg-slate-900 border-white/10 text-white p-0 overflow-hidden">
         <DialogHeader className="p-6 bg-white/5 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600/20 p-2 rounded-lg">

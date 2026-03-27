@@ -126,7 +126,7 @@ export default function TransferControlCenter() {
       
       {/* Stock Requests Modal */}
       <Dialog open={activeModal === 'requests'} onOpenChange={(open) => !open && setActiveModal(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0 border-none bg-slate-50 rounded-3xl shadow-2xl">
+      <DialogContent className="md:max-w-5xl md:max-h-[90vh] overflow-hidden flex flex-col p-0 border-none bg-slate-50 md:rounded-3xl shadow-2xl">
           <div className="bg-white p-8 border-b border-slate-100">
             <DialogHeader>
               <DialogTitle className="text-3xl font-black tracking-tighter flex items-center gap-3">
@@ -148,7 +148,7 @@ export default function TransferControlCenter() {
 
       {/* Stock Transfers Modal */}
       <Dialog open={activeModal === 'transfers'} onOpenChange={(open) => !open && setActiveModal(null)}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 border-none bg-slate-50 rounded-3xl shadow-2xl">
+      <DialogContent className="md:max-w-6xl md:max-h-[90vh] overflow-hidden flex flex-col p-0 border-none bg-slate-50 md:rounded-3xl shadow-2xl">
           <div className="bg-white p-8 border-b border-slate-100">
             <DialogHeader>
               <DialogTitle className="text-3xl font-black tracking-tighter flex items-center gap-3">

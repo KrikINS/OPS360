@@ -382,7 +382,7 @@ export default function ProductsPage() {
 
       {/* Confirmation Modal for Decommissioning */}
       <Dialog open={!!confirmingArchive} onOpenChange={(open) => !open && setConfirmingArchive(null)}>
-        <DialogContent className="sm:max-w-[400px] border-amber-200 shadow-2xl">
+        <DialogContent className="md:max-w-[400px] border-amber-200 shadow-2xl">
           <DialogHeader className="flex flex-col items-center text-center space-y-4 pt-4">
             <div className="h-16 w-16 bg-amber-50 rounded-full flex items-center justify-center border border-amber-100">
               <AlertTriangle className="h-8 w-8 text-amber-500 animate-pulse" />

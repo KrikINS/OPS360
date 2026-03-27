@@ -78,7 +78,7 @@ export function ImportStockModal({ open, onOpenChange, onSuccess }: ImportStockM
         setResult(null)
       }
     }}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="md:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Import Opening Stock</DialogTitle>
           <DialogDescription>

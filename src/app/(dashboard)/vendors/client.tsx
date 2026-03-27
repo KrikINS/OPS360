@@ -401,7 +401,7 @@ export default function VendorsClient({
         )}
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="md:max-w-[600px]">
             <form onSubmit={handleCreateVendor}>
               <DialogHeader>
                 <DialogTitle>Register New Vendor - Step {formStep} of 3</DialogTitle>
@@ -735,7 +735,7 @@ export default function VendorsClient({
 
       {/* Vendor Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="md:max-w-[800px] h-[80vh] flex flex-col p-0 overflow-hidden">
           {selectedVendor && (
             <>
               <DialogHeader className="p-6 border-b bg-muted/20">

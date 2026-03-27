@@ -135,7 +135,7 @@ export function UserProfileModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-none bg-slate-50 shadow-2xl">
+      <DialogContent className="md:max-w-2xl md:max-h-[90vh] overflow-y-auto p-0 border-none bg-slate-50 shadow-2xl">
         <DialogHeader className="p-6 bg-[#001529] text-white">
           <div className="flex items-center gap-3">
              <div className="p-2 bg-white/10 rounded-lg">
@@ -340,7 +340,7 @@ export function UserProfileModal({
           </DialogContent>
         </Dialog>
 
-        <DialogFooter className="p-6 bg-slate-100 border-t flex items-center justify-between">
+        <DialogFooter className="mt-4 flex items-center justify-between">
             <p className="text-[9px] font-bold text-slate-400 uppercase max-w-[200px]">
               * Permission changes take effect immediately in the global security layer.
             </p>

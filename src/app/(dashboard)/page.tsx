@@ -32,6 +32,7 @@ import { Upload } from "lucide-react"
 import { ImportStockModal } from "@/components/inventory/import-stock-modal"
 import { cn } from "@/lib/utils"
 import { formatCurrency } from "@/utils/format"
+import { useIsSmallMobile } from "@/hooks/use-mobile"
 
 type Branch = {
   id: string
@@ -98,6 +99,7 @@ export default function InventoryDashboard() {
   const [selectedBrand, setSelectedBrand] = useState<string>("all")
   const [loading, setLoading] = useState(true)
   const [sortOrder, setSortOrder] = useState<'oldest' | 'newest'>('oldest')
+  const isSmallMobile = useIsSmallMobile()
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
@@ -460,259 +462,324 @@ export default function InventoryDashboard() {
         </CardHeader>
         <CardContent className="p-0">
           <TooltipProvider>
-          <Table>
-            <TableHeader className="bg-slate-50 border-b">
-              <TableRow>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-10"></TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-24">Brand</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">EHA Code</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name & Specification</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Network Stock</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-28">Category</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-32">Distribution</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Status</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">Avg Value (LC)</TableHead>
-                <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right w-24">Max Aging</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-64 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                      <p className="text-xs font-bold text-slate-400 tracking-wider">Hydrating Registry...</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : groupedInventory.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-64 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <AlertOctagon className="h-10 w-10 text-slate-200" />
-                      <p className="text-sm font-medium text-slate-400">No matching assets found in current perimeter.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : groupedInventory.map((group) => {
-                const isExpanded = expandedRows[group.key]
-                const avgLandedCost = group.total_network_stock > 0 ? group.total_network_landed_cost / group.total_network_stock : 0
-                const formattedCount = new Intl.NumberFormat('en-IN').format(group.total_network_stock)
-
-                return (
-                  <React.Fragment key={group.key}>
-                    {/* LEVEL 1: PRODUCT BUNDLE */}
-                    <TableRow 
-                      className={cn(
-                        "group hover:bg-slate-50/80 transition-all border-b last:border-0 cursor-pointer",
-                        isExpanded && "bg-slate-50/50"
-                      )}
-                      onClick={() => toggleRow(group.key)}
-                    >
-                      <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-slate-200 rounded-full">
-                          {isExpanded ? <ChevronDown className="h-4 w-4 text-[#001529]" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 font-semibold text-slate-500 tracking-tight group-hover:text-slate-900">{group.brand}</TableCell>
-                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
-                        <code className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-bold">
-                          {group.product_code}
-                        </code>
-                      </TableCell>
-                      <TableCell className="max-w-[250px] py-3 px-4 border-r border-slate-100/50">
-                        <div className="flex flex-col overflow-hidden">
-                          <span className="font-semibold text-[#001529] tracking-tight break-words line-clamp-2" title={group.model_name}>
-                            {group.model_name}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-xs font-black text-blue-600">{formattedCount}</span>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Network</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
-                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-semibold text-[9px] px-1.5 py-0">{group.category}</Badge>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
-                        <div className="flex items-center gap-1.5 font-semibold text-slate-600 text-[11px]">
-                          <Badge variant="outline" className="text-[9px] font-bold py-0">{group.branches.length} Branches</Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
-                        <span className={cn(
-                          "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold tracking-wider",
-                          group.status === "Available" ? "bg-green-50 text-[#5A9E78] border border-green-100" :
-                          group.status === "In-Transit" ? "bg-amber-50 text-[#D4860A] border border-amber-100" :
-                          "bg-red-50 text-[#C0392B] border border-red-100"
-                        )}>
-                          {group.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 font-bold text-[#001529] text-xs border-r border-slate-100/50">
-                        {formatCurrency(avgLandedCost)}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-right pr-6">
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <div className={cn("flex items-center justify-end gap-1.5 cursor-default", getAgingColor(group.max_network_aging))}>
-                              {group.max_network_aging > 60 && <AlertCircle className="h-3 w-3" />}
-                              <Clock className="h-3 w-3 opacity-50" />
-                              <span className="text-xs">{group.max_network_aging}d</span>
+            {isSmallMobile ? (
+              <div className="p-4 space-y-4 bg-slate-50/50">
+                {loading ? (
+                  <div className="h-64 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                    <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">Hydrating Registry...</p>
+                  </div>
+                ) : filteredInventory.length === 0 ? (
+                  <div className="h-64 flex flex-col items-center justify-center gap-3">
+                    <AlertOctagon className="h-10 w-10 text-slate-200" />
+                    <p className="text-sm font-medium text-slate-400">No matching assets found.</p>
+                  </div>
+                ) : (
+                  filteredInventory.map((item) => {
+                    const days = calculateDaysInStock(item.created_at)
+                    return (
+                      <Card key={item.id} className="border border-slate-200 shadow-sm overflow-hidden bg-white hover:border-[#7FD1E3] transition-colors">
+                        <div className="p-4 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1 overflow-hidden">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.product?.brand}</span>
+                                <Badge variant="outline" className="text-[8px] font-bold py-0 h-4">{item.product?.category}</Badge>
+                              </div>
+                              <h3 className="font-bold text-slate-900 text-sm leading-tight truncate pr-2">{item.product?.model_name}</h3>
+                              <code className="text-[10px] font-mono text-blue-600 bg-blue-50 px-1 rounded">{item.product?.product_code}</code>
                             </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-slate-900 text-white border-none font-bold text-[10px]">
-                            {group.max_network_aging > 60 ? "SLOW MOVER PROTOCOL ACTIVE" : "Active Stock Aging Overview"}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
+                            <span className={cn(
+                              "inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider whitespace-nowrap",
+                              item.status === "Available" ? "bg-green-100 text-[#5A9E78]" :
+                              item.status === "In-Transit" ? "bg-amber-100 text-[#D4860A]" :
+                              "bg-red-100 text-[#C0392B]"
+                            )}>
+                              {item.status}
+                            </span>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Serial Number</p>
+                              <p className="text-xs font-mono font-bold text-[#001529]">{item.serial_number || "[NON-SERIALIZED]"}</p>
+                            </div>
+                            <div className="text-right space-y-0.5">
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Branch Location</p>
+                              <p className="text-xs font-bold text-slate-700">{branches.find(b => b.id === item.branch_id)?.name || "—"}</p>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 flex items-center justify-between bg-slate-50 -mx-4 px-4 py-2 border-t border-slate-100">
+                            <div className="flex flex-col">
+                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Landed Cost</span>
+                              <span className="text-sm font-black text-[#001529]">{formatCurrency(item.landed_cost || item.price)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className={cn("flex items-center gap-1 px-2 py-1 rounded bg-white border border-slate-200", getAgingColor(days))}>
+                                <Clock className="h-3 w-3 opacity-60" />
+                                <span className="text-xs font-bold">{days} Days</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    )
+                  })
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-slate-50 border-b">
+                    <TableRow>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-10"></TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-24">Brand</TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">EHA Code</TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name & Specification</TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Network Stock</TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-28">Category</TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-32">Distribution</TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Status</TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">Avg Value (LC)</TableHead>
+                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right w-24">Max Aging</TableHead>
                     </TableRow>
-
-                    {/* LEVEL 2: BRANCH NESTING */}
-                    {isExpanded && (
-                      <TableRow className="bg-slate-50/30 border-b border-slate-100">
-                        <TableCell colSpan={10} className="p-0">
-                          <div className="px-12 py-3 bg-white/50 animate-in slide-in-from-top-2 duration-300">
-                            <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white">
-                              <Table>
-                                <TableHeader className="bg-slate-50">
-                                  <TableRow className="hover:bg-transparent h-8">
-                                    <TableHead className="w-10"></TableHead>
-                                    <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4">Branch Outlet</TableHead>
-                                    <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4 text-center">Branch Stock</TableHead>
-                                    <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4">Landed Cost (Avg)</TableHead>
-                                    <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4 text-right">Aging</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {group.branches.map((branch) => {
-                                    const branchKey = `${group.key}-${branch.branch_id}`;
-                                    const isBranchExpanded = expandedBranches[branchKey];
-                                    return (
-                                      <React.Fragment key={branchKey}>
-                                        <TableRow 
-                                          className="hover:bg-slate-50/50 transition-colors cursor-pointer border-slate-100"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleBranch(branchKey);
-                                          }}
-                                        >
-                                          <TableCell className="py-2 px-2 text-center w-8">
-                                            {isBranchExpanded ? <ChevronDown className="h-3 w-3 text-blue-600" /> : <ChevronRight className="h-3 w-3 text-slate-300" />}
-                                          </TableCell>
-                                          <TableCell className="py-2 px-4">
-                                            <div className="flex items-center gap-1.5 font-bold text-slate-700 text-[10px]">
-                                              <div className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                                              {branch.branch_name}
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="py-2 px-4 text-center font-black text-[#001529] text-[10px]">
-                                            {branch.total_stock} Units
-                                          </TableCell>
-                                          <TableCell className="py-2 px-4 text-[10px] font-bold text-slate-500">
-                                            {formatCurrency(branch.total_stock > 0 ? branch.total_landed_cost / branch.total_stock : 0)}
-                                          </TableCell>
-                                          <TableCell className="py-2 px-4 text-right">
-                                            <span className={cn("text-[10px] font-bold", getAgingColor(branch.max_aging))}>
-                                              {branch.max_aging} Days
-                                            </span>
-                                          </TableCell>
-                                        </TableRow>
-
-                                        {/* LEVEL 3: UNIT REGISTRY TABLE */}
-                                        {isBranchExpanded && (
-                                          <TableRow className="bg-slate-50/20">
-                                            <TableCell colSpan={5} className="p-0">
-                                              <div className="px-10 py-2 border-l-2 border-blue-100 bg-slate-50/10">
-                                                <Table>
-                                                  <TableHeader className="bg-slate-100/30">
-                                                    <TableRow className="h-7 border-0">
-                                                      <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400">Serial Number</TableHead>
-                                                      <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400">Landed Cost (LCI)</TableHead>
-                                                      <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400">Status</TableHead>
-                                                      <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400 text-right">Aging</TableHead>
-                                                    </TableRow>
-                                                  </TableHeader>
-                                                  <TableBody>
-                                                    {branch.items.flatMap((item) => {
-                                                      const units = [];
-                                                      const days = calculateDaysInStock(item.created_at);
-                                                      
-                                                      // Expansion Logic: If serial_numbers array exists, create rows for each
-                                                      if (item.serial_numbers && item.serial_numbers.length > 0) {
-                                                        item.serial_numbers.forEach(sn => {
-                                                          units.push({
-                                                            id: `${item.id}-${sn}`,
-                                                            sn: sn,
-                                                            lc: item.landed_cost || item.price,
-                                                            status: item.status,
-                                                            days: days
-                                                          });
-                                                        });
-                                                      } else {
-                                                        // Otherwise, create rows based on available_quantity (for non-serialized)
-                                                        const count = item.available_quantity || 1;
-                                                        for(let i=0; i<count; i++) {
-                                                          units.push({
-                                                            id: `${item.id}-${i}`,
-                                                            sn: item.serial_number || "[NOT SERIALIZED]",
-                                                            lc: item.landed_cost || item.price,
-                                                            status: item.status,
-                                                            days: days
-                                                          });
-                                                        }
-                                                      }
-                                                      return units;
-                                                    }).map((unit) => (
-                                                      <TableRow key={unit.id} className="hover:bg-white border-b border-slate-100/50 last:border-0">
-                                                        <TableCell className="py-1.5 px-4">
-                                                          <code className="text-[9px] font-mono font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded">
-                                                            {unit.sn}
-                                                          </code>
-                                                        </TableCell>
-                                                        <TableCell className="py-1.5 px-4 text-[9px] font-bold text-slate-600">
-                                                          {formatCurrency(unit.lc)}
-                                                        </TableCell>
-                                                        <TableCell className="py-1.5 px-4">
-                                                          <span className={cn(
-                                                            "px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter",
-                                                            unit.status === "Available" ? "bg-green-100 text-green-700" : 
-                                                            unit.status === "Reserved" ? "bg-amber-100 text-amber-700" :
-                                                            "bg-slate-100 text-slate-700"
-                                                          )}>
-                                                            {unit.status}
-                                                          </span>
-                                                        </TableCell>
-                                                        <TableCell className="py-1.5 px-4 text-right text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                                          {unit.days}d
-                                                        </TableCell>
-                                                      </TableRow>
-                                                    ))}
-                                                  </TableBody>
-                                                </Table>
-                                              </div>
-                                            </TableCell>
-                                          </TableRow>
-                                        )}
-                                      </React.Fragment>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
-                            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="h-64 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                            <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">Hydrating Registry...</p>
                           </div>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                )
-              })}
-            </TableBody>
-          </Table>
+                    ) : groupedInventory.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="h-64 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <AlertOctagon className="h-10 w-10 text-slate-200" />
+                            <p className="text-sm font-medium text-slate-400">No matching assets found in current perimeter.</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : groupedInventory.map((group) => {
+                      const isExpanded = expandedRows[group.key]
+                      const avgLandedCost = group.total_network_stock > 0 ? group.total_network_landed_cost / group.total_network_stock : 0
+                      const formattedCount = new Intl.NumberFormat('en-IN').format(group.total_network_stock)
+
+                      return (
+                        <React.Fragment key={group.key}>
+                          <TableRow 
+                            className={cn(
+                              "group hover:bg-slate-50/80 transition-all border-b last:border-0 cursor-pointer",
+                              isExpanded && "bg-slate-50/50"
+                            )}
+                            onClick={() => toggleRow(group.key)}
+                          >
+                            <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-slate-200 rounded-full">
+                                {isExpanded ? <ChevronDown className="h-4 w-4 text-[#001529]" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
+                              </Button>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 font-semibold text-slate-500 tracking-tight group-hover:text-slate-900">{group.brand}</TableCell>
+                            <TableCell className="py-3 px-4 border-r border-slate-100/50">
+                              <code className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-bold">
+                                {group.product_code}
+                              </code>
+                            </TableCell>
+                            <TableCell className="max-w-[250px] py-3 px-4 border-r border-slate-100/50">
+                              <div className="flex flex-col overflow-hidden">
+                                <span className="font-semibold text-[#001529] tracking-tight break-words line-clamp-2" title={group.model_name}>
+                                  {group.model_name}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className="text-xs font-black text-blue-600">{formattedCount}</span>
+                                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Network</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
+                              <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-semibold text-[9px] px-1.5 py-0">{group.category}</Badge>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 border-r border-slate-100/50">
+                              <div className="flex items-center gap-1.5 font-semibold text-slate-600 text-[11px]">
+                                <Badge variant="outline" className="text-[9px] font-bold py-0">{group.branches.length} Branches</Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
+                              <span className={cn(
+                                "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold tracking-wider",
+                                group.status === "Available" ? "bg-green-50 text-[#5A9E78] border border-green-100" :
+                                group.status === "In-Transit" ? "bg-amber-50 text-[#D4860A] border border-amber-100" :
+                                "bg-red-50 text-[#C0392B] border border-red-100"
+                              )}>
+                                {group.status}
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 font-bold text-[#001529] text-xs border-r border-slate-100/50">
+                              {formatCurrency(avgLandedCost)}
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-right pr-6">
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <div className={cn("flex items-center justify-end gap-1.5 cursor-default", getAgingColor(group.max_network_aging))}>
+                                    {group.max_network_aging > 60 && <AlertCircle className="h-3 w-3" />}
+                                    <Clock className="h-3 w-3 opacity-50" />
+                                    <span className="text-xs">{group.max_network_aging}d</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-slate-900 text-white border-none font-bold text-[10px]">
+                                  {group.max_network_aging > 60 ? "SLOW MOVER PROTOCOL ACTIVE" : "Active Stock Aging Overview"}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+
+                          {isExpanded && (
+                            <TableRow className="bg-slate-50/30 border-b border-slate-100">
+                              <TableCell colSpan={10} className="p-0">
+                                <div className="px-4 md:px-12 py-3 bg-white/50 animate-in slide-in-from-top-2 duration-300">
+                                  <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white overflow-x-auto">
+                                    <Table>
+                                      <TableHeader className="bg-slate-50">
+                                        <TableRow className="hover:bg-transparent h-8">
+                                          <TableHead className="w-8 md:w-10"></TableHead>
+                                          <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4">Branch Outlet</TableHead>
+                                          <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4 text-center">Branch Stock</TableHead>
+                                          <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4">Landed Cost (Avg)</TableHead>
+                                          <TableHead className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-4 text-right">Aging</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {group.branches.map((branch) => {
+                                          const branchKey = `${group.key}-${branch.branch_id}`;
+                                          const isBranchExpanded = expandedBranches[branchKey];
+                                          return (
+                                            <React.Fragment key={branchKey}>
+                                              <TableRow 
+                                                className="hover:bg-slate-50/50 transition-colors cursor-pointer border-slate-100"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  toggleBranch(branchKey);
+                                                }}
+                                              >
+                                                <TableCell className="py-2 px-2 text-center w-8">
+                                                  {isBranchExpanded ? <ChevronDown className="h-3 w-3 text-blue-600" /> : <ChevronRight className="h-3 w-3 text-slate-300" />}
+                                                </TableCell>
+                                                <TableCell className="py-2 px-4 whitespace-nowrap">
+                                                  <div className="flex items-center gap-1.5 font-bold text-slate-700 text-[10px]">
+                                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                                                    {branch.branch_name}
+                                                  </div>
+                                                </TableCell>
+                                                <TableCell className="py-2 px-4 text-center font-black text-[#001529] text-[10px] whitespace-nowrap">
+                                                  {branch.total_stock} Units
+                                                </TableCell>
+                                                <TableCell className="py-2 px-4 text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                                                  {formatCurrency(branch.total_stock > 0 ? branch.total_landed_cost / branch.total_stock : 0)}
+                                                </TableCell>
+                                                <TableCell className="py-2 px-4 text-right whitespace-nowrap">
+                                                  <span className={cn("text-[10px] font-bold", getAgingColor(branch.max_aging))}>
+                                                    {branch.max_aging} Days
+                                                  </span>
+                                                </TableCell>
+                                              </TableRow>
+
+                                              {isBranchExpanded && (
+                                                <TableRow className="bg-slate-50/20">
+                                                  <TableCell colSpan={5} className="p-0">
+                                                    <div className="px-4 md:px-10 py-2 border-l-2 border-blue-100 bg-slate-50/10 overflow-x-auto">
+                                                      <Table>
+                                                        <TableHeader className="bg-slate-100/30">
+                                                          <TableRow className="h-7 border-0">
+                                                            <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400 whitespace-nowrap">Serial Number</TableHead>
+                                                            <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400 whitespace-nowrap">Landed Cost (LCI)</TableHead>
+                                                            <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400 whitespace-nowrap">Status</TableHead>
+                                                            <TableHead className="py-1 px-4 text-[7px] font-black uppercase text-slate-400 text-right whitespace-nowrap">Aging</TableHead>
+                                                          </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                          {branch.items.flatMap((item) => {
+                                                            const units = [];
+                                                            const days = calculateDaysInStock(item.created_at);
+                                                            if (item.serial_numbers && item.serial_numbers.length > 0) {
+                                                              item.serial_numbers.forEach(sn => {
+                                                                units.push({
+                                                                  id: `${item.id}-${sn}`,
+                                                                  sn: sn,
+                                                                  lc: item.landed_cost || item.price,
+                                                                  status: item.status,
+                                                                  days: days
+                                                                });
+                                                              });
+                                                            } else {
+                                                              const count = item.available_quantity || 1;
+                                                              for(let i=0; i<count; i++) {
+                                                                units.push({
+                                                                  id: `${item.id}-${i}`,
+                                                                  sn: item.serial_number || "[NOT SERIALIZED]",
+                                                                  lc: item.landed_cost || item.price,
+                                                                  status: item.status,
+                                                                  days: days
+                                                                });
+                                                              }
+                                                            }
+                                                            return units;
+                                                          }).map((unit) => (
+                                                            <TableRow key={unit.id} className="hover:bg-white border-b border-slate-100/50 last:border-0">
+                                                              <TableCell className="py-1.5 px-4">
+                                                                <code className="text-[9px] font-mono font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded whitespace-nowrap">
+                                                                  {unit.sn}
+                                                                </code>
+                                                              </TableCell>
+                                                              <TableCell className="py-1.5 px-4 text-[9px] font-bold text-slate-600 whitespace-nowrap">
+                                                                {formatCurrency(unit.lc)}
+                                                              </TableCell>
+                                                              <TableCell className="py-1.5 px-4">
+                                                                <span className={cn(
+                                                                  "px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter whitespace-nowrap",
+                                                                  unit.status === "Available" ? "bg-green-100 text-green-700" : 
+                                                                  unit.status === "Reserved" ? "bg-amber-100 text-amber-700" :
+                                                                  "bg-slate-100 text-slate-700"
+                                                                )}>
+                                                                  {unit.status}
+                                                                </span>
+                                                              </TableCell>
+                                                              <TableCell className="py-1.5 px-4 text-right text-[9px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                                                {unit.days}d
+                                                              </TableCell>
+                                                            </TableRow>
+                                                          ))}
+                                                        </TableBody>
+                                                      </Table>
+                                                    </div>
+                                                  </TableCell>
+                                                </TableRow>
+                                              )}
+                                            </React.Fragment>
+                                          );
+                                        })}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </TooltipProvider>
         </CardContent>
+
       </Card>
 
       <ImportStockModal 
