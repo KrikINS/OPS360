@@ -44,7 +44,7 @@ interface DashboardMetrics {
   today_invoices: number
   total_inventory_value: number
   branch_performance: { name: string, value: number }[]
-  low_stock_alerts: { model_name: string, brand: string, branch_name: string, available_quantity: number }[]
+  low_stock_alerts: { model_name: string, brand: string, branch_name: string, current_balance: number }[]
 }
 
 export default function AdminDashboardPage() {
@@ -239,7 +239,7 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
                     <div className="bg-red-100 text-red-700 px-3 py-1 rounded-lg font-black text-xs">
-                      {alert.available_quantity} U
+                      {alert.current_balance} U
                     </div>
                   </div>
                 ))

@@ -222,7 +222,7 @@ export function StockTransfersView({
       const { data, error } = await supabase.rpc('get_export_data', { p_type: 'logistics_history' })
       if (error) throw error
       if (data) {
-        exportToCSV(data as Record<string, unknown>[], 'Logistics_History_Waybills')
+        exportToExcel(data as Record<string, unknown>[], 'Logistics')
       }
     } catch (err) {
       console.error("Export failed", err)

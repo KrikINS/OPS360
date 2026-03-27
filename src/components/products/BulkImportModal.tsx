@@ -47,6 +47,13 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
+  const [results, setResults] = useState<{
+    added: number;
+    updated: number;
+    failed: number;
+    errors: { row: number; code: string; error: string }[];
+  } | null>(null)
+
   const downloadTemplate = () => {
     const headers = ["Brand", "Category", "Model_Name", "EHA_Code", "Purchase_Price", "Selling_Price", "Description"]
     const csvContent = headers.join(",")
@@ -57,6 +64,14 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
     link.setAttribute("download", `EHA_Product_Import_Template.csv`)
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  const downloadErrorReport = () => {
+    if (!results || results.errors.length === 0) return
+    const ws = XLSX.utils.json_to_sheet(results.errors)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Import_Errors")
+    XLSX.writeFile(wb, `EHA_Import_Errors_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
   const handleDrag = (e: React.DragEvent) => {
@@ -98,16 +113,18 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
           return
         }
 
-        // Basic check for required headers
-        const required = ["Brand", "Category", "Model_Name", "EHA_Code"]
-        const missing = required.filter(h => !Object.keys(json[0]).find(k => k.toLowerCase() === h.toLowerCase()))
-        
-        if (missing.length > 0) {
-          setError(`Missing required columns: ${missing.join(", ")}`)
-          return
-        }
+        // Sanitize data: Trim external spaces from all text fields
+        const sanitizedData = json.map(row => {
+          const newRow = { ...row }
+          Object.keys(newRow).forEach(key => {
+            if (typeof newRow[key] === 'string') {
+              newRow[key] = (newRow[key] as string).trim()
+            }
+          })
+          return newRow
+        })
 
-        setData(json)
+        setData(sanitizedData)
         setError(null)
       } catch (err) {
         console.error(err)
@@ -120,23 +137,31 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
   const handleConfirmImport = async () => {
     setProcessing(true)
     try {
-      // Map data to database schema
-      const productsToInsert = data.map(row => ({
-        brand: row.Brand || row.brand,
-        category: row.Category || row.category,
-        model_name: row.Model_Name || row.model_name,
-        product_code: row.EHA_Code || row.eha_code,
-        base_price: Number(row.Selling_Price || row.selling_price || 0),
-        description: row.Description || row.description || "",
-        // We might want to add purchase_price to DB later, mapping it to something if needed
-      }))
+      const { data: result, error } = await supabase.rpc("import_products_bulk", {
+        p_items: data,
+        p_filename: `EHA_Bulk_Upload_${new Date().toISOString().split('T')[0]}.csv`
+      })
 
-      const { error } = await supabase.from("products").insert(productsToInsert)
       if (error) throw error
+      
+      const summary = result.summary || { added: 0, updated: 0, failed: 0 }
+      const serverErrors = result.errors || []
+      
+      setResults({
+        added: summary.added,
+        updated: summary.updated,
+        failed: summary.failed,
+        errors: serverErrors
+      })
 
-      onSuccess()
-      onOpenChange(false)
-      setData([])
+      if (summary.failed === 0) {
+        setTimeout(() => {
+          onSuccess()
+          onOpenChange(false)
+          setData([])
+          setResults(null)
+        }, 1500)
+      }
     } catch (err: unknown) {
       console.error(err)
       const message = err instanceof Error ? err.message : "Bulk import failed. Check console for details."
@@ -164,7 +189,63 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
         </div>
 
         <div className="p-8 space-y-6">
-          {data.length === 0 ? (
+          {results ? (
+            <div className="space-y-6 animate-in zoom-in-95 duration-500">
+              <div className="text-center space-y-2">
+                <div className="h-16 w-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border-2 border-emerald-100 mb-4">
+                  <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                </div>
+                <h3 className="text-xl font-black text-[#001529]">Import Protocol Complete</h3>
+                <p className="text-slate-500 text-sm font-medium">The Global Registry has been synchronized with your data.</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Added</p>
+                  <p className="text-3xl font-black text-emerald-600 mt-1">{results.added}</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">Updated</p>
+                  <p className="text-3xl font-black text-blue-600 mt-1">{results.updated}</p>
+                </div>
+                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-center">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-700">Failed</p>
+                  <p className="text-3xl font-black text-rose-600 mt-1">{results.failed}</p>
+                </div>
+              </div>
+
+              {results.failed > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-3 text-amber-800">
+                    <AlertCircle className="h-5 w-5" />
+                    <p className="text-xs font-black uppercase tracking-tight text-center">
+                      Attention: {results.failed} rows failed due to data inconsistencies.
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    onClick={downloadErrorReport}
+                    className="w-full border-amber-300 text-amber-900 hover:bg-amber-100 gap-2 font-black h-12 rounded-xl shadow-sm transition-all"
+                  >
+                    <FileDown className="h-5 w-5" />
+                    DOWNLOAD DETAILED ERROR LOG
+                  </Button>
+                </div>
+              )}
+
+              {results.failed > 0 && (
+                <Button 
+                  onClick={() => {
+                    setResults(null)
+                    setData([])
+                  }}
+                  className="w-full bg-[#001529] hover:bg-[#002a52] text-white font-black h-12 rounded-xl shadow-xl transition-all"
+                >
+                  START NEW PROTOCOL
+                </Button>
+              )}
+            </div>
+          ) : data.length === 0 ? (
             <div className="space-y-4">
               <div 
                 className={cn(
@@ -300,32 +381,34 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
           )}
         </div>
 
-        <DialogFooter className="bg-slate-50/50 p-6 border-t border-slate-100">
-          <Button 
-            variant="ghost" 
-            onClick={() => onOpenChange(false)}
-            className="font-black text-slate-500 uppercase tracking-widest h-12"
-          >
-            Cancel Protocol
-          </Button>
-          <Button 
-            disabled={data.length === 0 || data.some(r => !isValidRow(r)) || processing}
-            onClick={handleConfirmImport}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 px-10 rounded-xl shadow-xl shadow-emerald-200 min-w-[200px]"
-          >
-            {processing ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                INITIATING UPSERT...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <CloudUpload className="h-5 w-5" />
-                CONFIRM DEPLOYMENT ({data.length})
-              </span>
-            )}
-          </Button>
-        </DialogFooter>
+        {!results && (
+          <DialogFooter className="bg-slate-50/50 p-6 border-t border-slate-100">
+            <Button 
+              variant="ghost" 
+              onClick={() => onOpenChange(false)}
+              className="font-black text-slate-500 uppercase tracking-widest h-12"
+            >
+              Cancel Protocol
+            </Button>
+            <Button 
+              disabled={data.length === 0 || data.some(r => !isValidRow(r)) || processing}
+              onClick={handleConfirmImport}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-12 px-10 rounded-xl shadow-xl shadow-emerald-200 min-w-[200px]"
+            >
+              {processing ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  INITIATING UPSERT...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <CloudUpload className="h-5 w-5" />
+                  CONFIRM DEPLOYMENT ({data.length})
+                </span>
+              )}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   )

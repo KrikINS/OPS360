@@ -73,7 +73,7 @@ export function ProductGrid() {
 }
 
 function ProductCard({ product, onAdd }: { product: Product, onAdd: () => void }) {
-  const isOutOfStock = product.available_quantity <= 0
+  const isOutOfStock = product.current_balance <= 0
   const taxRatePercent = Math.round(product.gst_rate)
 
   return (
@@ -89,12 +89,12 @@ function ProductCard({ product, onAdd }: { product: Product, onAdd: () => void }
             "text-[9px] font-black tracking-widest border-none transition-colors",
             isOutOfStock 
               ? "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400" 
-              : product.available_quantity < 5 
+              : product.current_balance < 5 
                 ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" 
                 : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
           )}
         >
-          {isOutOfStock ? "OUT OF STOCK" : `${product.available_quantity} UNITS LEFT`}
+          {isOutOfStock ? "OUT OF STOCK" : `${product.current_balance} UNITS LEFT`}
         </Badge>
         
         <div className="p-1 px-2 border border-slate-100 dark:border-white/5 rounded-md bg-slate-50 dark:bg-slate-900 flex items-center gap-1">

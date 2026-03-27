@@ -52,12 +52,14 @@ type ProductMetadata = {
   category: string
   description: string
   product_code: string
+  base_price: number
   min_stock_level: number
   low_stock_threshold: number | null
   categories: {
     low_stock_threshold: number
   } | null
   tracking_type: string
+  purchase_price: number | null
 }
 
 type InventoryItem = {
@@ -70,7 +72,7 @@ type InventoryItem = {
   price: number
   landed_cost: number
   created_at: string
-  available_quantity: number
+  current_balance: number
   serial_numbers: string[]
   product: ProductMetadata
 }
@@ -176,10 +178,12 @@ export default function InventoryDashboard() {
             categories:categories!products_category_fkey (
               low_stock_threshold
             ),
-            tracking_type
+            tracking_type,
+            base_price,
+            purchase_price
           ),
           branch:branches!left (*),
-          available_quantity
+          current_balance
         `)
       
       // Condition branch filtering
@@ -250,7 +254,7 @@ export default function InventoryDashboard() {
   const filteredInventory = inventory.filter(item => {
     // 1. Tab Level Filtering
     const isActiveTab = activeTab === 'active'
-    const isItemActive = (item.status === 'Available' || item.status === 'In-Transit') && (item.available_quantity > 0)
+    const isItemActive = (item.status === 'Available' || item.status === 'In-Transit') && (item.current_balance > 0)
     
     if (isActiveTab && !isItemActive) return false
     if (!isActiveTab && isItemActive) return false
@@ -293,7 +297,7 @@ export default function InventoryDashboard() {
       }
       
       const pg = productGroups[pCode];
-      pg.total_network_stock += (item.available_quantity || 0);
+      pg.total_network_stock += (item.current_balance || 0);
       pg.total_network_landed_cost += (item.landed_cost || item.price);
       const days = calculateDaysInStock(item.created_at);
       if (days > pg.max_network_aging) pg.max_network_aging = days;
@@ -314,7 +318,7 @@ export default function InventoryDashboard() {
       }
       
       bg.items.push(item);
-      bg.total_stock += (item.available_quantity || 0);
+      bg.total_stock += (item.current_balance || 0);
       bg.total_landed_cost += (item.landed_cost || item.price);
       if (days > bg.max_aging) bg.max_aging = days;
     });
@@ -324,9 +328,31 @@ export default function InventoryDashboard() {
     });
   }, [filteredInventory, branches, sortOrder]);
 
-  const availableStock = inventory.filter(i => i.status === "Available").reduce((sum, item) => sum + (item.available_quantity || 0), 0)
-  const inTransit = inventory.filter(i => i.status === "In-Transit").reduce((sum, item) => sum + (item.available_quantity || 0), 0)
-  const soldStock = inventory.filter(i => i.status === "Sold").reduce((sum, item) => sum + (item.available_quantity || 0), 0)
+  // Real-time Summary Stats for the Summary Strip
+  const summaryStats = useMemo(() => {
+    const stats = {
+      totalCost: 0,
+      totalRevenue: 0,
+      lowStockSKUs: 0
+    };
+
+    // Calculate Financials from the currently filtered dataset
+    filteredInventory.forEach(item => {
+      const qty = item.current_balance || 0;
+      stats.totalCost += (item.landed_cost || item.price || 0) * qty;
+      stats.totalRevenue += (item.product?.base_price || 0) * qty;
+    });
+
+    // Calculate Low Stock SKUs from the grouped (per-product) view
+    groupedInventory.forEach(group => {
+      const threshold = group.product?.low_stock_threshold ?? group.product?.categories?.low_stock_threshold ?? 10;
+      if (group.total_network_stock <= threshold) {
+        stats.lowStockSKUs += 1;
+      }
+    });
+
+    return stats;
+  }, [filteredInventory, groupedInventory]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -358,39 +384,60 @@ export default function InventoryDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-t-4 border-t-[#7FD1E3] shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold text-slate-500 tracking-wider">Available Units</CardTitle>
-            <Package className="h-4 w-4 text-[#7FD1E3]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-[#001529]">
-              {loading ? <Loader2 className="animate-spin h-6 w-6" /> : availableStock}
+        {/* Card 1: Inventory Cost (Valuation) */}
+        <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-[#001529]/20 transition-all">
+          <div className="h-1 bg-[#001529]/10 w-full" />
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+            <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Inventory Cost</CardTitle>
+            <div className="h-7 w-7 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-100">
+              <Package className="h-3.5 w-3.5 text-slate-400" />
             </div>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="text-2xl font-black text-[#001529] tracking-tight">
+              {loading ? <Loader2 className="animate-spin h-5 w-5 text-slate-300" /> : formatCurrency(summaryStats.totalCost)}
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Total Capital Portfolio</p>
           </CardContent>
         </Card>
 
-        <Card className="border-t-4 border-t-[#D4860A] shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold text-slate-500 tracking-wider">Network Movement</CardTitle>
-            <TrendingUp className="h-4 w-4 text-[#D4860A]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-[#001529]">
-              {loading ? <Loader2 className="animate-spin h-6 w-6" /> : inTransit}
+        {/* Card 2: Potential Revenue (MSRP) */}
+        <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-[#7FD1E3]/20 transition-all">
+          <div className="h-1 bg-[#7FD1E3]/20 w-full" />
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+            <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Potential Revenue</CardTitle>
+            <div className="h-7 w-7 bg-[#7FD1E3]/5 rounded-lg flex items-center justify-center border border-[#7FD1E3]/10">
+              <TrendingUp className="h-3.5 w-3.5 text-[#7FD1E3]" />
             </div>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="text-2xl font-black text-[#001529] tracking-tight">
+              {loading ? <Loader2 className="animate-spin h-5 w-5 text-slate-300" /> : formatCurrency(summaryStats.totalRevenue)}
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Expected Maturity Value</p>
           </CardContent>
         </Card>
 
-        <Card className="border-t-4 border-t-[#5A9E78] shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold text-slate-500 tracking-wider">Disposition (Sold)</CardTitle>
-            <AlertCircle className="h-4 w-4 text-[#5A9E78]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-[#001529]">
-              {loading ? <Loader2 className="animate-spin h-6 w-6" /> : soldStock}
+        {/* Card 3: System Health (Low Stock) */}
+        <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-rose-200 transition-all">
+          <div className="h-1 bg-rose-500/10 w-full" />
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+            <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">SKUs Below Threshold</CardTitle>
+            <div className={cn(
+              "h-7 w-7 rounded-lg flex items-center justify-center border transition-all",
+              summaryStats.lowStockSKUs > 0 ? "bg-rose-50 border-rose-100" : "bg-slate-50 border-slate-100"
+            )}>
+              <AlertOctagon className={cn("h-3.5 w-3.5", summaryStats.lowStockSKUs > 0 ? "text-rose-500 animate-pulse" : "text-slate-300")} />
             </div>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className={cn(
+              "text-2xl font-black tracking-tight",
+              summaryStats.lowStockSKUs > 0 ? "text-rose-600" : "text-[#001529]"
+            )}>
+              {loading ? <Loader2 className="animate-spin h-5 w-5 text-slate-300" /> : `${summaryStats.lowStockSKUs} Asset Lines`}
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Replenishment Required</p>
           </CardContent>
         </Card>
       </div>
@@ -794,7 +841,7 @@ export default function InventoryDashboard() {
                                                                 });
                                                               });
                                                             } else {
-                                                              const count = item.available_quantity || 1;
+                                                              const count = item.current_balance || 1;
                                                               for(let i=0; i<count; i++) {
                                                                 units.push({
                                                                   id: `${item.id}-${i}`,

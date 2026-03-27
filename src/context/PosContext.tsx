@@ -13,7 +13,7 @@ export type Product = {
   hsn_code: string
   base_price: number
   gst_rate: number
-  available_quantity: number
+  current_balance: number
   product_code: string
   tracking_type?: string
 }
@@ -249,16 +249,16 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     // We need to aggregate stock sum across all matching inventory records for each product
     const { data: inventoryData, error: invError } = await supabase
       .from('inventory')
-      .select('product_id, available_quantity')
+      .select('product_id, current_balance')
       .eq('branch_id', branchId)
       .eq('status', 'Available')
 
     if (invError) return
 
-    // Create a local map of product_id -> sum of available_quantity
+    // Create a local map of product_id -> sum of current_balance
     const stockMap: Record<string, number> = {}
-    inventoryData?.forEach((invItem: { product_id: string; available_quantity: number }) => {
-      stockMap[invItem.product_id] = (stockMap[invItem.product_id] || 0) + (invItem.available_quantity || 0)
+    inventoryData?.forEach((invItem: { product_id: string; current_balance: number }) => {
+      stockMap[invItem.product_id] = (stockMap[invItem.product_id] || 0) + (invItem.current_balance || 0)
     })
 
     const { data: productData, error: prodError } = await supabase
@@ -271,7 +271,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     if (!prodError && productData) {
       const transformed: Product[] = (productData as Product[]).map((pItem: Product) => ({
         ...pItem,
-        available_quantity: stockMap[pItem.id] || 0
+        current_balance: stockMap[pItem.id] || 0
       }))
       setProducts(transformed)
     }
@@ -422,7 +422,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       const existing = prev.find(item => item.id === product.id)
       const currentQty = existing ? existing.qty : 0
 
-      if (currentQty + 1 > product.available_quantity) {
+      if (currentQty + 1 > product.current_balance) {
         setToast({ message: "Stock limit reached", type: 'error' })
         return prev
       }
@@ -500,7 +500,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       if (!product) return prev
 
       const newQty = Math.max(1, itemToUpdate.qty + delta)
-      if (newQty > product.available_quantity) {
+      if (newQty > product.current_balance) {
         setToast({ message: "Cannot exceed available stock", type: 'error' })
         return prev
       }
