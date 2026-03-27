@@ -62,7 +62,7 @@ const MODULES: Module[] = [
     name: "Finance & Accounts",
     description: "Ledger, Tax & Expense",
     icon: Wallet,
-    path: "/finance",
+    path: "/accounting",
     color: "from-indigo-500/20 to-indigo-600/5",
   },
   {
@@ -86,7 +86,7 @@ const MODULES: Module[] = [
     name: "Human Resources",
     description: "Personnel, Payroll & Att.",
     icon: Users,
-    path: "/hr",
+    path: "/staff",
     color: "from-purple-500/20 to-purple-600/5",
   },
 ]

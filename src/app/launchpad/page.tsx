@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 
 const BrandIdentity = () => {
   return (
-    <div className="flex flex-col items-center scale-[0.5] fixed top-8 left-1/2 -translate-x-1/2 z-50">
+    <div className="flex flex-col items-center scale-75">
       <div className="relative">
         <Image 
           src="/ethan-logo-final.png" 
@@ -66,19 +66,25 @@ export default function LaunchpadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#001529] p-6 relative overflow-hidden flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-[#001529] relative overflow-hidden flex flex-col">
       {/* Background decoration */}
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#7FD1E3]/5 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00AEEF]/5 rounded-full blur-[100px]" />
       
-      <BrandIdentity />
+      {/* Logo Section */}
+      <div className="flex-none py-10 w-full flex justify-center z-10">
+        <BrandIdentity />
+      </div>
       
-      <div className="w-full max-w-7xl relative z-10 pt-20">
-        <ModuleLaunchpad permissions={permissions} role={role} isVisible={true} />
+      {/* Card Grid Section */}
+      <div className="flex-grow flex items-center justify-center px-6 pb-20 z-10">
+        <div className="w-full max-w-7xl relative">
+          <ModuleLaunchpad permissions={permissions} role={role} isVisible={true} />
+        </div>
       </div>
 
       {/* Developer Watermark */}
-      <div className="absolute bottom-6 right-8 text-center pointer-events-none select-none">
+      <div className="flex-none pb-10 w-full flex flex-col items-center justify-center z-10 pointer-events-none select-none">
         <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-1">Powered By</p>
         <div className="flex items-center justify-center gap-1.5">
           <span className="text-white/40 text-2xl font-black tracking-tighter">Krik</span>

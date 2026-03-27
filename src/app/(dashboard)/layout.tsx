@@ -35,7 +35,18 @@ export default async function DashboardLayout({
     `)
     .eq("user_id", user.id)
 
-  const rawProfile = profile || { id: user.id, full_name: "Unknown User", email: user.email, role: "sales", assigned_branch_id: "" }
+  // Fetch Module Permissions
+  const { data: permissionsData } = await supabase
+    .from("user_permissions")
+    .select("module, enabled")
+    .eq("user_id", user.id)
+
+  const permissions = (permissionsData || []).reduce((acc, p) => {
+    acc[p.module] = p.enabled
+    return acc
+  }, {} as Record<string, boolean>)
+
+  const rawProfile = profile || { id: user.id, full_name: "Unknown User", email: user.email, role: "Sales Rep", assigned_branch_id: "" }
   
   // Identify branch access for switching
   let typedBranchAccess = (branchAccess || []) as unknown as Array<{
@@ -92,7 +103,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardShell profile={profileWithBranchName}>
+    <DashboardShell profile={profileWithBranchName} permissions={permissions}>
       {children}
     </DashboardShell>
   )

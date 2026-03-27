@@ -19,9 +19,10 @@ interface DashboardShellProps {
     branch_id: string
     branch_name?: string
   }
+  permissions: Record<string, boolean>
 }
 
-export function DashboardShell({ children, profile }: DashboardShellProps) {
+export function DashboardShell({ children, profile, permissions }: DashboardShellProps) {
   const pathname = usePathname()
   const isPos = pathname === '/pos'
 
@@ -37,9 +38,9 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset className="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out">
-        <header className="h-14 flex items-center justify-between px-5 border-b bg-white shadow-sm gap-4 shrink-0 z-10">
+      <AppSidebar permissions={permissions} profile={profile} />
+      <SidebarInset className="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out overflow-x-hidden">
+        <header className="h-14 flex items-center justify-between px-5 border-b bg-white shadow-sm gap-4 shrink-0 z-50">
           <div className="flex items-center gap-3">
             <SidebarTrigger className="text-slate-500 hover:text-primary transition-colors" />
             <div className="h-5 w-[1px] bg-border" />

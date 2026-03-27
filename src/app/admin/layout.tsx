@@ -19,6 +19,17 @@ export default async function AdminLayout({
     .select("*")
     .eq("id", user.id)
     .single()
+    
+  // Fetch Module Permissions
+  const { data: permissionsData } = await supabase
+    .from("user_permissions")
+    .select("module, enabled")
+    .eq("user_id", user.id)
+
+  const permissionsMap = (permissionsData || []).reduce((acc, p) => {
+    acc[p.module] = p.enabled
+    return acc
+  }, {} as Record<string, boolean>)
 
   if (profile?.role !== "Admin/Owner") redirect("/unauthorized")
 
@@ -53,7 +64,7 @@ export default async function AdminLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
       {/* Admin-only sidebar — no AppSidebar here */}
-      <AdminSidebar />
+      <AdminSidebar profile={profileWithBranch} permissions={permissionsMap} />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Admin Top Header */}
         <header className="h-14 flex items-center justify-between px-5 bg-white border-b shadow-sm shrink-0 z-10">

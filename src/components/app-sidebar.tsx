@@ -49,6 +49,14 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const navigationGroups = [
   {
@@ -75,7 +83,7 @@ const navigationGroups = [
     ]
   },
   {
-    id: "sales",
+    id: "pos",
     title: "Sales Hub",
     icon: BarChart3,
     items: [
@@ -93,7 +101,7 @@ const navigationGroups = [
     items: []
   },
   {
-    id: "finance",
+    id: "accounting",
     title: "Finance & Accounts",
     icon: Wallet,
     items: [
@@ -118,7 +126,7 @@ const navigationGroups = [
     items: []
   },
   {
-    id: "hr",
+    id: "staff",
     title: "Human Resources",
     icon: Users,
     items: [
@@ -127,7 +135,14 @@ const navigationGroups = [
   }
 ]
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  permissions: Record<string, boolean>
+  profile: {
+    role: string
+  }
+}
+
+export function AppSidebar({ permissions, profile }: AppSidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { state, toggleSidebar } = useSidebar()
@@ -136,6 +151,26 @@ export function AppSidebar() {
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
   
+  const [openGroupId, setOpenGroupId] = useState<string | null>(() => {
+    const activeGroup = navigationGroups.find(group => 
+      group.items.some(item => 
+        item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
+      )
+    );
+    return activeGroup ? activeGroup.id : null;
+  });
+
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    const activeGroup = navigationGroups.find(group => 
+      group.items.some(item => 
+        item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
+      )
+    );
+    setOpenGroupId(activeGroup ? activeGroup.id : null);
+  }
+
   if (navigatingTo && currentUrl === navigatingTo) {
     setNavigatingTo(null);
   }
@@ -154,7 +189,7 @@ export function AppSidebar() {
   const isAdminMode = pathname.startsWith("/admin")
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#001529]/80 backdrop-blur-xl">
+    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#0F172A] transition-all duration-300 group-data-[state=collapsed]:w-[80px] group-data-[state=collapsed]:max-w-[80px]">
       {/* ── Logo Header ── */}
       <SidebarHeader className={cn("px-4 py-5 border-b border-white/5", isCollapsed && "px-2")}>
         <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
@@ -175,16 +210,16 @@ export function AppSidebar() {
           )}
         </div>
 
-        <div className={cn("mt-6 px-1", isCollapsed && "px-0")}>
+        <div className={cn("mt-6 px-4", isCollapsed && "px-0")}>
           <Link
             href="/launchpad"
             onClick={() => setNavigatingTo("/launchpad")}
             className={cn(
-              "flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-[#7FD1E3]/30 hover:border-[#7FD1E3] transition-all duration-300 group/nav",
+              "flex items-center justify-center gap-2 w-full py-2 rounded-xl border border-[#7FD1E3]/30 hover:border-[#7FD1E3] transition-all duration-300 group/nav relative z-50 font-bold",
               pathname === "/launchpad" 
-                ? "bg-[#7FD1E3]/10 border-[#7FD1E3] shadow-[0_0_15px_rgba(127,209,227,0.1)]" 
+                ? "bg-[#7FD1E3]/05 border-[#7FD1E3] shadow-[0_0_15px_rgba(127,209,227,0.1)]" 
                 : "bg-transparent",
-              isCollapsed && "px-0"
+              isCollapsed && "px-0 border-none"
             )}
             title={isCollapsed ? "Command Center" : undefined}
           >
@@ -193,13 +228,13 @@ export function AppSidebar() {
             ) : (
               <LayoutGrid className={cn(
                 "h-4 w-4 transition-colors duration-300",
-                pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-500 group-hover/nav:text-[#7FD1E3]"
+                pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-400 group-hover/nav:text-[#7FD1E3]"
               )} />
             )}
             {!isCollapsed && (
               <span className={cn(
                 "text-[11px] font-bold uppercase tracking-wider transition-colors duration-300",
-                pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-400 group-hover/nav:text-white"
+                pathname === "/launchpad" ? "text-[#7FD1E3]" : "text-slate-300 group-hover/nav:text-white"
               )}>
                 Command Center
               </span>
@@ -209,115 +244,196 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className="px-2 pt-2 pb-3">
+      <SidebarContent className={cn("px-2 pt-2 pb-3", isCollapsed && "px-0")}>
         <SidebarGroup>
-          <div className="px-4 mb-3 space-y-0.5 pointer-events-none select-none">
-            <h2 className="text-[8px] font-black uppercase tracking-[0.3em] text-white/30">
-              Authenticated Access
-            </h2>
-            <p className="text-[14px] font-bold tracking-tight text-white leading-tight">
-              Command Center
-            </p>
-          </div>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-3">
-            {navigationGroups.map((group) => {
-              const isGroupActive = group.items.some(item => 
-                item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
-              )
-              
-              const hasItems = group.items && group.items.length > 0;
-              
-              if (!hasItems) {
-                const isActive = currentUrl === group.url || pathname === group.url?.split('?')[0];
-                return (
-                  <SidebarMenuItem key={group.title}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      tooltip={group.title}
-                      asChild
-                      className={cn(
-                        "h-11 w-full gap-3 px-3 transition-all duration-150 relative tracking-tight",
-                        isActive 
-                          ? "text-white bg-[#7FD1E3]/10 border-l-[4px] border-l-[#7FD1E3] rounded-l-none" 
-                          : "text-slate-400 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      <Link
-                        href={group.url || "#"}
-                        onClick={() => setNavigatingTo(group.url || "#")}
-                      >
-                        <group.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-500")} />
-                        {!isCollapsed && <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+            {navigationGroups
+              .filter(group => {
+                // Admins see everything
+                if (profile.role === 'Admin/Owner') return true
+                // Special case for System Admin group - restrict to role check usually, 
+                // but if tied to a permission, check it.
+                if (group.id === 'admin') return profile.role === 'Admin/Owner'
+                
+                return permissions[group.id] === true
+              })
+              .map((group) => {
+                const isGroupActive = group.items.some(item => 
+                  item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
                 )
-              }
-
-              return (
-                <Collapsible
-                  key={`${group.title}-${isGroupActive}`}
-                  defaultOpen={isGroupActive}
-                  className="group/collapsible"
-                >
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={isGroupActive}
-                      tooltip={group.title}
-                      asChild
-                      className={cn(
-                        "h-11 w-full gap-3 px-3 transition-all duration-150 relative tracking-tight",
-                        isGroupActive 
-                          ? "text-white bg-[#7FD1E3]/10 border-l-[4px] border-l-[#7FD1E3] rounded-l-none" 
-                          : "text-slate-400 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      <CollapsibleTrigger>
-                        <group.icon className={cn("h-4 w-4 shrink-0", isGroupActive ? "text-[#7FD1E3]" : "text-slate-500")} />
-                        {!isCollapsed && (
-                          <>
-                            <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
-                            <ChevronRight className="h-3 w-3 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-slate-600" />
-                          </>
+                
+                const hasItems = group.items && group.items.length > 0;
+                
+                if (!hasItems) {
+                  const isActive = currentUrl === group.url || pathname === group.url?.split('?')[0];
+                  return (
+                    <SidebarMenuItem key={group.title}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={group.title}
+                        nativeButton={false}
+                        className={cn(
+                          "h-12 w-full transition-all duration-150 relative tracking-tight",
+                          isActive 
+                            ? "text-white bg-[#7FD1E3]/05" 
+                            : "text-slate-300 hover:text-white hover:bg-white/5",
+                          isCollapsed && "justify-center"
                         )}
-                      </CollapsibleTrigger>
-                    </SidebarMenuButton>
-                    {!isCollapsed && (
-                      <CollapsibleContent>
-                        <SidebarMenu className="mt-1 ml-4 border-l border-white/5 space-y-1">
-                          {group.items.map((item) => {
-                            const isActive = currentUrl === item.url || pathname === item.url.split('?')[0];
+                        render={(props) => (
+                          <Link
+                            {...props}
+                            href={group.url || "#"}
+                            onClick={() => setNavigatingTo(group.url || "#")}
+                            className={cn(
+                              "flex items-center w-full h-full", 
+                              isCollapsed ? "justify-center" : "gap-3 px-3",
+                              props.className
+                            )}
+                          >
+                            <group.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
+                            {!isCollapsed && <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>}
+                          </Link>
+                        )}
+                      />
+                    </SidebarMenuItem>
+                  )
+                }
 
-                            return (
-                              <SidebarMenuItem key={item.title}>
-                                <Link
-                                  href={item.url}
-                                  onClick={() => setNavigatingTo(item.url)}
-                                  className={cn(
-                                    "flex items-center gap-3 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 relative",
-                                    isActive
-                                      ? "text-white bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_0_15px_rgba(127,209,227,0.1)] font-bold border-l-[4px] border-l-[#7FD1E3] rounded-l-none"
-                                      : "text-slate-500 hover:text-slate-300 font-medium"
+                if (isCollapsed && hasItems) {
+                  return (
+                    <SidebarMenuItem key={group.id}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={(props) => (
+                            <SidebarMenuButton
+                              {...props}
+                              isActive={isGroupActive}
+                              tooltip={group.title}
+                              className={cn(
+                                "h-12 w-full flex items-center justify-center px-0 transition-all duration-150 relative tracking-tight",
+                                isGroupActive ? "text-white bg-[#7FD1E3]/05" : "text-slate-300 hover:text-white hover:bg-white/5",
+                                props.className
+                              )}
+                            >
+                              <group.icon className={cn("h-4 w-4 shrink-0", isGroupActive ? "text-[#7FD1E3]" : "text-slate-400")} />
+                            </SidebarMenuButton>
+                          )}
+                        />
+                        <DropdownMenuContent 
+                          side="right" 
+                          align="start" 
+                          sideOffset={12}
+                          className="w-64 bg-[#0F172A] border border-white/10 text-slate-300 z-[100] p-1 shadow-2xl backdrop-blur-xl"
+                        >
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel className="text-[#7FD1E3] font-bold text-[10px] uppercase tracking-widest px-3 py-3 border-b border-white/5 mb-1">
+                              {group.title}
+                            </DropdownMenuLabel>
+                            {group.items.map((item) => {
+                              const isActive = currentUrl === item.url || pathname === item.url.split('?')[0];
+                              return (
+                                <DropdownMenuItem
+                                  key={item.title}
+                                  render={(props) => (
+                                    <Link
+                                      {...props}
+                                      href={item.url}
+                                      onClick={() => setNavigatingTo(item.url)}
+                                      className={cn(
+                                        "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150 cursor-pointer outline-none w-full",
+                                        isActive 
+                                          ? "text-white bg-[#7FD1E3]/10 font-bold" 
+                                          : "hover:bg-white/5 hover:text-white",
+                                        props.className
+                                      )}
+                                    >
+                                      {navigatingTo === item.url ? (
+                                        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#7FD1E3]" />
+                                      ) : (
+                                        <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
+                                      )}
+                                      <span className="flex-1 truncate">{item.title}</span>
+                                    </Link>
                                   )}
-                                >
-                                  {navigatingTo === item.url ? (
-                                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#7FD1E3]" />
-                                  ) : (
-                                    <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-600")} />
-                                  )}
-                                  <span className={cn(navigatingTo === item.url && "animate-pulse", "tracking-tight")}>{item.title}</span>
-                                </Link>
-                              </SidebarMenuItem>
-                            )
-                          })}
-                        </SidebarMenu>
-                      </CollapsibleContent>
-                    )}
-                  </SidebarMenuItem>
-                </Collapsible>
-              )
-            })}
+                                />
+                              );
+                            })}
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </SidebarMenuItem>
+                  );
+                }
+
+                return (
+                  <Collapsible
+                    key={group.id}
+                    open={openGroupId === group.id}
+                    onOpenChange={(isOpen) => setOpenGroupId(isOpen ? group.id : null)}
+                    className="group/collapsible"
+                  >
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={isGroupActive}
+                        tooltip={group.title}
+                        nativeButton={false}
+                        className={cn(
+                          "h-12 w-full transition-all duration-150 relative tracking-tight",
+                          isGroupActive 
+                            ? "text-white bg-[#7FD1E3]/05" 
+                            : "text-slate-300 hover:text-white hover:bg-white/5",
+                          isCollapsed && "justify-center"
+                        )}
+                        render={(props) => (
+                          <CollapsibleTrigger {...props} nativeButton={false} render={(triggerProps) => (
+                            <div {...triggerProps} className={cn("flex items-center w-full h-full", isCollapsed ? "justify-center" : "gap-3 px-3", triggerProps.className)}>
+                              <group.icon className={cn("h-4 w-4 shrink-0", isGroupActive ? "text-[#7FD1E3]" : "text-slate-400")} />
+                              {!isCollapsed && (
+                                <>
+                                  <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
+                                  <ChevronRight className="h-3 w-3 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-slate-600" />
+                                </>
+                              )}
+                            </div>
+                          )} />
+                        )}
+                      />
+                      {!isCollapsed && (
+                        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                          <SidebarMenu className="mt-1 ml-4 border-l border-white/5 space-y-1">
+                            {group.items.map((item) => {
+                              const isActive = currentUrl === item.url || pathname === item.url.split('?')[0];
+
+                              return (
+                                <SidebarMenuItem key={item.title}>
+                                  <Link
+                                    href={item.url}
+                                    onClick={() => setNavigatingTo(item.url)}
+                                    className={cn(
+                                      "flex items-center gap-3 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 relative",
+                                      isActive
+                                        ? "text-white bg-[#7FD1E3]/05 backdrop-blur-md border border-white/20 shadow-[0_0_15px_rgba(127,209,227,0.1)] font-bold"
+                                        : "text-slate-300 hover:text-slate-100 font-medium"
+                                    )}
+                                  >
+                                    {navigatingTo === item.url ? (
+                                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#7FD1E3]" />
+                                    ) : (
+                                      <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
+                                    )}
+                                    <span className={cn(navigatingTo === item.url && "animate-pulse", "tracking-tight")}>{item.title}</span>
+                                  </Link>
+                                </SidebarMenuItem>
+                              )
+                            })}
+                          </SidebarMenu>
+                        </CollapsibleContent>
+                      )}
+                    </SidebarMenuItem>
+                  </Collapsible>
+                )
+              })}
           </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -332,15 +448,17 @@ export function AppSidebar() {
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-bold transition-all duration-150",
               "bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border border-emerald-600/20",
-              navigatingTo === "/" && "opacity-70"
+              navigatingTo === "/" && "opacity-70",
+              isCollapsed && "justify-center px-0"
             )}
+            title={isCollapsed ? "Return to ERP" : undefined}
           >
             {navigatingTo === "/" ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-400" />
             ) : (
               <ArrowLeft className="h-4 w-4 shrink-0" />
             )}
-            <span className={cn(navigatingTo === "/" && "animate-pulse")}>Return to ERP</span>
+            {!isCollapsed && <span className={cn(navigatingTo === "/" && "animate-pulse")}>Return to ERP</span>}
           </Link>
         )}
         
@@ -349,27 +467,29 @@ export function AppSidebar() {
           onClick={() => setNavigatingTo("/docs")}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
-            "text-slate-400 hover:text-white hover:bg-[#002244] border-l-[3px] border-l-transparent",
-            navigatingTo === "/docs" && "opacity-70"
+            "text-slate-300 hover:text-white hover:bg-white/5 border-l-[3px] border-l-transparent",
+            navigatingTo === "/docs" && "opacity-70",
+            isCollapsed && "justify-center px-0"
           )}
+          title={isCollapsed ? "OPS360 Knowledge Base" : undefined}
         >
           {navigatingTo === "/docs" ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-400" />
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-300" />
           ) : (
-            <BookOpen className="h-4 w-4 shrink-0 text-slate-500" />
+            <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
           )}
-          <span className={cn(navigatingTo === "/docs" && "animate-pulse")}>OPS360 Knowledge Base</span>
+          {!isCollapsed && <span className={cn(navigatingTo === "/docs" && "animate-pulse")}>OPS360 Knowledge Base</span>}
         </Link>
       </div>
 
       {/* ── Footer branding ── */}
-      <SidebarFooter className="border-t border-white/5 p-2">
+      <SidebarFooter className={cn("border-t border-white/5 p-2", isCollapsed && "px-0")}>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggleSidebar}
               tooltip={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-              className="w-full justify-center text-slate-400 hover:text-[#7FD1E3] hover:bg-white/5"
+              className="w-full justify-center text-slate-300 hover:text-[#7FD1E3] hover:bg-white/5"
             >
               {isCollapsed ? <ChevronsRight className="h-4 w-4" /> : (
                 <div className="flex items-center gap-3 w-full px-1">
@@ -381,8 +501,8 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <div className="mt-2 text-[10px] text-slate-600 text-center uppercase tracking-tighter opacity-50 px-2 leading-tight">
-          {!isCollapsed ? `© ${new Date().getFullYear()} Ethan Home Appliances` : `© ${new Date().getFullYear()}`}
+        <div className={cn("mt-2 text-[10px] text-slate-500 text-center uppercase tracking-tighter opacity-50 px-2 leading-tight", isCollapsed && "sr-only")}>
+          {`© ${new Date().getFullYear()} Ethan Home Appliances`}
         </div>
       </SidebarFooter>
     </Sidebar>

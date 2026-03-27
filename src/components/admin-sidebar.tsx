@@ -29,6 +29,7 @@ const adminNavItems = [
     url: "/admin/sales-registry",
     icon: BarChart3,
     description: "Audit trail & serial tracking",
+    module: "pos"
   },
   {
     title: "Organization Registry",
@@ -41,12 +42,14 @@ const adminNavItems = [
     url: "/admin/masters",
     icon: FolderTree,
     description: "Brands & categories",
+    module: "inventory"
   },
   {
     title: "User Management",
     url: "/admin/users",
     icon: Users,
     description: "Accounts & permissions",
+    module: "staff"
   },
   {
     title: "Company Branding",
@@ -56,7 +59,14 @@ const adminNavItems = [
   },
 ]
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  profile: {
+    role: string
+  }
+  permissions: Record<string, boolean>
+}
+
+export function AdminSidebar({ profile, permissions }: AdminSidebarProps) {
   const pathname = usePathname()
   const [logoUrl, setLogoUrl] = useState("/ethan-logo.png")
 
@@ -90,7 +100,9 @@ export function AdminSidebar() {
           Admin Functions
         </p>
         <nav className="space-y-0.5">
-          {adminNavItems.map((item) => {
+          {adminNavItems
+            .filter(item => !item.module || permissions[item.module] === true || profile.role === 'Admin/Owner')
+            .map((item) => {
             const isActive = item.url === "/admin"
               ? pathname === "/admin"
               : pathname.startsWith(item.url)

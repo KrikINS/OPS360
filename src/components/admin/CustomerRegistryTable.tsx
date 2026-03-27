@@ -63,7 +63,7 @@ export function CustomerRegistryTable({ customers, onAddClick }: CustomerRegistr
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-xl overflow-hidden overflow-x-auto">
+      <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900 shadow-xl overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
             <TableRow className="hover:bg-transparent border-b dark:border-white/5">

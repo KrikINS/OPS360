@@ -114,7 +114,6 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent">
@@ -232,7 +231,6 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
               ))}
             </TableBody>
           </Table>
-        </div>
       </div>
 
       <SaleDetailsDrawer
