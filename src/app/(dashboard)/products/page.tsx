@@ -21,6 +21,9 @@ import { exportToExcel } from "@/lib/export-utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { 
+  CloudUpload
+} from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +34,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AddProductModal } from "@/components/products/add-product-modal"
 import { EditProductModal } from "@/components/products/edit-product-modal"
+import { BulkImportModal } from "@/components/products/BulkImportModal"
 import { cn } from "@/lib/utils"
 import { 
   Dialog, 
@@ -62,6 +66,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isBulkOpen, setIsBulkOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [selectedBrand, setSelectedBrand] = useState<string>("all")
@@ -225,9 +230,18 @@ export default function ProductsPage() {
             </Button>
           )}
           {!showArchived && (
-            <Button onClick={() => setIsAddOpen(true)} className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs">
-              <Plus className="h-4 w-4" /> Add New Asset
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => setIsBulkOpen(true)} 
+                variant="outline"
+                className="border-slate-200 text-slate-600 hover:bg-slate-50 gap-1.5 font-bold shadow-sm h-10 px-4 text-xs transition-all"
+              >
+                <CloudUpload className="h-4 w-4" /> Bulk Add
+              </Button>
+              <Button onClick={() => setIsAddOpen(true)} className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs">
+                <Plus className="h-4 w-4" /> Add New Asset
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -412,6 +426,15 @@ export default function ProductsPage() {
         open={isAddOpen} 
         onOpenChange={setIsAddOpen} 
         onSuccess={fetchProducts} 
+      />
+
+      <BulkImportModal
+        open={isBulkOpen}
+        onOpenChange={setIsBulkOpen}
+        onSuccess={() => {
+          fetchProducts()
+          setToast({ message: "Bulk import successful. Matrix Registry updated.", type: "success" })
+        }}
       />
 
       {editingProduct && (
