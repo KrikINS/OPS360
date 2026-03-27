@@ -175,7 +175,7 @@ export default function InventoryDashboard() {
             product_code,
             min_stock_level,
             low_stock_threshold,
-            categories:categories!products_category_fkey (
+            categories:categories (
               low_stock_threshold
             ),
             tracking_type,
