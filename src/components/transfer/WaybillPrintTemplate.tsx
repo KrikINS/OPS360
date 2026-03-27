@@ -65,16 +65,19 @@ export const WaybillPrintTemplate = React.forwardRef<HTMLDivElement, WaybillPrin
           <div className="px-10 py-4 flex justify-between items-center w-full border-b-2 border-black bg-white">
             <div>
               <h1 className="text-[14pt] font-black tracking-tighter uppercase m-0 leading-none">Stock Transfer Waybill</h1>
-              <p className="text-[10px] font-black text-slate-500 m-0">Ref: {transfer_details.number}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="bg-white p-1 rounded border border-slate-200">
+                  <Image src="/ethan-logo.png" alt="Logo" width={32} height={32} className="h-7 w-auto object-contain" />
+                </div>
+                <div>
+                   <p className="text-[10pt] font-black m-0 uppercase tracking-tight">Ethan Home Appliances</p>
+                   <p className="text-[7px] uppercase tracking-[0.2em] font-black m-0 text-slate-500">Logistics Hub</p>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-[13pt] font-bold m-0 uppercase tracking-tight">Ethan Home Appliances</p>
-                <p className="text-[8px] uppercase tracking-[0.3em] font-black m-0 text-slate-500">Logistics & Supply Chain</p>
-              </div>
-              <div className="bg-white p-1 rounded border border-slate-200">
-                <Image src="/ethan-logo.png" alt="Logo" width={32} height={32} className="h-7 w-auto object-contain" />
-              </div>
+            <div className="text-right">
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Waybill ID</p>
+              <p className="text-[20pt] font-black tracking-tighter leading-none">{transfer_details.number}</p>
             </div>
           </div>
         </div>
@@ -206,7 +209,7 @@ export const WaybillPrintTemplate = React.forwardRef<HTMLDivElement, WaybillPrin
               </div>
               <div className="bg-white p-0.5 border border-black h-10 w-10">
                 <Image 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-ST-${transfer_details.number}`)}`} 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(transfer_details.number)}`} 
                   alt="QR" width={40} height={40} unoptimized className="grayscale" 
                 />
               </div>

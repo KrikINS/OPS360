@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/utils/supabase/client"
 import { 
   Package, 
   ShoppingCart, 
@@ -99,7 +100,26 @@ interface ModuleLaunchpadProps {
 
 export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpadProps) {
   const [mounted, setMounted] = useState(false)
+  const [lowStockCount, setLowStockCount] = useState(0)
   const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) return
+
+      let query = supabase.from('view_low_stock_alerts').select('product_id', { count: 'exact' })
+      
+      // If not admin, maybe filter by user's assigned branches?
+      // Based on user request, it didn't specify strict filtering here but hinted at branch-context.
+      // Usually Launchpad shows total for Admins or branch-total for managers.
+      const { count } = await query
+      if (count) setLowStockCount(count)
+    }
+
+    fetchAlerts()
+  }, [supabase])
 
   useEffect(() => {
     if (isVisible) {
@@ -139,6 +159,11 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
                 module.color
               )}>
                 <module.icon className="h-5 w-5 text-white" />
+                {module.id === 'inventory' && lowStockCount > 0 && (
+                  <div className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white ring-2 ring-black/20 animate-bounce">
+                    {lowStockCount}
+                  </div>
+                )}
               </div>
               
               {/* Typography block re-aligned to the bottom-left */}

@@ -69,6 +69,32 @@ export default function DeveloperGuide() {
       </section>
 
       <section className="space-y-6">
+        <h2 className="text-2xl font-bold text-[#001529] border-b pb-3 flex items-center gap-2 text-indigo-600">
+          <Terminal className="h-6 w-6" />
+          Logistics & ID Standardization
+        </h2>
+        <div className="bg-white border rounded-xl p-6 shadow-sm">
+          <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+            Ops360 uses a deterministic, year-based ID generation system for all logistical entities (Transfers, Waybills, Invoices).
+          </p>
+          <ul className="space-y-3 text-sm text-slate-600">
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>Sequential Utility:</strong> All IDs must be generated via the `public.get_next_logistics_id(prefix)` Postgres function to ensure thread-safe, non-colliding sequences across shards.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>Dual-ID Linkage:</strong> Every Stock Transfer (`ST-`) is hard-linked to a specific Waybill (`TX-`). This link is enforced at the database level via a `UNIQUE REFERENCES` constraint on the `waybills` table.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span><strong>Trigger-Based Automation:</strong> Waybill IDs are automatically assigned via a `BEFORE INSERT` trigger. This guarantees that every transfer, whether initiated via RPC or manual entry, receives a valid logistics identity.</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="space-y-6">
         <h2 className="text-2xl font-bold text-[#001529] border-b pb-3 flex items-center gap-2 text-rose-600">
           <ShieldAlert className="h-6 w-6" />
           Production Reliability

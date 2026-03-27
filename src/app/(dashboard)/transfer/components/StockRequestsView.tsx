@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Trash2, Send, CheckCircle2, XCircle
 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -36,6 +37,7 @@ export type Product = {
   model_name: string
   product_code: string
   brand: string
+  available_units: number
 }
 
 export type StockRequest = {
@@ -57,6 +59,7 @@ export type StockRequest = {
     product: {
       model_name: string
       product_code: string
+      brand?: string
     }
   }[]
 }
@@ -69,12 +72,14 @@ type InventoryUnit = {
 
 export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockRequest) => void }) {
   const supabase = createClient()
+  const searchParams = useSearchParams()
   const [branches, setBranches] = useState<Branch[]>([])
   const [requests, setRequests] = useState<StockRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   
   // Auth & Context
+  const [userBranches, setUserBranches] = useState<Branch[]>([])
   const [userBranchId, setUserBranchId] = useState<string | null>(null)
   
   // New Request Form
@@ -118,6 +123,15 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
     setLoading(false)
   }, [supabase])
 
+  const addToRequest = useCallback((product: Product) => {
+    setRequestCart(prev => {
+      if (prev.find(i => i.product.id === product.id)) return prev
+      return [...prev, { product, quantity: 1 }]
+    })
+    setProductSearch("")
+    setProductResults([])
+  }, [])
+
   useEffect(() => {
     async function init() {
       const { data: branchData } = await supabase.from('branches').select('id, name, code')
@@ -126,36 +140,61 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
       if (branchData) setBranches(branchData)
       
       if (authData?.user?.id) {
-        const { data: profile } = await supabase.from('profiles').select('assigned_branch_id').eq('id', authData.user.id).single()
-        if (profile?.assigned_branch_id) setUserBranchId(profile.assigned_branch_id)
+        const { data: access } = await supabase
+          .from('user_branch_access')
+          .select('branch_id, branches(id, name, code)')
+          .eq('user_id', authData.user.id)
+        
+        if (access && access.length > 0) {
+          interface ACMResponse { branch_id: string; branches: Branch }
+          const typedAccess = access as unknown as ACMResponse[]
+          const uBranches = typedAccess.map((a) => a.branches)
+          setUserBranches(uBranches)
+          if (uBranches.length === 1) {
+            setUserBranchId(uBranches[0].id)
+          } else {
+            const { data: profile } = await supabase.from('profiles').select('assigned_branch_id').eq('id', authData.user.id).single()
+            if (profile?.assigned_branch_id) setUserBranchId(profile.assigned_branch_id)
+          }
+        }
       }
       
       await fetchRequests()
+
+      // Handle Demand Shortcut from Inventory Registry
+      const demandId = searchParams.get('demand')
+      if (demandId) {
+        const { data: prod } = await supabase.from('products').select('*').eq('id', demandId).single()
+        if (prod) {
+          // Note: targetSourceId might not be set yet if user has multiple branches and hasn't selected one.
+          const { data: stockData } = await supabase.rpc('search_products_with_stock', {
+            p_search_term: prod.product_code,
+            p_branch_id: branches[0]?.id || '' 
+          })
+          
+          if (stockData && stockData[0]) {
+            addToRequest(stockData[0] as Product)
+            setIsCreating(true)
+          }
+        }
+      }
     }
     init()
-  }, [supabase, fetchRequests])
+  }, [supabase, fetchRequests, searchParams, branches, addToRequest])
 
-  const searchProducts = async (term: string) => {
+  const searchProducts = useCallback(async (term: string) => {
     setProductSearch(term)
-    if (term.length < 2) {
+    if (term.length < 2 || !targetSourceId) {
       setProductResults([])
       return
     }
-    const { data } = await supabase
-      .from('products')
-      .select('id, model_name, product_code, brand')
-      .or(`model_name.ilike.%${term}%,product_code.ilike.%${term}%`)
-      .limit(5)
+    const { data, error } = await supabase.rpc('search_products_with_stock', {
+      p_search_term: term,
+      p_branch_id: targetSourceId
+    })
     
-    if (data) setProductResults(data)
-  }
-
-  const addToRequest = (product: Product) => {
-    if (requestCart.find(i => i.product.id === product.id)) return
-    setRequestCart([...requestCart, { product, quantity: 1 }])
-    setProductSearch("")
-    setProductResults([])
-  }
+    if (!error && data) setProductResults(data)
+  }, [supabase, targetSourceId])
 
   const updateCartQty = (id: string, qty: number) => {
     setRequestCart(requestCart.map(i => i.product.id === id ? { ...i, quantity: Math.max(1, qty) } : i))
@@ -169,35 +208,24 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
     if (!targetSourceId || requestCart.length === 0 || !userBranchId) return
     setSubmitting(true)
     try {
-      const { data: reqHeader, error: headErr } = await supabase
-        .from('stock_requests')
-        .insert({
-          requesting_branch_id: userBranchId,
-          source_branch_id: targetSourceId,
-          priority,
-          notes,
-          status: 'Pending'
-        })
-        .select()
-        .single()
+      const { data: requestNumber, error: reqErr } = await supabase.rpc('create_stock_request_v2', {
+        p_requesting_branch_id: userBranchId,
+        p_source_branch_id: targetSourceId,
+        p_priority: priority,
+        p_notes: notes,
+        p_items: requestCart.map(i => ({ 
+          product_id: i.product.id, 
+          quantity: i.quantity 
+        }))
+      })
 
-      if (headErr) throw headErr
-
-      const { error: itemErr } = await supabase
-        .from('stock_request_items')
-        .insert(requestCart.map(i => ({
-          request_id: reqHeader.id,
-          product_id: i.product.id,
-          quantity: i.quantity
-        })))
-
-      if (itemErr) throw itemErr
+      if (reqErr) throw reqErr
 
       setIsCreating(false)
       setRequestCart([])
       setTargetSourceId("")
       setNotes("")
-      alert("Stock request submitted successfully")
+      alert(`Stock request ${requestNumber} submitted successfully`)
     } catch (err: unknown) {
       alert((err as Error).message || "Failed to submit request")
     } finally {
@@ -340,12 +368,35 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
               <DialogDescription>Specify the products and quantities needed from a target source.</DialogDescription>
             </DialogHeader>
             
-            <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              {userBranches.length > 1 && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400">My Requesting Branch</label>
+                  <Select value={userBranchId || ""} onValueChange={(val) => setUserBranchId(val || "")}>
+                    <SelectTrigger className="h-12 border-slate-200">
+                      <SelectValue placeholder="Select My Branch">
+                        {userBranches.find(b => b.id === userBranchId)?.name}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userBranches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name} ({b.code})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-slate-400">Target Source Branch</label>
-                <Select value={targetSourceId} onValueChange={(val) => setTargetSourceId(val || "")}>
+                <Select 
+                  value={targetSourceId} 
+                  onValueChange={(val) => {
+                    setTargetSourceId(val || "");
+                    if (productSearch.length >= 2) searchProducts(productSearch);
+                  }}
+                >
                   <SelectTrigger className="h-12 border-slate-200">
-                    <SelectValue placeholder="Select Destination">
+                    <SelectValue placeholder="Select Source Branch">
                       {branches.find(b => b.id === targetSourceId)?.name}
                     </SelectValue>
                   </SelectTrigger>
@@ -391,13 +442,30 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
                       <button
                         key={p.id}
                         onClick={() => addToRequest(p)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                        disabled={p.available_units === 0}
+                        className={cn(
+                          "w-full flex items-center justify-between p-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 last:border-0",
+                          p.available_units === 0 && "opacity-60 cursor-not-allowed bg-slate-50/50"
+                        )}
                       >
                         <div className="flex flex-col">
                           <span className="text-xs font-black text-slate-900">{p.model_name}</span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase">{p.product_code} • {p.brand}</span>
                         </div>
-                        <Plus className="h-4 w-4 text-slate-300" />
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className={cn(
+                            "text-[8px] font-black h-5 px-2",
+                            p.available_units > 10 ? "text-emerald-600 bg-emerald-50 border-emerald-100" :
+                            p.available_units > 0 && p.available_units < 5 ? "text-amber-600 bg-amber-50 border-amber-100" :
+                            p.available_units === 0 ? "text-rose-600 bg-rose-50 border-rose-100" :
+                            "text-slate-400 bg-slate-50 border-slate-100"
+                          )}>
+                            {p.available_units === 0 ? "Out of Stock" : 
+                             p.available_units < 5 ? `Low Stock: ${p.available_units}` : 
+                             `Available: ${p.available_units}`}
+                          </Badge>
+                          <Plus className={cn("h-4 w-4", p.available_units === 0 ? "text-slate-200" : "text-slate-300")} />
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -421,33 +489,43 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
                               <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase">{item.product.product_code}</span>
                                 <span className="text-xs font-black text-slate-800">{item.product.model_name}</span>
+                                {item.quantity > item.product.available_units && (
+                                  <div className="flex items-center gap-1 mt-1 text-rose-500">
+                                    <Clock className="h-3 w-3" />
+                                    <span className="text-[9px] font-bold">EXCEEDS SOURCE STOCK ({item.product.available_units})</span>
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
-                            <TableCell className="w-32">
-                              <div className="flex items-center gap-2">
+                            <TableCell className="w-32 px-4">
+                              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg w-fit shadow-inner">
                                 <Button 
-                                  variant="outline" 
+                                  variant="ghost" 
                                   size="sm" 
-                                  className="h-7 w-7 p-0"
+                                  className="h-8 w-8 p-0 bg-white shadow-sm hover:bg-slate-50 text-slate-900 border-none transition-all active:scale-95"
                                   onClick={() => updateCartQty(item.product.id, item.quantity - 1)}
-                                >-</Button>
-                                <span className="w-8 text-center text-xs font-black">{item.quantity}</span>
+                                >
+                                  -
+                                </Button>
+                                <span className="w-8 text-center text-xs font-black tracking-tighter text-slate-800">{item.quantity}</span>
                                 <Button 
-                                  variant="outline" 
+                                  variant="ghost" 
                                   size="sm" 
-                                  className="h-7 w-7 p-0"
+                                  className="h-8 w-8 p-0 bg-white shadow-sm hover:bg-slate-50 text-slate-900 border-none transition-all active:scale-95"
                                   onClick={() => updateCartQty(item.product.id, item.quantity + 1)}
-                                >+</Button>
+                                >
+                                  +
+                                </Button>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right pr-6">
+                            <TableCell className="text-right px-6">
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                className="h-9 w-9 p-0 text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all rounded-xl"
                                 onClick={() => removeFromCart(item.product.id)}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-4.5 w-4.5" />
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -459,7 +537,15 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
               </div>
             </div>
 
-            <DialogFooter className="mt-4">
+            <DialogFooter className="mt-4 border-t border-slate-50 pt-4 items-center">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[10px] font-black text-slate-900 uppercase">
+                    Total Demand: {requestCart.reduce((sum, item) => sum + item.quantity, 0)} Units
+                  </span>
+                </div>
+              </div>
               <Button variant="ghost" onClick={() => setIsCreating(false)} className="font-bold text-slate-500">Later</Button>
               <Button 
                 className="bg-slate-900 hover:bg-black font-black px-8 h-12 rounded-xl"

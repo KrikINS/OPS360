@@ -144,7 +144,7 @@ export default function InventoryDocs() {
           Enterprise Logistics & Waybills
         </h3>
         <p className="text-sm text-slate-600 mb-6">
-          Ops360 uses a synchronous waybill protocol to ensure 100% stock accuracy during inter-branch movements.
+          Ops360 uses a dual-identity logistics protocol (ST/TX) to ensure 100% stock accuracy and physical tracking during inter-branch movements.
         </p>
         
         <div className="grid md:grid-cols-2 gap-6">
@@ -154,9 +154,9 @@ export default function InventoryDocs() {
                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#001529]">Fulfillment Bridge</h4>
+                <h4 className="text-sm font-bold text-[#001529]">Automatic Waybill Provisioning</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  Approved <strong>Stock Requests</strong> can be fulfilled with one click. This bridges the demand manifest directly into a new Transfer Waybill, pre-filling quantities to eliminate manual entry errors.
+                  When a <strong>Stock Transfer</strong> (ST-) is initiated, the system automatically generates a unique <strong>Waybill ID</strong> (TX-). These records are hard-linked, ensuring that every physical manifest has a corresponding digital ledger entry.
                 </p>
               </div>
             </div>
@@ -166,9 +166,9 @@ export default function InventoryDocs() {
                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#001529]">Deterministic Numbering</h4>
+                <h4 className="text-sm font-bold text-[#001529]">Deterministic ID Formatting</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  Waybills follow a <code>ST-YYYY-####</code> sequence. The counter resets annually, providing a clean audit trail across fiscal years.
+                  Waybills follow a strict <code>TX-YYYY-XXXX</code> sequence (e.g., TX-2026-0001). This annually resetting sequence provides a clear audit trail and avoids collisions across the enterprise.
                 </p>
               </div>
             </div>
@@ -180,9 +180,9 @@ export default function InventoryDocs() {
                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#001529]">Physical Handover (Waybills)</h4>
+                <h4 className="text-sm font-bold text-[#001529]">QR-Based Instant Scanning</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  Thermal-ready and A4 PDFs contain ST-Number barcodes. Receiving managers use the search filter to locate digital records in seconds using these physical references.
+                  Every printed Waybill contains a dynamic QR code encoded with the <strong>TX- ID</strong>. Destination managers can scan this to instantly pull up the digital manifest and initiate the atomic receipt protocol.
                 </p>
               </div>
             </div>
@@ -194,7 +194,7 @@ export default function InventoryDocs() {
               <div>
                 <h4 className="text-sm font-bold text-[#001529]">Atomic Receipt Logic</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  The <code>receive_stock_transfer</code> protocol uses elevated security levels to ensure cross-table atomicity, locking the transfer record while simultaneously updating branch inventories and logging audit trails.
+                  The receipt process is cryptographically secure and uses atomic database transactions to ensure that stock is subtracted from the source and added to the destination in a single, irreversible operation.
                 </p>
               </div>
             </div>

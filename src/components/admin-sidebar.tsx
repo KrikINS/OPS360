@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Building2,
   FolderTree,
-  BarChart3,
 } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
@@ -23,13 +22,6 @@ const adminNavItems = [
     url: "/admin",
     icon: LayoutDashboard,
     description: "Overview & system health",
-  },
-  {
-    title: "Sales Registry",
-    url: "/admin/sales-registry",
-    icon: BarChart3,
-    description: "Audit trail & serial tracking",
-    module: "pos"
   },
   {
     title: "Organization Registry",
@@ -84,8 +76,8 @@ export function AdminSidebar({ profile, permissions }: AdminSidebarProps) {
       {/* Logo Header */}
       <div className="px-4 py-5 border-b border-[#002244]">
         <div className="flex items-center gap-3">
-          <div className="relative h-10 w-10 bg-white rounded-lg shadow-sm shrink-0 overflow-hidden">
-            <Image src={logoUrl} alt="Ethan Home Appliances" fill priority className="object-contain p-0.5" />
+          <div className="relative h-[70px] w-[70px] shrink-0 overflow-hidden">
+            <Image src={logoUrl} alt="Ethan Home Appliances" fill priority className="object-contain" />
           </div>
           <div className="flex flex-col leading-tight min-w-0">
             <span className="text-white font-semibold text-[13px] tracking-wide truncate">Ethan Home Appliances</span>

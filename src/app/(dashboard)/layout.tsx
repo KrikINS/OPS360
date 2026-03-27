@@ -55,10 +55,12 @@ export default async function DashboardLayout({
     branches: { name: string } | { name: string }[] | null;
   }>;
 
-  // For Admins without explicit access entries, allow switching to ALL branches
-  if (rawProfile.role === "Admin/Owner" && typedBranchAccess.length === 0) {
+  // FOR ADMiNS: Always allow switching to ALL branches in the registry
+  const isAdmin = rawProfile?.role?.toLowerCase().trim() === 'admin/owner' || rawProfile?.role?.toLowerCase().trim() === 'admin';
+  
+  if (isAdmin) {
     const { data: all_b } = await supabase.from("branches").select("id, name")
-    if (all_b) {
+    if (all_b && all_b.length > 0) {
       typedBranchAccess = all_b.map(b => ({
         branch_id: b.id,
         is_primary: false,
@@ -84,7 +86,7 @@ export default async function DashboardLayout({
   let branchName = ""
   if (activeAccess?.branches) {
     branchName = Array.isArray(activeAccess.branches) ? activeAccess.branches[0]?.name : activeAccess.branches.name
-  } else if (rawProfile.role === "Admin/Owner") {
+  } else if (isAdmin) {
     branchName = "Global Access"
   }
 

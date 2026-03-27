@@ -80,6 +80,7 @@ export function UserNav({ profile }: UserNavProps) {
     setSwitchingBranchId(branchId)
     try {
       await setActiveBranchAction(branchId)
+      window.location.reload()
       // setActiveBranchAction calls revalidatePath('/'), 
       // which triggers a server refresh of the layout
     } catch (err) {

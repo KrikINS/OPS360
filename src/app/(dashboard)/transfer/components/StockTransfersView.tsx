@@ -7,8 +7,8 @@ import { useReactToPrint } from "react-to-print"
 import { WaybillPrintTemplate } from "@/components/transfer/WaybillPrintTemplate"
 import { Input } from "@/components/ui/input"
 import { 
-  AlertTriangle, CheckCircle2, ChevronRight, ClipboardList, Clock, History, Loader2, 
-  Package, Plus, Printer, Search, Send, ShieldCheck, Trash2
+  AlertTriangle as AlertIcon, CheckCircle2, ChevronRight as ChevronIcon, Clock as ClockIcon, History as HistoryIcon, Loader2, 
+  Package, Plus, Printer, Search, Send, ShieldCheck as ShieldIcon
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +40,10 @@ type Product = {
   brand: string
 }
 
+type ProductWithStock = Product & {
+  available_units?: number
+}
+
 type InventoryUnit = {
   id: string
   serial_number: string
@@ -57,7 +61,7 @@ type StockTransfer = {
   transfer_number: string
   source_branch_id: string
   destination_branch_id: string
-  status: 'Pending' | 'In-Transit' | 'Completed' | 'Cancelled'
+  status: 'REQUESTED' | 'IN_TRANSIT' | 'RECEIVED' | 'DISCREPANCY'
   originator_id: string
   received_by?: string
   condition_notes?: string
@@ -68,7 +72,15 @@ type StockTransfer = {
   destination_branch?: { name: string, code: string }
   originator?: { full_name: string }
   items?: { id: string, serial_number: string, product: { model_name: string } }[]
+  waybill_number?: string
   item_count: number
+}
+
+type TransferSKUItem = {
+  product: Product
+  quantity: number
+  available: number
+  selectedUnits: InventoryUnit[]
 }
 
 type WaybillData = {
@@ -113,10 +125,18 @@ export function StockTransfersView({
   const [userBranchId, setUserBranchId] = useState<string | null>(null)
   const [sourceId, setSourceId] = useState("")
   const [destId, setDestId] = useState("")
-  const [transferCart, setTransferCart] = useState<TransferItem[]>([])
   const [submitting, setSubmitting] = useState(false)
+  
+  // New SKU-based Transfer Manifest
+  const [transferSKUCart, setTransferSKUCart] = useState<TransferSKUItem[]>([])
+  
+  const [pendingDemands, setPendingDemands] = useState<StockRequest[]>([])
+  const [selectedDemandId, setSelectedDemandId] = useState<string | null>(null)
+  const [isImportMode, setIsImportMode] = useState(false)
+
   const [inventorySearch, setInventorySearch] = useState("")
   const [inventoryResults, setInventoryResults] = useState<(InventoryUnit & { product: Product })[]>([])
+  const [productSearchResults, setProductSearchResults] = useState<ProductWithStock[]>([])
 
   // Waybill Print State
   const printRef = useRef<HTMLDivElement>(null)
@@ -173,6 +193,7 @@ export function StockTransfersView({
         *,
         source_branch:branches!source_branch_id(name, code),
         destination_branch:branches!destination_branch_id(name, code),
+        waybill:waybills(waybill_number),
         items:stock_transfer_items(id)
       `)
       .order('created_at', { ascending: false })
@@ -181,8 +202,9 @@ export function StockTransfersView({
       console.error("Failed to load transfers", error)
     } else {
       const typedData = (data || []) as (StockTransfer & { items: { id: string }[] })[]
-      setTransfers(typedData.map((t) => ({
+      setTransfers(typedData.map((t: StockTransfer & { waybill?: { waybill_number: string }[] | { waybill_number: string } }) => ({
         ...t,
+        waybill_number: Array.isArray(t.waybill) ? t.waybill[0]?.waybill_number : t.waybill?.waybill_number,
         item_count: t.items?.length || 0
       })))
     }
@@ -209,93 +231,152 @@ export function StockTransfersView({
     init()
   }, [supabase, fetchTransfers])
 
-  const searchInventory = async (term: string) => {
+  const fetchPendingDemands = async () => {
+    const { data: demands } = await supabase
+      .from('stock_requests')
+      .select('*, requesting_branch:branches!requesting_branch_id(name, code), items:stock_request_items(id, product_id, quantity, product:products(model_name, product_code, brand))')
+      .eq('status', 'Pending')
+      .eq('source_branch_id', sourceId || userBranchId || "")
+    
+    if (demands) setPendingDemands(demands as StockRequest[])
+  }
+
+  const importFromDemand = async (demandId: string) => {
+    const demand = pendingDemands.find(d => d.id === demandId)
+    if (!demand) return
+    
+    setDestId(demand.requesting_branch_id)
+    setSelectedDemandId(demand.id)
+    
+    const newSKUItems = await Promise.all(demand.items.map(async (item): Promise<TransferSKUItem> => {
+      // Fetch current stock for this SKU at source branch
+      const { data: stockData } = await supabase.rpc('get_product_stock_at_branch', {
+        p_product_id: item.product_id,
+        p_branch_id: sourceId || userBranchId || ""
+      })
+      
+      return {
+        product: {
+          id: item.product_id,
+          model_name: item.product.model_name,
+          product_code: item.product.product_code,
+          brand: item.product.brand || ""
+        },
+        quantity: item.quantity,
+        available: typeof stockData === 'number' ? stockData : 0,
+        selectedUnits: [] as InventoryUnit[]
+      }
+    }))
+    
+    setTransferSKUCart(newSKUItems)
+  }
+
+  const searchProducts = async (term: string) => {
     setInventorySearch(term)
     if (term.length < 2) {
-      setInventoryResults([])
+      setProductSearchResults([])
       return
     }
 
-    try {
-      const { data: serialMatches } = await supabase
-        .from('inventory')
-        .select('id, serial_number, product_id, status, product:products(id, model_name, product_code, brand)')
-        .eq('branch_id', sourceId || userBranchId || "")
-        .eq('status', 'Available')
-        .ilike('serial_number', `%${term}%`)
-        .limit(10)
+    const { data } = await supabase.rpc('search_products_with_stock', {
+      p_search_term: term,
+      p_branch_id: sourceId || userBranchId || ""
+    })
+    
+    if (data) setProductSearchResults(data as ProductWithStock[])
+  }
 
-      const { data: productMatches } = await supabase
-        .from('products')
-        .select('id, model_name, product_code, brand')
-        .or(`model_name.ilike.%${term}%,product_code.ilike.%${term}%`)
-        .limit(5)
+  const addSKUToTransfer = (p: ProductWithStock) => {
+    if (transferSKUCart.find(i => i.product.id === p.id)) return
+    
+    setTransferSKUCart([...transferSKUCart, {
+      product: p,
+      quantity: 1,
+      available: p.available_units || 0,
+      selectedUnits: [] as InventoryUnit[]
+    }])
+    
+    setInventorySearch("")
+    setProductSearchResults([])
+  }
 
-      let finalResults = [...(serialMatches || [])] as (InventoryUnit & { product: Product })[]
+  const updateSKUQty = (productId: string, qty: number) => {
+    setTransferSKUCart(prev => prev.map(item => 
+      item.product.id === productId ? { ...item, quantity: Math.max(0, qty) } : item
+    ))
+  }
 
-      if (productMatches && productMatches.length > 0) {
-        const { data: productUnitMatches } = await supabase
-          .from('inventory')
-          .select('id, serial_number, product_id, status, product:products(id, model_name, product_code, brand)')
-          .eq('branch_id', sourceId || userBranchId || "")
-          .eq('status', 'Available')
-          .in('product_id', productMatches.map((p: { id: string }) => p.id))
-          .limit(10)
-        
-        if (productUnitMatches) {
-          const newUnits = (productUnitMatches as (InventoryUnit & { product: Product })[]).filter(
-            u => !finalResults.find(fr => fr.id === u.id)
-          )
-          finalResults = [...finalResults, ...newUnits]
-        }
-      }
+  const [pickingUnitsFor, setPickingUnitsFor] = useState<string | null>(null) 
 
-      setInventoryResults(finalResults.slice(0, 10))
-    } catch (err) {
-      console.error("Search failed:", err)
-      setInventoryResults([])
+  const openUnitPicker = async (productId: string) => {
+    setPickingUnitsFor(productId)
+    const { data } = await supabase
+      .from('inventory')
+      .select('id, serial_number, product_id, status')
+      .eq('product_id', productId)
+      .eq('branch_id', sourceId || userBranchId || "")
+      .eq('status', 'Available')
+      .limit(50)
+
+    if (data) {
+      const selectedSKU = transferSKUCart.find(i => i.product.id === productId)
+      setInventoryResults(data.map((u: InventoryUnit) => ({ 
+        ...u, 
+        product: selectedSKU!.product 
+      })))
     }
   }
 
-  const removeFromTransfer = (id: string) => {
-    setTransferCart(transferCart.filter(i => i.unit.id !== id))
+  const toggleUnitSelection = (productId: string, unit: InventoryUnit) => {
+    setTransferSKUCart(prev => prev.map(item => {
+      if (item.product.id !== productId) return item
+      const isSelected = item.selectedUnits.find(u => u.id === unit.id)
+      if (isSelected) {
+        return { ...item, selectedUnits: item.selectedUnits.filter(u => u.id !== unit.id) }
+      } else {
+        if (item.selectedUnits.length >= item.quantity) return item
+        return { ...item, selectedUnits: [...item.selectedUnits, unit] }
+      }
+    }))
   }
 
   const submitTransfer = async () => {
-    if (!sourceId || !destId || transferCart.length === 0) {
-      alert("Please ensure both source and destination branches are selected and at least one item is added.")
+    if (!sourceId || !destId || transferSKUCart.length === 0) {
+      alert("Please ensure branches are selected and at least one item is manifest.")
       return
     }
 
-    // Strict Validation for Requests
-    if (prefillRequest) {
-      const isMet = prefillRequest.items.every(reqItem => {
-        const addedCount = transferCart.filter(cartItem => cartItem.product.id === reqItem.product_id).length
-        return addedCount === reqItem.quantity
-      })
+    const allUnits = transferSKUCart.flatMap(i => i.selectedUnits)
+    const expectedCount = transferSKUCart.reduce((sum, item) => sum + item.quantity, 0)
 
-      if (!isMet) {
-        alert("CRITICAL: You must manifest the EXACT quantity requested before shipping. Please add the required serial numbers.")
-        return
-      }
+    if (allUnits.length < expectedCount) {
+      alert(`INCOMPLETE MANIFEST: You have planned for ${expectedCount} units but only picked ${allUnits.length} serial numbers. Please pick ALL units before initiating.`)
+      return
+    }
+
+    const anyOverRequest = transferSKUCart.some(i => i.quantity > i.available)
+    if (anyOverRequest) {
+      alert("OVER-REQUEST ALERT: One or more products exceed current source stock. Please adjust quantities.")
+      return
     }
 
     setSubmitting(true)
     try {
-      const rpcName = prefillRequest ? 'fulfill_stock_request' : 'process_stock_transfer_send'
-      const rpcParams = prefillRequest 
-        ? { p_request_id: prefillRequest.id, p_inventory_ids: transferCart.map(i => i.unit.id) }
-        : { p_source_branch_id: sourceId, p_destination_branch_id: destId, p_inventory_ids: transferCart.map(i => i.unit.id), p_notes: "" }
+      const rpcName = (selectedDemandId || prefillRequest) ? 'fulfill_stock_request' : 'process_stock_transfer_send'
+      const rpcParams = (selectedDemandId || prefillRequest)
+        ? { p_request_id: (selectedDemandId || prefillRequest?.id) as string, p_inventory_ids: allUnits.map((u: InventoryUnit) => u.id) }
+        : { p_source_branch_id: sourceId, p_destination_branch_id: destId, p_inventory_ids: allUnits.map((u: InventoryUnit) => u.id), p_notes: "" }
 
-      const { data: transferNumber, error } = await supabase.rpc(rpcName, rpcParams)
+      const { data, error } = await supabase.rpc(rpcName, rpcParams)
+      const transferNumber = data as string
       
       if (error) throw error
 
       setLastTransferNumber(transferNumber)
-      alert(prefillRequest ? `Request fulfilled. Waybill ${transferNumber} generated.` : `Transfer ${transferNumber} initiated.`)
+      alert((selectedDemandId || prefillRequest) ? `Request fulfilled. Waybill ${transferNumber} generated.` : `Transfer ${transferNumber} initiated.`)
       
-      // Keep modal open but clear cart to allow printing
-      setTransferCart([])
+      setTransferSKUCart([])
+      setSelectedDemandId(null)
       if (prefillRequest) onClearPrefill?.()
       await fetchTransfers()
     } catch (err: unknown) {
@@ -369,9 +450,10 @@ export function StockTransfersView({
 
   const getStatusColor = (s: string) => {
     switch (s) {
-      case 'Completed': return "bg-emerald-50 text-emerald-600 border-emerald-100"
-      case 'Pending': return "bg-amber-50 text-amber-600 border-amber-100"
-      case 'Cancelled': return "bg-slate-50 text-slate-400 border-slate-100"
+      case 'RECEIVED': return "bg-emerald-50 text-emerald-600 border-emerald-100"
+      case 'IN_TRANSIT': return "bg-amber-50 text-amber-600 border-amber-100"
+      case 'REQUESTED': return "bg-blue-50 text-blue-600 border-blue-100"
+      case 'DISCREPANCY': return "bg-rose-50 text-rose-600 border-rose-100"
       default: return "bg-slate-50 text-slate-600 border-slate-100"
     }
   }
@@ -403,12 +485,17 @@ export function StockTransfersView({
             
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400">Dispatch From</label>
-                <Select value={sourceId} onValueChange={(val) => setSourceId(val || "")}>
+                <label className="text-[10px] font-black uppercase text-slate-400">Dispatch From (Source)</label>
+                <Select 
+                  value={sourceId} 
+                  onValueChange={(val) => {
+                    setSourceId(val || "")
+                    setTransferSKUCart([])
+                    setSelectedDemandId(null)
+                  }}
+                >
                   <SelectTrigger className="h-12 border-slate-200">
-                    <SelectValue placeholder="Dispatch From">
-                      {branches.find(b => b.id === sourceId)?.name}
-                    </SelectValue>
+                    <SelectValue placeholder="Dispatch From" />
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map(b => (
@@ -418,12 +505,10 @@ export function StockTransfersView({
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400">Receive At</label>
-                <Select value={destId} onValueChange={(val) => setDestId(val || "")}>
+                <label className="text-[10px] font-black uppercase text-slate-400">Receive At (Destination)</label>
+                <Select value={destId} onValueChange={(val) => setDestId(val || "")} disabled={!!selectedDemandId}>
                   <SelectTrigger className="h-12 border-slate-200">
-                    <SelectValue placeholder="Receive At">
-                      {branches.find(b => b.id === destId)?.name}
-                    </SelectValue>
+                    <SelectValue placeholder="Receive At" />
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map(b => (
@@ -433,119 +518,145 @@ export function StockTransfersView({
                 </Select>
               </div>
             </div>
-            
-            {prefillRequest && (
-              <Card className="bg-blue-50/50 border-blue-100 p-4 mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <ClipboardList className="h-4 w-4 text-blue-600" />
-                    <h4 className="text-[10px] font-black uppercase text-blue-900 tracking-wider">
-                      Fulfilling Request {prefillRequest.request_number}
-                    </h4>
-                  </div>
-                  <Badge className="bg-blue-600 text-[8px] font-black h-5 px-2">
-                    DEMAND MANIFEST
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  {prefillRequest.items.map(item => {
-                    const addedCount = transferCart.filter(i => i.product.id === item.product_id).length
-                    const isMet = addedCount >= item.quantity
-                    return (
-                      <div key={item.id} className="flex items-center justify-between bg-white p-2 rounded-lg border border-blue-100/50 shadow-sm">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-slate-800 tracking-tight">{item.product.model_name}</span>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase">Need: {item.quantity} units</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            "text-[10px] font-black px-2 py-0.5 rounded",
-                            isMet ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
-                          )}>
-                            {addedCount} / {item.quantity}
-                          </span>
-                          {isMet && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </Card>
-            )}
 
-            <div className="space-y-4">
-              <div className="relative">
+            <div className="flex bg-slate-100 p-1 rounded-xl h-12 mb-4">
+              <button 
+                onClick={() => { setIsImportMode(true); fetchPendingDemands(); }}
+                className={cn(
+                  "flex-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  isImportMode ? "bg-white shadow-sm text-blue-600" : "text-slate-400"
+                )}
+              >
+                Import from Pending Demand
+              </button>
+              <button 
+                onClick={() => setIsImportMode(false)}
+                className={cn(
+                  "flex-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  !isImportMode ? "bg-white shadow-sm text-blue-600" : "text-slate-400"
+                )}
+              >
+                Manual SKU Entry
+              </button>
+            </div>
+            
+            {isImportMode ? (
+              <div className="space-y-2 mb-6">
+                <label className="text-[10px] font-black uppercase text-slate-400">Link Demand Order</label>
+                <Select value={selectedDemandId || ""} onValueChange={(val) => val && importFromDemand(val)}>
+                  <SelectTrigger className="h-12 border-slate-200">
+                    <SelectValue placeholder="Select SR- Request..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pendingDemands.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-400">No pending demands for this branch</div>
+                    ) : (
+                      pendingDemands.map(d => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.request_number} • To: {d.requesting_branch.code} ({d.item_count} items)
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="relative mb-6">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                  placeholder="Search Serial Number or Model..."
-                  className="pl-10 h-12 bg-slate-50 border-none shadow-inner"
+                  placeholder="Search SKU..."
+                  className="pl-10 h-10 border-slate-200"
                   value={inventorySearch}
-                  onChange={(e) => searchInventory(e.target.value)}
+                  onChange={(e) => searchProducts(e.target.value)}
                 />
+                {productSearchResults.length > 0 && (
+                  <div className="absolute w-full mt-1 bg-white border rounded-xl shadow-2xl z-50 overflow-hidden">
+                    {productSearchResults.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => addSKUToTransfer(p)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black">{p.model_name}</span>
+                          <span className="text-[10px] text-slate-400 uppercase">{p.product_code}</span>
+                        </div>
+                        <Badge variant="outline" className="text-[9px] font-black h-5 px-2">
+                          Available: {p.available_units || 0}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+            )}
 
-              {inventoryResults.length > 0 && (
-                <div className="bg-slate-50 rounded-lg p-2 space-y-1 border border-slate-100 max-h-40 overflow-y-auto">
-                  {inventoryResults.map(unit => (
-                    <button
-                      key={unit.id}
-                      onClick={() => {
-                             if (unit.product && !transferCart.find(i => i.unit.id === unit.id)) {
-                               setTransferCart([...transferCart, { product: unit.product, unit }]);
-                               setInventorySearch("");
-                               setInventoryResults([]);
-                             }
-                           }}
-                      className="w-full flex items-center justify-between p-2 hover:bg-white rounded-xl transition-colors text-left"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-blue-600 tracking-tight">{unit.serial_number}</span>
-                        <span className="text-xs font-bold text-slate-700">{unit.product.model_name}</span>
-                      </div>
-                      <Plus className="h-4 w-4 text-slate-300" />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">
-                  <Package className="h-3 w-3" />
-                  Transfer Manifest ({transferCart.length} Units)
-                </label>
-                <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
-                  {transferCart.length === 0 ? (
-                    <div className="p-12 text-center text-slate-300 italic text-xs flex flex-col items-center gap-2">
-                      <Package className="h-8 w-8 opacity-20" />
-                      No units selected
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableBody>
-                        {transferCart.map(item => (
-                          <TableRow key={item.unit.id} className="group border-b last:border-0 h-16">
-                            <TableCell className="py-2 px-4">
-                              <div className="flex flex-col">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase leading-none mb-1">SN: {item.unit.serial_number}</span>
-                                <span className="text-xs font-black text-slate-800">{item.product.model_name}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right px-4">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
-                                onClick={() => removeFromTransfer(item.unit.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2">
+                <Package className="h-3 w-3" />
+                Logistic Manifest
+              </label>
+              <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm mb-4">
+                {transferSKUCart.length === 0 ? (
+                   <div className="p-12 text-center text-slate-300 italic text-xs flex flex-col items-center gap-2">
+                     No items in manifest
+                   </div>
+                ) : (
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow className="h-10 border-none">
+                        <TableHead className="text-[9px] font-black uppercase text-slate-400 px-4">Product SKU</TableHead>
+                        <TableHead className="text-[9px] font-black uppercase text-slate-400 text-center">Current Stock</TableHead>
+                        <TableHead className="text-[9px] font-black uppercase text-slate-400 text-center">Transfer Quantity</TableHead>
+                        <TableHead className="text-[9px] font-black uppercase text-slate-400 text-right px-4">S/N Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transferSKUCart.map(item => (
+                        <TableRow key={item.product.id} className="h-16 border-b last:border-0">
+                          <TableCell className="px-4">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-black text-slate-800">{item.product.model_name}</span>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase">{item.product.product_code}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge className={cn("text-[10px] font-black h-6", item.available > 5 ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100")}>
+                               {item.available}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-4">
+                            <div className="flex items-center gap-2 justify-center">
+                              <Input 
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateSKUQty(item.product.id, parseInt(e.target.value) || 0)}
+                                className={cn("h-8 w-16 text-center font-bold text-xs", item.quantity > item.available && "border-rose-500 bg-rose-50")}
+                              />
+                            </div>
+                            {item.quantity > item.available && (
+                              <p className="text-[8px] text-rose-500 font-bold uppercase mt-1 text-center">Insufficient Stock</p>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right px-4">
+                            <Button 
+                              size="sm" 
+                              variant={item.selectedUnits.length === item.quantity ? "outline" : "default"}
+                              className={cn(
+                                "h-8 px-3 text-[10px] font-black rounded-lg gap-1.5",
+                                item.selectedUnits.length === item.quantity ? "border-emerald-200 text-emerald-600 bg-emerald-50" : "bg-blue-600 text-white"
+                              )}
+                              onClick={() => openUnitPicker(item.product.id)}
+                            >
+                              {item.selectedUnits.length === item.quantity ? <CheckCircle2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                              {item.selectedUnits.length} / {item.quantity}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </div>
 
@@ -554,14 +665,15 @@ export function StockTransfersView({
                 <Button variant="ghost" onClick={() => {
                   setIsCreating(false)
                   setLastTransferNumber(null)
-                  setTransferCart([])
+                  setTransferSKUCart([])
+                  setSelectedDemandId(null)
                 }} className="font-bold text-slate-500 hover:bg-slate-100">Close</Button>
                 
                 {lastTransferNumber && (
                   <Button 
                     variant="outline"
-                    className="border-blue-200 text-blue-600 font-black hover:bg-blue-50 h-12 rounded-xl px-6 gap-2"
-                    onClick={() => fetchAndPrintWaybill(lastTransferNumber)}
+                    className="border-blue-200 text-blue-600 font-black hover:bg-blue-50 h-10 rounded-xl px-4 gap-2"
+                    onClick={() => fetchAndPrintWaybill(lastTransferNumber || "")}
                     disabled={printing}
                   >
                     {printing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
@@ -575,19 +687,53 @@ export function StockTransfersView({
                   className="bg-blue-600 hover:bg-blue-700 font-black px-8 h-12 rounded-xl shadow-lg shadow-blue-200"
                   onClick={submitTransfer}
                   disabled={
-                    !!(submitting || 
-                    transferCart.length === 0 || 
+                    submitting || 
+                    transferSKUCart.length === 0 || 
                     !destId ||
-                    (prefillRequest && !prefillRequest.items.every(reqItem => 
-                      transferCart.filter(cartItem => cartItem.product.id === reqItem.product_id).length === reqItem.quantity
-                    )))
+                    transferSKUCart.some(i => i.quantity > i.available || i.selectedUnits.length < i.quantity || i.quantity <= 0)
                   }
                 >
                   {submitting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                  CONFIRM SHIPMENT
+                  INITIATE TRANSFER
                 </Button>
               )}
             </DialogFooter>
+
+            {/* Sub-modal for picking serial numbers */}
+            <Dialog open={!!pickingUnitsFor} onOpenChange={() => setPickingUnitsFor(null)}>
+              <DialogContent className="md:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-black">Dispatch Scanning: {transferSKUCart.find(i => i.product.id === pickingUnitsFor)?.product.model_name}</DialogTitle>
+                  <DialogDescription>Select {transferSKUCart.find(i => i.product.id === pickingUnitsFor)?.quantity} physical units available at this branch.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                   <div className="max-h-60 overflow-y-auto border rounded-xl bg-slate-50 p-2 space-y-1">
+                      {inventoryResults.map(unit => {
+                        const isSelected = transferSKUCart.find(i => i.product.id === pickingUnitsFor)?.selectedUnits.find(u => u.id === unit.id)
+                        return (
+                          <button
+                            key={unit.id}
+                            onClick={() => toggleUnitSelection(pickingUnitsFor!, unit)}
+                            className={cn(
+                              "w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left",
+                              isSelected ? "bg-blue-50 border-blue-200" : "bg-white border-transparent hover:border-slate-200"
+                            )}
+                          >
+                             <div className="flex flex-col">
+                               <span className="text-[10px] font-black text-blue-600 tracking-tight">{unit.serial_number}</span>
+                               <span className="text-[8px] font-bold text-slate-400 uppercase">{unit.status}</span>
+                             </div>
+                             {isSelected ? <CheckCircle2 className="h-4 w-4 text-blue-600" /> : <Plus className="h-4 w-4 text-slate-300" />}
+                          </button>
+                        )
+                      })}
+                   </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={() => setPickingUnitsFor(null)} className="font-bold">Finished Scanning</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </DialogContent>
         </Dialog>
       </div>
@@ -595,11 +741,11 @@ export function StockTransfersView({
       <Tabs defaultValue="active" className="w-full">
         <TabsList className="mb-6 bg-slate-100/50 p-1 rounded-xl h-12 w-full max-w-md shadow-sm">
           <TabsTrigger value="active" className="flex-1 rounded-lg px-6 font-black text-[10px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
-            <Clock className="h-3.5 w-3.5 mr-2 text-amber-500" />
+            <ClockIcon className="h-3.5 w-3.5 mr-2 text-amber-500" />
             PENDING
           </TabsTrigger>
           <TabsTrigger value="history" className="flex-1 rounded-lg px-6 font-black text-[10px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
-            <History className="h-3.5 w-3.5 mr-2 text-emerald-500" />
+            <HistoryIcon className="h-3.5 w-3.5 mr-2 text-emerald-500" />
             HISTORY
           </TabsTrigger>
         </TabsList>
@@ -635,8 +781,8 @@ export function StockTransfersView({
                      <TableCell colSpan={5} className="h-32 text-center text-slate-400 text-xs">Loading waybills...</TableCell>
                   </TableRow>
                 ) : transfers.filter(t => 
-                  t.status === 'Pending' && 
-                  (!transferSearch || t.transfer_number.toLowerCase().includes(transferSearch.toLowerCase()))
+                  t.status === 'IN_TRANSIT' && 
+                  (!transferSearch || t.transfer_number.toLowerCase().includes(transferSearch.toLowerCase()) || t.waybill_number?.toLowerCase().includes(transferSearch.toLowerCase()))
                 ).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-32 text-center text-slate-400 text-xs italic">
@@ -646,8 +792,8 @@ export function StockTransfersView({
                 ) : (
                   transfers
                     .filter(t => 
-                      t.status === 'Pending' && 
-                      (!transferSearch || t.transfer_number.toLowerCase().includes(transferSearch.toLowerCase()))
+                      t.status === 'IN_TRANSIT' && 
+                      (!transferSearch || t.transfer_number.toLowerCase().includes(transferSearch.toLowerCase()) || t.waybill_number?.toLowerCase().includes(transferSearch.toLowerCase()))
                     )
                     .map(tx => {
                     const isDestination = tx.destination_branch_id === userBranchId;
@@ -659,7 +805,7 @@ export function StockTransfersView({
                         <TableCell>
                           <div className="flex items-center gap-2">
                              <span className="text-[9px] font-black text-slate-500 uppercase">{tx.source_branch?.code}</span>
-                             <ChevronRight className="h-3 w-3 text-slate-300" />
+                             <ChevronIcon className="h-3 w-3 text-slate-300" />
                              <span className={cn("text-[9px] font-black uppercase", isDestination ? "text-blue-600" : "text-slate-500")}>
                                 {tx.destination_branch?.code}
                              </span>
@@ -682,7 +828,7 @@ export function StockTransfersView({
                               onClick={() => openReceiveVerification(tx)}
                               className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] h-8 rounded-lg shadow-sm px-4 gap-1.5"
                             >
-                              <ShieldCheck className="h-3 w-3" />
+                              <ShieldIcon className="h-3 w-3" />
                               RECEIVE
                             </Button>
                           ) : (
@@ -724,13 +870,15 @@ export function StockTransfersView({
               <TableBody>
                 {transfers
                   .filter(t => 
-                    t.status !== 'Pending' && 
+                    t.status !== 'IN_TRANSIT' && 
                     (!transferSearch || t.transfer_number.toLowerCase().includes(transferSearch.toLowerCase()))
                   )
                   .map(tx => (
                   <TableRow key={tx.id} className="h-12 border-slate-50">
                     <TableCell className="px-4">
-                      <span className="text-[9px] font-black text-slate-600 font-mono uppercase">{tx.transfer_number}</span>
+                      <span className="text-[9px] font-black text-slate-600 font-mono uppercase">
+                        {tx.waybill_number || tx.transfer_number}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">{tx.source_branch?.code} → {tx.destination_branch?.code}</span>
@@ -753,7 +901,7 @@ export function StockTransfersView({
         <DialogContent className="md:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-black flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              <ShieldIcon className="h-5 w-5 text-emerald-600" />
               Verifying Arrival
             </DialogTitle>
           </DialogHeader>
@@ -790,7 +938,7 @@ export function StockTransfersView({
               />
             ) : (
               <Button variant="ghost" onClick={() => setDiscrepancyMode(true)} className="w-full text-[9px] font-black text-rose-500 uppercase">
-                <AlertTriangle className="h-3 w-3 mr-2" /> Report Discrepancy
+                <AlertIcon className="h-3 w-3 mr-2" /> Report Discrepancy
               </Button>
             )}
           </div>

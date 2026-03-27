@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +21,8 @@ import {
   Clock,
   Settings2,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Send
 } from "lucide-react"
 import { 
   Tooltip,
@@ -50,6 +51,10 @@ type ProductMetadata = {
   description: string
   product_code: string
   min_stock_level: number
+  low_stock_threshold: number | null
+  categories: {
+    low_stock_threshold: number
+  } | null
   tracking_type: string
 }
 
@@ -106,16 +111,12 @@ export default function InventoryDashboard() {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [expandedBranches, setExpandedBranches] = useState<Record<string, boolean>>({})
   const searchParams = useSearchParams()
-  const initialTab = (searchParams.get('tab') === 'inventory-register' || searchParams.get('tab') === 'active') ? 'active' : (searchParams.get('tab') === 'dispositions' ? 'dispositions' : 'active')
-  const [activeTab, setActiveTab] = useState<'active' | 'dispositions'>(initialTab as 'active' | 'dispositions')
-
-  useEffect(() => {
+  const router = useRouter()
+  const activeTab = useMemo(() => {
     const tab = searchParams.get('tab')
-    if (tab === 'inventory-register' || tab === 'active') {
-      setActiveTab('active')
-    } else if (tab === 'dispositions') {
-      setActiveTab('dispositions')
-    }
+    if (tab === 'inventory-register' || tab === 'active') return 'active'
+    if (tab === 'dispositions') return 'dispositions'
+    return 'active'
   }, [searchParams])
 
   const toggleRow = (key: string) => {
@@ -143,6 +144,10 @@ export default function InventoryDashboard() {
         setBranches(dbBranches)
       }
 
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) return
+
+      const lowStockQuery = supabase.from('view_low_stock_alerts').select('product_id', { count: 'exact' })
       // Fetch Inventory with Product join
       let query = supabase
         .from('inventory')
@@ -156,6 +161,10 @@ export default function InventoryDashboard() {
             description,
             product_code,
             min_stock_level,
+            low_stock_threshold,
+            categories:categories!products_category_fkey (
+              low_stock_threshold
+            ),
             tracking_type
           ),
           branch:branches!left (*),
@@ -351,7 +360,7 @@ export default function InventoryDashboard() {
 
       <div className="flex border-b border-slate-200 mt-6 mb-4">
         <button
-          onClick={() => setActiveTab('active')}
+          onClick={() => router.push('?tab=active', { scroll: false })}
           className={cn(
             "px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors",
             activeTab === 'active' ? "border-[#001529] text-[#001529]" : "border-transparent text-slate-400 hover:text-slate-600"
@@ -360,7 +369,7 @@ export default function InventoryDashboard() {
           Active Stock
         </button>
         <button
-          onClick={() => setActiveTab('dispositions')}
+          onClick={() => router.push('?tab=dispositions', { scroll: false })}
           className={cn(
             "px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors",
             activeTab === 'dispositions' ? "border-[#D4860A] text-[#D4860A]" : "border-transparent text-slate-400 hover:text-slate-600"
@@ -610,7 +619,27 @@ export default function InventoryDashboard() {
                             </TableCell>
                             <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
                               <div className="flex flex-col items-center gap-0.5">
-                                <span className="text-xs font-black text-blue-600">{formattedCount}</span>
+                                <span className={cn(
+                                  "text-xs font-black",
+                                  group.total_network_stock <= (group.product?.low_stock_threshold ?? group.product?.categories?.low_stock_threshold ?? 10) 
+                                    ? "text-rose-600 animate-pulse" 
+                                    : "text-blue-600"
+                                )}>
+                                  {formattedCount}
+                                </span>
+                                {group.total_network_stock <= (group.product?.low_stock_threshold ?? group.product?.categories?.low_stock_threshold ?? 10) && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-5 w-5 p-0 hover:bg-rose-50 text-rose-500 mt-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/transfer?tab=requests&demand=${group.product?.id}`);
+                                    }}
+                                  >
+                                    <Send className="h-3 w-3" />
+                                  </Button>
+                                )}
                                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Network</span>
                               </div>
                             </TableCell>

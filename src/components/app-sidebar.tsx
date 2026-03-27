@@ -191,15 +191,15 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#0F172A] transition-all duration-300 group-data-[state=collapsed]:w-[80px] group-data-[state=collapsed]:max-w-[80px]">
       {/* ── Logo Header ── */}
-      <SidebarHeader className={cn("px-4 py-5 border-b border-white/5", isCollapsed && "px-2")}>
+      <SidebarHeader className={cn("px-4 py-5 border-b border-white/5", isCollapsed && "px-[5px]")}>
         <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
-          <div className="relative h-10 w-10 bg-white rounded-lg shadow-sm shrink-0 overflow-hidden">
+          <div className="relative h-[70px] w-[70px] shrink-0 overflow-hidden">
             <Image
               src={logoUrl}
               alt="Ethan Home Appliances"
               fill
               priority
-              className="object-contain p-0.5"
+              className="object-contain"
             />
           </div>
           {!isCollapsed && (

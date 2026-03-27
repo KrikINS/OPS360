@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 /**
  * Sets the active branch for the current session via a persistent cookie.
@@ -16,11 +17,12 @@ export async function setActiveBranchAction(branchId: string) {
     maxAge: 60 * 60 * 24 * 30,
     path: '/',
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Ensure it works on localhost even in production mode
     sameSite: 'lax'
   })
 
-  // Refresh everything
-  revalidatePath('/')
-  return { success: true }
+  // Refresh everything aggressively across the dashboard
+  revalidatePath('/', 'layout')
+  // Using direct redirect to force a clean navigation state with the new cookie
+  redirect('/')
 }
