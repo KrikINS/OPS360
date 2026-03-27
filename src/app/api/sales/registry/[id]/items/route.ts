@@ -38,9 +38,14 @@ export async function GET(
 
     if (!profile) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-    const allowedRoles = ['admin', 'manager', 'staff']
-    if (!allowedRoles.includes(profile.role || "")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const normalizedRole = (profile.role || "").toLowerCase().trim();
+    const isAuthorized = normalizedRole === 'admin/owner' || 
+                         normalizedRole === 'manager' || 
+                         normalizedRole === 'sales rep' ||
+                         normalizedRole === 'admin';
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Forbidden - Role unauthorized" }, { status: 403 })
     }
 
     // 3. Fetch line items using the Flattened View

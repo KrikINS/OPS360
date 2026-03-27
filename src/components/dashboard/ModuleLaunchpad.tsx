@@ -31,7 +31,7 @@ const MODULES: Module[] = [
     name: "Inventory Management",
     description: "Active Stock & Registry",
     icon: Package,
-    path: "/inventory",
+    path: "/inventory/registry",
     color: "from-blue-500/20 to-blue-600/5",
   },
   {
@@ -39,7 +39,7 @@ const MODULES: Module[] = [
     name: "Procurement Portal",
     description: "Orders, GRN & Vendors",
     icon: ShoppingCart,
-    path: "/procurement",
+    path: "/procurement/po-registry",
     color: "from-amber-500/20 to-amber-600/5",
   },
   {
@@ -47,7 +47,7 @@ const MODULES: Module[] = [
     name: "Sales Hub",
     description: "Invoice & Customers",
     icon: BarChart3,
-    path: "/sales",
+    path: "/sales/hub",
     color: "from-emerald-500/20 to-emerald-600/5",
   },
   {
@@ -109,7 +109,7 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) return
 
-      let query = supabase.from('view_low_stock_alerts').select('product_id', { count: 'exact' })
+      const query = supabase.from('view_low_stock_alerts').select('product_id', { count: 'exact' })
       
       // If not admin, maybe filter by user's assigned branches?
       // Based on user request, it didn't specify strict filtering here but hinted at branch-context.

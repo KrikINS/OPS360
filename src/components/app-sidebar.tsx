@@ -64,7 +64,7 @@ const navigationGroups = [
     title: "Inventory Management",
     icon: PackageIcon,
     items: [
-      { title: "Inventory Registry", url: "/", icon: PackageIcon },
+      { title: "Inventory Registry", url: "/inventory/registry", icon: PackageIcon },
       { title: "Product Master", url: "/products", icon: Archive },
       { title: "Transfer Control Center", url: "/transfer", icon: ArrowRightLeft },
     ]
@@ -74,11 +74,11 @@ const navigationGroups = [
     title: "Procurement Portal",
     icon: ShoppingCart,
     items: [
-      { title: "PO Registry", url: "/procurement", icon: FileText },
-      { title: "GRN Registry", url: "/procurement?tab=pending", icon: CheckCircle2 },
-      { title: "3-WAY Match Audit", url: "/procurement?tab=audit", icon: ShieldCheck },
-      { title: "Purchase Returns", url: "/procurement?tab=returns", icon: RotateCcw },
-      { title: "Discrepancy Report Registry", url: "/procurement?tab=discrepancies", icon: AlertCircle },
+      { title: "PO Registry", url: "/procurement/po-registry", icon: FileText },
+      { title: "GRN Registry", url: "/procurement/po-registry?tab=pending", icon: CheckCircle2 },
+      { title: "3-WAY Match Audit", url: "/procurement/po-registry?tab=audit", icon: ShieldCheck },
+      { title: "Purchase Returns", url: "/procurement/po-registry?tab=returns", icon: RotateCcw },
+      { title: "Discrepancy Report Registry", url: "/procurement/po-registry?tab=discrepancies", icon: AlertCircle },
       { title: "Vendor Management", url: "/vendors", icon: Users },
     ]
   },
@@ -87,8 +87,8 @@ const navigationGroups = [
     title: "Sales Hub",
     icon: BarChart3,
     items: [
-      { title: "Sales Registry", url: "/sales/registry", icon: List },
-      { title: "Sales Return", url: "/sales/returns", icon: RotateCcw },
+      { title: "Sales Registry", url: "/sales/hub", icon: List },
+      { title: "Sales Return", url: "/sales/hub?tab=returns", icon: RotateCcw },
       { title: "Customer Registry", url: "/admin/customers", icon: UserSquare },
       { title: "Loyalty Points", url: "/sales/loyalty", icon: Star },
     ]
@@ -105,8 +105,8 @@ const navigationGroups = [
     title: "Finance & Accounts",
     icon: Wallet,
     items: [
-      { title: "Branch-Wise P&L", url: "/finance/pl", icon: BarChart3 },
-      { title: "Expense Tracker", url: "/finance/expenses", icon: Receipt },
+      { title: "Branch-Wise P&L", url: "/accounting", icon: BarChart3 },
+      { title: "Expense Tracker", url: "/accounting", icon: Receipt },
     ]
   },
   {
@@ -130,7 +130,7 @@ const navigationGroups = [
     title: "Human Resources",
     icon: Users,
     items: [
-      { title: "Personnel Registry", url: "/hr", icon: Users },
+      { title: "Personnel Registry", url: "/staff", icon: Users },
     ]
   }
 ]
@@ -284,7 +284,10 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                           <Link
                             {...props}
                             href={group.url || "#"}
-                            onClick={() => setNavigatingTo(group.url || "#")}
+                            onClick={() => {
+                              setNavigatingTo(group.url || "#");
+                              setOpenGroupId(null);
+                            }}
                             className={cn(
                               "flex items-center w-full h-full", 
                               isCollapsed ? "justify-center" : "gap-3 px-3",
@@ -339,7 +342,10 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                                     <Link
                                       {...props}
                                       href={item.url}
-                                      onClick={() => setNavigatingTo(item.url)}
+                                      onClick={() => {
+                                        setNavigatingTo(item.url);
+                                        setOpenGroupId(null);
+                                      }}
                                       className={cn(
                                         "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150 cursor-pointer outline-none w-full",
                                         isActive 
@@ -409,7 +415,10 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                                 <SidebarMenuItem key={item.title}>
                                   <Link
                                     href={item.url}
-                                    onClick={() => setNavigatingTo(item.url)}
+                                    onClick={() => {
+                                      setNavigatingTo(item.url);
+                                      setOpenGroupId(null);
+                                    }}
                                     className={cn(
                                       "flex items-center gap-3 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 relative",
                                       isActive
@@ -444,7 +453,10 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
         {isAdminMode && (
           <Link
             href="/"
-            onClick={() => setNavigatingTo("/")}
+            onClick={() => {
+              setNavigatingTo("/");
+              setOpenGroupId(null);
+            }}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-bold transition-all duration-150",
               "bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border border-emerald-600/20",

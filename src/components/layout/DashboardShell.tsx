@@ -39,7 +39,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
   return (
     <SidebarProvider>
       <AppSidebar permissions={permissions} profile={profile} />
-      <SidebarInset className="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out overflow-x-hidden">
+      <SidebarInset className="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out">
         <header className="h-14 flex items-center justify-between px-5 border-b bg-white shadow-sm gap-4 shrink-0 z-50">
           <div className="flex items-center gap-3">
             <SidebarTrigger className="text-slate-500 hover:text-primary transition-colors" />
@@ -59,8 +59,10 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
             <UserNav profile={profile} />
           </div>
         </header>
-        <div className="flex-1 overflow-auto bg-[linear-gradient(135deg,#f8fafc_0%,#f1f5f9_100%)]">
-          {children}
+        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+          <main className="flex-1 overflow-y-auto pb-6 scrollbar-thin scrollbar-thumb-slate-200">
+            {children}
+          </main>
         </div>
       </SidebarInset>
     </SidebarProvider>

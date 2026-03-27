@@ -420,7 +420,7 @@ export default function PurchaseReturn() {
   return (
     <div className="flex-1 space-y-8 mt-0">
       <Card className="shadow-md border-slate-200 border-t-0 rounded-t-none overflow-hidden py-0">
-        <CardHeader className="bg-[#001529] text-white pt-4 pb-2 px-6 border-b-0 space-y-0 rounded-t-none">
+        <CardHeader className="bg-[#001529]/95 backdrop-blur-md sticky top-0 z-20 pt-4 pb-2 px-6 border-b-0 space-y-0 rounded-t-none shadow-[0_4px_12px_-4px_rgba(0,21,41,0.35)] text-white">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <CardTitle className="text-lg flex items-center gap-2 text-white">
               <RotateCcw className="h-5 w-5 text-orange-400" />
@@ -571,9 +571,9 @@ export default function PurchaseReturn() {
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200">
               <Table>
-                <TableHeader className="bg-slate-50 border-b">
+                <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                   <TableRow>
                     <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Return ID</TableHead>
                     <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Execution Hub</TableHead>
