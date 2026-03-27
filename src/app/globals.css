@@ -223,8 +223,10 @@
   .scrollbar-hide {
     /* IE and Edge */
     -ms-overflow-style: none !important;
-    /* Firefox */
-    scrollbar-width: none !important;
+    /* Firefox and modern Chrome/Safari */
+    @supports (scrollbar-width: none) {
+      scrollbar-width: none !important;
+    }
   }
   /* Custom Scrollbar */
   .custom-scrollbar::-webkit-scrollbar {

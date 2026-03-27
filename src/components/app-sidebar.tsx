@@ -278,7 +278,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                           isActive 
                             ? "text-white bg-[#7FD1E3]/05" 
                             : "text-slate-300 hover:text-white hover:bg-white/5",
-                          isCollapsed && "justify-center"
+                          isCollapsed && "w-full flex justify-center"
                         )}
                         render={(props) => (
                           <Link
@@ -311,7 +311,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                               isActive={isGroupActive}
                               tooltip={group.title}
                               className={cn(
-                                "h-12 w-full flex items-center justify-center px-0 transition-all duration-150 relative tracking-tight",
+                                "h-12 w-full flex items-center justify-center px-0 transition-all duration-150 relative tracking-tight group-data-[state=collapsed]:justify-center",
                                 isGroupActive ? "text-white bg-[#7FD1E3]/05" : "text-slate-300 hover:text-white hover:bg-white/5",
                                 props.className
                               )}
@@ -383,7 +383,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                           isGroupActive 
                             ? "text-white bg-[#7FD1E3]/05" 
                             : "text-slate-300 hover:text-white hover:bg-white/5",
-                          isCollapsed && "justify-center"
+                          isCollapsed && "w-full flex justify-center"
                         )}
                         render={(props) => (
                           <CollapsibleTrigger {...props} nativeButton={false} render={(triggerProps) => (

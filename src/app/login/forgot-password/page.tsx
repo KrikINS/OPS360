@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Loader2, Mail, ArrowLeft, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 
+import { getURL } from "@/utils/getURL"
+
 export default function ForgotPasswordPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -27,7 +29,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${getURL()}auth/reset-password`,
       })
 
       if (resetError) throw resetError
