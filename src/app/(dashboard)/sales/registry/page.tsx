@@ -11,6 +11,8 @@ import {
   RefreshCcw
 } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
+import { createClient } from "@/utils/supabase/client"
+import { exportToCSV } from "@/lib/export-utils"
 
 interface Sale {
   sale_id: string;
@@ -37,10 +39,23 @@ export default function SalesRegistryPage() {
     invoiceCount: 0,
     avgTicket: 0
   })
+  const [canExport, setCanExport] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const fetchSales = async () => {
     setLoading(true)
+    const supabase = createClient()
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+        const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'accounting').eq('enabled', true)
+        
+        const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'finance'
+        const hasAccounting = permissions && permissions.length > 0
+        setCanExport(isAdmin || hasAccounting)
+      }
+
       const res = await fetch('/api/sales/registry')
       if (!res.ok) throw new Error("Failed to fetch sales")
       const data = await res.json()
@@ -56,6 +71,22 @@ export default function SalesRegistryPage() {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExport = async () => {
+    const supabase = createClient()
+    setExporting(true)
+    try {
+      const { data, error } = await supabase.rpc('get_export_data', { p_type: 'sales_registry' })
+      if (error) throw error
+      if (data) {
+        exportToCSV(data as Record<string, any>[], 'Sales_Registry')
+      }
+    } catch (err) {
+      console.error("Export failed", err)
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -126,7 +157,7 @@ export default function SalesRegistryPage() {
           <p className="text-slate-500 font-bold animate-pulse">Syncing Sales Registry...</p>
         </div>
       ) : (
-        <SalesRegistryTable sales={sales} />
+        <SalesRegistryTable sales={sales} onExport={handleExport} canExport={canExport} />
       )}
     </div>
   )

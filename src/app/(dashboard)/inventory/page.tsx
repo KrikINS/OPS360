@@ -22,8 +22,10 @@ import {
   Settings2,
   ChevronRight,
   ChevronDown,
-  Send
+  Send,
+  FileSpreadsheet
 } from "lucide-react"
+import { exportToCSV } from "@/lib/export-utils"
 import { 
   Tooltip,
   TooltipContent,
@@ -110,6 +112,8 @@ export default function InventoryDashboard() {
   const [showFilters, setShowFilters] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [expandedBranches, setExpandedBranches] = useState<Record<string, boolean>>({})
+  const [canExport, setCanExport] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const searchParams = useSearchParams()
   const router = useRouter()
   const activeTab = useMemo(() => {
@@ -144,10 +148,17 @@ export default function InventoryDashboard() {
         setBranches(dbBranches)
       }
 
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) return
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-      const lowStockQuery = supabase.from('view_low_stock_alerts').select('product_id', { count: 'exact' })
+      // Check export permission
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'accounting').eq('enabled', true)
+      
+      const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'finance'
+      const hasAccounting = permissions && permissions.length > 0
+      setCanExport(isAdmin || hasAccounting)
+
       // Fetch Inventory with Product join
       let query = supabase
         .from('inventory')
@@ -202,6 +213,22 @@ export default function InventoryDashboard() {
       supabase.removeChannel(channel)
     }
   }, [selectedBranch])
+
+  const handleExport = async () => {
+    const supabase = createClient()
+    setExporting(true)
+    try {
+      const { data, error } = await supabase.rpc('get_export_data', { p_type: 'stock_ledger' })
+      if (error) throw error
+      if (data) {
+        exportToCSV(data as Record<string, any>[], 'Stock_Ledger')
+      }
+    } catch (err) {
+      console.error("Export failed", err)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const calculateDaysInStock = (createdAt: string) => {
     const createdDate = new Date(createdAt)
@@ -310,6 +337,17 @@ export default function InventoryDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {canExport && (
+            <Button 
+              onClick={handleExport} 
+              variant="outline" 
+              disabled={exporting}
+              className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-1.5 font-bold h-10 px-4 text-xs transition-all shadow-sm"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin text-emerald-600" /> : <FileSpreadsheet className="h-4 w-4 text-emerald-600" />}
+              Export Ledger
+            </Button>
+          )}
           <Button 
             onClick={() => setIsImportModalOpen(true)}
             className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs"

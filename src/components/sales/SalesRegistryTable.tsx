@@ -15,7 +15,8 @@ import {
   Eye, 
   Printer, 
   Search,
-  Loader2
+  Loader2,
+  FileSpreadsheet
 } from "lucide-react"
 import { SaleDetailsDrawer } from './SaleDetailsDrawer'
 import { CustomerHistoryDrawer } from './CustomerHistoryDrawer'
@@ -42,9 +43,12 @@ interface Sale {
 interface SaleRegistryTableProps {
   sales: Sale[];
   onPrint?: (saleId: string) => void;
+  onExport?: () => void;
+  canExport?: boolean;
+  exporting?: boolean;
 }
 
-export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
+export function SalesRegistryTable({ sales, onPrint, onExport, canExport, exporting }: SaleRegistryTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null)
@@ -111,6 +115,17 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
             className="pl-11 h-12 bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 transition-all font-medium"
           />
         </div>
+        {canExport && (
+          <Button 
+            onClick={onExport} 
+            variant="outline" 
+            disabled={exporting}
+            className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-1.5 font-bold h-12 px-6 rounded-xl transition-all shadow-sm hidden sm:flex"
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin text-emerald-600" /> : <FileSpreadsheet className="h-4 w-4 text-emerald-600" />}
+            Export to Excel
+          </Button>
+        )}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">

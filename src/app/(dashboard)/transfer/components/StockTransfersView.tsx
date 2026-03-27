@@ -8,8 +8,9 @@ import { WaybillPrintTemplate } from "@/components/transfer/WaybillPrintTemplate
 import { Input } from "@/components/ui/input"
 import { 
   AlertTriangle as AlertIcon, CheckCircle2, ChevronRight as ChevronIcon, Clock as ClockIcon, History as HistoryIcon, Loader2, 
-  Package, Plus, Printer, Search, Send, ShieldCheck as ShieldIcon
+  Package, Plus, Printer, Search, Send, ShieldCheck as ShieldIcon, FileSpreadsheet
 } from "lucide-react"
+import { exportToCSV } from "@/lib/export-utils"
 import { createClient } from "@/utils/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import { type StockRequest } from "./StockRequestsView"
@@ -121,6 +122,10 @@ export function StockTransfersView({
   const [loading, setLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   
+  // Export State
+  const [canExport, setCanExport] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  
   // Create Transfer State
   const [userBranchId, setUserBranchId] = useState<string | null>(null)
   const [sourceId, setSourceId] = useState("")
@@ -211,19 +216,40 @@ export function StockTransfersView({
     setLoading(false)
   }, [supabase])
 
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const { data, error } = await supabase.rpc('get_export_data', { p_type: 'logistics_history' })
+      if (error) throw error
+      if (data) {
+        exportToCSV(data as Record<string, unknown>[], 'Logistics_History_Waybills')
+      }
+    } catch (err) {
+      console.error("Export failed", err)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   useEffect(() => {
     async function init() {
       const { data: branchData } = await supabase.from('branches').select('id, name, code')
-      const { data: authData } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
       
       if (branchData) setBranches(branchData)
       
-      if (authData?.user?.id) {
-        const { data: userProfile } = await supabase.from('profiles').select('assigned_branch_id').eq('id', authData.user.id).single()
-        if (userProfile?.assigned_branch_id) {
-          setUserBranchId(userProfile.assigned_branch_id)
-          setSourceId(userProfile.assigned_branch_id)
+      if (user?.id) {
+        const { data: profile } = await supabase.from('profiles').select('assigned_branch_id, role').eq('id', user.id).single()
+        if (profile?.assigned_branch_id) {
+          setUserBranchId(profile.assigned_branch_id)
+          setSourceId(profile.assigned_branch_id)
         }
+
+        // Check export permission
+        const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'finance'
+        const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'transfer').eq('enabled', true)
+        const hasTransferPerm = permissions && permissions.length > 0
+        setCanExport(isAdmin || hasTransferPerm)
       }
       
       await fetchTransfers()
@@ -468,7 +494,20 @@ export function StockTransfersView({
           <p className="text-xs text-slate-500 font-medium">Manage waybills and cross-branch logistics.</p>
         </div>
 
-        <Dialog open={isCreating} onOpenChange={setIsCreating}>
+        <div className="flex items-center gap-3">
+          {canExport && (
+            <Button 
+              onClick={handleExport} 
+              variant="outline" 
+              disabled={exporting}
+              className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-1.5 font-bold h-10 px-4 text-xs transition-all shadow-sm"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin text-emerald-600" /> : <FileSpreadsheet className="h-4 w-4 text-emerald-600" />}
+              Export Logistics
+            </Button>
+          )}
+
+          <Dialog open={isCreating} onOpenChange={setIsCreating}>
           <DialogTrigger 
             render={
               <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg font-black h-10 px-4 rounded-xl gap-2 flex items-center text-white text-xs">
@@ -737,6 +776,7 @@ export function StockTransfersView({
           </DialogContent>
         </Dialog>
       </div>
+    </div>
 
       <Tabs defaultValue="active" className="w-full">
         <TabsList className="mb-6 bg-slate-100/50 p-1 rounded-xl h-12 w-full max-w-md shadow-sm">

@@ -14,8 +14,10 @@ import {
   XCircle,
   RefreshCw,
   AlertTriangle,
-  History
+  History,
+  FileSpreadsheet
 } from "lucide-react"
+import { exportToCSV } from "@/lib/export-utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -67,11 +69,25 @@ export default function ProductsPage() {
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
   const [showArchived, setShowArchived] = useState(false)
   const [confirmingArchive, setConfirmingArchive] = useState<string | null>(null)
+  const [canExport, setCanExport] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const supabase = createClient()
 
   const fetchProducts = async () => {
     setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    // Check export permission
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'accounting').eq('enabled', true)
+      
+      const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'finance'
+      const hasAccounting = permissions && permissions.length > 0
+      setCanExport(isAdmin || hasAccounting)
+    }
+
     const { data } = await supabase
       .from("products")
       .select("id, model_name, brand, category, product_code, base_price, hsn_code, min_stock_level, tracking_type, description, gst_rate, warranty_months, is_archived")
@@ -80,6 +96,22 @@ export default function ProductsPage() {
     
     if (data) setProducts(data as Product[])
     setLoading(false)
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const { data, error } = await supabase.rpc('get_export_data', { p_type: 'product_master' })
+      if (error) throw error
+      if (data) {
+        exportToCSV(data as Record<string, any>[], 'Product_Master')
+      }
+    } catch (err) {
+      console.error("Export failed", err)
+      setToast({ message: "Export failed: Unauthorized access", type: "error" })
+    } finally {
+      setExporting(false)
+    }
   }
 
   useEffect(() => {
@@ -181,6 +213,17 @@ export default function ProductsPage() {
               <><Archive className="h-4 w-4" /> View Archived Assets</>
             )}
           </Button>
+          {canExport && (
+            <Button 
+              onClick={handleExport} 
+              variant="outline" 
+              disabled={exporting}
+              className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-1.5 font-bold h-10 px-4 text-xs transition-all shadow-sm"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin text-emerald-600" /> : <FileSpreadsheet className="h-4 w-4 text-emerald-600" />}
+              Export Registry
+            </Button>
+          )}
           {!showArchived && (
             <Button onClick={() => setIsAddOpen(true)} className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs">
               <Plus className="h-4 w-4" /> Add New Asset
