@@ -2221,7 +2221,7 @@ Are you sure you want to proceed?`)) return;
 
           }
         }}>
-          <DialogContent className="w-[90vw] max-w-[1200px] sm:max-w-none h-[85vh] flex flex-col p-0 gap-0 border-none shadow-2xl [&>button]:text-white">
+          <DialogContent className="w-[90vw] !max-w-[1200px] md:max-w-none h-[90vh] flex flex-col p-0 gap-0 border-none shadow-2xl rounded-xl overflow-hidden [&>button]:text-white">
             <DialogHeader className="bg-[#111827] p-8 text-white rounded-t-lg shrink-0">
               <div className="flex justify-between items-start w-full">
                 {/* Left Side: PO Reference and Date */}
@@ -2495,7 +2495,7 @@ Are you sure you want to proceed?`)) return;
             setViewingGRN(null);
           }
         }}>
-          <DialogContent className="w-[90vw] max-w-[1200px] sm:max-w-none h-[85vh] flex flex-col p-0 gap-0 border-none shadow-2xl [&>button]:text-white">
+          <DialogContent className="w-[90vw] !max-w-[1200px] md:max-w-none h-[90vh] flex flex-col p-0 gap-0 border-none shadow-2xl rounded-xl overflow-hidden [&>button]:text-white">
             <DialogHeader className="bg-[#111827] p-8 text-white rounded-t-lg shrink-0">
               <div className="flex justify-between items-start w-full">
                 <div className="space-y-4">

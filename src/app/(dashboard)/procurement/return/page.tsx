@@ -714,7 +714,7 @@ export default function PurchaseReturn() {
 
       {/* ── RETURN INITIATION MODAL ── */}
       <Dialog open={isReturnModalOpen} onOpenChange={setIsReturnModalOpen}>
-        <DialogContent className="sm:max-w-4xl w-full p-0 overflow-hidden border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh] [&>button]:text-white">
+        <DialogContent className="!max-w-4xl w-full md:max-w-none p-0 overflow-hidden border-none shadow-2xl rounded-2xl flex flex-col max-h-[90vh] [&>button]:text-white">
           <DialogHeader className="bg-[#001529] p-6 text-white border-b-0 space-y-1 shrink-0">
             <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
               <div className="bg-orange-500 p-2 rounded-lg">
@@ -950,7 +950,7 @@ export default function PurchaseReturn() {
             setViewingDebitNote(null);
           }
         }}>
-          <DialogContent className="w-[90vw] max-w-[1200px] sm:max-w-none h-[85vh] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl [&>button]:text-white">
+          <DialogContent className="w-[90vw] !max-w-[1200px] md:max-w-none h-[90vh] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl rounded-xl [&>button]:text-white">
             <DialogHeader className="bg-[#111827] p-8 text-white rounded-t-lg shrink-0">
               <div className="flex justify-between items-start w-full">
                 <div className="space-y-4">

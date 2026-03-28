@@ -55,12 +55,12 @@ function DialogContent({
         className={cn(
           "fixed z-50 flex flex-col bg-background text-sm ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           "inset-0 h-full w-full rounded-none overflow-y-auto p-0", // Mobile: Fullscreen
-          "md:top-1/2 md:left-1/2 md:h-auto md:max-h-[calc(100%-4rem)] md:w-full md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:p-6", // Tablet/Desktop
+          "md:top-1/2 md:left-1/2 md:max-h-[calc(100%-4rem)] md:w-full md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:p-6", // Tablet/Desktop (no md:h-auto so explicit h-* classes win)
           className
         )}
         {...props}
       >
-        <div className="flex flex-col h-full md:h-auto">
+        <div className="flex flex-col h-full">
           {children}
         </div>
         {showCloseButton && (
