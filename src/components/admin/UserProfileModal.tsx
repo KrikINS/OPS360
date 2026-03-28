@@ -19,6 +19,7 @@ import {
   AccordionTrigger 
 } from "@/components/ui/accordion"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Switch } from "@/components/ui/switch"
 import { Loader2, Shield, User, Lock, AlertTriangle, Copy, Check, Phone } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Profile } from "@/app/admin/users/page"
@@ -73,6 +74,19 @@ export function UserProfileModal({
 
   const handleBasicInfoChange = (field: keyof Profile, value: string) => {
     setFormData((prev) => prev ? ({ ...prev, [field]: value }) : null)
+  }
+
+  const toggleModulePermission = (module: string, checked: boolean) => {
+    setFormData((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        permissions: {
+          ...(prev.permissions || {}),
+          [module]: checked
+        }
+      }
+    })
   }
 
   const toggleRegisterLevel = (module: string, register: string, next: 'view' | 'edit') => {
@@ -205,24 +219,39 @@ export function UserProfileModal({
               <Lock className="h-3 w-3" /> Register Access (Deep Dive)
             </h4>
             
-            <Accordion className="w-full space-y-2">
+            <Accordion className="w-full space-y-2" type="multiple">
               {Object.entries(MODULE_REGISTERS).map(([module, registers]) => {
                 const isModuleEnabled = formData.permissions?.[module]
-                if (!isModuleEnabled) return null
 
                 return (
                   <AccordionItem key={module} value={module} className="border border-slate-200 bg-white rounded-lg overflow-hidden px-4">
-                    <AccordionTrigger className="hover:no-underline py-3">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          isModuleEnabled ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300"
-                        )} />
-                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">{module} PROTOCOL</span>
+                    <div className="flex items-center justify-between py-1 pr-1">
+                      <AccordionTrigger className="hover:no-underline py-3 flex-1">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            isModuleEnabled ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300"
+                          )} />
+                          <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">{module} PROTOCOL</span>
+                        </div>
+                      </AccordionTrigger>
+                      <div className="flex items-center gap-2 p-2">
+                        <span className="text-[8px] font-black uppercase text-slate-400">STATUS: {isModuleEnabled ? "ACTIVE" : "INACTIVE"}</span>
+                        <Switch 
+                          checked={isModuleEnabled || false} 
+                          onCheckedChange={(checked) => toggleModulePermission(module, checked)}
+                          className="scale-75"
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       </div>
-                    </AccordionTrigger>
+                    </div>
                     <AccordionContent keepMounted={true} className="pb-4 space-y-3">
-                      {registers.map((reg) => {
+                      {!isModuleEnabled && (
+                        <div className="p-4 rounded-lg bg-slate-50 border border-dashed border-slate-200 text-center">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase">Activate this protocol for deep-dive access controls</p>
+                        </div>
+                      )}
+                      {isModuleEnabled && registers.map((reg) => {
                         const key = reg.toLowerCase().replace(/ /g, "_")
                         const level = formData.register_permissions?.[module]?.[key] || "view"
                         

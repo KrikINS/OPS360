@@ -202,6 +202,8 @@ export default function UserManagementPage() {
         .update({
           full_name: updated.full_name,
           email: updated.email,
+          phone: updated.phone,
+          permissions: updated.permissions,
           register_permissions: updated.register_permissions
         })
         .eq('id', updated.id)
