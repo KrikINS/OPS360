@@ -267,11 +267,14 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
             <SidebarMenu className="space-y-3">
             {navigationGroups
               .filter(group => {
+                const normalizedRole = (profile.role || "").toLowerCase().trim();
+                const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner';
+
                 // Admins see everything
-                if (profile.role === 'Admin/Owner') return true
+                if (isAdmin) return true
                 // Special case for System Admin group - restrict to role check usually, 
                 // but if tied to a permission, check it.
-                if (group.id === 'admin') return profile.role === 'Admin/Owner'
+                if (group.id === 'admin') return isAdmin
                 
                 return permissions[group.id] === true
               })

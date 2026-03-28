@@ -44,7 +44,10 @@ export async function POST(request: Request) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'Admin/Owner') {
+    const normalizedRole = profile?.role?.toLowerCase().trim() || ""
+    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'admin/owner'
+
+    if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden. Admin access required." }, { status: 403 })
     }
 

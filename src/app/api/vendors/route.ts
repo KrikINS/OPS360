@@ -133,7 +133,10 @@ export async function PATCH(request: Request) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'admin' && profile?.role !== 'manager') {
+  const normalizedRole = profile?.role?.toLowerCase().trim() || ""
+  const isAuthorized = normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'admin/owner' || normalizedRole === 'manager'
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Insufficient permissions to update vendors" }, { status: 403 })
   }
 

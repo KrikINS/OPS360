@@ -218,7 +218,10 @@ export async function PATCH(request: Request) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
+    const normalizedRole = profile?.role?.toLowerCase().trim() || ""
+    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'admin/owner'
+
+    if (!isAdmin) {
       return NextResponse.json({ error: "Only admins can approve purchase orders" }, { status: 403 })
     }
   }
@@ -231,7 +234,10 @@ export async function PATCH(request: Request) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
+    const normalizedRole = profile?.role?.toLowerCase().trim() || ""
+    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'admin/owner'
+
+    if (!isAdmin) {
       return NextResponse.json({ error: "Only admins can request revisions" }, { status: 403 })
     }
   }

@@ -38,6 +38,7 @@ export async function GET(request: Request) {
 
     const normalizedRole = (profile.role || "").toLowerCase().trim();
     const isAuthorized = normalizedRole === 'admin/owner' || 
+                         normalizedRole === 'owner' ||
                          normalizedRole === 'manager' || 
                          normalizedRole === 'sales rep' ||
                          normalizedRole === 'admin';

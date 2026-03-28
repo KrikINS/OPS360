@@ -128,8 +128,11 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
     }
   }, [isVisible])
 
+  const normalizedRole = (role || "").toLowerCase().trim();
+  const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner';
+
   // Admins always see all modules; others filter by permissions
-  const allowedModules = role === "Admin/Owner" 
+  const allowedModules = isAdmin 
     ? MODULES 
     : MODULES.filter(m => permissions?.[m.id])
 
