@@ -24,11 +24,25 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [receivedAmount, setReceivedAmount] = useState<string>("")
   const [isPrinting, setIsPrinting] = useState(false)
   const componentRef = React.useRef<HTMLDivElement>(null)
+  const shouldAutoPrintRef = React.useRef(false)
+  const shouldManualPrintRef = React.useRef(false)
   const { fetchInvoiceById } = usePos()
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
   })
+
+  const handleTemplateReady = React.useCallback(() => {
+    if (shouldAutoPrintRef.current) {
+      shouldAutoPrintRef.current = false
+      handlePrint()
+    }
+    if (shouldManualPrintRef.current) {
+      shouldManualPrintRef.current = false
+      handlePrint()
+      setIsPrinting(false)
+    }
+  }, [handlePrint])
 
   // Reset state on close
   useEffect(() => {
@@ -40,6 +54,8 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
         setInvoiceNumberDisplay(null)
         setInvoiceFullData(null)
         setReceivedAmount("")
+        shouldAutoPrintRef.current = false
+        shouldManualPrintRef.current = false
       }, 300)
     }
   }, [open])
@@ -60,8 +76,8 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setInvoiceNumberDisplay(result.invoiceData.invoice_number)
       setInvoiceFullData(result.invoiceData)
       setStatus('success')
-      // Trigger print after success screen is visible
-      setTimeout(() => handlePrint(), 800)
+      // Mark for auto print, it will trigger when InvoiceTemplate is ready
+      shouldAutoPrintRef.current = true
     }
  else {
       setErrorMsg(result.error || "Transaction failed")
@@ -201,9 +217,13 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                   setIsPrinting(true)
                   // Re-fetch latest to ensure zero items issue isn't present
                   const latest = await fetchInvoiceById(invoiceId!)
-                  if (latest) setInvoiceFullData(latest)
-                  handlePrint()
-                  setTimeout(() => setIsPrinting(false), 1000)
+                  if (latest) {
+                    setInvoiceFullData(latest)
+                    shouldManualPrintRef.current = true
+                  } else {
+                    handlePrint()
+                    setIsPrinting(false)
+                  }
                 }}
                 disabled={isPrinting}
               >
@@ -224,7 +244,12 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
             
             {/* Off-screen template for reliable printing */}
             <div className="fixed top-[-10000px] left-[-10000px] opacity-0 pointer-events-none z-[-100]">
-              <InvoiceTemplate ref={componentRef} invoiceId={invoiceId || undefined} initialData={invoiceFullData} />
+              <InvoiceTemplate 
+                ref={componentRef} 
+                invoiceId={invoiceId || undefined} 
+                initialData={invoiceFullData} 
+                onReady={handleTemplateReady}
+              />
             </div>
           </div>
         )}

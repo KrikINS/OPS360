@@ -17,17 +17,34 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [isVerifying, setIsVerifying] = useState(true)
   
   const router = useRouter()
   const supabase = createClient()
 
-  // Verify session on mount (to ensure we are authorized to reset)
   useEffect(() => {
     const checkSession = async () => {
+      // 1. Check if we have a session
       const { data: { session } } = await supabase.auth.getSession()
+      
+      // 2. If no session, wait a bit for Supabase to process URL hash (implicit flow)
       if (!session) {
-        router.push("/login")
+        // Check if the current URL has an access token or recovery type in hash
+        const hash = window.location.hash
+        const isRecovery = hash.includes('type=recovery') || hash.includes('access_token=')
+        
+        if (isRecovery) {
+          // Wait briefly for SDK to parse hash
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          const { data: { session: retrySession } } = await supabase.auth.getSession()
+          if (!retrySession) {
+            router.push("/login")
+          }
+        } else {
+          router.push("/login")
+        }
       }
+      setIsVerifying(false)
     }
     checkSession()
   }, [supabase, router])
@@ -73,6 +90,17 @@ export default function ResetPasswordPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#001529] font-geist">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-[#7FD1E3]" />
+          <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">Validating Session...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

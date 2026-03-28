@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { ModuleLaunchpad } from "@/components/dashboard/ModuleLaunchpad"
-import { Loader2 } from "lucide-react"
+import { Loader2, LogOut } from "lucide-react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
 
 const BrandIdentity = () => {
   return (
@@ -34,6 +36,13 @@ export default function LaunchpadPage() {
   const [permissions, setPermissions] = useState<Record<string, boolean>>({})
   const [role, setRole] = useState<string>("")
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -70,6 +79,23 @@ export default function LaunchpadPage() {
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#7FD1E3]/5 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00AEEF]/5 rounded-full blur-[100px]" />
       
+      {/* Top Header Controls */}
+      <div className="absolute top-8 right-8 z-50">
+        <Button 
+          variant="ghost" 
+          onClick={handleLogout}
+          className="group flex items-center gap-3 px-5 py-6 bg-white/5 hover:bg-white/10 text-white/40 hover:text-[#7FD1E3] border border-white/5 hover:border-[#7FD1E3]/30 rounded-2xl backdrop-blur-xl transition-all duration-500 shadow-2xl"
+        >
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none mb-1 opacity-50 group-hover:opacity-100 transition-opacity">Terminate</span>
+            <span className="text-[13px] font-bold tracking-tight">Session</span>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-[#7FD1E3]/10 group-hover:rotate-12 transition-all duration-500">
+            <LogOut className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+          </div>
+        </Button>
+      </div>
+
       {/* Logo Section */}
       <div className="flex-none pt-12 pb-2 w-full flex justify-center z-10">
         <BrandIdentity />

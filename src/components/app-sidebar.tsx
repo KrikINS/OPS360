@@ -100,13 +100,13 @@ const navigationGroups = [
     ]
   },
   {
-    id: "pos",
+    id: "sales",
     title: "Sales Hub",
     icon: BarChart3,
     items: [
       { title: "Sales Registry", url: "/sales/hub", icon: List },
       { title: "Sales Return", url: "/sales/hub?tab=returns", icon: RotateCcw },
-      { title: "Customer Registry", url: "/admin/customers", icon: UserSquare },
+      { title: "Customer Registry", url: "/sales/customers", icon: UserSquare },
       { title: "Loyalty Points", url: "/sales/loyalty", icon: Star },
     ]
   },

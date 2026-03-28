@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Search, Calculator, ShieldCheck, ArrowRight, ArrowUpRight, CheckCircle2, Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { ModernOrbitSpinner } from "@/components/ui/ModernOrbitSpinner"
 import {
   Dialog,
   DialogContent,
@@ -115,42 +116,48 @@ export function HSNLookupTool() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Global HSN Search */}
-        <Card className="border-slate-200 shadow-sm overflow-hidden">
-          <CardHeader className="bg-[#001529] text-white">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Search className="h-4 w-4 text-[#7FD1E3]" /> Global HSN Lookup
+        <Card className="border-slate-200 shadow-sm overflow-hidden bg-slate-50/10 transition-all duration-300">
+          <CardHeader className="bg-white border-b">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800">
+              <Search className="h-4 w-4 text-[#001529]" /> Search Protocol
             </CardTitle>
-            <CardDescription className="text-white/60 text-xs">Search by code prefix or product keywords.</CardDescription>
+            <CardDescription className="text-xs">Search by code prefix or product keywords.</CardDescription>
           </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input 
-                placeholder="Search AC, TV, 8415..." 
-                className="pl-10 h-10 border-slate-200 focus-visible:ring-[#001529]"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
+          <CardContent className="pt-8 px-8 space-y-8">
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase font-black tracking-widest text-slate-400 ml-1">Master Discovery</label>
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-[#001529] transition-colors" />
+                <Input 
+                  placeholder="e.g. 8415, Air Conditioners..." 
+                  className="pl-10 h-14 text-sm font-bold border-slate-200 focus-visible:ring-[#001529] bg-white rounded-xl shadow-inner-sm"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
             </div>
 
-            <div className="border rounded-xl divide-y overflow-hidden h-[300px] overflow-y-auto bg-slate-50/30">
+            <div className="border rounded-2xl divide-y overflow-hidden h-[300px] overflow-y-auto bg-white/50 border-slate-200 shadow-sm backdrop-blur-sm">
               {loading ? (
-                <div className="p-8 text-center text-slate-400 text-xs animate-pulse">Searching Master Database...</div>
+                <div className="p-12 text-center flex flex-col items-center gap-3">
+                   <ModernOrbitSpinner size="md" className="opacity-30" />
+                   <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest animate-pulse">Scanning Master Index...</span>
+                </div>
               ) : results.length > 0 ? (
                 results.map(r => (
-                  <div key={r.hsn_code} className="p-4 flex items-center justify-between group hover:bg-white transition-colors border-l-4 border-transparent hover:border-l-[#001529]">
+                  <div key={r.hsn_code} className="p-4 flex items-center justify-between group hover:bg-slate-50 transition-all border-l-4 border-transparent hover:border-l-[#001529]">
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase text-[#001529] tracking-widest">{r.hsn_code}</p>
-                      <p className="text-sm font-semibold text-slate-600 truncate">{r.description}</p>
+                      <p className="text-sm font-semibold text-slate-600 truncate group-hover:text-slate-900">{r.description}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                       <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-100 italic">
+                    <div className="flex flex-col items-end gap-1.5 translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                       <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-100 italic">
                          {r.gst_rate}% GST
                        </span>
                        <Button 
                          variant="ghost" 
                          size="sm" 
-                         className="h-7 text-[10px] font-black uppercase text-slate-400 hover:text-[#001529] hover:bg-slate-100 gap-1 opacity-0 group-hover:opacity-100 transition-all px-2"
+                         className="h-7 text-[10px] font-black uppercase text-slate-400 hover:text-[#001529] hover:bg-[#001529]/10 gap-1 px-3 rounded-full"
                          onClick={() => setPushHSN(r.hsn_code)}
                        >
                          Push to Product <ArrowUpRight className="h-3 w-3" />
@@ -159,8 +166,13 @@ export function HSNLookupTool() {
                   </div>
                 ))
               ) : (
-                <div className="p-12 text-center text-slate-300 text-xs italic">
-                  {search ? "No direct matches found." : "Type to begin HSN discovery."}
+                <div className="p-12 text-center flex flex-col items-center justify-center h-full gap-2">
+                  <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center">
+                    <Search className="h-4 w-4 text-slate-300" />
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">
+                    {search ? "Zero Matches Found" : "Awaiting Input Keywords..."}
+                  </p>
                 </div>
               )}
             </div>

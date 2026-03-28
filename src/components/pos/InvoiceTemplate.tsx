@@ -29,7 +29,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    if (initialData) {
+    if (initialData && Array.isArray(initialData.items) && initialData.items.length > 0) {
       setArchivalData({
         cart: initialData.items.map((item) => ({
           model_name: item.model_name || 'Unknown Product',
@@ -64,8 +64,8 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
         setArchivalData(null) // Reset for new ID
         setLoading(true)
         try {
-          // 1. Fetch Items via Admin API (bypasses RLS issues)
-          const itemsRes = await fetch(`/api/admin/sales/${invoiceId}/items`)
+          // 1. Fetch Items via Registry API (bypasses RLS issues)
+          const itemsRes = await fetch(`/api/sales/registry/${invoiceId}/items`)
           if (!itemsRes.ok) throw new Error("Failed to fetch invoice items")
           const items = await itemsRes.json()
 
@@ -73,7 +73,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           // Since the sales registry table already has this data, we could pass it in,
           // but for standalone re-print, let's fetch the header.
           // 2. Fetch Invoice Header via our new secure admin API
-          const headerRes = await fetch(`/api/admin/sales/${invoiceId}`)
+          const headerRes = await fetch(`/api/sales/registry/${invoiceId}`)
           if (!headerRes.ok) throw new Error("Failed to fetch invoice header")
           const invoice = await headerRes.json()
 

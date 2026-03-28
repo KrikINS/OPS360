@@ -41,7 +41,7 @@ export function SaleDetailsDrawer({ saleId, invoiceNumber, open, onClose }: Sale
       const fetchItems = async () => {
         setLoading(true)
         try {
-          const res = await fetch(`/api/admin/sales/${saleId}/items`)
+          const res = await fetch(`/api/sales/registry/${saleId}/items`)
           if (!res.ok) throw new Error("Failed to fetch items")
           const data = await res.json()
           setItems(data)

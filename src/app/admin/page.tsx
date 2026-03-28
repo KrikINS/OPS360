@@ -12,12 +12,12 @@ import {
   ShoppingBag,
   AlertCircle,
   BarChart3,
-  Loader2,
   CheckCircle2,
   ChevronRight,
   FolderTree,
 } from "lucide-react"
-import Link from 'next/link'
+import { useRouter } from "next/navigation"
+import { ModernOrbitSpinner } from "@/components/ui/ModernOrbitSpinner"
 import { 
   BarChart, 
   Bar, 
@@ -95,21 +95,21 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           label="Today's Revenue" 
-          value={loading ? "..." : `₹${metrics?.today_revenue.toLocaleString()}`} 
+          value={loading ? <ModernOrbitSpinner size="sm" className="opacity-40" /> : `₹${metrics?.today_revenue.toLocaleString()}`} 
           icon={TrendingUp} 
           color="bg-indigo-600" 
           description="Gross sales from all branches"
         />
         <StatCard 
           label="Today's Invoices" 
-          value={loading ? "..." : metrics?.today_invoices || 0} 
+          value={loading ? <ModernOrbitSpinner size="sm" className="opacity-40" /> : metrics?.today_invoices || 0} 
           icon={ShoppingBag} 
           color="bg-blue-600"
           description="Finalized transactions"
         />
         <StatCard 
           label="Inventory Value" 
-          value={loading ? "..." : `₹${metrics?.total_inventory_value.toLocaleString()}`} 
+          value={loading ? <ModernOrbitSpinner size="sm" className="opacity-40" /> : `₹${metrics?.total_inventory_value.toLocaleString()}`} 
           icon={Building2} 
           color="bg-emerald-600"
           description="Total Stock @ Base Price"
@@ -134,7 +134,7 @@ export default function AdminDashboardPage() {
         />
         <ModuleCard 
           title="Customer Registry" 
-          href="/admin/customers" 
+          href="/sales/customers" 
           icon={Users} 
           description="Manage buyer profiles & data" 
           color="emerald" 
@@ -172,7 +172,7 @@ export default function AdminDashboardPage() {
           <CardContent className="p-8 h-[350px]">
             {loading ? (
               <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400">
-                <Loader2 className="h-10 w-10 animate-spin" />
+                <ModernOrbitSpinner size="lg" />
                 <p className="text-xs font-black uppercase tracking-widest">Hydrating Chart Data...</p>
               </div>
             ) : metrics?.branch_performance && metrics.branch_performance.length > 0 ? (
@@ -225,7 +225,10 @@ export default function AdminDashboardPage() {
           <CardContent className="p-0 flex-1 overflow-auto max-h-[350px]">
             <div className="divide-y divide-slate-100">
               {loading ? (
-                <div className="p-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-red-200" /></div>
+                <div className="p-10 text-center flex flex-col items-center gap-2">
+                  <ModernOrbitSpinner size="md" className="opacity-30" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scanning Registry...</span>
+                </div>
               ) : metrics?.low_stock_alerts && metrics.low_stock_alerts.length > 0 ? (
                 metrics.low_stock_alerts.map((alert, idx) => (
                   <div key={idx} className="p-4 hover:bg-red-50/50 transition-colors flex items-center justify-between border-l-4 border-l-red-500">
@@ -314,6 +317,9 @@ export default function AdminDashboardPage() {
 }
 
 function ModuleCard({ title, href, icon: Icon, description, color }: { title: string, href: string, icon: React.ElementType, description: string, color: 'indigo' | 'blue' | 'emerald' | 'amber' }) {
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  
   const colorMaps: Record<string, string> = {
     indigo: "hover:bg-indigo-50 border-indigo-100 text-indigo-600",
     blue: "hover:bg-blue-50 border-blue-100 text-blue-600",
@@ -322,11 +328,21 @@ function ModuleCard({ title, href, icon: Icon, description, color }: { title: st
   }
 
   return (
-    <Link href={href}>
-      <Card className={cn("transition-all duration-200 border cursor-pointer hover:shadow-md h-full group", colorMaps[color])}>
+    <div 
+      onClick={() => {
+        setLoading(true)
+        router.push(href)
+      }}
+      className="cursor-pointer"
+    >
+      <Card className={cn("transition-all duration-200 border hover:shadow-md h-full group", colorMaps[color])}>
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-white shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
-            <Icon className="h-5 w-5" />
+          <div className="p-3 rounded-xl bg-white shadow-sm border border-slate-100 group-hover:scale-110 transition-transform flex items-center justify-center min-w-[44px] min-h-[44px]">
+            {loading ? (
+              <ModernOrbitSpinner size="sm" className="opacity-60" />
+            ) : (
+              <Icon className="h-5 w-5" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{title}</h4>
@@ -335,11 +351,11 @@ function ModuleCard({ title, href, icon: Icon, description, color }: { title: st
           <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-current transition-colors" />
         </CardContent>
       </Card>
-    </Link>
+    </div>
   )
 }
 
-function StatCard({ label, value, icon: Icon, color, description }: { label: string, value: string | number, icon: React.ElementType, color: string, description: string }) {
+function StatCard({ label, value, icon: Icon, color, description }: { label: string, value: string | number | React.ReactNode, icon: React.ElementType, color: string, description: string }) {
   return (
     <Card className="border-none shadow-lg overflow-hidden group hover:-translate-y-1 transition-all duration-300">
       <CardContent className="p-0">

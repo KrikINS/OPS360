@@ -10,6 +10,7 @@ import { Plus, Trash2, Tag, LayoutGrid, FileText, CheckCircle2, Pencil, Save } f
 import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { cn } from "@/lib/utils"
+import { ModernOrbitSpinner } from "@/components/ui/ModernOrbitSpinner"
 
 interface MasterItem {
   id: string
@@ -46,6 +47,19 @@ export function GlobalMastersTab() {
   const [newTermContent, setNewTermContent] = useState("")
   const [isDefaultTerm, setIsDefaultTerm] = useState(false)
   const [editingTermId, setEditingTermId] = useState<string | null>(null)
+  const [loading, setLoading] = useState<Record<string, boolean>>({})
+  const [success, setSuccess] = useState<Record<string, boolean>>({})
+
+  const setTableLoading = (table: string, isLoading: boolean) => {
+    setLoading(prev => ({ ...prev, [table]: isLoading }))
+  }
+
+  const setTableSuccess = (table: string, isSuccess: boolean) => {
+    setSuccess(prev => ({ ...prev, [table]: isSuccess }))
+    if (isSuccess) {
+      setTimeout(() => setSuccess(prev => ({ ...prev, [table]: false })), 3000)
+    }
+  }
 
   const fetchMasters = useCallback(async () => {
     const supabase = createClient()
@@ -76,9 +90,13 @@ export function GlobalMastersTab() {
   }, [fetchMasters])
 
   const addMaster = async (table: string, data: Record<string, string | boolean>) => {
+    setTableLoading(table, true)
     const supabase = createClient()
     const { error } = await supabase.from(table).insert(data)
-    if (error) alert(error.message)
+    if (error) {
+      alert(`Master Update Failed: ${error.message}`)
+      setTableLoading(table, false)
+    }
     else {
       if (table === "brands") setNewBrand("")
       if (table === "categories") setNewCategory("")
@@ -89,6 +107,8 @@ export function GlobalMastersTab() {
         setIsDefaultTerm(false)
       }
       fetchMasters()
+      setTableLoading(table, false)
+      setTableSuccess(table, true)
     }
   }
 
@@ -172,10 +192,19 @@ export function GlobalMastersTab() {
               />
               <Button 
                 onClick={() => newBrand.trim() && addMaster("brands", { name: newBrand.trim() })} 
-                disabled={!newBrand.trim()}
-                className="bg-[#001529] font-bold shadow-soft h-10"
+                disabled={!newBrand.trim() || loading['brands']}
+                className={cn(
+                  "font-bold shadow-soft h-10 min-w-[44px] transition-all duration-300",
+                  success['brands'] ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#001529]"
+                )}
               >
-                <Plus className="h-4 w-4" />
+                {loading['brands'] ? (
+                  <ModernOrbitSpinner size="sm" />
+                ) : success['brands'] ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <div className="border rounded-xl divide-y overflow-hidden h-[250px] overflow-y-auto bg-white/50">
@@ -210,10 +239,19 @@ export function GlobalMastersTab() {
               />
               <Button 
                 onClick={() => newCategory.trim() && addMaster("categories", { name: newCategory.trim() })} 
-                disabled={!newCategory.trim()}
-                className="bg-[#001529] font-bold shadow-soft h-10"
+                disabled={!newCategory.trim() || loading['categories']}
+                className={cn(
+                  "font-bold shadow-soft h-10 min-w-[44px] transition-all duration-300",
+                  success['categories'] ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#001529]"
+                )}
               >
-                <Plus className="h-4 w-4" />
+                {loading['categories'] ? (
+                  <ModernOrbitSpinner size="sm" />
+                ) : success['categories'] ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <div className="border rounded-xl divide-y overflow-hidden h-[250px] overflow-y-auto bg-white/50">
@@ -248,10 +286,19 @@ export function GlobalMastersTab() {
               />
               <Button 
                 onClick={() => newReturnReason.trim() && addMaster("return_reason_master", { reason_text: newReturnReason.trim() })} 
-                disabled={!newReturnReason.trim()}
-                className="bg-[#001529] font-bold shadow-soft h-10"
+                disabled={!newReturnReason.trim() || loading['return_reason_master']}
+                className={cn(
+                  "font-bold shadow-soft h-10 min-w-[44px] transition-all duration-300",
+                  success['return_reason_master'] ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#001529]"
+                )}
               >
-                <Plus className="h-4 w-4" />
+                {loading['return_reason_master'] ? (
+                  <ModernOrbitSpinner size="sm" />
+                ) : success['return_reason_master'] ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <div className="border rounded-xl divide-y overflow-hidden h-[250px] overflow-y-auto bg-white/50">
@@ -344,10 +391,19 @@ export function GlobalMastersTab() {
                         })
                       }
                     }} 
-                    disabled={!newTermName.trim() || !newTermContent.trim()}
-                    className="w-full bg-[#001529] font-black uppercase tracking-widest text-[10px]"
+                    disabled={!newTermName.trim() || !newTermContent.trim() || loading['po_terms_templates']}
+                    className={cn(
+                      "w-full font-black uppercase tracking-widest text-[10px] transition-all duration-300",
+                      success['po_terms_templates'] ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#001529]"
+                    )}
                   >
-                    <Plus className="h-3 w-3 mr-2" /> Save Template
+                    {loading['po_terms_templates'] ? (
+                      <ModernOrbitSpinner size="sm" />
+                    ) : success['po_terms_templates'] ? (
+                      <><CheckCircle2 className="h-3 w-3 mr-2" /> Template Saved</>
+                    ) : (
+                      <><Plus className="h-3 w-3 mr-2" /> Save Template</>
+                    )}
                   </Button>
                 )}
               </div>

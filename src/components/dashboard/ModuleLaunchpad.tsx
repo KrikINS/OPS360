@@ -15,6 +15,7 @@ import {
   Receipt
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ModernOrbitSpinner } from "@/components/ui/ModernOrbitSpinner"
 
 interface Module {
   id: string
@@ -92,23 +93,6 @@ const MODULES: Module[] = [
   },
 ]
 
-const ModernOrbitSpinner = () => (
-  <div className="relative h-6 w-6 flex items-center justify-center">
-    {/* Outer Scanning Ring */}
-    <div className="absolute inset-0 rounded-full border-2 border-white/5 border-t-white/40 animate-[spin_1.5s_linear_infinite]" />
-    
-    {/* Inner Pulsing Core */}
-    <div className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] animate-pulse" />
-    
-    {/* Orbiting Satellite Dot */}
-    <div className="absolute inset-[-4px] animate-[spin_0.8s_linear_infinite]">
-      <div className="h-1 w-1 rounded-full bg-[#7FD1E3] shadow-[0_0_8px_#7FD1E3]" />
-    </div>
-
-    {/* Holographic Subtle Scan Line */}
-    <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-transparent h-[1px] w-full animate-[bounce_2s_ease-in-out_infinite] opacity-20" />
-  </div>
-)
 
 interface ModuleLaunchpadProps {
   permissions: Record<string, boolean>

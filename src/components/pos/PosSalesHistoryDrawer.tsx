@@ -41,7 +41,7 @@ export function PosSalesHistoryDrawer({ open, onClose }: PosSalesHistoryDrawerPr
     if (!selectedBranch) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/sales?branchId=${selectedBranch}`)
+      const res = await fetch(`/api/sales/registry?branchId=${selectedBranch}`)
       if (!res.ok) throw new Error("Failed to fetch sales history")
       const data = await res.json()
       setSales(data)
