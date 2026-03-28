@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     // 3. Fetch from the V8 RPC (supports customer IDs and names)
     const { data, error } = await supabase
       .rpc('get_sales_registry_v8', {
-        p_branch_id: branchId || null
+        p_branch_id: branchId && branchId !== "ALL_000" ? branchId : null
       })
 
     if (error) {

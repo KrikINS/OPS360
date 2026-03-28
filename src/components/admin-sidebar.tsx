@@ -10,6 +10,7 @@ import {
   ArrowLeftCircle,
   ChevronRight,
   FolderTree,
+  AlertCircle
 } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
@@ -130,9 +131,26 @@ export function AdminSidebar({ profile, permissions }: AdminSidebarProps) {
             <p className="text-[10px] text-slate-600 group-hover:text-slate-500 mt-0.5">Return to main dashboard</p>
           </div>
         </Link>
-        <p className="text-[10px] text-slate-700 text-center mt-3">
-          © 2025 Ethan Home Appliances
-        </p>
+        <a
+          href="mailto:ethanops360@gmail.com?subject=OPS360%20Issue%20Report"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-slate-400 hover:text-white hover:bg-[#002244] border-l-[3px] border-l-transparent transition-all duration-150 group mt-1"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-500/80 group-hover:text-amber-400" />
+          <div>
+            <p className="font-medium leading-none">Report an Issue</p>
+            <p className="text-[10px] text-slate-600 group-hover:text-slate-500 mt-0.5">Contact Support Team</p>
+          </div>
+        </a>
+        <div className="flex flex-col gap-1.5 items-center justify-center mt-4">
+          <p className="text-[10px] text-slate-700 text-center uppercase tracking-widest font-bold">
+            © {new Date().getFullYear()} Ethan Home Appliances
+          </p>
+          <div className="flex items-center gap-1.5 opacity-60 text-slate-500 text-[10px]">
+            <span>System v1.2</span>
+            <span>•</span>
+            <span className="text-[#7FD1E3] font-bold tracking-widest">Active</span>
+          </div>
+        </div>
       </div>
     </aside>
   )

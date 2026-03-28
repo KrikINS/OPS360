@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { SalesRegistryTable } from '@/components/sales/SalesRegistryTable'
 import { 
   ShoppingBag, 
@@ -13,6 +13,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { createClient } from "@/utils/supabase/client"
 import { exportToExcel } from "@/lib/export-utils"
+import { useGlobalContext } from "@/context/GlobalContext"
 
 interface Sale {
   sale_id: string;
@@ -32,6 +33,7 @@ interface Sale {
 }
 
 export default function SalesRegistryPage() {
+  const { activeBranch } = useGlobalContext()
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -42,7 +44,7 @@ export default function SalesRegistryPage() {
   const [canExport, setCanExport] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const fetchSales = async () => {
+  const fetchSales = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
     try {
@@ -51,12 +53,13 @@ export default function SalesRegistryPage() {
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
         const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'accounting').eq('enabled', true)
         
-        const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'finance'
+        const isAdmin = profile?.role?.toLowerCase().trim() === 'admin/owner' || profile?.role?.toLowerCase().trim() === 'finance'
         const hasAccounting = permissions && permissions.length > 0
         setCanExport(isAdmin || hasAccounting)
       }
 
-      const res = await fetch('/api/sales/registry')
+      const url = activeBranch?.id ? `/api/sales/registry?branchId=${activeBranch.id}` : '/api/sales/registry'
+      const res = await fetch(url)
       if (!res.ok) throw new Error("Failed to fetch sales")
       const data = await res.json()
       setSales(data)
@@ -72,7 +75,7 @@ export default function SalesRegistryPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [activeBranch?.id])
 
   const handleExport = async () => {
     const supabase = createClient()
@@ -92,7 +95,7 @@ export default function SalesRegistryPage() {
 
   useEffect(() => {
     fetchSales()
-  }, [])
+  }, [fetchSales])
 
   return (
     <div className="p-8 pb-0 space-y-8 animate-in fade-in duration-500">
@@ -117,11 +120,14 @@ export default function SalesRegistryPage() {
         <Card className="border-none shadow-md bg-gradient-to-br from-indigo-600 to-blue-700 text-white overflow-hidden relative">
           <CardContent className="p-6">
             <div className="relative z-10 space-y-2">
-              <p className="text-indigo-100 text-xs font-black uppercase tracking-widest">Total Revenue</p>
+              <div className="flex items-center justify-between">
+                <p className="text-indigo-100 text-xs font-black uppercase tracking-widest">Total Revenue</p>
+                {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-white/20 text-white border border-white/10">Consolidated</span>}
+              </div>
               <h3 className="text-4xl font-black tracking-tighter">₹{stats.totalSales.toLocaleString()}</h3>
               <div className="flex items-center gap-1 text-[10px] bg-white/10 w-fit px-2 py-1 rounded-full border border-white/10">
                 <ArrowUpRight className="h-3 w-3" />
-                Live from all branches
+                {activeBranch?.id === "ALL_000" ? "Live from all branches" : "Live from active branch"}
               </div>
             </div>
             <ShoppingBag className="absolute -right-4 -bottom-4 h-32 w-32 text-white/10 rotate-12" />
@@ -131,7 +137,10 @@ export default function SalesRegistryPage() {
         <Card className="border-none shadow-md bg-white overflow-hidden relative group hover:shadow-xl transition-all">
           <CardContent className="p-6">
             <div className="relative z-10 space-y-2">
-              <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Invoice Volume</p>
+              <div className="flex items-center justify-between">
+                <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Invoice Volume</p>
+                {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+              </div>
               <h3 className="text-4xl font-black tracking-tighter text-slate-900">{stats.invoiceCount}</h3>
               <p className="text-[10px] text-slate-500 font-medium">Completed Transactions</p>
             </div>
@@ -142,7 +151,10 @@ export default function SalesRegistryPage() {
         <Card className="border-none shadow-md bg-white overflow-hidden relative group hover:shadow-xl transition-all border-l-4 border-l-emerald-500">
           <CardContent className="p-6">
             <div className="relative z-10 space-y-2">
-              <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Average Ticket</p>
+              <div className="flex items-center justify-between">
+                <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Average Ticket</p>
+                {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+              </div>
               <h3 className="text-4xl font-black tracking-tighter text-slate-900">₹{Math.round(stats.avgTicket).toLocaleString()}</h3>
               <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Per Sale Value</p>
             </div>

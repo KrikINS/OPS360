@@ -55,8 +55,9 @@ export default async function DashboardLayout({
     branches: { name: string } | { name: string }[] | null;
   }>;
 
-  // FOR ADMiNS: Always allow switching to ALL branches in the registry
-  const isAdmin = rawProfile?.role?.toLowerCase().trim() === 'admin/owner' || rawProfile?.role?.toLowerCase().trim() === 'admin';
+  // FOR ADMINS: Always allow switching to ALL branches in the registry
+  const normalizedRole = rawProfile?.role?.toLowerCase().trim() || "";
+  const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner';
   
   if (isAdmin) {
     const { data: all_b } = await supabase.from("branches").select("id, name")
@@ -66,6 +67,13 @@ export default async function DashboardLayout({
         is_primary: false,
         branches: { name: b.name }
       }))
+
+      // Inject Global Overview bypass for admins
+      typedBranchAccess.unshift({
+        branch_id: "ALL_000",
+        is_primary: false,
+        branches: { name: "Global Overview (All Branches)" }
+      })
     }
   }
 
@@ -78,7 +86,7 @@ export default async function DashboardLayout({
 
   const activeAccess = hasAccessToCookieBranch
     ? typedBranchAccess.find((ba) => ba.branch_id === activeBranchIdFromCookie)
-    : typedBranchAccess.find((ba) => ba.is_primary) || typedBranchAccess[0]
+    : (isAdmin ? typedBranchAccess[0] : (typedBranchAccess.find((ba) => ba.is_primary) || typedBranchAccess[0]))
 
   const branchId = activeAccess?.branch_id || (rawProfile as { assigned_branch_id?: string }).assigned_branch_id || ""
 

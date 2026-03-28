@@ -101,7 +101,10 @@ interface ProductGroup {
   status: string; // Aggregate status
 }
 
+import { useGlobalContext } from "@/context/GlobalContext"
+
 export default function InventoryDashboard() {
+  const { activeBranch } = useGlobalContext()
   const [branches, setBranches] = useState<Branch[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -139,9 +142,10 @@ export default function InventoryDashboard() {
     }))
   }
 
+  // Hook-like separation for inventory fetching logic
   useEffect(() => {
     const supabase = createClient()
-    const fetchData = async () => {
+    const fetchInventoryData = async () => {
       setLoading(true)
       
       const branchRes = await fetch("/api/branches")
@@ -186,9 +190,14 @@ export default function InventoryDashboard() {
           current_balance
         `)
       
+      // Determine what base branch to use if not overridden by the UI filter
+      const effectiveBranchId = selectedBranch === "all" ? (activeBranch?.id || "all") : selectedBranch;
+
       // Condition branch filtering
-      if (selectedBranch !== "all") {
-        query = query.eq("branch_id", selectedBranch)
+      if (effectiveBranchId !== "all" && effectiveBranchId !== "ALL_000") {
+        if (effectiveBranchId) {
+          query = query.eq("branch_id", effectiveBranchId)
+        }
       }
       
       const { data: dbInventory, error: invErr } = await query
@@ -204,19 +213,19 @@ export default function InventoryDashboard() {
       setLoading(false)
     }
 
-    fetchData()
+    fetchInventoryData()
 
     const channel = supabase
       .channel('inventory_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
-        fetchData()
+        fetchInventoryData()
       })
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [selectedBranch])
+  }, [selectedBranch, activeBranch?.id])
 
   const handleExport = async () => {
     const supabase = createClient()
@@ -381,14 +390,15 @@ export default function InventoryDashboard() {
             <Upload className="h-4 w-4" /> Import Opening Stock
           </Button>
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
+      </div>      <div className="grid gap-4 md:grid-cols-3">
         {/* Card 1: Inventory Cost (Valuation) */}
         <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-[#001529]/20 transition-all">
           <div className="h-1 bg-[#001529]/10 w-full" />
           <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
-            <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Inventory Cost</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Inventory Cost</CardTitle>
+              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+            </div>
             <div className="h-7 w-7 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-100">
               <Package className="h-3.5 w-3.5 text-slate-400" />
             </div>
@@ -405,7 +415,10 @@ export default function InventoryDashboard() {
         <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-[#7FD1E3]/20 transition-all">
           <div className="h-1 bg-[#7FD1E3]/20 w-full" />
           <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
-            <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Potential Revenue</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Potential Revenue</CardTitle>
+              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+            </div>
             <div className="h-7 w-7 bg-[#7FD1E3]/5 rounded-lg flex items-center justify-center border border-[#7FD1E3]/10">
               <TrendingUp className="h-3.5 w-3.5 text-[#7FD1E3]" />
             </div>
@@ -422,7 +435,10 @@ export default function InventoryDashboard() {
         <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-rose-200 transition-all">
           <div className="h-1 bg-rose-500/10 w-full" />
           <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
-            <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">SKUs Below Threshold</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">SKUs Below Threshold</CardTitle>
+              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+            </div>
             <div className={cn(
               "h-7 w-7 rounded-lg flex items-center justify-center border transition-all",
               summaryStats.lowStockSKUs > 0 ? "bg-rose-50 border-rose-100" : "bg-slate-50 border-slate-100"

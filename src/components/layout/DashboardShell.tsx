@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar"
 import { UserNav } from "@/components/user-nav"
 import { PosProvider } from "@/context/PosContext"
+import { GlobalProvider } from "@/context/GlobalContext"
 import Link from "next/link"
 import { HelpCircle } from "lucide-react"
 
@@ -37,9 +38,10 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar permissions={permissions} profile={profile} />
-      <SidebarInset className="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out">
+    <GlobalProvider initialBranch={{ id: profile.branch_id, name: profile.branch_name || "Unknown Branch" }}>
+      <SidebarProvider>
+        <AppSidebar permissions={permissions} profile={profile} />
+        <SidebarInset className="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out">
         <header className="h-14 flex items-center justify-between px-5 border-b bg-white shadow-sm gap-4 shrink-0 z-50">
           <div className="flex items-center gap-3">
             <SidebarTrigger className="text-slate-500 hover:text-primary transition-colors" />
@@ -65,6 +67,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
           </main>
         </div>
       </SidebarInset>
-    </SidebarProvider>
+      </SidebarProvider>
+    </GlobalProvider>
   )
 }

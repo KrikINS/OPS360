@@ -507,8 +507,21 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
           ) : (
             <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
           )}
-          {!isCollapsed && <span className={cn(navigatingTo === "/docs" && "animate-pulse")}>OPS360 Knowledge Base</span>}
+          {!isCollapsed && <span className={cn(navigatingTo === "/docs" && "animate-pulse")}>Knowledge Base</span>}
         </Link>
+        
+        <a
+          href="mailto:ethanops360@gmail.com?subject=OPS360%20Issue%20Report"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
+            "text-slate-300 hover:text-white hover:bg-white/5 border-l-[3px] border-l-transparent",
+            isCollapsed && "justify-center px-0"
+          )}
+          title={isCollapsed ? "Report an Issue" : undefined}
+        >
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-500/80" />
+          {!isCollapsed && <span>Report an Issue</span>}
+        </a>
       </div>
 
       {/* ── Footer branding ── */}
@@ -530,8 +543,13 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <div className={cn("mt-2 text-[10px] text-slate-500 text-center uppercase tracking-tighter opacity-50 px-2 leading-tight", isCollapsed && "sr-only")}>
-          {`© ${new Date().getFullYear()} Ethan Home Appliances`}
+        <div className={cn("mt-2 text-[10px] text-slate-500 text-center uppercase tracking-tighter px-2 leading-tight flex flex-col gap-1 items-center justify-center", isCollapsed && "sr-only")}>
+          <span>{`© ${new Date().getFullYear()} Ethan Home Appliances`}</span>
+          <div className="flex items-center gap-1.5 opacity-60">
+            <span>System v1.2</span>
+            <span>•</span>
+            <span className="text-[#7FD1E3] font-bold tracking-widest">Active</span>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

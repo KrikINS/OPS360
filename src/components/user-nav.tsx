@@ -80,13 +80,15 @@ export function UserNav({ profile }: UserNavProps) {
     setSwitchingBranchId(branchId)
     try {
       await setActiveBranchAction(branchId)
-      window.location.reload()
-      // setActiveBranchAction calls revalidatePath('/'), 
-      // which triggers a server refresh of the layout
+      
+      // Force a hard navigation bypassing client-side router cache
+      window.location.assign(window.location.pathname)
     } catch (err) {
       console.error("Failed to switch branch:", err)
+      setErrorMsg("Failed to switch branch: " + (err as Error).message)
     } finally {
-      setSwitchingBranchId(null)
+      // Small timeout to allow the browser assign to initiate before removing the spinner
+      setTimeout(() => setSwitchingBranchId(null), 1000)
     }
   }
 
@@ -142,7 +144,10 @@ export function UserNav({ profile }: UserNavProps) {
                           className={`flex items-center justify-between text-[11px] px-3 py-2.5 sm:px-2 sm:py-1.5 rounded transition-colors cursor-pointer ${
                             isActive ? 'bg-primary/5 text-primary font-semibold' : 'text-muted-foreground hover:text-foreground'
                           }`}
-                          onSelect={() => handleSwitchBranch(branch.id)}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            handleSwitchBranch(branch.id)
+                          }}
                         >
                           <span className="truncate max-w-[180px]">{branch.name}</span>
                           {isActive && <Check className="h-3 w-3" />}
@@ -159,7 +164,7 @@ export function UserNav({ profile }: UserNavProps) {
           <DropdownMenuGroup className="font-bold text-[10px] uppercase tracking-wider">
             <DropdownMenuItem 
               className="cursor-pointer font-bold text-[10px] uppercase tracking-wider h-11 sm:h-9" 
-              onSelect={(e) => {
+              onClick={(e) => {
                 e.preventDefault()
                 setIsEditDialogOpen(true)
               }}
@@ -169,7 +174,7 @@ export function UserNav({ profile }: UserNavProps) {
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="cursor-pointer font-bold text-[10px] uppercase tracking-wider h-11 sm:h-9" 
-              onSelect={() => router.push("/auth/reset-password")}
+              onClick={() => router.push("/auth/reset-password")}
             >
               <KeyRound className="mr-2 h-4 w-4" />
               <span>Change Password</span>
@@ -203,7 +208,7 @@ export function UserNav({ profile }: UserNavProps) {
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Work Email</label>
                 <Input value={profile.email} disabled className="bg-muted" />
-                <p className="text-xs text-muted-foreground">Contact IT to change your designated email address.</p>
+                <p className="text-xs text-muted-foreground">Contact the master administrator (ethanops360@gmail.com) to change your designated email address.</p>
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Full Name</label>
