@@ -575,16 +575,16 @@ export default function PurchaseReturn() {
               <Table>
                 <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                   <TableRow>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Return ID</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Execution Hub</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Original PO</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Vendor</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Return Logic</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Landed Cost / Debit Note</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Serials</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Status</TableHead>
-                    <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] uppercase">Actions</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Return ID</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Execution Hub</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Original PO</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Vendor</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Return Logic</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Landed Cost / Debit Note</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Serials</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Status</TableHead>
+                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] uppercase">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -597,8 +597,8 @@ export default function PurchaseReturn() {
                     </TableRow>
                   ) : filteredReturns.map((ret) => (
                     <TableRow key={ret.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-[11px]">
-                      <TableCell className="py-3 px-4 font-black text-[#001529] font-mono border-r border-slate-100/50">{ret.debit_note_number}</TableCell>
-                      <TableCell className="py-3 px-4 text-slate-500 border-r border-slate-100/50 text-center">
+                      <TableCell className="py-3 px-2 font-black text-[#001529] font-mono border-r border-slate-100/50">{ret.debit_note_number}</TableCell>
+                      <TableCell className="py-3 px-2 text-slate-500 border-r border-slate-100/50 text-center">
                         <div className="font-bold flex flex-col items-center gap-0.5 text-slate-600">
                           <span className="text-[10px]">{new Date(ret.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                           <span className="text-[8px] font-black text-[#001529] bg-slate-100 px-1.5 py-0.5 rounded-full ring-1 ring-slate-200 uppercase tracking-tighter">
@@ -609,14 +609,14 @@ export default function PurchaseReturn() {
                           <ShieldCheck className="h-2 w-2" /> Serial Lock Engaged
                         </div>
                       </TableCell>
-                      <TableCell className="py-3 px-4 font-bold text-slate-600 border-r border-slate-100/50">{ret.po_number}</TableCell>
-                      <TableCell className="py-3 px-4 font-bold text-slate-600 border-r border-slate-100/50">{ret.vendor_name}</TableCell>
-                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
+                      <TableCell className="py-3 px-2 font-bold text-slate-600 border-r border-slate-100/50">{ret.po_number}</TableCell>
+                      <TableCell className="py-3 px-2 font-bold text-slate-600 border-r border-slate-100/50">{ret.vendor_name}</TableCell>
+                      <TableCell className="py-3 px-2 border-r border-slate-100/50">
                         <Badge variant="secondary" className="bg-slate-100 text-[#001529] font-bold text-[9px] uppercase tracking-tight py-0">
                           {ret.reason}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
+                      <TableCell className="py-3 px-2 border-r border-slate-100/50">
                         <div className="font-black text-[#001529]">{formatCurrency(ret.amount)}</div>
                         <div className="text-[9px] font-bold text-emerald-600 mt-1 uppercase tracking-tight flex items-center gap-1">
                           <CheckCircle2 className="h-2.5 w-2.5" /> 100% Recovery Verified
@@ -626,10 +626,10 @@ export default function PurchaseReturn() {
                           Landed Cost Sum: {formatCurrency(ret.amount)}
                         </div>
                       </TableCell>
-                      <TableCell className="py-2 px-4 border-r border-slate-100/50">
-                        <div className="font-bold text-slate-900 line-clamp-1 max-w-[150px]">{ret.item_names?.join(", ") || "Multiple Items"}</div>
+                      <TableCell className="py-2 px-2 border-r border-slate-100/50">
+                        <div className="font-bold text-slate-900">{ret.item_names?.join(", ") || "Multiple Items"}</div>
                       </TableCell>
-                      <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                      <TableCell className="py-2 px-2 border-r border-slate-100/50">
                         <div className="flex flex-wrap gap-1">
                           {ret.serial_numbers.map((sn) => (
                             <Badge key={sn} variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-[9px] font-mono px-1.5 py-0 h-4">
@@ -638,7 +638,7 @@ export default function PurchaseReturn() {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="py-3 px-4 border-r border-slate-100/50">
+                      <TableCell className="py-3 px-2 border-r border-slate-100/50">
                         <Badge className={cn(
                           "text-[9px] px-2 py-0.5 font-black uppercase tracking-tighter",
                           ret.status === 'Paid' || ret.status === 'Authorized' 
@@ -648,7 +648,7 @@ export default function PurchaseReturn() {
                           {ret.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-3 px-4">
+                      <TableCell className="py-3 px-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger render={
                             <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
@@ -1120,13 +1120,13 @@ export default function PurchaseReturn() {
                 </div>
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="space-y-1">
-                    <h4 className="text-lg font-black uppercase tracking-tighter text-[#7FD1E3]">Reverse Logistics Integrity Audit</h4>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Authorized Financial Recovery Mechanism</p>
+                    <h4 className="text-lg font-black uppercase tracking-tighter text-[#7FD1E3]">Document Verification</h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">This is an electronically generated document. No physical signature is required.</p>
                   </div>
 
                   <div className="flex items-center gap-6">
                     <div className="text-right flex flex-col items-end">
-                      <span className="text-[9px] font-black tracking-widest text-[#7FD1E3] uppercase mb-1">Scan for Validation</span>
+                      <span className="text-[9px] font-black tracking-widest text-[#7FD1E3] uppercase mb-1 text-right leading-none">Scan to Verify<br/>Authenticity</span>
                       <div className="bg-white p-1 rounded-lg shadow-inner shadow-slate-900/20">
                          <NextImage 
                             src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`OPS360-DN-MODAL-${viewingDebitNote.debit_note_number}`)}`} 

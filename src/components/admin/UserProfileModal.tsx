@@ -128,6 +128,14 @@ export function UserProfileModal({
   const handleSave = async () => {
     if (!formData) return
     setLoading(true)
+    console.log("Saving User Permissions payload:", {
+      id: formData.id,
+      email: formData.email,
+      permissions: formData.permissions,
+      register_permissions: formData.register_permissions,
+      pos_protocol: formData.permissions?.pos,
+      inventory_protocol: formData.permissions?.inventory
+    });
     await onSave(formData)
     setLoading(false)
     onOpenChange(false)
@@ -213,7 +221,7 @@ export function UserProfileModal({
                         <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">{module} PROTOCOL</span>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="pb-4 space-y-3">
+                    <AccordionContent keepMounted={true} className="pb-4 space-y-3">
                       {registers.map((reg) => {
                         const key = reg.toLowerCase().replace(/ /g, "_")
                         const level = formData.register_permissions?.[module]?.[key] || "view"
@@ -350,11 +358,14 @@ export function UserProfileModal({
               </Button>
               <Button 
                 onClick={handleSave} 
-                className="h-9 px-8 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-lg"
+                className="min-w-[180px] h-9 px-8 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center justify-center transition-all"
                 disabled={loading || !isAdmin}
               >
-                {loading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
-                Save Identity Controls
+                {loading ? (
+                  <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Saving...</>
+                ) : (
+                  "Save Identity Controls"
+                )}
               </Button>
             </div>
         </DialogFooter>

@@ -330,33 +330,33 @@ export default function DiscrepancyReportPage() {
             <Table>
               <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                 <TableRow>
-                  <TableHead className="py-3 px-6 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Discrepancy ID</TableHead>
-                  <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Reference / Product</TableHead>
-                  <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Vendor</TableHead>
-                  <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Discrepancy Type</TableHead>
-                  <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-right">Detected Gap</TableHead>
-                  <TableHead className="py-3 px-4 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Status</TableHead>
-                  <TableHead className="py-3 px-6 font-black text-slate-400 tracking-wider text-[9px] uppercase">Actions</TableHead>
+                  <TableHead className="py-3 px-3 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Discrepancy ID</TableHead>
+                  <TableHead className="py-3 px-2 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Reference / Product</TableHead>
+                  <TableHead className="py-3 px-2 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Vendor</TableHead>
+                  <TableHead className="py-3 px-2 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Discrepancy Type</TableHead>
+                  <TableHead className="py-3 px-2 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-right">Detected Gap</TableHead>
+                  <TableHead className="py-3 px-2 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase text-center">Status</TableHead>
+                  <TableHead className="py-3 px-3 font-black text-slate-400 tracking-wider text-[9px] uppercase">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredDiscrepancies.map((item: Discrepancy) => (
                   <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-[11px]">
-                    <TableCell className="py-4 px-6 font-black text-[#001529] font-mono border-r border-slate-100/50">
+                    <TableCell className="py-4 px-3 font-black text-[#001529] font-mono border-r border-slate-100/50">
                       {item.display_id || `EHA-DR-${(allSortedDiscrepancies.findIndex(d => d.id === item.id) + 1).toString().padStart(4, '0')}`}
                     </TableCell>
-                    <TableCell className="py-4 px-4 font-bold text-[#001529] font-mono border-r border-slate-100/50">
+                    <TableCell className="py-4 px-2 font-bold text-[#001529] font-mono border-r border-slate-100/50">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[11px]">{item.po?.po_number || "NO_REF"}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase truncate max-w-[120px]">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase">
                           {item.product?.model_name || "Unknown Product"}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="py-4 px-4 font-bold text-slate-600 border-r border-slate-100/50">
+                    <TableCell className="py-4 px-2 font-bold text-slate-600 border-r border-slate-100/50">
                       {item.vendor?.name}
                     </TableCell>
-                    <TableCell className="py-4 px-4 border-r border-slate-100/50 text-center">
+                    <TableCell className="py-4 px-2 border-r border-slate-100/50 text-center">
                       <Badge variant="secondary" className={cn(
                         "font-black text-[9px] uppercase tracking-tighter py-0 px-2 shadow-sm border",
                         item.discrepancy_type === 'Price Mismatch' ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200"
@@ -364,7 +364,7 @@ export default function DiscrepancyReportPage() {
                         {item.discrepancy_type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-4 px-4 border-r border-slate-100/50 text-right font-black font-mono">
+                    <TableCell className="py-4 px-2 border-r border-slate-100/50 text-right font-black font-mono">
                       <div className={cn(
                         "text-sm",
                         item.detected_gap < 0 ? "text-red-500" : "text-emerald-600"
@@ -382,7 +382,7 @@ export default function DiscrepancyReportPage() {
                         }
                       </div>
                     </TableCell>
-                    <TableCell className="py-4 px-4 border-r border-slate-100/50 text-center">
+                    <TableCell className="py-4 px-2 border-r border-slate-100/50 text-center">
                       <Badge className={cn(
                         "text-[9px] px-2 py-0.5 font-black uppercase tracking-tighter ring-1",
                         item.status === 'Resolved' ? "bg-emerald-100 text-emerald-700 ring-emerald-200" :
@@ -392,7 +392,7 @@ export default function DiscrepancyReportPage() {
                         {item.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-4 px-6">
+                    <TableCell className="py-4 px-3">
                       <div className="flex justify-start">
                         <DropdownMenu>
                           <DropdownMenuTrigger className={cn(

@@ -1415,13 +1415,13 @@ Are you sure you want to proceed?`)) return;
                     <Table>
                       <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm">
                         <TableRow>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Payment</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Payment</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1432,19 +1432,19 @@ Are you sure you want to proceed?`)) return;
                               className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs"
                             >
                               <TableCell
-                                className="py-2 px-4 font-bold text-[#001529] font-mono cursor-pointer hover:underline border-r border-slate-100/50"
+                                className="py-2 px-2 font-bold text-[#001529] font-mono cursor-pointer hover:underline border-r border-slate-100/50"
                                 onClick={() => setViewingPO(po)}
                               >
                                 {po.po_number}
                               </TableCell>
-                              <TableCell className="py-2 px-4 font-semibold text-slate-600 border-r border-slate-100/50">{po.vendor?.name}</TableCell>
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                              <TableCell className="py-2 px-2 font-semibold text-slate-600 border-r border-slate-100/50">{po.vendor?.name}</TableCell>
+                              <TableCell className="py-2 px-2 border-r border-slate-100/50">
                                 <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">
                                   {po.payment_terms || po.vendor?.payment_terms || 'Immediate'}
                                 </span>
                               </TableCell>
-                              <TableCell className="py-2 px-4 text-slate-500 border-r border-slate-100/50">
-                                <div className="font-semibold text-slate-700 truncate max-w-[140px]">
+                              <TableCell className="py-2 px-2 text-slate-500 border-r border-slate-100/50">
+                                <div className="font-semibold text-slate-700">
                                   {po.items[0]?.product?.model_name || '---'}
                                 </div>
                                 {po.items.length > 1 && (
@@ -1453,7 +1453,7 @@ Are you sure you want to proceed?`)) return;
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                              <TableCell className="py-2 px-2 border-r border-slate-100/50">
                                 <Badge className={
                                   po.status === 'received' ? "bg-green-100 text-green-700 hover:bg-green-200 text-[9px] px-1.5 py-0 font-bold" :
                                     po.status === 'approved' ? "bg-blue-100 text-blue-700 hover:bg-blue-200 text-[9px] px-1.5 py-0 font-bold" :
@@ -1467,7 +1467,7 @@ Are you sure you want to proceed?`)) return;
                                   {po.status === 'partially_received' ? 'PARTIAL' : po.status === 'needs_revision' ? 'NEEDS REVISION' : po.status.toUpperCase()}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="py-2 px-4 font-bold text-[#001529] border-r border-slate-100/50">
+                              <TableCell className="py-2 px-2 font-bold text-[#001529] border-r border-slate-100/50">
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger render={
@@ -1507,7 +1507,7 @@ Are you sure you want to proceed?`)) return;
                                   </Tooltip>
                                 </TooltipProvider>
                               </TableCell>
-                              <TableCell className="text-left py-4">
+                              <TableCell className="text-left py-4 px-2">
                                 <div className="flex items-center gap-2">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger render={
@@ -1752,11 +1752,11 @@ Are you sure you want to proceed?`)) return;
                     <Table>
                     <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                       <TableRow>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Delayed By</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-[300px]">Item Progress</TableHead>
-                        <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right">Actions</TableHead>
+                        <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
+                        <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Delayed By</TableHead>
+                        <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                        <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-[300px]">Item Progress</TableHead>
+                        <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1773,11 +1773,11 @@ Are you sure you want to proceed?`)) return;
                           const daysOutstanding = Math.floor((new Date().getTime() - new Date(po.created_at).getTime()) / (1000 * 3600 * 24));
                           return (
                             <TableRow key={po.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs text-xs">
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                              <TableCell className="py-2 px-2 border-r border-slate-100/50">
                                 <div className="font-bold text-[#001529] font-mono">{po.po_number}</div>
                                 <div className="text-[10px] text-slate-400 font-medium">{po.branch?.name}</div>
                               </TableCell>
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                              <TableCell className="py-2 px-2 border-r border-slate-100/50">
                                 <div className="flex items-center gap-1.5">
                                   <div className={`h-2 w-2 rounded-full ${daysOutstanding > 5 ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
                                   <span className={`font-bold ${daysOutstanding > 5 ? 'text-red-600' : 'text-slate-700'}`}>
@@ -1785,17 +1785,17 @@ Are you sure you want to proceed?`)) return;
                                   </span>
                                 </div>
                               </TableCell>
-                              <TableCell className="py-2 px-4 border-r border-slate-100/50 font-semibold text-slate-600">
+                              <TableCell className="py-2 px-2 border-r border-slate-100/50 font-semibold text-slate-600">
                                 {po.vendor?.name}
                               </TableCell>
-                              <TableCell className="py-4">
+                              <TableCell className="py-4 px-2">
                                 <div className="space-y-3">
                                   {po.items.map((item) => {
                                     const progress = (item.received_quantity / item.quantity) * 100;
                                     return (
                                       <div key={item.id} className="space-y-1">
                                         <div className="flex justify-between text-[10px] font-medium text-slate-500">
-                                          <span className="truncate max-w-[150px]">{item.product.model_name}</span>
+                                          <span>{item.product.model_name}</span>
                                           <span className={progress === 100 ? "text-green-600 font-bold" : "text-slate-900"}>
                                             {item.received_quantity} / {item.quantity}
                                           </span>
@@ -1817,7 +1817,7 @@ Are you sure you want to proceed?`)) return;
                                   })}
                                 </div>
                               </TableCell>
-                              <TableCell className="text-right py-4 px-4">
+                              <TableCell className="text-right py-4 px-2">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger render={
                                     <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
@@ -1977,14 +1977,14 @@ Are you sure you want to proceed?`)) return;
                     <Table>
                     <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                         <TableRow>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Delayed By</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Ordered Amount</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Received Value</TableHead>
-                           <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor&apos;s Invoice</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
-                          <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Delayed By</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Ordered Amount</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Received Value</TableHead>
+                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor&apos;s Invoice</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2030,8 +2030,8 @@ Are you sure you want to proceed?`)) return;
 
                            return (
                              <TableRow key={po.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-xs">
-                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold font-mono text-[#001529]">{po.po_number}</TableCell>
-                               <TableCell className="py-2 px-4 border-r border-slate-100/50">
+                               <TableCell className="py-2 px-2 border-r border-slate-100/50 font-bold font-mono text-[#001529]">{po.po_number}</TableCell>
+                               <TableCell className="py-2 px-2 border-r border-slate-100/50">
                                  <div className="flex items-center gap-1.5">
                                    <div className={`h-2 w-2 rounded-full ${daysOutstanding > 5 ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
                                    <span className={`font-bold ${daysOutstanding > 5 ? 'text-red-600' : 'text-slate-700'}`}>
@@ -2039,8 +2039,8 @@ Are you sure you want to proceed?`)) return;
                                    </span>
                                  </div>
                                </TableCell>
-                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-semibold text-slate-600">{po.vendor?.name}</TableCell>
-                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-slate-500">
+                               <TableCell className="py-2 px-2 border-r border-slate-100/50 font-semibold text-slate-600">{po.vendor?.name}</TableCell>
+                               <TableCell className="py-2 px-2 border-r border-slate-100/50 font-bold text-slate-500">
                                  <TooltipProvider>
                                    <Tooltip>
                                      <TooltipTrigger render={
@@ -2063,7 +2063,7 @@ Are you sure you want to proceed?`)) return;
                                    </Tooltip>
                                  </TooltipProvider>
                                </TableCell>
-                               <TableCell className="py-2 px-4 border-r border-slate-100/50 font-bold text-blue-600">
+                               <TableCell className="py-2 px-2 border-r border-slate-100/50 font-bold text-blue-600">
                                  <TooltipProvider>
                                    <Tooltip>
                                      <TooltipTrigger render={
@@ -2087,7 +2087,7 @@ Are you sure you want to proceed?`)) return;
                                  </TooltipProvider>
                                </TableCell>
                                <TableCell className={cn(
-                                 "py-2 px-4 border-r border-slate-100/50 font-bold",
+                                 "py-2 px-2 border-r border-slate-100/50 font-bold",
                                  hasBill 
                                    ? (matchesPO ? "text-[#001529]" : "text-red-600 font-black underline decoration-double") 
                                    : "text-amber-600"
@@ -2109,7 +2109,7 @@ Are you sure you want to proceed?`)) return;
                                   <Badge variant="outline" className="text-slate-400">PENDING</Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-left py-4 px-4">
+                              <TableCell className="text-left py-4 px-2">
                                 <div className="flex justify-start gap-2">
                                   <DropdownMenu>
                                   <DropdownMenuTrigger render={
@@ -2441,24 +2441,38 @@ Are you sure you want to proceed?`)) return;
                 </div>
               </div>
 
-              {/* Audit Trail */}
+              {/* Document Verification Footer */}
               <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-8 opacity-10">
                   <ShieldCheck className="h-24 w-24" />
                 </div>
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="space-y-1">
-                    <h4 className="text-lg font-black uppercase tracking-tighter text-[#7FD1E3]">Cryptographic Audit Trail</h4>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Authorized Systems Oversight Registry</p>
+                    <h4 className="text-lg font-black uppercase tracking-tighter text-[#7FD1E3]">Document Verification</h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">This is an electronically generated document. No physical signature is required.</p>
                   </div>
-                  <div className="flex flex-wrap gap-4">
+                  
+                  <div className="flex flex-wrap items-center gap-6">
                     <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10">
                       <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Generated By</p>
-                      <p className="text-xs font-bold uppercase">System Automata v2.4</p>
+                      <p className="text-xs font-bold uppercase">OPS360 ENTERPRISE ERP</p>
                     </div>
-                    <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10">
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Encrypted Hash</p>
-                      <p className="text-[10px] font-mono text-[#7FD1E3]">SHA256: {viewingPO.id.substring(0, 16)}...</p>
+
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-[9px] font-black text-[#7FD1E3] uppercase tracking-widest leading-none">Scan to Verify</p>
+                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter mt-1">Authenticity</p>
+                      </div>
+                      <div className="bg-white p-1 rounded-lg">
+                        <Image 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`OPS360-PO-VERIFY-${viewingPO.po_number}`)}`} 
+                          alt="Verification QR" 
+                          width={40}
+                          height={40}
+                          unoptimized
+                          className="h-10 w-10 block grayscale contrast-125"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
