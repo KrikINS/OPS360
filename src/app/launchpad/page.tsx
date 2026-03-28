@@ -5,7 +5,6 @@ import { createClient } from "@/utils/supabase/client"
 import { ModuleLaunchpad } from "@/components/dashboard/ModuleLaunchpad"
 import { Loader2 } from "lucide-react"
 import Image from "next/image"
-import { cn } from "@/lib/utils"
 
 const BrandIdentity = () => {
   return (
@@ -72,12 +71,12 @@ export default function LaunchpadPage() {
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00AEEF]/5 rounded-full blur-[100px]" />
       
       {/* Logo Section */}
-      <div className="flex-none py-10 w-full flex justify-center z-10">
+      <div className="flex-none pt-12 pb-2 w-full flex justify-center z-10">
         <BrandIdentity />
       </div>
       
       {/* Card Grid Section */}
-      <div className="flex-grow flex items-center justify-center px-6 pb-20 z-10">
+      <div className="flex-grow flex items-start justify-center px-6 pb-20 z-10 mt-2">
         <div className="w-full max-w-7xl relative">
           <ModuleLaunchpad permissions={permissions} role={role} isVisible={true} />
         </div>

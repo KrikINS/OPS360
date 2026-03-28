@@ -35,7 +35,6 @@ import {
   BarChart3,
   Wrench,
   Wallet,
-  Loader2,
   ArrowLeft,
   BookOpen,
   ChevronsLeft,
@@ -57,6 +56,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+const ModernOrbitSpinner = ({ size = "sm" }: { size?: "sm" | "md" }) => {
+  const isMd = size === "md";
+  return (
+    <div className={cn("relative flex items-center justify-center", isMd ? "h-6 w-6" : "h-4 w-4")}>
+      {/* Outer Scanning Ring */}
+      <div className={cn("absolute inset-0 rounded-full border-2 border-white/5 border-t-[#7FD1E3]/40 animate-[spin_1.5s_linear_infinite]", isMd ? "border-2" : "border-[1.5px]")} />
+      
+      {/* Inner Pulsing Core */}
+      <div className={cn("rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] animate-pulse", isMd ? "h-1.5 w-1.5" : "h-1 w-1")} />
+      
+      {/* Orbiting Satellite Dot */}
+      <div className={cn("absolute animate-[spin_0.8s_linear_infinite]", isMd ? "inset-[-4px]" : "inset-[-2px]")}>
+        <div className={cn("rounded-full bg-[#7FD1E3] shadow-[0_0_6px_#7FD1E3]", isMd ? "h-1 w-1" : "h-0.5 w-0.5")} />
+      </div>
+    </div>
+  );
+};
 
 const navigationGroups = [
   {
@@ -224,7 +241,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
             title={isCollapsed ? "Command Center" : undefined}
           >
             {navigatingTo === "/launchpad" ? (
-              <Loader2 className="h-4 w-4 animate-spin text-[#7FD1E3]" />
+              <ModernOrbitSpinner />
             ) : (
               <LayoutGrid className={cn(
                 "h-4 w-4 transition-colors duration-300",
@@ -355,7 +372,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                                       )}
                                     >
                                       {navigatingTo === item.url ? (
-                                        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#7FD1E3]" />
+                                        <ModernOrbitSpinner />
                                       ) : (
                                         <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
                                       )}
@@ -427,7 +444,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                                     )}
                                   >
                                     {navigatingTo === item.url ? (
-                                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#7FD1E3]" />
+                                      <ModernOrbitSpinner />
                                     ) : (
                                       <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
                                     )}
@@ -466,7 +483,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
             title={isCollapsed ? "Return to ERP" : undefined}
           >
             {navigatingTo === "/" ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-400" />
+              <ModernOrbitSpinner />
             ) : (
               <ArrowLeft className="h-4 w-4 shrink-0" />
             )}
@@ -486,7 +503,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
           title={isCollapsed ? "OPS360 Knowledge Base" : undefined}
         >
           {navigatingTo === "/docs" ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-300" />
+            <ModernOrbitSpinner />
           ) : (
             <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
           )}

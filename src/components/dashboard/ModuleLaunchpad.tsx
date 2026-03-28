@@ -92,6 +92,24 @@ const MODULES: Module[] = [
   },
 ]
 
+const ModernOrbitSpinner = () => (
+  <div className="relative h-6 w-6 flex items-center justify-center">
+    {/* Outer Scanning Ring */}
+    <div className="absolute inset-0 rounded-full border-2 border-white/5 border-t-white/40 animate-[spin_1.5s_linear_infinite]" />
+    
+    {/* Inner Pulsing Core */}
+    <div className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] animate-pulse" />
+    
+    {/* Orbiting Satellite Dot */}
+    <div className="absolute inset-[-4px] animate-[spin_0.8s_linear_infinite]">
+      <div className="h-1 w-1 rounded-full bg-[#7FD1E3] shadow-[0_0_8px_#7FD1E3]" />
+    </div>
+
+    {/* Holographic Subtle Scan Line */}
+    <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-transparent h-[1px] w-full animate-[bounce_2s_ease-in-out_infinite] opacity-20" />
+  </div>
+)
+
 interface ModuleLaunchpadProps {
   permissions: Record<string, boolean>
   role?: string
@@ -101,6 +119,7 @@ interface ModuleLaunchpadProps {
 export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpadProps) {
   const [mounted, setMounted] = useState(false)
   const [lowStockCount, setLowStockCount] = useState(0)
+  const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -109,13 +128,11 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) return
 
-      const query = supabase.from('view_low_stock_alerts').select('product_id', { count: 'exact' })
+      const { data: count, error } = await supabase.rpc('get_unique_low_stock_count')
       
-      // If not admin, maybe filter by user's assigned branches?
-      // Based on user request, it didn't specify strict filtering here but hinted at branch-context.
-      // Usually Launchpad shows total for Admins or branch-total for managers.
-      const { count } = await query
-      if (count) setLowStockCount(count)
+      if (!error && count !== null) {
+        setLowStockCount(Number(count))
+      }
     }
 
     fetchAlerts()
@@ -135,12 +152,15 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
   if (!isVisible) return null
 
   return (
-    <div className="w-full flex-1 flex flex-col items-center justify-center min-h-[70vh] px-6 py-4">
+    <div className="w-full flex-none flex flex-col items-center justify-center px-6 py-2">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl w-full">
         {allowedModules.map((module, index) => (
           <div 
             key={module.id} 
-            onClick={() => router.push(module.path)}
+            onClick={() => {
+              setLoadingModuleId(module.id)
+              router.push(module.path)
+            }}
             className={cn(
               "group relative block cursor-pointer transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) hover:-translate-y-1 hover:scale-[1.03]",
               mounted ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-90",
@@ -158,7 +178,11 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
                 "p-2.5 rounded-lg bg-gradient-to-br from-white/10 to-transparent border border-white/10 group-hover:scale-110 transition-transform duration-500 mb-auto",
                 module.color
               )}>
-                <module.icon className="h-5 w-5 text-white" />
+                {loadingModuleId === module.id ? (
+                  <ModernOrbitSpinner />
+                ) : (
+                  <module.icon className="h-5 w-5 text-white" />
+                )}
                 {module.id === 'inventory' && lowStockCount > 0 && (
                   <div className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white ring-2 ring-black/20 animate-bounce">
                     {lowStockCount}
