@@ -29,7 +29,8 @@ import {
   Truck,
   Scale,
   LayoutGrid,
-  X
+  X,
+  Ban
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -133,7 +134,7 @@ type PurchaseOrder = {
   po_number: string
   vendor_id: string
   branch_id: string
-  status: 'draft' | 'pending_approval' | 'needs_revision' | 'approved' | 'received' | 'partially_received' | 'cancelled' | 'PARTIALLY_RETURNED' | 'RETURNED'
+  status: 'draft' | 'pending_approval' | 'needs_revision' | 'approved' | 'received' | 'partially_received' | 'cancelled' | 'PARTIALLY_RETURNED' | 'RETURNED' | 'SHORT_CLOSED'
   total_amount: number
   created_at: string
   vendor: { name: string, state: string, payment_terms?: string }
@@ -278,6 +279,10 @@ export default function ProcurementGRNPage() {
   const [viewingInvoices, setViewingInvoices] = useState<PurchaseOrder | null>(null)
   const [isUploadingBill, setIsUploadingBill] = useState(false)
   const [isSubmittingRevision, setIsSubmittingRevision] = useState(false)
+  const [shortClosingPO, setShortClosingPO] = useState<PurchaseOrder | null>(null)
+  const [isShortClosing, setIsShortClosing] = useState(false)
+  const [shortCloseReason, setShortCloseReason] = useState("")
+  const [shortCloseOtherReason, setShortCloseOtherReason] = useState("")
   const printRef = useRef<HTMLDivElement>(null)
   const grnPrintRef = useRef<HTMLDivElement>(null)
   const [currentGrnData, setCurrentGrnData] = useState<GRNData | null>(null)
@@ -688,7 +693,6 @@ export default function ProcurementGRNPage() {
   }
 
 
-
   const handleRejectPO = async (poId: string) => {
     if (!confirm("Are you sure you want to reject this Purchase Order?")) return
     try {
@@ -709,6 +713,41 @@ export default function ProcurementGRNPage() {
        console.error("Failed to reject PO", error)
        const errorMsg = error instanceof Error ? error.message : "An error occurred rejecting the PO";
        alert(errorMsg)
+    }
+  }
+
+  const handleShortClosePO = async () => {
+    if (!shortClosingPO || !shortCloseReason) return
+    setIsShortClosing(true)
+    
+    // Final Reason text assembly
+    const finalReason = shortCloseReason === "Other (Manual Entry)" 
+        ? `Other: ${shortCloseOtherReason}` 
+        : shortCloseReason;
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.rpc('short_close_po', { 
+        p_po_id: shortClosingPO.id,
+        p_reason: finalReason
+      })
+
+      if (error) throw error
+
+      // Refresh data
+      const poRes = await fetch('/api/procurement/purchase-orders')
+      const pos = await poRes.json()
+      setActivePOs(pos)
+      
+      setShortClosingPO(null)
+      setShortCloseReason("")
+      setShortCloseOtherReason("")
+      alert("Purchase Order short-closed successfully.")
+    } catch (err: unknown) {
+      console.error("Failed to short-close PO:", err)
+      alert("Action failed: " + (err instanceof Error ? err.message : "Unknown error"))
+    } finally {
+      setIsShortClosing(false)
     }
   }
 
@@ -1223,7 +1262,7 @@ Are you sure you want to proceed?`)) return;
                                   item.unit_price > (products.find(p => p.id === item.product_id)!.base_price * 5)) && (
                                   <TooltipProvider>
                                     <Tooltip>
-                                      <TooltipTrigger asChild>
+                                      <TooltipTrigger>
                                         <div className="absolute right-2 top-1/2 -translate-y-1/2 cursor-help text-amber-500 animate-pulse">
                                           <ShieldAlert className="h-4 w-4" />
                                         </div>
@@ -1560,9 +1599,10 @@ Are you sure you want to proceed?`)) return;
                                           po.status === 'needs_revision' ? "bg-orange-100 text-orange-700 hover:bg-orange-200 text-[9px] px-1.5 py-0 font-bold border border-orange-200" :
                                             po.status === 'PARTIALLY_RETURNED' ? "bg-pink-100 text-pink-700 hover:bg-pink-200 text-[9px] px-1.5 py-0 font-bold" :
                                               po.status === 'RETURNED' ? "bg-rose-100 text-rose-700 hover:bg-rose-200 text-[9px] px-1.5 py-0 font-bold" :
-                                                "bg-slate-100 text-slate-700 hover:bg-slate-200 text-[9px] px-1.5 py-0 font-bold"
+                                                po.status === 'SHORT_CLOSED' ? "bg-slate-100 text-slate-500 hover:bg-slate-200 text-[9px] px-1.5 py-0 font-bold border border-slate-200" :
+                                                  "bg-slate-100 text-slate-700 hover:bg-slate-200 text-[9px] px-1.5 py-0 font-bold"
                                 }>
-                                  {po.status === 'partially_received' ? 'PARTIAL' : po.status === 'needs_revision' ? 'NEEDS REVISION' : po.status.toUpperCase()}
+                                  {po.status === 'partially_received' ? 'PARTIAL' : po.status === 'needs_revision' ? 'NEEDS REVISION' : po.status === 'SHORT_CLOSED' ? 'SHORT-CLOSED' : po.status.toUpperCase()}
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-2 px-2 font-bold text-[#001529] border-r border-slate-100/50">
@@ -1673,12 +1713,23 @@ Are you sure you want to proceed?`)) return;
                                       )}
 
                                       {(po.status === 'approved' || po.status === 'partially_received') && (
-                                        <DropdownMenuItem 
-                                          onClick={(e) => { e.stopPropagation(); setSelectedPO(po); }}
-                                          className="text-[#001529] focus:text-[#001529] cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                        >
-                                          <Truck className="h-4 w-4 mr-2" /> Process GRN
-                                        </DropdownMenuItem>
+                                        <>
+                                          <DropdownMenuItem 
+                                            onClick={(e) => { e.stopPropagation(); setSelectedPO(po); }}
+                                            className="text-[#001529] focus:text-[#001529] cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                          >
+                                            <Truck className="h-4 w-4 mr-2" /> Process GRN
+                                          </DropdownMenuItem>
+
+                                          {po.status === 'partially_received' && isAdmin && (
+                                            <DropdownMenuItem 
+                                              onClick={(e) => { e.stopPropagation(); setShortClosingPO(po); }}
+                                              className="text-slate-500 focus:text-slate-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                            >
+                                              <Ban className="h-4 w-4 mr-2" /> Short-Close PO
+                                            </DropdownMenuItem>
+                                          )}
+                                        </>
                                       )}
 
                                       {(po.status === 'received' || po.status === 'partially_received' || po.status === 'RETURNED' || po.status === 'PARTIALLY_RETURNED') && (
@@ -1930,6 +1981,15 @@ Are you sure you want to proceed?`)) return;
                                     >
                                       <Truck className="h-4 w-4 mr-2" /> Process GRN
                                     </DropdownMenuItem>
+                                    {isAdmin && (
+                                      <DropdownMenuItem 
+                                        onSelect={(e) => e.preventDefault()}
+                                        onClick={() => setShortClosingPO(po)}
+                                        className="text-slate-500 focus:text-slate-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                      >
+                                        <Ban className="h-4 w-4 mr-2" /> Short-Close PO
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem 
                                       onSelect={(e) => e.preventDefault()}
                                       onClick={() => setViewingPO(po)} 
@@ -3079,6 +3139,102 @@ Are you sure you want to proceed?`)) return;
               Close Record
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Short-Close Confirmation Dialog */}
+      <Dialog open={!!shortClosingPO} onOpenChange={(open) => { 
+          if (!open) {
+            setShortClosingPO(null)
+            setShortCloseReason("")
+            setShortCloseOtherReason("")
+          }
+        }}>
+        <DialogContent className="max-w-md p-6 bg-white shrink-0 sm:rounded-2xl shadow-2xl border-0">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+                <Ban className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <DialogTitle className="text-xl font-bold text-slate-900">
+                  Short-Close PO
+                </DialogTitle>
+                <DialogDescription className="text-sm font-medium text-slate-500">
+                  Seal procurement obligation for <span className="font-bold text-[#001529]">{shortClosingPO?.po_number}</span>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
+            <p className="text-sm text-slate-600 leading-relaxed font-medium">
+              You are about to cancel the remaining <span className="text-red-600 font-bold">
+                {shortClosingPO?.items.reduce((acc, item) => acc + (item.quantity - item.received_quantity), 0)} unit(s)
+              </span> for {shortClosingPO?.po_number}.
+            </p>
+            <p className="text-xs text-slate-500 italic">
+              This action will zero out any outstanding quantities and set the status to Short-Closed. <strong>This action cannot be undone.</strong> Proceed?
+            </p>
+          </div>
+
+          <div className="mt-6 space-y-4">
+             <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-[#001529] opacity-60">
+                  Reason for Cancellation <span className="text-red-500">*</span>
+                </Label>
+                <Select onValueChange={setShortCloseReason}>
+                   <SelectTrigger className="w-full h-11 border-slate-200 focus:ring-slate-900 transition-all font-medium text-sm">
+                      <SelectValue placeholder="Select a reason..." />
+                   </SelectTrigger>
+                   <SelectContent>
+                      <SelectItem value="Vendor Out of Stock" className="font-medium text-sm">Vendor Out of Stock</SelectItem>
+                      <SelectItem value="Customer Order Cancelled" className="font-medium text-sm">Customer Order Cancelled</SelectItem>
+                      <SelectItem value="Price/Terms Disagreement" className="font-medium text-sm">Price/Terms Disagreement</SelectItem>
+                      <SelectItem value="Damaged in Transit (Remaining)" className="font-medium text-sm">Damaged in Transit (Remaining)</SelectItem>
+                      <SelectItem value="Inventory Strategy Shift" className="font-medium text-sm">Inventory Strategy Shift</SelectItem>
+                      <SelectItem value="Other (Manual Entry)" className="font-medium text-sm italic">Other (Manual Entry)</SelectItem>
+                   </SelectContent>
+                </Select>
+             </div>
+
+             {shortCloseReason === "Other (Manual Entry)" && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                   <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      Specify Other Reason <span className="text-red-500">*</span>
+                   </Label>
+                   <Textarea
+                     placeholder="Please provide details..."
+                     value={shortCloseOtherReason}
+                     onChange={(e) => setShortCloseOtherReason(e.target.value)}
+                     rows={3}
+                     className="text-sm font-medium border-slate-200 focus:ring-slate-900 resize-none rounded-xl"
+                   />
+                </div>
+             )}
+          </div>
+
+          <DialogFooter className="mt-8 gap-3 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShortClosingPO(null)
+                setShortCloseReason("")
+                setShortCloseOtherReason("")
+              }}
+              className="px-6 h-11 font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-slate-200 rounded-xl transition-colors"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleShortClosePO}
+              disabled={isShortClosing || !shortCloseReason || (shortCloseReason === "Other (Manual Entry)" && !shortCloseOtherReason.trim())}
+              className="px-8 h-11 bg-slate-900 hover:bg-slate-800 text-white shadow-lg font-bold rounded-xl transition-all active:scale-[0.98] min-w-[140px]"
+            >
+              {isShortClosing ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Ban className="h-4 w-4 mr-2" />}
+              Confirm Cancellation
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       </div>
