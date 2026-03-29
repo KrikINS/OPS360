@@ -751,6 +751,10 @@ export default function ProcurementGRNPage() {
     }
   }
 
+  const handleShortCloseReasonChange = (val: string | null) => {
+    setShortCloseReason(val || "");
+  }
+
   // Approver sends PO back for revision with comments
   const handleRevisionRequest = async () => {
     if (!revisionDialogPO || !revisionNotesInput.trim()) return
@@ -3183,7 +3187,7 @@ Are you sure you want to proceed?`)) return;
                 <Label className="text-[10px] font-black uppercase tracking-widest text-[#001529] opacity-60">
                   Reason for Cancellation <span className="text-red-500">*</span>
                 </Label>
-                <Select onValueChange={setShortCloseReason}>
+                <Select onValueChange={handleShortCloseReasonChange}>
                    <SelectTrigger className="w-full h-11 border-slate-200 focus:ring-slate-900 transition-all font-medium text-sm">
                       <SelectValue placeholder="Select a reason..." />
                    </SelectTrigger>
