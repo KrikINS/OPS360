@@ -69,6 +69,7 @@ export async function POST(request: Request) {
         unit_price,
         hsn_code,
         landed_cost: costDetails.totalLandedCost,
+        freight,
         item_id
       }
     })

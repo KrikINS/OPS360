@@ -33,7 +33,15 @@ export async function GET() {
         *,
         product:products(model_name, hsn_code)
       ),
-      grns:grns(id, grn_number),
+      grns:grns(
+        id, 
+        grn_number,
+        grn_items(
+          freight_value,
+          landed_cost,
+          quantity
+        )
+      ),
       discrepancies:discrepancies(status),
       vendor_bills:vendor_bills(*),
       debit_notes:debit_notes(*)
