@@ -144,7 +144,7 @@ type PurchaseOrder = {
   vendor_bills: VendorBill[]
   debit_notes?: { id: string, status: string, amount: number }[]
   discrepancies?: { id: string, status: string }[]
-  grns?: { id: string, grn_number: string }[]
+  grns?: { id: string, grn_number: string, grn_items?: { freight_value: number }[] }[]
   requester_name?: string
   approver_name?: string
   approver_email?: string
@@ -161,7 +161,7 @@ type PurchaseOrder = {
     tax_rate: number
     total_item_cost: number
     override_reason?: string
-    product: { model_name: string, hsn_code: string, product_code: string }
+    product: { model_name: string, hsn_code: string, product_code: string, base_price: number }
   }[]
   is_partial_billing?: boolean
 }
@@ -594,7 +594,7 @@ export default function ProcurementGRNPage() {
         is_partial_billing: isPartialBilling,
         items: poItems.map((item, idx) => ({
           ...item,
-          override_reason: overrideReasons[idx] || item.override_reason || null,
+          override_reason: overrideReasons[idx] || item.override_reason || item.override_reason || null,
           total_item_cost: (item.unit_price * item.quantity) * (1 + item.tax_rate / 100)
         })),
         // needs_revision PO → resubmit to pending_approval
@@ -1181,22 +1181,59 @@ Are you sure you want to proceed?`)) return;
                                 }}
                               />
                             </TableCell>
-                            <TableCell>
-                              <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+                            <TableCell className="align-top pt-4">
+                              <div className="relative group/price">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs z-10 font-bold">₹</span>
                                 <Input
                                   type="number"
-                                  className="w-24 pl-5 h-8 text-xs font-medium"
+                                  className={cn(
+                                    "w-36 pl-5 h-8 text-xs font-bold transition-all",
+                                    (products.find(p => p.id === item.product_id)?.base_price && 
+                                     item.unit_price > (products.find(p => p.id === item.product_id)!.base_price * 5))
+                                      ? "border-amber-400 bg-amber-50 focus:ring-amber-500 pr-8"
+                                      : "border-slate-200"
+                                  )}
                                   value={item.unit_price}
+                                  max="100000000" // ₹10Cr cap
+                                  onPaste={(e) => {
+                                    const pasteData = e.clipboardData.getData('text').trim();
+                                    // Block if pasted value is suspiciously long (likely a barcode)
+                                    if (pasteData.length > 8 && /^\d+$/.test(pasteData)) {
+                                      e.preventDefault();
+                                      alert("Barcode detected in price field. Paste operation blocked for security.");
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    // Block 'e', '+', '-', '.' (if needed) but here focusing on price corruption
+                                    if (['e', 'E', '+'].includes(e.key)) e.preventDefault();
+                                  }}
                                   onChange={(e) => {
+                                    const val = Number(e.target.value);
+                                    if (val > 100000000) return; // Hard limit at ₹10Cr
+                                    
                                     const newItems = [...poItems];
-                                    const idx = poItems.findIndex(i => i.id === item.id);
-                                    if (idx !== -1) {
-                                      newItems[idx].unit_price = Number(e.target.value);
+                                    const currentIdx = poItems.findIndex(i => i.id === item.id);
+                                    if (currentIdx !== -1) {
+                                      newItems[currentIdx].unit_price = val;
                                       setPoItems(newItems);
                                     }
                                   }}
                                 />
+                                {(products.find(p => p.id === item.product_id)?.base_price && 
+                                  item.unit_price > (products.find(p => p.id === item.product_id)!.base_price * 5)) && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 cursor-help text-amber-500 animate-pulse">
+                                          <ShieldAlert className="h-4 w-4" />
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="bg-amber-600 text-white font-bold border-none">
+                                        <p>Warning: Price is 500% higher than Product Master (₹{products.find(p => p.id === item.product_id)?.base_price.toLocaleString()}). Please verify.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -2076,7 +2113,8 @@ Are you sure you want to proceed?`)) return;
                              
                              const grnSubtotal = po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity)), 0);
                              const grnTaxTotal = po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity) * (Number(item.tax_rate) / 100)), 0);
-                             const grnFreightTotal = po.grns?.reduce((acc: any, grn: any) => acc + (grn.grn_items?.reduce((iAcc: any, item: any) => iAcc + Number(item.freight_value || 0), 0) || 0), 0) || 0;
+                             const grnFreightTotal = po.grns?.reduce((acc: number, grn: { grn_items?: { freight_value: number }[] }) => 
+                               acc + (grn.grn_items?.reduce((iAcc: number, item: { freight_value: number }) => iAcc + Number(item.freight_value || 0), 0) || 0), 0) || 0;
                              const grnTotal = grnSubtotal + grnTaxTotal + grnFreightTotal;
                              
                              const billAmount = po.vendor_bills?.reduce((acc: number, b: VendorBill) => acc + Number(b.bill_amount), 0) || 0;

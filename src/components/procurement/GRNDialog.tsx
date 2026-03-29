@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { 
   Loader2, CheckCircle2, XCircle, Package, Truck, 
-  Landmark, FileText, Barcode, ScanLine, Zap, X 
+  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert 
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -23,6 +23,7 @@ interface Product {
   model_name: string
   product_code: string
   hsn_code: string
+  base_price?: number
 }
 
 interface POItem {
@@ -387,18 +388,42 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                     )}
 
                     {/* Freight */}
-                    <div className="px-3 py-3 min-w-0 flex items-center">
-                      <div className="relative group w-full">
-                        <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-black tracking-tighter">₹</span>
+                    <div className="px-3 py-3 min-w-0 flex items-center align-top pt-4">
+                      <div className="relative group/freight w-full">
+                        <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-black tracking-tighter z-10">₹</span>
                         <Input
                           ref={(el) => { freightRefs.current[item.id] = el }}
                           type="number"
                           placeholder="0"
-                          className="h-9 text-[10px] pl-4 pr-1 border-slate-200 bg-slate-50/30 focus:bg-white focus:border-blue-500 text-slate-900 font-black rounded-lg transition-all min-w-0 w-full"
+                          className={cn(
+                            "h-9 text-[10px] pl-4 pr-1 border-slate-200 bg-slate-50/30 focus:bg-white focus:border-blue-500 text-slate-900 font-black rounded-lg transition-all min-w-0 w-full",
+                            (parseFloat(freightCharges[item.id] || "0") + item.unit_price > (item.product.base_price || 0) * 5) && 
+                            "border-amber-400 bg-amber-50 focus:border-amber-500"
+                          )}
                           value={freightCharges[item.id] || ""}
+                          max="1000000" // ₹10L freight cap per row
+                          onPaste={(e) => {
+                            const pasteData = e.clipboardData.getData('text').trim();
+                            if (pasteData.length > 8 && /^\d+$/.test(pasteData)) {
+                              e.preventDefault();
+                              setToast({ message: "⚠️ Scanner detected in financial field. Manual entry required.", type: "error" });
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (['e', 'E', '+'].includes(e.key)) e.preventDefault();
+                          }}
                           onFocus={() => activeScannerItemId && closeScanner()}
-                          onChange={(e) => setFreightCharges({ ...freightCharges, [item.id]: e.target.value })}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (parseFloat(val) > 1000000) return;
+                            setFreightCharges({ ...freightCharges, [item.id]: val })
+                          }}
                         />
+                        {(parseFloat(freightCharges[item.id] || "0") + item.unit_price > (item.product.base_price || 0) * 5) && (
+                          <div className="absolute -top-6 left-0 text-[8px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded uppercase flex items-center gap-1 animate-in fade-in zoom-in">
+                            <ShieldAlert className="h-3 w-3" /> Integrity Check: Landed Cost abnormally high
+                          </div>
+                        )}
                       </div>
                     </div>
 

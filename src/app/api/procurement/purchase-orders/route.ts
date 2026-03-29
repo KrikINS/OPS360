@@ -31,7 +31,7 @@ export async function GET() {
       branch:branches(name),
       items:purchase_order_items(
         *,
-        product:products(model_name, hsn_code)
+        product:products(model_name, hsn_code, base_price)
       ),
       grns:grns(
         id, 
