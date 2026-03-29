@@ -96,12 +96,9 @@ export function UserProfileModal({
       if (!prev) return null
       
       const currentRegisters = prev.register_permissions || {}
-      const modulePerms = { ...(currentRegisters[module] || {}) }
-      
-      if (next === 'none') {
-        delete modulePerms[key]
-      } else {
-        modulePerms[key] = next
+      const modulePerms = { 
+        ...(currentRegisters[module] || {}),
+        [key]: next 
       }
       
       return {
@@ -148,12 +145,6 @@ export function UserProfileModal({
   const handleSave = async () => {
     if (!formData) return
     setLoading(true)
-    
-    // Diagnostic log for verification
-    console.log("FINAL PAYLOAD DATA:", {
-      permissions: formData.permissions,
-      register_permissions: formData.register_permissions
-    })
     
     await onSave(formData)
     setLoading(false)

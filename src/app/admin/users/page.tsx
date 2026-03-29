@@ -47,7 +47,7 @@ export interface Profile {
   assigned_branch_id: string | null
   assigned_branch_ids: string[] | null
   permissions: Record<string, boolean>
-  register_permissions: Record<string, Record<string, 'view' | 'edit'>> | null
+  register_permissions: Record<string, Record<string, 'none' | 'view' | 'edit'>> | null
   is_active: boolean
 }
 
