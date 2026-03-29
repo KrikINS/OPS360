@@ -75,6 +75,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { ChevronsUpDown, Check } from "lucide-react"
 import ProcessReturns from "../return/page"
 import DiscrepancyReportPage from "../../discrepancy-report/page"
 
@@ -267,6 +281,7 @@ export default function ProcurementGRNPage() {
   const [availableTemplates, setAvailableTemplates] = useState<POTermsTemplate[]>([])
   const [mappedProductIds, setMappedProductIds] = useState<string[]>([])
   const [selectedProductId, setSelectedProductId] = useState<string>("")
+  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false)
   // Revision workflow state
   const [revisionDialogPO, setRevisionDialogPO] = useState<PurchaseOrder | null>(null)
   const [revisionNotesInput, setRevisionNotesInput] = useState("")
@@ -1167,27 +1182,60 @@ Are you sure you want to proceed?`)) return;
               <div className="pt-4 border-t space-y-4">
                 <div className="space-y-4">
                   <Label className="text-lg">Add Items</Label>
-                  <Select
-                    value={selectedProductId}
-                    onValueChange={(val) => {
-                      addPOItem(val)
-                      setSelectedProductId("") // reset picker to blank after selection
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Search products..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products
-                        .filter(p => mappedProductIds.length === 0 || mappedProductIds.includes(p.id))
-                        .map(p => (
-                          <SelectItem key={p.id} value={p.id}>
-                            <span className="font-mono text-xs font-bold mr-2 text-blue-600">[{p.product_code}]</span>
-                            {p.model_name} (₹{p.base_price.toLocaleString()})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={isProductSearchOpen}
+                        className="w-full justify-between h-10 border-slate-200 font-medium text-slate-700"
+                      >
+                        {selectedProductId 
+                          ? products.find((p) => p.id === selectedProductId)?.model_name 
+                          : "Search by Product Name, SKU, or Model Number..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command className="border-none shadow-none">
+                        <CommandInput placeholder="Type to search..." className="h-9 border-none focus:ring-0" />
+                        <CommandList className="max-h-[300px] overflow-y-auto scrollbar-thin">
+                          <CommandEmpty>No product found in master registry.</CommandEmpty>
+                          <CommandGroup heading="Master Registry Products">
+                            {products
+                              .filter(p => !mappedProductIds.length || mappedProductIds.includes(p.id))
+                              .map((p) => (
+                              <CommandItem
+                                key={p.id}
+                                value={`${p.model_name} ${p.brand} ${p.product_code}`}
+                                onSelect={() => {
+                                  addPOItem(p.id)
+                                  setSelectedProductId("")
+                                  setIsProductSearchOpen(false)
+                                }}
+                                className="flex flex-col items-start gap-1 py-3 px-4 cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0"
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="font-bold text-slate-900 text-sm">{p.model_name}</span>
+                                  <Check
+                                    className={cn(
+                                      "h-4 w-4 text-blue-600 ml-auto",
+                                      selectedProductId === p.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                </div>
+                                <div className="flex items-center gap-3 text-[10px] uppercase font-black tracking-widest text-slate-400">
+                                  <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">SKU: {p.product_code}</span>
+                                  <span>{p.brand}</span>
+                                  <span className="text-blue-500">₹{p.base_price.toLocaleString()}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {poItems.length > 0 && (
@@ -1392,17 +1440,17 @@ Are you sure you want to proceed?`)) return;
         </Card>
       ) : (
         <>
-      {/* Registry with Tabs Integration */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full gap-0">
-      <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1">
-        <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
-          <TabsTrigger 
-            value="all" 
-            className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
-          >
-            <FileText className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
-            PO Registry
-          </TabsTrigger>
+          {/* Registry with Tabs Integration */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full gap-0">
+            <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1">
+              <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
+                <TabsTrigger 
+                  value="all" 
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
+                >
+                  <FileText className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
+                  PO Registry
+                </TabsTrigger>
                 <TabsTrigger 
                   value="pending" 
                   className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group relative border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
