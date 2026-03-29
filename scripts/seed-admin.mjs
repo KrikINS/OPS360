@@ -74,7 +74,7 @@ async function updateProfile(userId) {
   try {
     // Branch synchronization
     console.log(">>> Checking for existing operational branches...");
-    let { data: branchData, error: _branchFetchError } = await supabaseAdmin.from("branches").select("id").limit(1).single();
+    let { data: branchData } = await supabaseAdmin.from("branches").select("id").limit(1).single();
     
     if(!branchData) {
       console.log(">>> DATABASE WARNING: No branches detected. Provisioning HQ Control Center...");
@@ -99,7 +99,7 @@ async function updateProfile(userId) {
         id: userId,
         email: "ethanops360@gmail.com",
         full_name: "Ethan Administrator",
-        role: "admin",
+        role: "Admin/Owner",
         branch_id: branchData.id
       });
 

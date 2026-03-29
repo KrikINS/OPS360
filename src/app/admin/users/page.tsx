@@ -217,6 +217,10 @@ export default function UserManagementPage() {
       } else {
         setToast({ message: "Identity metadata successfully synchronized", type: 'success' })
         await refreshData()
+        
+        // RE-SYNC SELECTED PROFILE TO PREVENT STALE MODAL STATE
+        setSelectedProfile(prev => prev ? updated : null)
+        
         router.refresh()
         setTimeout(() => setToast(null), 3000)
       }

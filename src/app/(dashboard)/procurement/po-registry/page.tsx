@@ -237,6 +237,9 @@ export default function ProcurementGRNPage() {
   const [isPartialBilling, setIsPartialBilling] = useState(false)
 
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const isAdmin = userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'admin/owner'
+
   const [loading, setLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [approvingId, setApprovingId] = useState<string | null>(null)
@@ -405,6 +408,7 @@ export default function ProcurementGRNPage() {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
+          setUserId(user.id)
           const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
           setUserRole(profile?.role || 'sales')
         }
@@ -617,8 +621,8 @@ export default function ProcurementGRNPage() {
         console.error(error.error || "Failed to process PO")
         alert(error.error || "Failed to process PO")
       }
-    } catch (err) {
-      console.error("Connection error", err)
+    } catch (err: unknown) {
+      console.error("Connection error:", err)
     } finally {
       setIsGenerating(false)
     }
@@ -629,22 +633,61 @@ export default function ProcurementGRNPage() {
   const handleApprovePO = async (poId: string) => {
     setApprovingId(poId)
     try {
-      const res = await fetch('/api/procurement/purchase-orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: poId, status: 'approved' })
+      if (!userId) {
+        throw new Error("User session expired. Please refresh and try again.");
+      }
+
+      const supabase = createClient()
+      const { data, error } = await supabase.rpc('approve_purchase_order', { 
+        p_po_id: poId,
+        p_user_id: userId
       })
 
-      if (res.ok) {
-        const poRes = await fetch('/api/procurement/purchase-orders')
-        setActivePOs(await poRes.json())
+      if (error) {
+        // Log the actual error object properties for debugging
+        console.error("RPC Error Details:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw new Error(error.message || "Approval RPC failed");
       }
-    } catch (err) {
-      console.error("Failed to approve PO", err)
+
+      if (data && data.success === false) {
+        throw new Error(data.message || "Database side approval failed");
+      }
+
+      // Refresh data
+      const poRes = await fetch('/api/procurement/purchase-orders')
+      const updatedPOs = await poRes.json()
+      setActivePOs(updatedPOs)
+      
+      // Update local state first for immediate UI feedback
+      setActivePOs(prev => prev.map(p => 
+        p.id === poId ? { ...p, status: 'approved', approved_by: userId } : p
+      ))
+      
+      // Automatically switch to GRN Registry (Pending Fulfilment) tab
+      setActiveTab('pending')
+      setViewingPO(null)
+      
+      // Update viewing modal if open
+      if (viewingPO && viewingPO.id === poId) {
+        setViewingPO(updatedPOs.find((p: PurchaseOrder) => p.id === poId))
+      }
+      
+      alert("Purchase Order Approved successfully.")
+    } catch (err: unknown) {
+      console.error("Failed to approve PO:", err)
+      const errorMsg = err instanceof Error ? err.message : "Internal Error";
+      alert("Approval failed: " + errorMsg)
     } finally {
       setApprovingId(null)
     }
   }
+
+
 
   const handleRejectPO = async (poId: string) => {
     if (!confirm("Are you sure you want to reject this Purchase Order?")) return
@@ -662,9 +705,10 @@ export default function ProcurementGRNPage() {
         const data = await res.json()
         alert("Failed to reject PO: " + (data.error || res.statusText))
       }
-    } catch (error) {
+    } catch (error: unknown) {
        console.error("Failed to reject PO", error)
-       alert("An error occurred rejecting the PO")
+       const errorMsg = error instanceof Error ? error.message : "An error occurred rejecting the PO";
+       alert(errorMsg)
     }
   }
 
@@ -691,7 +735,7 @@ export default function ProcurementGRNPage() {
         const err = await res.json()
         console.error("Failed to send back for revision:", err.error)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to send back for revision:", err)
     } finally {
       setIsSubmittingRevision(false)
@@ -1137,7 +1181,24 @@ Are you sure you want to proceed?`)) return;
                                 }}
                               />
                             </TableCell>
-                            <TableCell>₹{item.unit_price.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+                                <Input
+                                  type="number"
+                                  className="w-24 pl-5 h-8 text-xs font-medium"
+                                  value={item.unit_price}
+                                  onChange={(e) => {
+                                    const newItems = [...poItems];
+                                    const idx = poItems.findIndex(i => i.id === item.id);
+                                    if (idx !== -1) {
+                                      newItems[idx].unit_price = Number(e.target.value);
+                                      setPoItems(newItems);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-1">
                                 <Input
@@ -1518,7 +1579,7 @@ Are you sure you want to proceed?`)) return;
                                     <DropdownMenuContent align="end" className="w-56">
                                       {po.status === 'pending_approval' && (
                                         <>
-                                          {userRole === 'admin' && (
+                                          {isAdmin && (
                                             <>
                                               <DropdownMenuItem 
                                                 onClick={() => handleApprovePO(po.id)}
@@ -2246,6 +2307,28 @@ Are you sure you want to proceed?`)) return;
                     </div>
                   </div>
                 </div>
+
+                {/* Center: Approval Actions for Administrators */}
+                {viewingPO.status === 'pending_approval' && isAdmin && (
+                  <div className="flex items-center gap-4 animate-in fade-in zoom-in duration-300">
+                    <Button 
+                      onClick={() => handleApprovePO(viewingPO.id)}
+                      disabled={approvingId === viewingPO.id}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] px-6 h-10 shadow-lg shadow-emerald-900/20 gap-2 border-none"
+                    >
+                      {approvingId === viewingPO.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                      Approve Purchase Order
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      onClick={() => handleRejectPO(viewingPO.id)}
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-black uppercase tracking-widest text-[10px] px-6 h-10 shadow-lg shadow-rose-900/20 gap-2 border-none"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Reject PO
+                    </Button>
+                  </div>
+                )}
 
                 {/* Right Side: Logo and Company Info */}
                 <div className="text-right flex flex-col items-end gap-3">

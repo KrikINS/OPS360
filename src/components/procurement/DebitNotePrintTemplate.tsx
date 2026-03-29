@@ -285,12 +285,12 @@ export const DebitNotePrintTemplate = React.forwardRef<HTMLDivElement, DebitNote
         <div className="w-full px-10 py-6 border-t font-bold text-black uppercase tracking-widest shrink-0 bg-white print-footer">
           <div className="flex justify-between items-end w-full">
             <div className="w-[45%] flex flex-col gap-1">
-              <p className="m-0 text-black font-black text-[9px]">FINANCIAL INSTRUMENT: DEBIT NOTE</p>
-              <p className="text-[7px] m-0 leading-tight">OPS360 ERP | REVERSE LOGISTICS LAYER | AUDITED DOCUMENT</p>
+              <p className="m-0 text-black font-black text-[9px]">DOCUMENT VERIFICATION: OPS360 ENTERPRISE ERP</p>
+              <p className="text-[7px] m-0 leading-tight font-bold uppercase tracking-wider">This is an electronically generated document. No physical signature is required.</p>
             </div>
             
-            <div className="text-center text-[10px] flex items-center gap-3">
-              <span className="text-black font-black">SCAN FOR VALIDATION</span>
+            <div className="text-center text-[10px] flex items-center gap-2">
+              <span className="text-black font-black text-right leading-none">SCAN TO VERIFY<br/>AUTHENTICITY</span>
               <div className="bg-white p-0.5 border border-slate-900 leading-none">
                  {/* Standard img used for consistent print rendering of external QR source */}
                  <Image 

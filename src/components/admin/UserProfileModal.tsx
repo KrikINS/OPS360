@@ -89,12 +89,16 @@ export function UserProfileModal({
     })
   }
 
-  const toggleRegisterLevel = (module: string, register: string, next: 'view' | 'edit') => {
+  const toggleRegisterLevel = (module: string, register: string, next: 'view' | 'edit' | 'none') => {
     const key = register.toLowerCase().replace(/ /g, "_")
     
     setFormData((prev) => {
       if (!prev) return null
       const modulePerms = prev.register_permissions?.[module] || {}
+      
+      // If none, we can either store 'none' or delete the key. 
+      // Deleting the key is cleaner if we default to view elsewhere, 
+      // but explicitly storing 'none' is clearer for this specific UI.
       return {
         ...prev,
         register_permissions: {
@@ -142,14 +146,13 @@ export function UserProfileModal({
   const handleSave = async () => {
     if (!formData) return
     setLoading(true)
-    console.log("Saving User Permissions payload:", {
-      id: formData.id,
-      email: formData.email,
+    
+    // Diagnostic log for verification
+    console.log("FINAL PAYLOAD DATA:", {
       permissions: formData.permissions,
-      register_permissions: formData.register_permissions,
-      pos_protocol: formData.permissions?.pos,
-      inventory_protocol: formData.permissions?.inventory
-    });
+      register_permissions: formData.register_permissions
+    })
+    
     await onSave(formData)
     setLoading(false)
     onOpenChange(false)
@@ -219,7 +222,7 @@ export function UserProfileModal({
               <Lock className="h-3 w-3" /> Register Access (Deep Dive)
             </h4>
             
-            <Accordion className="w-full space-y-2" type="multiple">
+            <Accordion className="w-full space-y-2">
               {Object.entries(MODULE_REGISTERS).map(([module, registers]) => {
                 const isModuleEnabled = formData.permissions?.[module]
 
@@ -235,13 +238,12 @@ export function UserProfileModal({
                           <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">{module} PROTOCOL</span>
                         </div>
                       </AccordionTrigger>
-                      <div className="flex items-center gap-2 p-2">
+                      <div className="flex items-center gap-2 p-2" onClick={(e) => e.stopPropagation()}>
                         <span className="text-[8px] font-black uppercase text-slate-400">STATUS: {isModuleEnabled ? "ACTIVE" : "INACTIVE"}</span>
                         <Switch 
                           checked={isModuleEnabled || false} 
                           onCheckedChange={(checked) => toggleModulePermission(module, checked)}
                           className="scale-75"
-                          onClick={(e) => e.stopPropagation()}
                         />
                       </div>
                     </div>
@@ -253,33 +255,32 @@ export function UserProfileModal({
                       )}
                       {isModuleEnabled && registers.map((reg) => {
                         const key = reg.toLowerCase().replace(/ /g, "_")
-                        const level = formData.register_permissions?.[module]?.[key] || "view"
+                        const val = formData.register_permissions?.[module]?.[key]
+                        const level = val || "none"
                         
                         return (
                           <div key={reg} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                             <div>
                               <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{reg}</p>
                               <p className="text-[9px] text-slate-400 font-bold uppercase">
-                                Capability: {level === "edit" ? "Full Modification" : "Read-Only Observation"}
+                                Capability: {level === "edit" ? "Full Modification" : (level === "view" ? "Read-Only Observation" : "No Access")}
                               </p>
                             </div>
-                            <div className="flex items-center gap-6">
                               <RadioGroup 
                                 value={level} 
-                                onValueChange={(val: string) => toggleRegisterLevel(module, reg, val as 'view' | 'edit')}
+                                onValueChange={(val: string) => toggleRegisterLevel(module, reg, val as 'view' | 'edit' | 'none')}
                                 disabled={!isAdmin}
-                                className="flex items-center gap-4"
+                                className="flex items-center gap-4 py-1"
                               >
-                                  <div className="flex items-center gap-1.5">
+                                    <RadioGroupItem value="none" id={`${reg}-none`} className="text-slate-500 border-slate-200 focus:ring-slate-500" />
+                                    <Label htmlFor={`${reg}-none`} className="text-[9px] font-black uppercase text-slate-500 cursor-pointer pr-2">None</Label>
+
                                     <RadioGroupItem value="view" id={`${reg}-view`} className="text-amber-500 border-amber-200 focus:ring-amber-500" />
-                                    <Label htmlFor={`${reg}-view`} className="text-[9px] font-black uppercase text-amber-600 cursor-pointer">View Only</Label>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
+                                    <Label htmlFor={`${reg}-view`} className="text-[9px] font-black uppercase text-amber-600 cursor-pointer pr-2">View Only</Label>
+
                                     <RadioGroupItem value="edit" id={`${reg}-edit`} className="text-emerald-500 border-emerald-200 focus:ring-emerald-500" />
                                     <Label htmlFor={`${reg}-edit`} className="text-[9px] font-black uppercase text-emerald-600 cursor-pointer">Full Access</Label>
-                                  </div>
-                                </RadioGroup>
-                            </div>
+                              </RadioGroup>
                           </div>
                         )
                       })}

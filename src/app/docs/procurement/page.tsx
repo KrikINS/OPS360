@@ -19,9 +19,9 @@ export default function ProcurementDocs() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { step: "Creation", desc: "Draft POs with HSN-locked GST rates and model-specific pricing." },
-            { step: "Approval", desc: "Authorized managers review and approve POs for fulfillment." },
-            { step: "Reception", desc: "Partial or full receipt (GRN) triggers automated inventory syncing." }
+            { step: "Creation", desc: "Draft POs with HSN-locked GST rates and editable model-specific unit pricing." },
+            { step: "Approval", desc: "Authorized managers review POs. Approval triggers an automatic redirect to the GRN Registry." },
+            { step: "Reception", desc: "Atomic GRN finalization synchronizes inventory and updates PO status in a single transaction." }
           ].map((item, i) => (
             <div key={i} className="bg-slate-50 border rounded-xl p-4 relative">
               <span className="absolute top-2 right-3 text-slate-200 font-bold text-2xl">0{i+1}</span>
@@ -95,8 +95,9 @@ export default function ProcurementDocs() {
 
         <div className="flex gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-          <div className="text-sm text-amber-800">
-            <strong>Manager Override:</strong> If a non-standard rate is required for a specific batch, managers can use the <strong>Manual Override</strong> flag. This bypasses the HSN lock but flags the entry for audit.
+          <div className="text-sm text-amber-800 space-y-2">
+            <p><strong>Manager Override:</strong> If a non-standard rate is required for a specific batch, managers can use the <strong>Manual Override</strong> flag. This bypasses the HSN lock but flags the entry for audit.</p>
+            <p><strong>Price Adjustability:</strong> Unit prices are fully editable during the draft phase to accommodate negotiated vendor rates before the final approval cycle.</p>
           </div>
         </div>
       </section>
@@ -254,6 +255,14 @@ export default function ProcurementDocs() {
             <li className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border">
               <div className="h-2 w-2 rounded-full bg-blue-500" />
               <span className="text-[11px] font-bold uppercase tracking-widest text-[#001529]">Standardized Action Menus</span>
+            </li>
+            <li className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border">
+              <div className="h-2 w-2 rounded-full bg-[#7FD1E3]" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#001529]">Automated Tab Transitions</span>
+            </li>
+            <li className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border">
+              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#001529]">Single-Click GRN Routing</span>
             </li>
             <li className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border">
               <div className="h-2 w-2 rounded-full bg-blue-500" />

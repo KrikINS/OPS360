@@ -262,8 +262,8 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
         <div className="w-full px-10 py-6 border-t font-bold text-black uppercase tracking-widest shrink-0 bg-white print-footer">
           <div className="flex justify-between items-end w-full">
             <div className="w-[45%] flex flex-col gap-1">
-              <p className="m-0 text-black font-black text-[9px]">CLASSIFICATION: CONFIDENTIAL – INTERNAL INVENTORY AUDIT</p>
-              <p className="text-[7px] opacity-100 m-0 leading-tight font-bold uppercase tracking-wider">INTAKE VERIFIED BY OPS360 ENTERPRISE LOGISTICS SUITE</p>
+              <p className="m-0 text-black font-black text-[9px]">DOCUMENT VERIFICATION: OPS360 ENTERPRISE ERP</p>
+              <p className="text-[7px] opacity-100 m-0 leading-tight font-bold uppercase tracking-wider">This is an electronically generated document. No physical signature is required.</p>
             </div>
             
             <div className="w-[55%] text-right flex flex-row items-end justify-end gap-6 text-[8px]">
@@ -273,15 +273,18 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                    <CheckCircle2 className="h-2 w-2" /> Authenticated Hub Entry
                 </p>
               </div>
-              <div className="bg-white p-1 border border-black h-12 w-12 flex items-center justify-center">
-                <Image 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-GRN-${grn.grn_number}-${grn.id}`)}`} 
-                  alt="QR Code" 
-                  width={48}
-                  height={48}
-                  unoptimized
-                  className="h-full w-full object-contain grayscale"
-                />
+              <div className="flex items-center gap-2">
+                <span className="text-[7px] font-black text-black uppercase tracking-widest">Scan to Verify<br/>Authenticity</span>
+                <div className="bg-white p-1 border border-black h-12 w-12 flex items-center justify-center">
+                  <Image 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-GRN-${grn.grn_number}`)}`} 
+                    alt="QR Code" 
+                    width={48}
+                    height={48}
+                    unoptimized
+                    className="h-full w-full object-contain grayscale"
+                  />
+                </div>
               </div>
             </div>
           </div>
