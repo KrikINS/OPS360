@@ -1183,7 +1183,7 @@ Are you sure you want to proceed?`)) return;
                 <div className="space-y-4">
                   <Label className="text-lg">Add Items</Label>
                   <Popover open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen}>
-                    <PopoverTrigger asChild>
+                    <PopoverTrigger render={
                       <Button
                         variant="outline"
                         role="combobox"
@@ -1195,7 +1195,7 @@ Are you sure you want to proceed?`)) return;
                           : "Search by Product Name, SKU, or Model Number..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
-                    </PopoverTrigger>
+                    } />
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                       <Command className="border-none shadow-none">
                         <CommandInput placeholder="Type to search..." className="h-9 border-none focus:ring-0" />
