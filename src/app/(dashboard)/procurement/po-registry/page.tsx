@@ -1231,9 +1231,10 @@ Are you sure you want to proceed?`)) return;
                                   type="number"
                                   className={cn(
                                     "w-36 pl-5 h-8 text-xs font-bold transition-all",
-                                    (products.find(p => p.id === item.product_id)?.base_price && 
-                                     item.unit_price > (products.find(p => p.id === item.product_id)!.base_price * 5))
-                                      ? "border-amber-400 bg-amber-50 focus:ring-amber-500 pr-8"
+                                    (products.find(p => p.id === item.product_id)?.base_price && (
+                                      Math.abs((item.unit_price - products.find(p => p.id === item.product_id)!.base_price) / products.find(p => p.id === item.product_id)!.base_price) > 0.1
+                                    ))
+                                      ? "border-amber-400 bg-amber-50 focus:ring-amber-500 pr-8 shadow-[0_0_0_1px_rgba(251,191,36,0.3)] animate-pulse"
                                       : "border-slate-200"
                                   )}
                                   value={item.unit_price}
@@ -1262,17 +1263,23 @@ Are you sure you want to proceed?`)) return;
                                     }
                                   }}
                                 />
-                                {(products.find(p => p.id === item.product_id)?.base_price && 
-                                  item.unit_price > (products.find(p => p.id === item.product_id)!.base_price * 5)) && (
+                                {(products.find(p => p.id === item.product_id)?.base_price && (
+                                  Math.abs((item.unit_price - products.find(p => p.id === item.product_id)!.base_price) / products.find(p => p.id === item.product_id)!.base_price) > 0.1
+                                )) && (
                                   <TooltipProvider>
                                     <Tooltip>
-                                      <TooltipTrigger>
-                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 cursor-help text-amber-500 animate-pulse">
+                                      <TooltipTrigger render={
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 cursor-help text-amber-500">
                                           <ShieldAlert className="h-4 w-4" />
                                         </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent className="bg-amber-600 text-white font-bold border-none">
-                                        <p>Warning: Price is 500% higher than Product Master (₹{products.find(p => p.id === item.product_id)?.base_price.toLocaleString()}). Please verify.</p>
+                                      } />
+                                      <TooltipContent className="bg-amber-600 text-white font-bold border-none shadow-xl">
+                                        <div className="space-y-1 text-[11px]">
+                                          <p className="flex items-center gap-1.5"><ShieldAlert className="h-3 w-3" /> Price Deviation Detected</p>
+                                          <p className="opacity-90 font-medium">Entered: ₹{item.unit_price.toLocaleString()}</p>
+                                          <p className="opacity-90 font-medium text-amber-100">Master: ₹{products.find(p => p.id === item.product_id)?.base_price.toLocaleString()}</p>
+                                          <p className="pt-1 mt-1 border-t border-white/20">The price deviates by more than 10% from the Product Master Registry.</p>
+                                        </div>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -2151,7 +2158,7 @@ Are you sure you want to proceed?`)) return;
                     </TableHeader>
                     <TableBody>
                       {activePOs
-                        .filter(p => p.status === 'received' || p.status === 'partially_received' || p.status === 'PARTIALLY_RETURNED')
+                        .filter(p => p.status === 'received' || p.status === 'partially_received' || p.status === 'PARTIALLY_RETURNED' || p.status === 'SHORT_CLOSED')
                         .filter(p => {
                           const searchMatch = !auditSearch || p.po_number.toLowerCase().includes(auditSearch.toLowerCase()) || p.vendor?.name?.toLowerCase().includes(auditSearch.toLowerCase());
                           
@@ -2171,8 +2178,14 @@ Are you sure you want to proceed?`)) return;
                           return searchMatch;
                         })
                         .map((po) => {
-                             const subtotal = po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity)), 0);
-                             const taxTotal = po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * (Number(item.tax_rate) / 100)), 0);
+                             const subtotal = po.items.reduce((acc, item) => {
+                               const qtyToAudit = po.status === 'SHORT_CLOSED' ? Number(item.received_quantity) : Number(item.quantity);
+                               return acc + (Number(item.unit_price) * qtyToAudit);
+                             }, 0);
+                             const taxTotal = po.items.reduce((acc, item) => {
+                               const qtyToAudit = po.status === 'SHORT_CLOSED' ? Number(item.received_quantity) : Number(item.quantity);
+                               return acc + (Number(item.unit_price) * qtyToAudit * (Number(item.tax_rate) / 100));
+                             }, 0);
                              const poTotal = subtotal + taxTotal;
                              
                              const grnSubtotal = po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity)), 0);
