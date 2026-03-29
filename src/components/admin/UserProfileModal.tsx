@@ -94,21 +94,23 @@ export function UserProfileModal({
     
     setFormData((prev) => {
       if (!prev) return null
-      const modulePerms = prev.register_permissions?.[module] || {}
       
-      // If none, we can either store 'none' or delete the key. 
-      // Deleting the key is cleaner if we default to view elsewhere, 
-      // but explicitly storing 'none' is clearer for this specific UI.
+      const currentRegisters = prev.register_permissions || {}
+      const modulePerms = { ...(currentRegisters[module] || {}) }
+      
+      if (next === 'none') {
+        delete modulePerms[key]
+      } else {
+        modulePerms[key] = next
+      }
+      
       return {
         ...prev,
         register_permissions: {
-          ...(prev.register_permissions || {}),
-          [module]: {
-            ...modulePerms,
-            [key]: next
-          }
+          ...currentRegisters,
+          [module]: modulePerms
         }
-      }
+      } as Profile
     })
   }
 
