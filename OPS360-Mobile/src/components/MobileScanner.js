@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Audio } from 'expo-av';
+import { useScannerFeedback } from '../hooks/useScannerFeedback';
 import { Zap, RefreshCw, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PermissionGuard from './PermissionGuard';
@@ -14,15 +14,7 @@ export default function MobileScanner({ onClose, onScan }) {
   const [lastScan, setLastScan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Play audio feedbacks
-  const playSound = async (type) => {
-    const { sound } = await Audio.Sound.createAsync(
-      type === 'success' 
-        ? { uri: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3' } // Success Beep
-        : { uri: 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3' } // Error Beep
-    );
-    await sound.playAsync();
-  };
+  const { playFeedback } = useScannerFeedback();
 
   const handleBarcodeScanned = useCallback(async ({ data }) => {
     if (isProcessing) return;
@@ -32,10 +24,10 @@ export default function MobileScanner({ onClose, onScan }) {
     const result = onScan(data); // Call validateScan from Context
     
     if (!result.success) {
-      await playSound('error');
+      await playFeedback(false);
       setLastScan({ data, status: 'error', message: result.message });
     } else {
-      await playSound('success');
+      await playFeedback(true);
       setLastScan({ data, status: 'success', message: result.message });
     }
     
@@ -43,7 +35,7 @@ export default function MobileScanner({ onClose, onScan }) {
       setLastScan(null);
       setIsProcessing(false);
     }, 2000);
-  }, [isProcessing, onScan]);
+  }, [isProcessing, onScan, playFeedback]);
 
   return (
     <PermissionGuard permission={permission} requestPermission={requestPermission}>
