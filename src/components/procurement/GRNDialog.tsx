@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { Html5Qrcode } from "html5-qrcode"
 import { 
   Dialog, 
   DialogContent, 
@@ -62,6 +63,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   const [scanBuffer, setScanBuffer] = useState("")
   const [lastScannedCount, setLastScannedCount] = useState(0)
   const scanInputRef = useRef<HTMLInputElement>(null)
+  const scannerRef = useRef<Html5Qrcode | null>(null)
   // Per-row freight input refs for post-scan focus jump
   const freightRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -122,16 +124,60 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
     }
   }
 
-  const openScanner = (itemId: string) => {
-    setScanBuffer("")
-    setLastScannedCount(0)
-    setActiveScannerItemId(itemId)
-  }
-
-  const closeScanner = () => {
+  const closeScanner = useCallback(async () => {
+    if (scannerRef.current) {
+      if (scannerRef.current.isScanning) {
+        await scannerRef.current.stop()
+      }
+      scannerRef.current = null
+    }
     setActiveScannerItemId(null)
     setScanBuffer("")
-  }
+  }, [])
+
+  // Start camera when a scanner item is activated
+  useEffect(() => {
+    if (activeScannerItemId) {
+      const startCamera = async () => {
+        try {
+          const html5QrCode = new Html5Qrcode("reader")
+          scannerRef.current = html5QrCode
+          
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+            },
+            (decodedText) => {
+              // Success callback
+              commitScan(decodedText)
+            },
+            () => {
+              // Error callback (usually frame-by-frame) - ignore
+            }
+          )
+        } catch (err) {
+          console.error("Camera init failed:", err)
+          setToast({ message: "Camera not found. Please enter Serial Number manually.", type: "error" })
+          // Still keep it open for manual entry but null the scanner
+          scannerRef.current = null
+        }
+      }
+
+      startCamera()
+      // Also focus manual input as backup
+      setTimeout(() => scanInputRef.current?.focus(), 500)
+    } else {
+      closeScanner()
+    }
+
+    return () => {
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop()
+      }
+    }
+  }, [activeScannerItemId, commitScan, closeScanner])
 
   // ──────────────── GRN Finalize ────────────────
   if (!po) return null
@@ -200,10 +246,10 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="md:max-w-5xl w-[95vw] p-0 overflow-hidden h-fit max-h-[95vh] flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl">
+      <DialogContent className="md:max-w-5xl w-[95vw] p-0 overflow-hidden min-h-[300px] h-auto max-h-[95vh] flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl">
         
         {/* ── Header ── */}
-        <DialogHeader className="bg-gradient-to-r from-[#001529] via-[#002140] to-[#001529] text-white p-8 space-y-2 relative overflow-hidden">
+        <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-[#001529] via-[#002140] to-[#001529] text-white p-8 space-y-2 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-32 -mt-32 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full -ml-32 -mb-32 blur-3xl" />
           <div className="relative flex items-center justify-between">
@@ -214,7 +260,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                 </div>
                 Process GRN: {po.po_number}
               </DialogTitle>
-              <DialogDescription className="text-blue-100/60 font-medium text-sm flex items-center gap-2">
+              <DialogDescription className="text-blue-100/60 font-medium text-sm flex items-center gap-2" render={<div />}>
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Logistics &amp; Inventory Sync • Vendor: {po.vendor.name}
               </DialogDescription>
@@ -233,7 +279,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
         </DialogHeader>
 
         {/* ── Body ── */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 relative max-w-full overflow-x-hidden">
+        <div className="flex-grow overflow-y-auto p-4 space-y-6 relative max-w-full overflow-x-hidden">
 
           {/* ── Scan Window (Absolute/Floating) ── */}
           {activeScannerItemId && (() => {
@@ -268,11 +314,23 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                         e.stopPropagation();
                         closeScanner();
                       }}
-                      className="p-2 rounded-xl bg-white/10 hover:bg-rose-500/20 hover:text-rose-400 border border-white/10 transition-all z-50 relative"
+                      className="p-2.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 border border-rose-500/50 shadow-lg shadow-rose-900/40 transition-all z-[60] relative flex items-center justify-center"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-5 w-5 stroke-[3]" />
                     </button>
                   </div>
+                </div>
+
+                {/* Camera Viewfinder */}
+                <div className="relative rounded-xl overflow-hidden bg-black border border-blue-500/30 mb-4 aspect-square">
+                  <div id="reader" className="w-full h-full" />
+                  {!scannerRef.current && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 p-6 text-center">
+                      <XCircle className="h-8 w-8 text-rose-500 mb-2" />
+                      <p className="text-xs font-bold text-slate-300">Camera Unavailable</p>
+                      <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-black">Manual Entry Mode Only</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Scan input area */}
@@ -445,7 +503,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                         <button
                           type="button"
                           aria-label="Activate Barcode Scanner"
-                          onClick={() => isScanning ? closeScanner() : openScanner(item.id)}
+                          onClick={() => isScanning ? closeScanner() : setActiveScannerItemId(item.id)}
                           className={cn(
                             "absolute right-2 top-2 p-1.5 rounded-lg transition-all border shrink-0",
                             isScanning
@@ -499,7 +557,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
         )}
 
         {/* ── Footer ── */}
-        <DialogFooter className="gap-4 p-8 bg-slate-50/80 border-t border-slate-200/60 backdrop-blur-md">
+        <DialogFooter className="flex-shrink-0 gap-4 p-8 bg-slate-50/80 border-t border-slate-200/60 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
           <Button
             variant="outline"
             onClick={onClose}
