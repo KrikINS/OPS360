@@ -143,20 +143,23 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
           const html5QrCode = new Html5Qrcode("reader")
           scannerRef.current = html5QrCode
           
-          await html5QrCode.start(
-            { facingMode: "environment" },
-            {
-              fps: 10,
-              qrbox: { width: 250, height: 250 },
-            },
-            (decodedText) => {
-              // Success callback
-              commitScan(decodedText)
-            },
-            () => {
-              // Error callback (usually frame-by-frame) - ignore
-            }
-          )
+          // Try with exact back camera first (iOS/iPad Safari fix)
+          try {
+            await html5QrCode.start(
+              { facingMode: { exact: "environment" } },
+              { fps: 10, qrbox: { width: 250, height: 250 } },
+              (decodedText) => { commitScan(decodedText) },
+              () => { /* frame error - ignore */ }
+            )
+          } catch {
+            // Fallback: try any available camera
+            await html5QrCode.start(
+              { facingMode: "environment" },
+              { fps: 10, qrbox: { width: 250, height: 250 } },
+              (decodedText) => { commitScan(decodedText) },
+              () => { /* frame error - ignore */ }
+            )
+          }
         } catch (err) {
           console.error("Camera init failed:", err)
           setToast({ message: "Camera not found. Please enter Serial Number manually.", type: "error" })
@@ -246,7 +249,12 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="md:max-w-5xl w-[95vw] p-0 overflow-hidden min-h-[300px] h-auto max-h-[95vh] flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl">
+      <DialogContent className="
+        p-0 overflow-hidden flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl
+        fixed inset-0 w-full h-full max-w-none max-h-none rounded-none
+        lg:inset-auto lg:relative lg:w-[95vw] lg:max-w-5xl lg:h-auto lg:min-h-[300px] lg:max-h-[95vh] lg:rounded-xl
+        lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2
+      ">
         
         {/* ── Header ── */}
         <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-[#001529] via-[#002140] to-[#001529] text-white p-8 space-y-2 relative overflow-hidden">
