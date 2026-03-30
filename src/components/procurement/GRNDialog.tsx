@@ -50,34 +50,79 @@ interface GRNDialogProps {
 }
 
 function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let scanner: any = null;
-    let isRendered = false;
+  const containerId = "grn-barcode-reader";
+  const scannerRef = useRef<any>(null);
 
-    import("html5-qrcode").then(({ Html5QrcodeScanner }) => {
-      scanner = new Html5QrcodeScanner(
-        "grn-barcode-reader",
-        { fps: 10, qrbox: { width: 250, height: 100 }, disableFlip: false },
-        false
-      );
-      scanner.render(
-        (decodedText: string) => {
-          onScan(decodedText);
-        },
-        () => {} // silent error logging
-      );
-      isRendered = true;
-    });
+  useEffect(() => {
+    let isMounted = true;
+
+    const startScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        if (!isMounted) return;
+
+        const scanner = new Html5Qrcode(containerId);
+        scannerRef.current = scanner;
+
+        const config = { 
+          fps: 15, 
+          qrbox: { width: 250, height: 120 },
+          aspectRatio: 1.0
+        };
+
+        // Try environment (back) camera first
+        try {
+          await scanner.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => {
+              if (decodedText) onScan(decodedText.trim());
+            },
+            () => {} // frame error (silent)
+          );
+        } catch (err) {
+          console.warn("Back camera failed, trying front camera:", err);
+          // Fallback to user (front) camera
+          await scanner.start(
+            { facingMode: "user" },
+            config,
+            (decodedText) => {
+              if (decodedText) onScan(decodedText.trim());
+            },
+            () => {}
+          );
+        }
+      } catch (err) {
+        console.error("Camera scanner initialization failed:", err);
+      }
+    };
+
+    startScanner();
 
     return () => {
-      if (scanner && isRendered) {
-        scanner.clear().catch(console.error);
+      isMounted = false;
+      if (scannerRef.current) {
+        if (scannerRef.current.isScanning) {
+          scannerRef.current.stop()
+            .then(() => scannerRef.current.clear())
+            .catch((e: any) => console.error("Scanner stop error:", e));
+        }
       }
     };
   }, [onScan]);
 
-  return <div id="grn-barcode-reader" className="w-full bg-white/5 rounded-xl overflow-hidden mb-4" />;
+  return (
+    <div className="relative w-full mb-4 group/camera">
+      <div 
+        id={containerId} 
+        className="w-full bg-black/40 rounded-2xl overflow-hidden border-2 border-blue-500/30 aspect-square md:aspect-video shadow-inner"
+      />
+      <div className="absolute inset-0 pointer-events-none border-2 border-blue-500/20 rounded-2xl animate-pulse" />
+      <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded-md text-[9px] font-black uppercase text-blue-400 tracking-tighter border border-blue-500/30">
+        Live Stream Active
+      </div>
+    </div>
+  );
 }
 
 export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
