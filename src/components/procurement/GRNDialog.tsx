@@ -243,34 +243,37 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
     } catch (err) { console.error("Focus error:", err); }
   };
 
-  if (!hasStarted) {
-    // Fix: Explicit User Tap
-    return (
-      <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300 h-[100dvh] w-screen m-0 p-0">
-        <button
-          onClick={handleStartScanning}
-          className="bg-blue-600 hover:bg-blue-700 text-white p-8 rounded-3xl shadow-2xl shadow-blue-500/30 flex flex-col items-center gap-4 transition-all"
-        >
-          <Camera className="h-12 w-12 animate-pulse" />
-          <span className="font-black tracking-widest uppercase text-xl">Start Scanning</span>
-          <span className="text-sm text-blue-200 font-medium max-w-[250px] text-center">Tap here to activate lens</span>
-        </button>
-        <button 
-          onClick={onClose} 
-          title="Close Scanner"
-          className="absolute top-6 right-6 p-4 rounded-full bg-rose-500 border border-rose-400 text-white shadow-xl shadow-rose-900/40"
-        >
-          <X className="h-6 w-6" />
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center overflow-hidden animate-in fade-in duration-300 h-[100dvh] w-screen m-0 p-0">
       {/* Visual Emerald Flash on Scan Success */}
       {showFlash && <div className="absolute inset-0 bg-emerald-500/60 z-[120] animate-in fade-in zoom-in duration-150 backdrop-blur-sm" />}
+      
+      {/* 1. Underlying Core Scanner DOM Element - MUST ALWAYS BE MOUNTED FOR HTML5QRCODE */}
       <div id={containerId} className="absolute inset-0 w-full h-full object-cover" />
+
+      {/* Explicit User Tap Overlay */}
+      {!hasStarted && (
+        <div className="absolute inset-0 z-[130] bg-black/95 flex flex-col items-center justify-center backdrop-blur-lg">
+          <button
+            onClick={handleStartScanning}
+            className="bg-blue-600 hover:bg-blue-700 text-white p-8 rounded-3xl shadow-2xl shadow-blue-500/30 flex flex-col items-center gap-4 transition-all"
+          >
+            <Camera className="h-12 w-12 animate-pulse" />
+            <span className="font-black tracking-widest uppercase text-xl">Start Scanning</span>
+            <span className="text-sm text-blue-200 font-medium max-w-[250px] text-center">Tap here to grant permission & activate lens</span>
+          </button>
+          <button 
+            onClick={onClose} 
+            title="Close Scanner"
+            className="absolute top-6 right-6 p-4 rounded-full bg-rose-500 border border-rose-400 text-white shadow-xl shadow-rose-900/40"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+      )}
+
+      {/* Sub-UI elements wrapper (Only visible when started) */}
+      <div className={cn("absolute inset-0 pointer-events-none", !hasStarted && "hidden")}>
 
       {/* 2. Target Frame Overlay */}
       <div className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none">
@@ -339,6 +342,8 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
 
       {/* 4. Success Flash Overlay */}
       {showFlash && <div className="absolute inset-0 z-50 bg-emerald-500/80 animate-in fade-in duration-200" />}
+      
+      </div> {/* End Sub-UI wrapper */}
     </div>
   );
 }
