@@ -244,106 +244,113 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center overflow-hidden animate-in fade-in duration-300 h-[100dvh] w-screen m-0 p-0">
-      {/* Visual Emerald Flash on Scan Success */}
-      {showFlash && <div className="absolute inset-0 bg-emerald-500/60 z-[120] animate-in fade-in zoom-in duration-150 backdrop-blur-sm" />}
+    <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-200 h-[100dvh] w-screen m-0 p-4 md:p-8">
       
-      {/* 1. Underlying Core Scanner DOM Element - MUST ALWAYS BE MOUNTED FOR HTML5QRCODE */}
-      <div id={containerId} className="absolute inset-0 w-full h-full object-cover" />
+      {/* Centered Modal Container for the Scanner */}
+      <div className="relative w-full max-w-md h-[65dvh] md:max-h-[600px] bg-black rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/10 border border-white/10 ring-1 ring-white/5">
+        
+        {/* Visual Emerald Flash on Scan Success */}
+        {showFlash && <div className="absolute inset-0 bg-emerald-500/60 z-[120] animate-in fade-in zoom-in duration-150 backdrop-blur-sm" />}
+        
+        {/* 1. Underlying Core Scanner DOM Element - MUST ALWAYS BE MOUNTED FOR HTML5QRCODE */}
+        <div id={containerId} className="absolute inset-0 w-full h-full object-cover" />
 
-      {/* Explicit User Tap Overlay */}
-      {!hasStarted && (
-        <div className="absolute inset-0 z-[130] bg-black/95 flex flex-col items-center justify-center backdrop-blur-lg">
-          <button
-            onClick={handleStartScanning}
-            className="bg-blue-600 hover:bg-blue-700 text-white p-8 rounded-3xl shadow-2xl shadow-blue-500/30 flex flex-col items-center gap-4 transition-all"
-          >
-            <Camera className="h-12 w-12 animate-pulse" />
-            <span className="font-black tracking-widest uppercase text-xl">Start Scanning</span>
-            <span className="text-sm text-blue-200 font-medium max-w-[250px] text-center">Tap here to grant permission & activate lens</span>
-          </button>
-          <button 
-            onClick={onClose} 
-            title="Close Scanner"
-            className="absolute top-6 right-6 p-4 rounded-full bg-rose-500 border border-rose-400 text-white shadow-xl shadow-rose-900/40"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-      )}
-
-      {/* Sub-UI elements wrapper (Only visible when started) */}
-      <div className={cn("absolute inset-0 pointer-events-none", !hasStarted && "hidden")}>
-
-      {/* 2. Target Frame Overlay */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none">
-        <div className="w-[80vw] h-[30vh] md:w-[60vw] border-2 border-white/50 rounded-3xl relative overflow-hidden">
-          {/* Corner accents */}
-          <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl" />
-          <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl" />
-          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl" />
-          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-xl" />
-          {/* Scanning line */}
-          <div className="absolute inset-x-0 h-0.5 bg-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.5)] animate-[scan_2.5s_linear_infinite]" />
-        </div>
-        <p className="mt-8 text-white/70 font-black uppercase tracking-[0.2em] text-xs drop-shadow-lg">
-          Align Barcode in Viewfinder
-        </p>
-      </div>
-
-      {/* 3. Top Control Bar */}
-      <div className="absolute top-0 inset-x-0 p-6 flex items-center justify-between z-20 bg-gradient-to-b from-black/60 to-transparent">
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest drop-shadow-lg">
-            {isInitializing ? "Lens Initializing" : "Vision active"}
-          </span>
-          <span className="text-white font-bold text-sm drop-shadow-md">
-            {cameras[activeCamIdx]?.label || "Ready to capture"}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {hasTorch && (
+        {/* Explicit User Tap Overlay */}
+        {!hasStarted && (
+          <div className="absolute inset-0 z-[130] bg-slate-900/95 flex flex-col items-center justify-center backdrop-blur-md">
             <button
-              onClick={toggleTorch}
-              title="Toggle Flashlight"
-              className={cn(
-                "p-3 rounded-full border transition-all",
-                isTorchOn ? "bg-amber-500 border-amber-400 text-black" : "bg-black/40 border-white/20 text-white hover:bg-black/60"
-              )}
+              onClick={handleStartScanning}
+              className="bg-blue-600 hover:bg-blue-500 text-white p-6 rounded-3xl shadow-xl shadow-blue-500/20 flex flex-col items-center gap-3 transition-all active:scale-95"
             >
-              <Zap className={cn("h-5 w-5", isTorchOn && "fill-current")} />
+              <Camera className="h-10 w-10 animate-pulse text-blue-100" />
+              <span className="font-black tracking-widest uppercase text-lg">Start Scanner</span>
+              <span className="text-xs text-blue-200 font-medium max-w-[200px] text-center">Tap to initialize lens</span>
             </button>
-          )}
-          {cameras.length > 1 && (
             <button 
-              onClick={switchCamera} 
-              title="Switch Camera"
-              className="p-3 rounded-full bg-black/40 border border-white/20 text-white hover:bg-black/60 transition-all"
+              onClick={onClose} 
+              title="Close Scanner"
+              className="absolute top-4 right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
-              <RefreshCw className="h-5 w-5" />
+              <X className="h-5 w-5" />
             </button>
-          )}
-          <button 
-            onClick={triggerFocus} 
-            title="Focus Camera"
-            className="p-3 rounded-full bg-black/40 border border-white/20 text-white hover:bg-black/60 transition-all"
-          >
-            <Target className="h-5 w-5" />
-          </button>
-          <button 
-            onClick={onClose} 
-            title="Close Scanner"
-            className="p-3 rounded-full bg-rose-500 border border-rose-400 text-white shadow-xl shadow-rose-900/40"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* 4. Success Flash Overlay */}
-      {showFlash && <div className="absolute inset-0 z-50 bg-emerald-500/80 animate-in fade-in duration-200" />}
-      
-      </div> {/* End Sub-UI wrapper */}
+        {/* Sub-UI elements wrapper (Only visible when started) */}
+        <div className={cn("absolute inset-0 pointer-events-none", !hasStarted && "hidden")}>
+
+          {/* 2. Target Frame Overlay (Uses massive box-shadow to darken surroundings) */}
+          <div className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none pb-8">
+            <div className="w-[65%] aspect-square max-w-[250px] border-2 border-white/30 rounded-3xl relative overflow-hidden shadow-[0_0_0_4000px_rgba(0,0,0,0.5)]">
+              {/* Corner accents */}
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl" />
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl" />
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl" />
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-xl" />
+              {/* Scanning line */}
+              <div className="absolute inset-x-0 h-0.5 bg-blue-500/80 shadow-[0_0_20px_rgba(59,130,246,1)] animate-[scan_2s_linear_infinite]" />
+            </div>
+            <div className="mt-6 flex flex-col items-center gap-1.5 opacity-90">
+              <span className="bg-black/60 backdrop-blur text-white px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase border border-white/10 shadow-lg">
+                Align Barcode inside frame
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Top Control Bar */}
+          <div className="absolute top-0 inset-x-0 p-4 flex items-center justify-between z-20 bg-gradient-to-b from-black/80 via-black/40 to-transparent pt-5">
+            <div className="flex flex-col gap-0.5 pl-1">
+              <span className="text-[9px] font-black text-blue-400/90 uppercase tracking-widest drop-shadow-lg">
+                {isInitializing ? "Initializing" : "Vision Active"}
+              </span>
+              <span className="text-white/90 font-bold text-xs drop-shadow-md truncate max-w-[120px]">
+                {cameras[activeCamIdx]?.label || "Ready to capture"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 pr-1 pointer-events-auto">
+              {hasTorch && (
+                <button
+                  onClick={toggleTorch}
+                  title="Toggle Flashlight"
+                  className={cn(
+                    "p-2.5 rounded-full backdrop-blur-md transition-all border",
+                    isTorchOn 
+                      ? "bg-amber-400 text-amber-950 border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.4)]" 
+                      : "bg-white/10 border-white/10 text-white hover:bg-white/20"
+                  )}
+                >
+                  <Zap className={cn("h-4 w-4", isTorchOn && "fill-current")} />
+                </button>
+              )}
+              {cameras.length > 1 && (
+                <button 
+                  onClick={switchCamera} 
+                  title="Switch Camera"
+                  className="p-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white hover:bg-white/20 transition-all"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              )}
+              <button 
+                onClick={triggerFocus} 
+                title="Focus Camera"
+                className="p-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white hover:bg-white/20 transition-all"
+              >
+                <Target className="h-4 w-4" />
+              </button>
+              <div className="w-px h-6 bg-white/20 mx-1" />
+              <button 
+                onClick={onClose} 
+                title="Close Scanner"
+                className="p-2.5 rounded-full bg-rose-500/90 hover:bg-rose-500 border border-rose-400/50 text-white shadow-lg shadow-rose-900/20 transition-all"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+        </div> {/* End Sub-UI wrapper */}
+      </div>
     </div>
   );
 }
