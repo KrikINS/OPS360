@@ -2,8 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useScannerFeedback } from '../hooks/useScannerFeedback';
-import { Zap, RefreshCw, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import { Zap, RefreshCw, X, CheckCircle2, AlertCircle, Camera } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { performAuditOCR } from '../utils/ocrIntelligence';
+import { useMobile } from '../context/MobileContext';
 import PermissionGuard from './PermissionGuard';
 
 export default function MobileScanner({ onClose, onScan }) {
@@ -15,6 +18,48 @@ export default function MobileScanner({ onClose, onScan }) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { playFeedback } = useScannerFeedback();
+
+  const { expectedSerials = [] } = useMobile(); // Access audit specification
+
+  const handleOCRFallback = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        quality: 1,
+        allowsEditing: true,
+        aspect: [16, 9],
+      });
+
+      if (!result.cancelled && result.assets) {
+        setIsProcessing(true);
+        const ocrResult = await performAuditOCR(result.assets[0].uri, expectedSerials);
+        
+        if (ocrResult.success) {
+           // AUDITOR: Handle Partial/Suggested Match
+           if (ocrResult.suggested) {
+             setLastScan({ 
+               data: ocrResult.data, 
+               status: 'suggested', 
+               message: `Partial Match: Did you mean ${ocrResult.data}?` 
+             });
+           } else {
+             const validation = onScan(ocrResult.data);
+             if (validation.success) {
+               await playFeedback(true);
+               setLastScan({ data: ocrResult.data, status: 'success', message: 'OCR Verified' });
+             } else {
+               await playFeedback(false);
+               setLastScan({ data: ocrResult.data, status: 'error', message: validation.message });
+             }
+           }
+        } else {
+           setLastScan({ status: 'error', message: ocrResult.message });
+        }
+        setIsProcessing(false);
+      }
+    } catch (err) {
+      console.warn('OCR Trigger Failed:', err);
+    }
+  };
 
   const handleBarcodeScanned = useCallback(async ({ data }) => {
     if (isProcessing) return;
@@ -78,6 +123,14 @@ export default function MobileScanner({ onClose, onScan }) {
             </View>
         </View>
 
+        {/* OCR Manual Trigger (@UI-ENGINEER) */}
+        {!isProcessing && (
+           <TouchableOpacity style={styles.ocrBtn} onPress={handleOCRFallback}>
+              <Camera size={16} color="#FFF" />
+              <Text style={styles.ocrBtnText}>CAN'T SCAN? USE PHOTO</Text>
+           </TouchableOpacity>
+        )}
+
         {/* Scan Results Feedback Panel */}
         {lastScan && (
           <View style={[styles.feedback, lastScan.status === 'success' ? styles.success : styles.error]}>
@@ -122,5 +175,8 @@ const styles = StyleSheet.create({
   error: { backgroundColor: '#EF4444' },
   feedbackText: { color: '#FFF', fontWeight: '900', fontSize: 16 },
   feedbackSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: '700', marginTop: 2 },
-  scanLine: { position: 'absolute', height: 2, backgroundColor: '#3B82F6', left: 10, right: 10, top: '50%' }
+  scanLine: { position: 'absolute', height: 2, backgroundColor: '#3B82F6', left: 10, right: 10, top: '50%' },
+  ocrBtn: { position: 'absolute', bottom: 120, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 30, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  ocrBtnText: { color: '#FFF', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  suggested: { backgroundColor: '#F59E0B' }
 });
