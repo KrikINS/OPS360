@@ -64,8 +64,13 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   const [lastScannedCount, setLastScannedCount] = useState(0)
   const scanInputRef = useRef<HTMLInputElement>(null)
   const scannerRef = useRef<Html5Qrcode | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   // Per-row freight input refs for post-scan focus jump
   const freightRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  
+  // Diagnostic logs for Safari/iPad debugging
+  const [diagLog, setDiagLog] = useState<string>("")
+  const [isScanningFile, setIsScanningFile] = useState(false)
 
   // ──────────────── Duplicate-check & toast timer ────────────────
   useEffect(() => {
@@ -183,23 +188,52 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
             (decodedText) => commitScan(decodedText),
             () => {}
           );
-        } catch (err) {
-          console.warn("Exact environment failed, trying standard environment fallback", err);
+          setDiagLog("Success: Rear camera (exact) initialized.");
+        } catch (err: any) {
+          const errMsg = err?.name || err?.message || "Unknown Error";
+          setDiagLog(`Handshake 1 Failed: ${errMsg}`);
           // Fallback: Support older iPads or browsers that block exact constraints
-          await html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: config.fps, qrbox: config.qrbox },
-            (decodedText) => commitScan(decodedText),
-            () => {}
-          );
+          try {
+            await html5QrCode.start(
+              { facingMode: "environment" },
+              { fps: config.fps, qrbox: config.qrbox },
+              (decodedText) => commitScan(decodedText),
+              () => {}
+            );
+            setDiagLog(prev => `${prev} -> Success: Rear camera (fallback) initialized.`);
+          } catch (err2: any) {
+            const err2Msg = err2?.name || err2?.message || "Unknown Error";
+            setDiagLog(prev => `${prev} -> Final Failure: ${err2Msg}`);
+            throw err2;
+          }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Camera init failed:", err);
-        setToast({ message: "Camera not found. Please enter Serial Number manually.", type: "error" });
+        const finalMsg = err?.name || err?.message || "Camera blocked";
+        setToast({ message: `Camera error (${finalMsg}) - manual entry only`, type: "error" });
         scannerRef.current = null;
       }
     }, 100); // Tiny delay to ensure wrapper div is mounted
   }, [commitScan]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeScannerItemId) return;
+    
+    setIsScanningFile(true);
+    try {
+      const html5QrCode = new Html5Qrcode("reader");
+      const decodedText = await html5QrCode.scanFile(file, true);
+      commitScan(decodedText);
+      setToast({ message: "Barcode successfully decoded from image", type: "success" });
+    } catch (err) {
+      console.error("File scan failed:", err);
+      setToast({ message: "Could not find a valid barcode in that image. Try a clearer shot.", type: "error" });
+    } finally {
+      setIsScanningFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   // Cleanup on unmount
   useEffect(() => {
@@ -378,6 +412,36 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                       <p className="text-[9px] text-slate-500 font-medium leading-tight max-w-[200px]">
                         Tap above to reload the page. Safari will re-prompt for camera access.
                       </p>
+
+                      <div className="flex flex-col gap-2 mt-2 w-full px-4">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          disabled={isScanningFile}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40 border border-blue-400/30 disabled:opacity-50"
+                        >
+                          {isScanningFile ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Camera className="h-3.5 w-3.5" />
+                          )}
+                          Snap/Upload Photo
+                        </button>
+                        
+                        {diagLog && (
+                          <div className="bg-black/40 p-2 rounded-lg border border-white/5 text-[8px] font-mono text-rose-300 text-left overflow-x-auto whitespace-nowrap scrollbar-hide opacity-40 hover:opacity-100 transition-opacity">
+                            $ diag_log: {diagLog}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
