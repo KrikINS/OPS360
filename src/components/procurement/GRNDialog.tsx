@@ -80,6 +80,7 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
         ];
 
         // Constructor handles format prioritization
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
         scannerRef.current = scanner;
 
