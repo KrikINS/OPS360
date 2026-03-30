@@ -161,6 +161,17 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
     // 3. Initialize Scanner
     setTimeout(async () => {
+      // Hardware Enumeration Log
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          setDiagLog(prev => `${prev} | Hardware: ${devices.length} cams found.`);
+          console.log("Available Devices:", devices);
+        } else {
+          setDiagLog(prev => `${prev} | Hardware: ZERO cams detected.`);
+        }
+      } catch (e) { console.warn("Enum failed", e); }
+
       try {
         if (scannerRef.current) {
           if (scannerRef.current.isScanning) await scannerRef.current.stop();
@@ -181,19 +192,18 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
         };
 
         try {
-          // Primary Attempt: Exact back camera with high-res constraints
+          // Primary Attempt: Exact back camera (iPad focus)
           await html5QrCode.start(
             config.videoConstraints,
             { fps: config.fps, qrbox: config.qrbox },
             (decodedText) => commitScan(decodedText),
             () => {}
           );
-          setDiagLog("Success: Rear camera (exact) initialized.");
-          setDiagLog("Success: Rear camera (exact) initialized.");
+          setDiagLog(prev => `${prev} -> Success: Rear cam (exact).`);
         } catch (err) {
           const errMsg = err instanceof Error ? err.name : String(err);
-          setDiagLog(`Handshake 1 Failed: ${errMsg}`);
-          // Fallback: Support older iPads or browsers that block exact constraints
+          setDiagLog(prev => `${prev} -> H1 Fail: ${errMsg}`);
+          // Fallback 1: Standard environment (older iPads/Browsers)
           try {
             await html5QrCode.start(
               { facingMode: "environment" },
@@ -201,20 +211,35 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
               (decodedText) => commitScan(decodedText),
               () => {}
             );
-            setDiagLog(prev => `${prev} -> Success: Rear camera (fallback) initialized.`);
+            setDiagLog(prev => `${prev} -> Success: Rear cam (fallback).`);
           } catch (err2) {
             const err2Msg = err2 instanceof Error ? err2.name : String(err2);
-            setDiagLog(prev => `${prev} -> Final Failure: ${err2Msg}`);
-            throw err2;
+            setDiagLog(prev => `${prev} -> H2 Fail: ${err2Msg}`);
+            
+            // Fallback 2: Any available camera (Laptop/Desktop fix)
+            try {
+              setDiagLog(prev => `${prev} -> Final Attempt: Default cam...`);
+              await html5QrCode.start(
+                { video: true }, // Broadest possible constraint
+                { fps: config.fps, qrbox: config.qrbox },
+                (decodedText) => commitScan(decodedText),
+                () => {}
+              );
+              setDiagLog(prev => `${prev} -> Success: Default camera.`);
+            } catch (err3) {
+              const err3Msg = err3 instanceof Error ? err3.name : String(err3);
+              setDiagLog(prev => `${prev} -> H3 Fail: ${err3Msg}`);
+              throw err3;
+            }
           }
         }
       } catch (err) {
-        console.error("Camera init failed:", err);
+        console.error("Camera init failed after all fallbacks:", err);
         const finalMsg = err instanceof Error ? err.name : "Camera blocked";
-        setToast({ message: `Camera error (${finalMsg}) - manual entry only`, type: "error" });
+        setToast({ message: `Camera failure (${finalMsg}) - manual entry or photo upload only`, type: "error" });
         scannerRef.current = null;
       }
-    }, 100); // Tiny delay to ensure wrapper div is mounted
+    }, 500); // 500ms delay to ensure DOM is fully ready for attachment
   }, [commitScan]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
