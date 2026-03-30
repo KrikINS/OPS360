@@ -190,28 +190,45 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
 
   const handleStartScanning = async () => {
     setHasStarted(true);
-    await startCamera();
+    setIsInitializing(true);
     
-    // Once permission is granted, list cameras for the UI toggle
     try {
       const mod = await import("html5-qrcode");
+      // 1. getCameras() natively requests initial generic permission to retrieve hardware labels, resolving iPad loop securely.
       const devices = await mod.Html5Qrcode.getCameras();
+      
       if (devices && devices.length > 0) {
-        setCameras(devices.map(d => ({ id: d.id, label: d.label })));
+        const mapped = devices.map((d, i) => ({ id: d.id, label: d.label || `Camera ${i + 1}` }));
+        setCameras(mapped);
+        
+        // 2. Prioritize Rear/Environment Lens instantly
+        const backIdx = mapped.findIndex(d => /back|rear|environment/i.test(d.label));
+        const targetIdx = backIdx >= 0 ? backIdx : 0;
+        setActiveCamIdx(targetIdx);
+        
+        // 3. Start scanning with definitively correct target
+        await startCamera(mapped[targetIdx].id);
+        return;
       }
-    } catch {}
+    } catch (err) {
+      console.warn("Failed hardware enumeration, defaulting to generic fallback:", err);
+    }
+    
+    // Fallback if device blocks enumeration or rejects
+    await startCamera();
   };
 
-  const switchCamera = async () => {
-    if (!scannerRef.current || cameras.length < 2) return;
-    const nextIdx = (activeCamIdx + 1) % cameras.length;
-    setActiveCamIdx(nextIdx);
-    
-    if (scannerRef.current.isScanning) {
-        await scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
+  const manuallySelectCamera = async (targetId: string) => {
+    if (!scannerRef.current) return;
+    const idx = cameras.findIndex(c => c.id === targetId);
+    if (idx >= 0) {
+      setActiveCamIdx(idx);
+      if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop().catch(() => {});
+          scannerRef.current.clear();
+      }
+      await startCamera(targetId);
     }
-    await startCamera(cameras[nextIdx].id);
   };
 
   const toggleTorch = async () => {
@@ -323,13 +340,23 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
                 </button>
               )}
               {cameras.length > 1 && (
-                <button 
-                  onClick={switchCamera} 
-                  title="Switch Camera"
-                  className="p-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white hover:bg-white/20 transition-all"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
+                <div className="relative group">
+                  <select
+                    title="Select Camera"
+                    className="appearance-none bg-white/10 backdrop-blur-md border border-white/10 text-white/90 hover:bg-white/20 transition-all rounded-full pl-3 pr-8 py-2 text-[10px] font-bold tracking-widest uppercase max-w-[130px] sm:max-w-[160px] truncate outline-none cursor-pointer text-center shadow-lg"
+                    value={cameras[activeCamIdx]?.id || ""}
+                    onChange={(e) => manuallySelectCamera(e.target.value)}
+                  >
+                    {cameras.map((c, i) => (
+                      <option key={c.id} value={c.id} className="bg-slate-900 text-white font-sans normal-case tracking-normal">
+                        {c.label || `Camera ${i + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
+                    <RefreshCw className="h-3 w-3" />
+                  </div>
+                </div>
               )}
               <button 
                 onClick={triggerFocus} 
