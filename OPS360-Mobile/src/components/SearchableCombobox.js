@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Dimensions, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { Search, ChevronDown, PackageCheck, AlertCircle, ShoppingCart } from 'lucide-react-native';
-
-const { width } = Dimensions.get('window');
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import { Search, ChevronDown, PackageCheck } from 'lucide-react-native';
 
 // Mock data (Phase 2 will replace with real query)
 const MOCK_POS = [

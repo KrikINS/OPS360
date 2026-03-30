@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { StyleSheet, View, Text, StatusBar, SafeAreaView, Dimensions, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, StatusBar, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ShoppingCart, LogOut, PackageSearch, Boxes, ScanLine } from 'lucide-react-native';
+import { LogOut, PackageSearch, Boxes, ScanLine } from 'lucide-react-native';
 import { MobileProvider, useMobile } from './src/context/MobileContext';
 
 // Components

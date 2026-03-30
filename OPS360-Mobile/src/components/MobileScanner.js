@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Dimensions, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Audio } from 'expo-av';
-import { Zap, Target, RefreshCw, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import { Zap, RefreshCw, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function MobileScanner({ onClose, onScan, expectedSerials = [], priceLock = false }) {
+export default function MobileScanner({ onClose, onScan, expectedSerials = [] }) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [isFaceMode, setIsFaceMode] = useState(false);
@@ -42,7 +42,7 @@ export default function MobileScanner({ onClose, onScan, expectedSerials = [], p
       setLastScan(null);
       setIsProcessing(false);
     }, 2000);
-  }, [expectedSerials, isProcessing]);
+  }, [expectedSerials, isProcessing, onScan]);
 
   if (!permission) return <View style={styles.center}><ActivityIndicator size="large" color="#3B82F6"/></View>;
   if (!permission.granted) {
