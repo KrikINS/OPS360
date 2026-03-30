@@ -137,8 +137,12 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
   const startCamera = useCallback(async (itemId: string) => {
     // 1. Audio Context Kickstart (iOS hardware wake-up)
+    // 1. Audio Context Kickstart (iOS hardware wake-up)
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const WinWithAudio = window as typeof window & {
+        webkitAudioContext?: typeof AudioContext;
+      };
+      const AudioCtx = window.AudioContext || WinWithAudio.webkitAudioContext;
       if (AudioCtx) {
         const ctx = new AudioCtx();
         ctx.resume();
@@ -195,7 +199,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
         scannerRef.current = null;
       }
     }, 100); // Tiny delay to ensure wrapper div is mounted
-  }, [commitScan, closeScanner]);
+  }, [commitScan]);
 
   // Cleanup on unmount
   useEffect(() => {
