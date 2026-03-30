@@ -333,10 +333,23 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                 <div className="relative rounded-xl overflow-hidden bg-black border border-blue-500/30 mb-4 aspect-square">
                   <div id="reader" className="w-full h-full" />
                   {!scannerRef.current && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 p-6 text-center">
-                      <XCircle className="h-8 w-8 text-rose-500 mb-2" />
-                      <p className="text-xs font-bold text-slate-300">Camera Unavailable</p>
-                      <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-black">Manual Entry Mode Only</p>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/85 p-6 text-center gap-3">
+                      <XCircle className="h-8 w-8 text-rose-500" />
+                      <div>
+                        <p className="text-sm font-bold text-slate-200">Camera Unavailable</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Manual Entry Mode Active</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-amber-900/40 border border-amber-400/50"
+                      >
+                        <ScanLine className="h-3.5 w-3.5" />
+                        Reset Permissions &amp; Retry
+                      </button>
+                      <p className="text-[9px] text-slate-500 font-medium leading-tight max-w-[200px]">
+                        Tap above to reload the page. Safari will re-prompt for camera access.
+                      </p>
                     </div>
                   )}
                 </div>
