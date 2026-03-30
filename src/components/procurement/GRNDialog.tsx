@@ -59,6 +59,7 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
+  const [isBackCamera, setIsBackCamera] = useState(false);
 
   // Memoize static configs
   const config = useMemo(() => ({ 
@@ -79,6 +80,10 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
   const startCamera = useCallback(async (scanner: any, deviceId: string) => {
     try {
       if (scanner.isScanning) await scanner.stop();
+      
+      const isBack = cameras.find(c => c.id === deviceId)?.label.toLowerCase().match(/back|rear|environment/) || !deviceId;
+      setIsBackCamera(!!isBack);
+
       await scanner.start(
         deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" },
         config,
@@ -98,7 +103,7 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
       const track = scanner.getRunningTrack();
       if (track && track.getCapabilities) {
         const capabilities = track.getCapabilities();
-        setHasTorch(!!capabilities.torch);
+        setHasTorch(!!capabilities.torch && !!isBack);
       } else {
         setHasTorch(false);
       }
@@ -107,10 +112,11 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
     } catch (err) {
       console.error("Failed to start camera:", err);
       try {
+        setIsBackCamera(false);
         await scanner.start({ facingMode: "user" }, config, (txt: string) => onScan(txt.trim()), () => {});
       } catch {}
     }
-  }, [config, onScan, onClose]);
+  }, [config, onScan, onClose, cameras]);
 
   useEffect(() => {
     let isMounted = true;
@@ -164,7 +170,7 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
   };
 
   const toggleTorch = async () => {
-    if (!scannerRef.current || !hasTorch) return;
+    if (!scannerRef.current || !hasTorch || !isBackCamera) return;
     try {
       const newState = !isTorchOn;
       const track = scannerRef.current.getRunningTrack();
