@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { 
   Dialog, 
   DialogContent, 
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { 
   Loader2, CheckCircle2, XCircle, Package, Truck, 
-  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert, Camera, RefreshCw
+  Landmark, FileText, Barcode, Zap, X, ShieldAlert, Camera, RefreshCw, Target
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -49,19 +49,22 @@ interface GRNDialogProps {
   onSuccess: () => void
 }
 
-function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
-  const containerId = "grn-barcode-reader";
+function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, onClose: () => void }) {
+  const containerId = "grn-full-viewfinder";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerRef = useRef<any>(null);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const [activeCamIdx, setActiveCamIdx] = useState(0);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [hasTorch, setHasTorch] = useState(false);
+  const [showFlash, setShowFlash] = useState(false);
 
-  // Memoize static configs to keep useEffect stable
+  // Memoize static configs
   const config = useMemo(() => ({ 
     fps: 20, 
-    qrbox: { width: 280, height: 120 },
-    aspectRatio: 1.0,
+    qrbox: { width: 300, height: 150 },
+    aspectRatio: window.innerWidth / window.innerHeight,
     videoConstraints: {
       width: { ideal: 1920 },
       height: { ideal: 1080 },
@@ -72,6 +75,7 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
 
   const formatsToSupport = useMemo(() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 14, 15, 16], []);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const startCamera = useCallback(async (scanner: any, deviceId: string) => {
     try {
       if (scanner.isScanning) await scanner.stop();
@@ -79,35 +83,44 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
         deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" },
         config,
         (decodedText: string) => {
-          if (decodedText) onScan(decodedText.trim());
+          if (decodedText) {
+            setShowFlash(true);
+            onScan(decodedText.trim());
+            setTimeout(() => {
+              setShowFlash(false);
+              onClose();
+            }, 500);
+          }
         },
         () => {} // silent frame error
       );
+      
+      const track = scanner.getRunningTrack();
+      if (track && track.getCapabilities) {
+        const capabilities = track.getCapabilities();
+        setHasTorch(!!capabilities.torch);
+      } else {
+        setHasTorch(false);
+      }
+      setIsTorchOn(false);
+
     } catch (err) {
       console.error("Failed to start camera:", err);
-      // Fallback to generic start if specific ID fails
       try {
         await scanner.start({ facingMode: "user" }, config, (txt: string) => onScan(txt.trim()), () => {});
-      } catch {
-        // terminal fallback if even user camera fails
-      }
+      } catch {}
     }
-  }, [config, onScan]);
+  }, [config, onScan, onClose]);
 
   useEffect(() => {
     let isMounted = true;
-
     const init = async () => {
       try {
         const { Html5Qrcode } = await import("html5-qrcode");
         if (!isMounted) return;
-
-        // 1. Get Devices
         const devices = await Html5Qrcode.getCameras();
         if (devices && devices.length > 0) {
           setCameras(devices.map(d => ({ id: d.id, label: d.label })));
-          
-          // 2. Identify "back" camera index
           const backIdx = devices.findIndex(d => 
             d.label.toLowerCase().includes('back') || 
             d.label.toLowerCase().includes('environment') ||
@@ -115,14 +128,11 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
           );
           const initialIdx = backIdx !== -1 ? backIdx : 0;
           setActiveCamIdx(initialIdx);
-
-          // 3. Start
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
           scannerRef.current = scanner;
           await startCamera(scanner, devices[initialIdx].id);
         } else {
-          // Fallback for no labels/discovery
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
           scannerRef.current = scanner;
@@ -134,18 +144,14 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
         setIsInitializing(false);
       }
     };
-
     init();
-
     return () => {
       isMounted = false;
-      if (scannerRef.current) {
-        if (scannerRef.current.isScanning) {
-          scannerRef.current.stop()
-            .then(() => scannerRef.current.clear())
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .catch((e: any) => console.error("Scanner cleanup error:", e));
-        }
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop()
+          .then(() => scannerRef.current.clear())
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .catch((e: any) => console.error("Scanner cleanup error:", e));
       }
     };
   }, [onScan, config, formatsToSupport, startCamera]);
@@ -157,34 +163,107 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
     await startCamera(scannerRef.current, cameras[nextIdx].id);
   };
 
+  const toggleTorch = async () => {
+    if (!scannerRef.current || !hasTorch) return;
+    try {
+      const newState = !isTorchOn;
+      const track = scannerRef.current.getRunningTrack();
+      if (track) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await track.applyConstraints({ advanced: [{ torch: newState }] } as any);
+        setIsTorchOn(newState);
+      }
+    } catch (err) { console.error("Torch error:", err); }
+  };
+
+  const triggerFocus = async () => {
+    if (!scannerRef.current) return;
+    try {
+      const track = scannerRef.current.getRunningTrack();
+      if (track) {
+        // Kickstart/Shake: Cycle focus mode to force hardware to re-focus
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await track.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: 100 }] as any });
+        setTimeout(async () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] as any });
+        }, 150);
+      }
+    } catch (err) { console.error("Focus error:", err); }
+  };
+
   return (
-    <div className="relative w-full mb-4 group/camera">
-      <div 
-        id={containerId} 
-        className="w-full bg-black/40 rounded-2xl overflow-hidden border-2 border-blue-500/30 aspect-square md:aspect-video shadow-inner"
-      />
-      
-      {/* Overlay Controls */}
-      <div className="absolute top-2 left-2 flex items-center gap-2 pointer-events-none">
-        <div className="px-2 py-1 bg-black/60 backdrop-blur-md rounded-md text-[9px] font-black uppercase text-blue-400 tracking-tighter border border-blue-500/30">
-          {isInitializing ? "Initializing..." : cameras[activeCamIdx]?.label || "Live Stream Active"}
+    <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center overflow-hidden animate-in fade-in duration-300">
+      {/* 1. Camera Canvas (Full Screen) */}
+      <div id={containerId} className="absolute inset-0 w-full h-full object-cover" />
+
+      {/* 2. Target Frame Overlay */}
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none">
+        <div className="w-[80vw] h-[30vh] md:w-[60vw] border-2 border-white/50 rounded-3xl relative overflow-hidden">
+          {/* Corner accents */}
+          <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl" />
+          <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl" />
+          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl" />
+          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-xl" />
+          {/* Scanning line */}
+          <div className="absolute inset-x-0 h-0.5 bg-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.5)] animate-[scan_2.5s_linear_infinite]" />
+        </div>
+        <p className="mt-8 text-white/70 font-black uppercase tracking-[0.2em] text-xs drop-shadow-lg">
+          Align Barcode in Viewfinder
+        </p>
+      </div>
+
+      {/* 3. Top Control Bar */}
+      <div className="absolute top-0 inset-x-0 p-6 flex items-center justify-between z-20 bg-gradient-to-b from-black/60 to-transparent">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest drop-shadow-lg">
+            {isInitializing ? "Lens Initializing" : "Vision active"}
+          </span>
+          <span className="text-white font-bold text-sm drop-shadow-md">
+            {cameras[activeCamIdx]?.label || "Ready to capture"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {hasTorch && (
+            <button
+              onClick={toggleTorch}
+              title="Toggle Flashlight"
+              className={cn(
+                "p-3 rounded-full border transition-all",
+                isTorchOn ? "bg-amber-500 border-amber-400 text-black" : "bg-black/40 border-white/20 text-white hover:bg-black/60"
+              )}
+            >
+              <Zap className={cn("h-5 w-5", isTorchOn && "fill-current")} />
+            </button>
+          )}
+          {cameras.length > 1 && (
+            <button 
+              onClick={switchCamera} 
+              title="Switch Camera"
+              className="p-3 rounded-full bg-black/40 border border-white/20 text-white hover:bg-black/60 transition-all"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+          )}
+          <button 
+            onClick={triggerFocus} 
+            title="Focus Camera"
+            className="p-3 rounded-full bg-black/40 border border-white/20 text-white hover:bg-black/60 transition-all"
+          >
+            <Target className="h-5 w-5" />
+          </button>
+          <button 
+            onClick={onClose} 
+            title="Close Scanner"
+            className="p-3 rounded-full bg-rose-500 border border-rose-400 text-white shadow-xl shadow-rose-900/40"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
-      {cameras.length > 1 && (
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            switchCamera();
-          }}
-          className="absolute top-2 right-2 p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-lg text-white transition-all shadow-xl"
-          title="Switch Camera"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
-      )}
-
-      <div className="absolute inset-0 pointer-events-none border-2 border-blue-500/20 rounded-2xl animate-pulse" />
+      {/* 4. Success Flash Overlay */}
+      {showFlash && <div className="absolute inset-0 z-50 bg-emerald-500/80 animate-in fade-in duration-200" />}
     </div>
   );
 }
@@ -201,7 +280,6 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   const [activeScannerItemId, setActiveScannerItemId] = useState<string | null>(null)
   const [isCameraActive, setIsCameraActive] = useState(false)
   const [scanBuffer, setScanBuffer] = useState("")
-  const [lastScannedCount, setLastScannedCount] = useState(0)
   const scanInputRef = useRef<HTMLInputElement>(null)
   // Per-row freight input refs for post-scan focus jump
   const freightRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -246,7 +324,6 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
       return { ...prev, [itemId]: newVal }
     })
 
-    setLastScannedCount(c => c + 1)
     setToast({ message: `✓ Scanned: ${scanned}`, type: "info" })
 
     // Auto-focus the Freight field for this row after scan
@@ -265,7 +342,6 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
   const openScanner = (itemId: string) => {
     setScanBuffer("")
-    setLastScannedCount(0)
     setIsCameraActive(false)
     setActiveScannerItemId(itemId)
   }
@@ -378,120 +454,80 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
         {/* ── Body ── */}
         <div className="flex-grow overflow-y-auto p-4 space-y-6 relative max-w-full overflow-x-hidden">
 
-          {/* ── Scan Window (Absolute/Floating) ── */}
-          {activeScannerItemId && (() => {
+          {/* ── Full Screen Scanner Overlay ── */}
+          {activeScannerItemId && isCameraActive && (
+            <CameraScanner 
+              onScan={(text) => {
+                 commitScan(text);
+              }} 
+              onClose={() => setIsCameraActive(false)}
+            />
+          )}
+
+          {/* ── Horizontal Notification Bar (Post-Scan) ── */}
+          {activeScannerItemId && !isCameraActive && (() => {
             const activeItem = po.items.find(i => i.id === activeScannerItemId)
             const currentSns = serialNumbers[activeScannerItemId]?.split(',').map(s => s.trim()).filter(s => s !== "") || []
             return (
-              <div className="absolute top-4 right-4 z-50 w-[380px] rounded-2xl border-2 border-blue-500 bg-[#001529] text-white p-5 shadow-2xl shadow-blue-900/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-                {/* Background glow */}
-                <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
-                <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl" />
-
-                {/* Header row */}
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/20 rounded-xl border border-blue-400/30 animate-pulse">
-                      <ScanLine className="h-5 w-5 text-blue-400" />
+              <div className="bg-[#001529] border-2 border-blue-500/30 rounded-2xl p-5 shadow-xl animate-in slide-in-from-top-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 bg-blue-500/20 rounded-xl border border-blue-400/30">
+                      <Barcode className="h-5 w-5 text-blue-400" />
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-widest font-black text-blue-300/60">Scanner Active</p>
-                      <p className="text-sm font-black leading-tight">{activeItem?.product.model_name}</p>
+                      <p className="text-[10px] uppercase tracking-widest font-black text-blue-300/60">Manual Entry Active</p>
+                      <h4 className="text-sm font-black text-white">{activeItem?.product.model_name}</h4>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/15 border border-emerald-400/30 rounded-xl">
-                      <Zap className="h-3.5 w-3.5 text-emerald-400" />
-                      <span className="text-xs font-black text-emerald-300">{lastScannedCount} Scanned</span>
-                    </div>
-                    <button
-                      type="button"
-                      aria-label="Toggle Camera"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsCameraActive(!isCameraActive);
-                      }}
-                      className={cn(
-                        "p-2 rounded-xl transition-all z-50 relative border",
-                        isCameraActive 
-                          ? "bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30" 
-                          : "bg-white/10 hover:bg-blue-500/20 hover:text-blue-400 border-white/10 text-white"
-                      )}
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={() => setIsCameraActive(true)}
+                      className="bg-blue-600 hover:bg-blue-700 h-9 rounded-xl font-bold uppercase text-[10px] tracking-widest"
                     >
-                      <Camera className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Close scanner"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        closeScanner();
-                      }}
-                      className="p-2 rounded-xl bg-white/10 hover:bg-rose-500/20 hover:text-rose-400 border border-white/10 transition-all z-50 relative text-white"
+                      <Camera className="h-3.5 w-3.5 mr-2" /> Launch Lens
+                    </Button>
+                    <button 
+                      onClick={closeScanner} 
+                      title="Discard and Close"
+                      className="p-2 text-slate-400 hover:text-rose-400 transition-colors"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Camera Viewer plugin */}
-                {isCameraActive && (
-                  <CameraScanner 
-                    onScan={(text) => {
-                       commitScan(text);
-                       // Optional: prevent rapid duplicate scan by pausing briefly if needed
-                       // but commitScan auto handles it decently.
-                    }} 
-                  />
-                )}
-
-                {/* Scan input area */}
                 <form 
+                  onSubmit={(e) => { e.preventDefault(); commitScan(scanBuffer); }}
                   className="relative"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    commitScan(scanBuffer);
-                  }}
                 >
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                    <Barcode className="h-5 w-5 text-blue-400" />
-                  </div>
                   <input
                     ref={scanInputRef}
                     type="search"
                     inputMode="search"
                     autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="characters"
-                    spellCheck="false"
+                    autoCorrect="off" autoCapitalize="characters" spellCheck="false"
                     value={scanBuffer}
                     onChange={e => setScanBuffer(e.target.value)}
                     onKeyDown={handleScanKeyDown}
-                    placeholder="Point scanner at barcode or type here..."
-                    className="w-full h-14 pl-12 pr-4 text-sm font-mono font-bold bg-white/10 border-2 border-blue-400/40 rounded-xl text-white placeholder:text-blue-300/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 focus:ring-4 focus:ring-blue-500/20 transition-all [&::-webkit-search-cancel-button]:hidden"
+                    placeholder="Type serial or use gun scanner..."
+                    className="w-full h-12 pl-4 pr-12 text-sm font-mono font-bold bg-white/5 border border-white/10 rounded-xl text-white focus:border-blue-400 focus:bg-white/10 transition-all"
                   />
-                  {/* Scanning line animation */}
-                  <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-[scan_2s_linear_infinite] opacity-70" />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-400/50 uppercase tracking-widest px-2 py-1 bg-white/5 rounded-md">
+                    Enter
+                  </div>
                 </form>
 
-                {/* Current SNs for this row */}
                 {currentSns.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     {currentSns.map((sn, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/15 border border-emerald-400/30 rounded-lg text-[11px] font-mono font-bold text-emerald-300"
-                      >
-                        <CheckCircle2 className="h-3 w-3" />
-                        {sn}
+                      <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[10px] font-mono font-bold text-emerald-400">
+                        <CheckCircle2 className="h-3 w-3" /> {sn}
                       </span>
                     ))}
                   </div>
                 )}
-
-                <p className="mt-3 text-[10px] text-blue-300/50 uppercase tracking-widest font-bold">
-                  Manual entry also accepted · Scanner auto-commits on barcode trigger
-                </p>
               </div>
             )
           })()}
