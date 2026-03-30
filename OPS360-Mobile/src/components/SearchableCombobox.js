@@ -1,26 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { Search, ChevronDown, PackageCheck } from 'lucide-react-native';
-
-// Mock data (Phase 2 will replace with real query)
-const MOCK_POS = [
-  { id: 'PO-2026-0001', vendor: 'Global Tech', total: 15400, items: [{ sku: 'SAM-S24', serials: ['123', '456'], price: 900 }] },
-  { id: 'PO-2026-0014', vendor: 'Warehouse Co', total: 8000, items: [] }
-];
+import { fetchLightweightPOs } from '../utils/supabase';
 
 export default function SearchableCombobox({ onSelect }) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [realPOs, setRealPOs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Phase 3: Bind to database bridge (DB-ARCHITECT)
+  React.useEffect(() => {
+    fetchLightweightPOs().then(data => {
+      if (data) setRealPOs(data);
+      setIsLoading(false);
+    });
+  }, []);
 
   // Memoized local filtering for zero lag on iPad
   const filteredPO = useMemo(() => {
-    if (!query) return MOCK_POS;
+    const list = realPOs.length > 0 ? realPOs : [];
+    if (!query) return list;
     const lower = query.toLowerCase();
-    return MOCK_POS.filter(po => 
+    return list.filter(po => 
       po.id.toLowerCase().includes(lower) || 
       po.vendor.toLowerCase().includes(lower)
     );
-  }, [query]);
+  }, [query, realPOs]);
 
   return (
     <View style={styles.container}>
@@ -44,6 +50,11 @@ export default function SearchableCombobox({ onSelect }) {
           <FlatList
             data={filteredPO}
             keyExtractor={item => item.id}
+            ListEmptyComponent={() => (
+              <View style={styles.empty}>
+                 <Text style={styles.emptyText}>{isLoading ? 'Initialising Bridge...' : 'No Match Found'}</Text>
+              </View>
+            )}
             renderItem={({ item }) => (
               <TouchableOpacity 
                 style={styles.item} 

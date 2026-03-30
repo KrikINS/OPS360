@@ -42,6 +42,13 @@ function HomeScreen() {
                 <View style={styles.tagBlue}><Text style={styles.tagTextBlue}>Vendor: {activePO.vendor}</Text></View>
              </View>
            )}
+           
+           {scannedItems.length > 0 && (
+              <TouchableOpacity style={styles.finishBtn} onPress={finishSession}>
+                 <Text style={styles.finishBtnText}>Finish & Short-Close</Text>
+                 <View style={styles.countBadge}><Text style={styles.countText}>{scannedItems.length}</Text></View>
+              </TouchableOpacity>
+           )}
         </View>
 
         {/* Main Action Launchers */}
@@ -116,5 +123,9 @@ const styles = StyleSheet.create({
   actionLabel: { color: '#FFF', fontWeight: '900', fontSize: 18 },
   actionWarning: { color: '#FFF', fontSize: 10, fontWeight: '700', marginTop: 4, opacity: 0.8 },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 64, opacity: 0.5 },
-  footerText: { fontSize: 11, fontWeight: '800', color: '#94A3B8' }
+  footerText: { fontSize: 11, fontWeight: '800', color: '#94A3B8' },
+  finishBtn: { marginTop: 24, padding: 18, backgroundColor: '#0F172A', borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  finishBtnText: { color: '#FFF', fontWeight: '900', fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
+  countBadge: { backgroundColor: '#3B82F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  countText: { color: '#FFF', fontSize: 12, fontWeight: '900' }
 });
