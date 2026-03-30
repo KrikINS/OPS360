@@ -220,7 +220,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
             try {
               setDiagLog(prev => `${prev} -> Final Attempt: Default cam...`);
               await html5QrCode.start(
-                { video: true }, // Broadest possible constraint
+                {}, // Empty constraints object acts as "any video device"
                 { fps: config.fps, qrbox: config.qrbox },
                 (decodedText) => commitScan(decodedText),
                 () => {}
