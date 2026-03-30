@@ -6,7 +6,7 @@ import { Zap, RefreshCw, X, CheckCircle2, AlertCircle } from 'lucide-react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PermissionGuard from './PermissionGuard';
 
-export default function MobileScanner({ onClose, onScan, expectedSerials = [] }) {
+export default function MobileScanner({ onClose, onScan }) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [isFaceMode, setIsFaceMode] = useState(false);
@@ -28,22 +28,22 @@ export default function MobileScanner({ onClose, onScan, expectedSerials = [] })
     if (isProcessing) return;
     setIsProcessing(true);
     
-    // Phase 2: Price/Serial validation
-    const exists = expectedSerials.includes(data);
-    if (expectedSerials.length > 0 && !exists) {
+    // Phase 2: Financial Auditor Validation Logic
+    const result = onScan(data); // Call validateScan from Context
+    
+    if (!result.success) {
       await playSound('error');
-      setLastScan({ data, status: 'invalid' });
+      setLastScan({ data, status: 'error', message: result.message });
     } else {
       await playSound('success');
-      setLastScan({ data, status: 'success' });
-      onScan?.(data);
+      setLastScan({ data, status: 'success', message: result.message });
     }
     
     setTimeout(() => {
       setLastScan(null);
       setIsProcessing(false);
     }, 2000);
-  }, [expectedSerials, isProcessing, onScan]);
+  }, [isProcessing, onScan]);
 
   return (
     <PermissionGuard permission={permission} requestPermission={requestPermission}>
@@ -90,7 +90,10 @@ export default function MobileScanner({ onClose, onScan, expectedSerials = [] })
         {lastScan && (
           <View style={[styles.feedback, lastScan.status === 'success' ? styles.success : styles.error]}>
              {lastScan.status === 'success' ? <CheckCircle2 color="#FFF" /> : <AlertCircle color="#FFF" />}
-             <Text style={styles.feedbackText}>{lastScan.data}</Text>
+             <View>
+                <Text style={styles.feedbackText}>{lastScan.data}</Text>
+                <Text style={styles.feedbackSub}>{lastScan.message}</Text>
+             </View>
           </View>
         )}
       </View>
@@ -126,5 +129,6 @@ const styles = StyleSheet.create({
   success: { backgroundColor: '#10B981' },
   error: { backgroundColor: '#EF4444' },
   feedbackText: { color: '#FFF', fontWeight: '900', fontSize: 16 },
+  feedbackSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: '700', marginTop: 2 },
   scanLine: { position: 'absolute', height: 2, backgroundColor: '#3B82F6', left: 10, right: 10, top: '50%' }
 });
