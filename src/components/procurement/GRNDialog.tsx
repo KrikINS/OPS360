@@ -136,51 +136,73 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   }, [])
 
   // Start camera when a scanner item is activated
-  useEffect(() => {
-    if (activeScannerItemId) {
-      const startCamera = async () => {
-        try {
-          const html5QrCode = new Html5Qrcode("reader")
-          scannerRef.current = html5QrCode
-          
-          // Try with exact back camera first (iOS/iPad Safari fix)
-          try {
-            await html5QrCode.start(
-              { facingMode: { exact: "environment" } },
-              { fps: 10, qrbox: { width: 250, height: 250 } },
-              (decodedText) => { commitScan(decodedText) },
-              () => { /* frame error - ignore */ }
-            )
-          } catch {
-            // Fallback: try any available camera
-            await html5QrCode.start(
-              { facingMode: "environment" },
-              { fps: 10, qrbox: { width: 250, height: 250 } },
-              (decodedText) => { commitScan(decodedText) },
-              () => { /* frame error - ignore */ }
-            )
-          }
-        } catch (err) {
-          console.error("Camera init failed:", err)
-          setToast({ message: "Camera not found. Please enter Serial Number manually.", type: "error" })
-          // Still keep it open for manual entry but null the scanner
-          scannerRef.current = null
+  const startCamera = useCallback(async (itemId: string) => {
+    try {
+      // 1. Kickstart AudioContext (Wakes up iOS hardware permissions)
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          if (ctx.state === 'suspended') ctx.resume();
         }
+      } catch (e) { console.warn("AudioContext kickstart failed", e); }
+
+      // 2. Initialize Scanner
+      const html5QrCode = new Html5Qrcode("reader");
+      scannerRef.current = html5QrCode;
+
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        videoConstraints: {
+          facingMode: { exact: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+
+      try {
+        await html5QrCode.start(
+          config.videoConstraints,
+          { fps: config.fps, qrbox: config.qrbox },
+          (decodedText) => { commitScan(decodedText) },
+          () => { /* frame error */ }
+        );
+      } catch (err) {
+        console.warn("Exact facingMode failed, falling back to non-exact", err);
+        // Fallback: try non-exact environment camera
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: config.fps, qrbox: config.qrbox },
+          (decodedText) => { commitScan(decodedText) },
+          () => { /* frame error */ }
+        );
       }
-
-      startCamera()
-      // Also focus manual input as backup
-      setTimeout(() => scanInputRef.current?.focus(), 500)
-    } else {
-      closeScanner()
+    } catch (err) {
+      console.error("Camera handshake failed:", err);
+      setToast({ message: "Camera not found. Please enter Serial Number manually.", type: "error" });
+      scannerRef.current = null;
     }
+  }, [commitScan]);
 
+  const openScanner = useCallback((itemId: string) => {
+    setScanBuffer("");
+    setLastScannedCount(0);
+    setActiveScannerItemId(itemId);
+    // Explicit User-Initiated Call (Safari Requirement)
+    setTimeout(() => startCamera(itemId), 50);
+  }, [startCamera]);
+
+  useEffect(() => {
+    if (!activeScannerItemId) {
+      closeScanner();
+    }
     return () => {
       if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop()
+        scannerRef.current.stop();
       }
-    }
-  }, [activeScannerItemId, commitScan, closeScanner])
+    };
+  }, [activeScannerItemId, closeScanner]);
 
   // ──────────────── GRN Finalize ────────────────
   if (!po) return null
@@ -524,7 +546,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                         <button
                           type="button"
                           aria-label="Activate Barcode Scanner"
-                          onClick={() => isScanning ? closeScanner() : setActiveScannerItemId(item.id)}
+                          onClick={() => isScanning ? closeScanner() : openScanner(item.id)}
                           className={cn(
                             "absolute right-2 top-2 p-1.5 rounded-lg transition-all border shrink-0",
                             isScanning
