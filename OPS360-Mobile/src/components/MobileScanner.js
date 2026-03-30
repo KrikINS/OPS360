@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Audio } from 'expo-av';
 import { Zap, RefreshCw, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PermissionGuard from './PermissionGuard';
 
 export default function MobileScanner({ onClose, onScan, expectedSerials = [] }) {
   const insets = useSafeAreaInsets();
@@ -44,66 +45,56 @@ export default function MobileScanner({ onClose, onScan, expectedSerials = [] })
     }, 2000);
   }, [expectedSerials, isProcessing, onScan]);
 
-  if (!permission) return <View style={styles.center}><ActivityIndicator size="large" color="#3B82F6"/></View>;
-  if (!permission.granted) {
-      return (
-          <View style={styles.center}>
-              <Text style={styles.msg}>Camera Access Required</Text>
-              <TouchableOpacity onPress={requestPermission} style={styles.btn}>
-                  <Text style={styles.btnText}>Grant Permission</Text>
-              </TouchableOpacity>
-          </View>
-      );
-  }
-
   return (
-    <View style={styles.container}>
-      <CameraView
-        style={StyleSheet.absoluteFill}
-        facing={isFaceMode ? 'front' : 'back'}
-        enableTorch={isTorchOn}
-        onBarcodeScanned={handleBarcodeScanned}
-        barcodeScannerSettings={{ barcodeTypes: ['code128', 'ean13', 'upc_a'] }}
-      />
-      
-      {/* Target Box Overlay */}
-      <View style={styles.overlay}>
-        <View style={styles.targetFrame}>
-           <View style={[styles.corner, styles.tl]} />
-           <View style={[styles.corner, styles.tr]} />
-           <View style={[styles.corner, styles.bl]} />
-           <View style={[styles.corner, styles.br]} />
-           {isProcessing && <View style={styles.scanLine} />}
-        </View>
-      </View>
-
-      {/* Top Header UI */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
-          <View>
-              <Text style={styles.title}>Vision Hub</Text>
-              <Text style={styles.subtitle}>{isFaceMode ? 'Front Lens' : 'Rear Lens Active'}</Text>
+    <PermissionGuard permission={permission} requestPermission={requestPermission}>
+      <View style={styles.container}>
+        <CameraView
+          style={StyleSheet.absoluteFill}
+          facing={isFaceMode ? 'front' : 'back'}
+          enableTorch={isTorchOn}
+          onBarcodeScanned={handleBarcodeScanned}
+          barcodeScannerSettings={{ barcodeTypes: ['code128', 'ean13', 'upc_a'] }}
+        />
+        
+        {/* Target Box Overlay */}
+        <View style={styles.overlay}>
+          <View style={styles.targetFrame}>
+             <View style={[styles.corner, styles.tl]} />
+             <View style={[styles.corner, styles.tr]} />
+             <View style={[styles.corner, styles.bl]} />
+             <View style={[styles.corner, styles.br]} />
+             {isProcessing && <View style={styles.scanLine} />}
           </View>
-          <View style={styles.controls}>
-             <TouchableOpacity style={[styles.iconBtn, isTorchOn && styles.iconBtnActive]} onPress={() => setIsTorchOn(!isTorchOn)}>
-                <Zap size={20} color={isTorchOn ? '#000' : '#FFF'} />
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.iconBtn} onPress={() => setIsFaceMode(!isFaceMode)}>
-                <RefreshCw size={20} color="#FFF" />
-             </TouchableOpacity>
-             <TouchableOpacity style={[styles.iconBtn, styles.exitBtn]} onPress={onClose}>
-                <X size={20} color="#FFF" />
-             </TouchableOpacity>
-          </View>
-      </View>
-
-      {/* Scan Results Feedback Panel */}
-      {lastScan && (
-        <View style={[styles.feedback, lastScan.status === 'success' ? styles.success : styles.error]}>
-           {lastScan.status === 'success' ? <CheckCircle2 color="#FFF" /> : <AlertCircle color="#FFF" />}
-           <Text style={styles.feedbackText}>{lastScan.data}</Text>
         </View>
-      )}
-    </View>
+
+        {/* Top Header UI */}
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
+            <View>
+                <Text style={styles.title}>Vision Hub</Text>
+                <Text style={styles.subtitle}>{isFaceMode ? 'Front Lens' : 'Rear Lens Active'}</Text>
+            </View>
+            <View style={styles.controls}>
+               <TouchableOpacity style={[styles.iconBtn, isTorchOn && styles.iconBtnActive]} onPress={() => setIsTorchOn(!isTorchOn)}>
+                  <Zap size={20} color={isTorchOn ? '#000' : '#FFF'} />
+               </TouchableOpacity>
+               <TouchableOpacity style={styles.iconBtn} onPress={() => setIsFaceMode(!isFaceMode)}>
+                  <RefreshCw size={20} color="#FFF" />
+               </TouchableOpacity>
+               <TouchableOpacity style={[styles.iconBtn, styles.exitBtn]} onPress={onClose}>
+                  <X size={20} color="#FFF" />
+               </TouchableOpacity>
+            </View>
+        </View>
+
+        {/* Scan Results Feedback Panel */}
+        {lastScan && (
+          <View style={[styles.feedback, lastScan.status === 'success' ? styles.success : styles.error]}>
+             {lastScan.status === 'success' ? <CheckCircle2 color="#FFF" /> : <AlertCircle color="#FFF" />}
+             <Text style={styles.feedbackText}>{lastScan.data}</Text>
+          </View>
+        )}
+      </View>
+    </PermissionGuard>
   );
 }
 
