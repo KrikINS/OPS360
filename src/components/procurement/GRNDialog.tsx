@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { 
   Loader2, CheckCircle2, XCircle, Package, Truck, 
-  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert 
+  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert, Camera
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -49,6 +49,37 @@ interface GRNDialogProps {
   onSuccess: () => void
 }
 
+function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let scanner: any = null;
+    let isRendered = false;
+
+    import("html5-qrcode").then(({ Html5QrcodeScanner }) => {
+      scanner = new Html5QrcodeScanner(
+        "grn-barcode-reader",
+        { fps: 10, qrbox: { width: 250, height: 100 }, disableFlip: false },
+        false
+      );
+      scanner.render(
+        (decodedText: string) => {
+          onScan(decodedText);
+        },
+        () => {} // silent error logging
+      );
+      isRendered = true;
+    });
+
+    return () => {
+      if (scanner && isRendered) {
+        scanner.clear().catch(console.error);
+      }
+    };
+  }, [onScan]);
+
+  return <div id="grn-barcode-reader" className="w-full bg-white/5 rounded-xl overflow-hidden mb-4" />;
+}
+
 export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [freightCharges, setFreightCharges] = useState<Record<string, string>>({})
@@ -59,6 +90,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
   // Scanner state
   const [activeScannerItemId, setActiveScannerItemId] = useState<string | null>(null)
+  const [isCameraActive, setIsCameraActive] = useState(false)
   const [scanBuffer, setScanBuffer] = useState("")
   const [lastScannedCount, setLastScannedCount] = useState(0)
   const scanInputRef = useRef<HTMLInputElement>(null)
@@ -125,11 +157,13 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   const openScanner = (itemId: string) => {
     setScanBuffer("")
     setLastScannedCount(0)
+    setIsCameraActive(false)
     setActiveScannerItemId(itemId)
   }
 
   const closeScanner = () => {
     setActiveScannerItemId(null)
+    setIsCameraActive(false)
     setScanBuffer("")
   }
 
@@ -263,17 +297,44 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                     </div>
                     <button
                       type="button"
+                      aria-label="Toggle Camera"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCameraActive(!isCameraActive);
+                      }}
+                      className={cn(
+                        "p-2 rounded-xl transition-all z-50 relative border",
+                        isCameraActive 
+                          ? "bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30" 
+                          : "bg-white/10 hover:bg-blue-500/20 hover:text-blue-400 border-white/10 text-white"
+                      )}
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
                       aria-label="Close scanner"
                       onClick={(e) => {
                         e.stopPropagation();
                         closeScanner();
                       }}
-                      className="p-2 rounded-xl bg-white/10 hover:bg-rose-500/20 hover:text-rose-400 border border-white/10 transition-all z-50 relative"
+                      className="p-2 rounded-xl bg-white/10 hover:bg-rose-500/20 hover:text-rose-400 border border-white/10 transition-all z-50 relative text-white"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
+
+                {/* Camera Viewer plugin */}
+                {isCameraActive && (
+                  <CameraScanner 
+                    onScan={(text) => {
+                       commitScan(text);
+                       // Optional: prevent rapid duplicate scan by pausing briefly if needed
+                       // but commitScan auto handles it decently.
+                    }} 
+                  />
+                )}
 
                 {/* Scan input area */}
                 <form 
