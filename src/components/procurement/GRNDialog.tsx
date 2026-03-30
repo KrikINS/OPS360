@@ -83,7 +83,8 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
   const scannerRef = useRef<any>(null);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const [activeCamIdx, setActiveCamIdx] = useState(0);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
@@ -104,16 +105,22 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
 
   const formatsToSupport = useMemo(() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 14, 15, 16], []);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const startCamera = useCallback(async (scanner: any, deviceId: string) => {
+  const startCamera = useCallback(async (deviceId?: string) => {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    if (scanner.isScanning) return; // Fix: De-bounce the Request
+
+    setIsInitializing(true);
+
     try {
-      if (scanner.isScanning) await scanner.stop();
-      
       const isBack = cameras.find(c => c.id === deviceId)?.label.toLowerCase().match(/back|rear|environment/) || !deviceId;
       setIsBackCamera(!!isBack);
 
+      // Fix: Standard Constraints - Use { video: true } if no device id specified
+      const cameraParam = deviceId ? { deviceId: { exact: deviceId } } : { video: true };
+
       await scanner.start(
-        deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" },
+        cameraParam,
         config,
         (decodedText: string) => {
           if (decodedText) {
@@ -147,46 +154,29 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
 
     } catch (err) {
       console.error("Failed to start camera:", err);
+      // Fix: Clear State on Error
+      scanner.clear();
+
       try {
         setIsBackCamera(false);
         await scanner.start({ facingMode: "user" }, config, (txt: string) => onScan(txt.trim()), () => {});
-      } catch {}
+      } catch (err2) {
+         console.error("Fallback camera failed:", err2);
+         scanner.clear();
+      }
+    } finally {
+      setIsInitializing(false);
     }
   }, [config, onScan, onClose, cameras, isDuplicate]);
 
   useEffect(() => {
     let isMounted = true;
-    const init = async () => {
-      try {
-        const { Html5Qrcode } = await import("html5-qrcode");
-        if (!isMounted) return;
-        const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length > 0) {
-          setCameras(devices.map(d => ({ id: d.id, label: d.label })));
-          const backIdx = devices.findIndex(d => 
-            d.label.toLowerCase().includes('back') || 
-            d.label.toLowerCase().includes('environment') ||
-            d.label.toLowerCase().includes('rear')
-          );
-          const initialIdx = backIdx !== -1 ? backIdx : 0;
-          setActiveCamIdx(initialIdx);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
-          scannerRef.current = scanner;
-          await startCamera(scanner, devices[initialIdx].id);
-        } else {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
-          scannerRef.current = scanner;
-          await scanner.start({ facingMode: "environment" }, config, (txt: string) => onScan(txt.trim()), () => {});
-        }
-      } catch (err) {
-        console.error("Scanner Init Error:", err);
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-    init();
+    import("html5-qrcode").then((mod) => {
+      if (!isMounted) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      scannerRef.current = new mod.Html5Qrcode(containerId, { formatsToSupport } as any);
+    });
+
     return () => {
       isMounted = false;
       if (scannerRef.current && scannerRef.current.isScanning) {
@@ -196,13 +186,32 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
           .catch((e: any) => console.error("Scanner cleanup error:", e));
       }
     };
-  }, [onScan, config, formatsToSupport, startCamera, isDuplicate]);
+  }, [formatsToSupport]);
+
+  const handleStartScanning = async () => {
+    setHasStarted(true);
+    await startCamera();
+    
+    // Once permission is granted, list cameras for the UI toggle
+    try {
+      const mod = await import("html5-qrcode");
+      const devices = await mod.Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        setCameras(devices.map(d => ({ id: d.id, label: d.label })));
+      }
+    } catch {}
+  };
 
   const switchCamera = async () => {
     if (!scannerRef.current || cameras.length < 2) return;
     const nextIdx = (activeCamIdx + 1) % cameras.length;
     setActiveCamIdx(nextIdx);
-    await startCamera(scannerRef.current, cameras[nextIdx].id);
+    
+    if (scannerRef.current.isScanning) {
+        await scannerRef.current.stop().catch(() => {});
+        scannerRef.current.clear();
+    }
+    await startCamera(cameras[nextIdx].id);
   };
 
   const toggleTorch = async () => {
@@ -233,6 +242,29 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
       }
     } catch (err) { console.error("Focus error:", err); }
   };
+
+  if (!hasStarted) {
+    // Fix: Explicit User Tap
+    return (
+      <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300 h-[100dvh] w-screen m-0 p-0">
+        <button
+          onClick={handleStartScanning}
+          className="bg-blue-600 hover:bg-blue-700 text-white p-8 rounded-3xl shadow-2xl shadow-blue-500/30 flex flex-col items-center gap-4 transition-all"
+        >
+          <Camera className="h-12 w-12 animate-pulse" />
+          <span className="font-black tracking-widest uppercase text-xl">Start Scanning</span>
+          <span className="text-sm text-blue-200 font-medium max-w-[250px] text-center">Tap here to activate lens</span>
+        </button>
+        <button 
+          onClick={onClose} 
+          title="Close Scanner"
+          className="absolute top-6 right-6 p-4 rounded-full bg-rose-500 border border-rose-400 text-white shadow-xl shadow-rose-900/40"
+        >
+          <X className="h-6 w-6" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center overflow-hidden animate-in fade-in duration-300 h-[100dvh] w-screen m-0 p-0">
