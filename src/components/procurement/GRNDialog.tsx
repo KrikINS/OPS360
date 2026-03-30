@@ -49,7 +49,35 @@ interface GRNDialogProps {
   onSuccess: () => void
 }
 
-function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, onClose: () => void }) {
+// Global Audio Context for scanner feedback (shared to avoid multiple instances)
+let audioCtx: AudioContext | null = null;
+const initAudio = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+};
+
+const playBeep = (freq: number, duration: number, volume = 0.1) => {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration/1000);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration/1000);
+};
+
+const playSuccessBeep = () => playBeep(800, 100, 0.2);
+const playErrorBeep = () => {
+  playBeep(200, 150, 0.3);
+  setTimeout(() => playBeep(200, 150, 0.3), 200);
+};
+
+function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string) => void, onClose: () => void, isDuplicate: (text: string) => boolean }) {
   const containerId = "grn-full-viewfinder";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerRef = useRef<any>(null);
@@ -89,8 +117,16 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
         config,
         (decodedText: string) => {
           if (decodedText) {
+            const raw = decodedText.trim().toUpperCase();
+            if (isDuplicate(raw)) {
+              playErrorBeep();
+              // Don't close or flash green, let user see it failed
+              return;
+            }
+
             setShowFlash(true);
-            onScan(decodedText.trim());
+            playSuccessBeep();
+            onScan(raw);
             setTimeout(() => {
               setShowFlash(false);
               onClose();
@@ -116,7 +152,7 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
         await scanner.start({ facingMode: "user" }, config, (txt: string) => onScan(txt.trim()), () => {});
       } catch {}
     }
-  }, [config, onScan, onClose, cameras]);
+  }, [config, onScan, onClose, cameras, isDuplicate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -160,7 +196,7 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
           .catch((e: any) => console.error("Scanner cleanup error:", e));
       }
     };
-  }, [onScan, config, formatsToSupport, startCamera]);
+  }, [onScan, config, formatsToSupport, startCamera, isDuplicate]);
 
   const switchCamera = async () => {
     if (!scannerRef.current || cameras.length < 2) return;
@@ -199,8 +235,9 @@ function CameraScanner({ onScan, onClose }: { onScan: (text: string) => void, on
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center overflow-hidden animate-in fade-in duration-300">
-      {/* 1. Camera Canvas (Full Screen) */}
+    <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center overflow-hidden animate-in fade-in duration-300 h-[100dvh] w-screen m-0 p-0">
+      {/* Visual Emerald Flash on Scan Success */}
+      {showFlash && <div className="absolute inset-0 bg-emerald-500/60 z-[120] animate-in fade-in zoom-in duration-150 backdrop-blur-sm" />}
       <div id={containerId} className="absolute inset-0 w-full h-full object-cover" />
 
       {/* 2. Target Frame Overlay */}
@@ -324,6 +361,18 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
     setScanBuffer("")
 
+    // Check for duplicates globally across all rows
+    const allSns = Object.values(serialNumbers).flatMap(snStr => 
+      snStr.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
+    )
+
+    if (allSns.includes(scanned)) {
+      playErrorBeep();
+      setToast({ message: `❌ Duplicate detected: ${scanned}`, type: "error" });
+      return;
+    }
+
+    playSuccessBeep();
     setSerialNumbers(prev => {
       const existing = prev[itemId]?.trim() || ""
       const newVal = existing ? `${existing}, ${scanned}` : scanned
@@ -337,7 +386,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
       freightRefs.current[itemId]?.focus()
       freightRefs.current[itemId]?.select()
     }, 120)
-  }, [activeScannerItemId])
+  }, [activeScannerItemId, serialNumbers])
 
   const handleScanKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -347,6 +396,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   }
 
   const openScanner = (itemId: string) => {
+    initAudio()
     setScanBuffer("")
     setIsCameraActive(false)
     setActiveScannerItemId(itemId)
@@ -466,6 +516,11 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
               onScan={(text) => {
                  commitScan(text);
               }} 
+              isDuplicate={(text) => {
+                return Object.values(serialNumbers).some(snStr => 
+                  snStr.split(',').map(s => s.trim().toUpperCase()).includes(text)
+                );
+              }}
               onClose={() => setIsCameraActive(false)}
             />
           )}
@@ -489,7 +544,10 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                   <div className="flex items-center gap-2">
                     <Button 
                       size="sm" 
-                      onClick={() => setIsCameraActive(true)}
+                      onClick={() => {
+                        initAudio();
+                        setIsCameraActive(true);
+                      }}
                       className="bg-blue-600 hover:bg-blue-700 h-9 rounded-xl font-bold uppercase text-[10px] tracking-widest"
                     >
                       <Camera className="h-3.5 w-3.5 mr-2" /> Launch Lens
