@@ -9,7 +9,7 @@ import SearchableCombobox from './src/components/SearchableCombobox';
 import MobileScanner from './src/components/MobileScanner';
 
 function HomeScreen() {
-  const { activePO, setActivePO, commitScan } = useMobile();
+  const { activePO, setActivePO, scannedItems, validateScan, finishSession } = useMobile();
   const [isCameraActive, setIsCameraActive] = useState(false);
 
   return (
@@ -80,9 +80,7 @@ function HomeScreen() {
       {isCameraActive && (
         <MobileScanner 
             onClose={() => setIsCameraActive(false)} 
-            onScan={commitScan} 
-            expectedSerials={activePO?.items?.flatMap(i => i.serials) || []}
-            priceLock={true}
+            onScan={validateScan} 
         />
       )}
     </SafeAreaView>
