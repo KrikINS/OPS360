@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Html5Qrcode } from "html5-qrcode"
 import { 
   Dialog, 
   DialogContent, 
@@ -16,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { 
   Loader2, CheckCircle2, XCircle, Package, Truck, 
-  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert, Camera 
+  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert 
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -63,14 +62,8 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   const [scanBuffer, setScanBuffer] = useState("")
   const [lastScannedCount, setLastScannedCount] = useState(0)
   const scanInputRef = useRef<HTMLInputElement>(null)
-  const scannerRef = useRef<Html5Qrcode | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   // Per-row freight input refs for post-scan focus jump
   const freightRefs = useRef<Record<string, HTMLInputElement | null>>({})
-  
-  // Diagnostic logs for Safari/iPad debugging
-  const [diagLog, setDiagLog] = useState<string>("")
-  const [isScanningFile, setIsScanningFile] = useState(false)
 
   // ──────────────── Duplicate-check & toast timer ────────────────
   useEffect(() => {
@@ -129,146 +122,16 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
     }
   }
 
-  const closeScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      if (scannerRef.current.isScanning) {
-        await scannerRef.current.stop()
-      }
-      scannerRef.current = null
-    }
+  const openScanner = (itemId: string) => {
+    setScanBuffer("")
+    setLastScannedCount(0)
+    setActiveScannerItemId(itemId)
+  }
+
+  const closeScanner = () => {
     setActiveScannerItemId(null)
     setScanBuffer("")
-  }, [])
-
-  const startCamera = useCallback(async (itemId: string) => {
-    // 1. Audio Context Kickstart (iOS hardware wake-up)
-    // 1. Audio Context Kickstart (iOS hardware wake-up)
-    try {
-      const WinWithAudio = window as typeof window & {
-        webkitAudioContext?: typeof AudioContext;
-      };
-      const AudioCtx = window.AudioContext || WinWithAudio.webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
-        ctx.resume();
-      }
-    } catch (e) { console.warn("Audio kickstart failed", e); }
-
-    // 2. Set Active Item
-    setScanBuffer("");
-    setLastScannedCount(0);
-    setActiveScannerItemId(itemId);
-
-    // 3. Initialize Scanner
-    setTimeout(async () => {
-      // Hardware Enumeration Log
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length > 0) {
-          setDiagLog(prev => `${prev} | Hardware: ${devices.length} cams found.`);
-          console.log("Available Devices:", devices);
-        } else {
-          setDiagLog(prev => `${prev} | Hardware: ZERO cams detected.`);
-        }
-      } catch (e) { console.warn("Enum failed", e); }
-
-      try {
-        if (scannerRef.current) {
-          if (scannerRef.current.isScanning) await scannerRef.current.stop();
-          scannerRef.current = null;
-        }
-
-        const html5QrCode = new Html5Qrcode("reader");
-        scannerRef.current = html5QrCode;
-
-        const config = {
-          fps: 15,
-          qrbox: { width: 250, height: 250 },
-          videoConstraints: {
-            facingMode: { exact: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        };
-
-        try {
-          // Primary Attempt: Exact back camera (iPad focus)
-          await html5QrCode.start(
-            config.videoConstraints,
-            { fps: config.fps, qrbox: config.qrbox },
-            (decodedText) => commitScan(decodedText),
-            () => {}
-          );
-          setDiagLog(prev => `${prev} -> Success: Rear cam (exact).`);
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.name : String(err);
-          setDiagLog(prev => `${prev} -> H1 Fail: ${errMsg}`);
-          // Fallback 1: Standard environment (older iPads/Browsers)
-          try {
-            await html5QrCode.start(
-              { facingMode: "environment" },
-              { fps: config.fps, qrbox: config.qrbox },
-              (decodedText) => commitScan(decodedText),
-              () => {}
-            );
-            setDiagLog(prev => `${prev} -> Success: Rear cam (fallback).`);
-          } catch (err2) {
-            const err2Msg = err2 instanceof Error ? err2.name : String(err2);
-            setDiagLog(prev => `${prev} -> H2 Fail: ${err2Msg}`);
-            
-            // Fallback 2: Any available camera (Laptop/Desktop fix)
-            try {
-              setDiagLog(prev => `${prev} -> Final Attempt: Default cam...`);
-              await html5QrCode.start(
-                {}, // Empty constraints object acts as "any video device"
-                { fps: config.fps, qrbox: config.qrbox },
-                (decodedText) => commitScan(decodedText),
-                () => {}
-              );
-              setDiagLog(prev => `${prev} -> Success: Default camera.`);
-            } catch (err3) {
-              const err3Msg = err3 instanceof Error ? err3.name : String(err3);
-              setDiagLog(prev => `${prev} -> H3 Fail: ${err3Msg}`);
-              throw err3;
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Camera init failed after all fallbacks:", err);
-        const finalMsg = err instanceof Error ? err.name : "Camera blocked";
-        setToast({ message: `Camera failure (${finalMsg}) - manual entry or photo upload only`, type: "error" });
-        scannerRef.current = null;
-      }
-    }, 500); // 500ms delay to ensure DOM is fully ready for attachment
-  }, [commitScan]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeScannerItemId) return;
-    
-    setIsScanningFile(true);
-    try {
-      const html5QrCode = new Html5Qrcode("reader");
-      const decodedText = await html5QrCode.scanFile(file, true);
-      commitScan(decodedText);
-      setToast({ message: "Barcode successfully decoded from image", type: "success" });
-    } catch (err) {
-      console.error("File scan failed:", err);
-      setToast({ message: "Could not find a valid barcode in that image. Try a clearer shot.", type: "error" });
-    } finally {
-      setIsScanningFile(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop();
-      }
-    };
-  }, []);
+  }
 
   // ──────────────── GRN Finalize ────────────────
   if (!po) return null
@@ -337,12 +200,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="
-        p-0 overflow-hidden flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl
-        fixed inset-0 w-full h-[100dvh] max-w-none max-h-none rounded-none
-        lg:inset-auto lg:relative lg:w-[95vw] lg:max-w-5xl lg:h-auto lg:min-h-[300px] lg:max-h-[95vh] lg:rounded-xl
-        lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2
-      ">
+      <DialogContent className="md:max-w-5xl w-[95vw] p-0 overflow-hidden min-h-[300px] h-auto max-h-[95vh] flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl">
         
         {/* ── Header ── */}
         <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-[#001529] via-[#002140] to-[#001529] text-white p-8 space-y-2 relative overflow-hidden">
@@ -382,7 +240,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
             const activeItem = po.items.find(i => i.id === activeScannerItemId)
             const currentSns = serialNumbers[activeScannerItemId]?.split(',').map(s => s.trim()).filter(s => s !== "") || []
             return (
-              <div className="absolute top-4 right-4 z-50 w-[380px] max-h-[35dvh] rounded-2xl border-2 border-blue-500 bg-[#001529] text-white p-5 shadow-2xl shadow-blue-900/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 md:max-h-[40vh] lg:max-h-none">
+              <div className="absolute top-4 right-4 z-50 w-[380px] rounded-2xl border-2 border-blue-500 bg-[#001529] text-white p-5 shadow-2xl shadow-blue-900/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
                 {/* Background glow */}
                 <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
                 <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl" />
@@ -410,87 +268,41 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                         e.stopPropagation();
                         closeScanner();
                       }}
-                      className="p-2.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 border border-rose-500/50 shadow-lg shadow-rose-900/40 transition-all z-[60] relative flex items-center justify-center"
+                      className="p-2 rounded-xl bg-white/10 hover:bg-rose-500/20 hover:text-rose-400 border border-white/10 transition-all z-50 relative"
                     >
-                      <X className="h-5 w-5 stroke-[3]" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Camera Viewfinder */}
-                <div className="relative rounded-xl overflow-hidden bg-black border border-blue-500/30 mb-4 aspect-square">
-                  <div id="reader" className="w-full h-full" />
-                  {!scannerRef.current && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/85 p-6 text-center gap-3">
-                      <XCircle className="h-8 w-8 text-rose-500" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-200">Camera Unavailable</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Manual Entry Mode Active</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => window.location.reload()}
-                        className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-amber-900/40 border border-amber-400/50"
-                      >
-                        <ScanLine className="h-3.5 w-3.5" />
-                        Reset Permissions &amp; Retry
-                      </button>
-                      <p className="text-[9px] text-slate-500 font-medium leading-tight max-w-[200px]">
-                        Tap above to reload the page. Safari will re-prompt for camera access.
-                      </p>
-
-                      <div className="flex flex-col gap-2 mt-2 w-full px-4">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          title="Snap / Upload Barcode Image"
-                          aria-label="Snap or upload a photo of the barcode"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                        <button
-                          type="button"
-                          disabled={isScanningFile}
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40 border border-blue-400/30 disabled:opacity-50"
-                        >
-                          {isScanningFile ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Camera className="h-3.5 w-3.5" />
-                          )}
-                          Snap/Upload Photo
-                        </button>
-                        
-                        {diagLog && (
-                          <div className="bg-black/40 p-2 rounded-lg border border-white/5 text-[8px] font-mono text-rose-300 text-left overflow-x-auto whitespace-nowrap scrollbar-hide opacity-40 hover:opacity-100 transition-opacity">
-                            $ diag_log: {diagLog}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {/* Scan input area */}
-                <div className="relative">
+                <form 
+                  className="relative"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    commitScan(scanBuffer);
+                  }}
+                >
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     <Barcode className="h-5 w-5 text-blue-400" />
                   </div>
                   <input
                     ref={scanInputRef}
-                    type="text"
+                    type="search"
+                    inputMode="search"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="characters"
+                    spellCheck="false"
                     value={scanBuffer}
                     onChange={e => setScanBuffer(e.target.value)}
                     onKeyDown={handleScanKeyDown}
-                    placeholder="Point scanner at barcode · Press Enter to confirm"
-                    className="w-full h-14 pl-12 pr-4 text-sm font-mono font-bold bg-white/10 border-2 border-blue-400/40 rounded-xl text-white placeholder:text-blue-300/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 focus:ring-4 focus:ring-blue-500/20 transition-all"
+                    placeholder="Point scanner at barcode or type here..."
+                    className="w-full h-14 pl-12 pr-4 text-sm font-mono font-bold bg-white/10 border-2 border-blue-400/40 rounded-xl text-white placeholder:text-blue-300/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 focus:ring-4 focus:ring-blue-500/20 transition-all [&::-webkit-search-cancel-button]:hidden"
                   />
                   {/* Scanning line animation */}
                   <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-[scan_2s_linear_infinite] opacity-70" />
-                </div>
+                </form>
 
                 {/* Current SNs for this row */}
                 {currentSns.length > 0 && (
@@ -644,7 +456,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                         <button
                           type="button"
                           aria-label="Activate Barcode Scanner"
-                          onClick={() => isScanning ? closeScanner() : startCamera(item.id)}
+                          onClick={() => isScanning ? closeScanner() : openScanner(item.id)}
                           className={cn(
                             "absolute right-2 top-2 p-1.5 rounded-lg transition-all border shrink-0",
                             isScanning
