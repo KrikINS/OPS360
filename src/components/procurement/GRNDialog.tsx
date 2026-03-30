@@ -62,13 +62,38 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
         const { Html5Qrcode } = await import("html5-qrcode");
         if (!isMounted) return;
 
-        const scanner = new Html5Qrcode(containerId);
+        // Standard Barcode formats to speed up processing
+        const formatsToSupport = [
+          0, // AZTEC
+          1, // CODABAR
+          2, // CODE_39
+          3, // CODE_93
+          4, // CODE_128
+          5, // DATA_MATRIX
+          6, // EAN_8
+          7, // EAN_13
+          8, // ITF
+          10, // PDF_417
+          14, // UPC_A
+          15, // UPC_E
+          16  // UPC_EAN_EXTENSION
+        ];
+
+        // Constructor handles format prioritization
+        const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
         scannerRef.current = scanner;
 
         const config = { 
-          fps: 15, 
-          qrbox: { width: 250, height: 120 },
-          aspectRatio: 1.0
+          fps: 20, 
+          qrbox: { width: 280, height: 120 },
+          aspectRatio: 1.0,
+          videoConstraints: {
+             width: { ideal: 1920 },
+             height: { ideal: 1080 },
+             // Pass focusMode if supported by the browser implementation
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             advanced: [{ focusMode: "continuous" }] as any
+          }
         };
 
         // Try environment (back) camera first
