@@ -51,6 +51,7 @@ interface GRNDialogProps {
 
 function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
   const containerId = "grn-barcode-reader";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -105,6 +106,7 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
         if (scannerRef.current.isScanning) {
           scannerRef.current.stop()
             .then(() => scannerRef.current.clear())
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .catch((e: any) => console.error("Scanner stop error:", e));
         }
       }
