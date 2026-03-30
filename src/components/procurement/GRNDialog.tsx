@@ -135,74 +135,76 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
     setScanBuffer("")
   }, [])
 
-  // Start camera when a scanner item is activated
   const startCamera = useCallback(async (itemId: string) => {
+    // 1. Audio Context Kickstart (iOS hardware wake-up)
     try {
-      // 1. Kickstart AudioContext (Wakes up iOS hardware permissions)
-      try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          if (ctx.state === 'suspended') ctx.resume();
-        }
-      } catch (e) { console.warn("AudioContext kickstart failed", e); }
-
-      // 2. Initialize Scanner
-      const html5QrCode = new Html5Qrcode("reader");
-      scannerRef.current = html5QrCode;
-
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        videoConstraints: {
-          facingMode: { exact: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      };
-
-      try {
-        await html5QrCode.start(
-          config.videoConstraints,
-          { fps: config.fps, qrbox: config.qrbox },
-          (decodedText) => { commitScan(decodedText) },
-          () => { /* frame error */ }
-        );
-      } catch (err) {
-        console.warn("Exact facingMode failed, falling back to non-exact", err);
-        // Fallback: try non-exact environment camera
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: config.fps, qrbox: config.qrbox },
-          (decodedText) => { commitScan(decodedText) },
-          () => { /* frame error */ }
-        );
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        ctx.resume();
       }
-    } catch (err) {
-      console.error("Camera handshake failed:", err);
-      setToast({ message: "Camera not found. Please enter Serial Number manually.", type: "error" });
-      scannerRef.current = null;
-    }
-  }, [commitScan]);
+    } catch (e) { console.warn("Audio kickstart failed", e); }
 
-  const openScanner = useCallback((itemId: string) => {
+    // 2. Set Active Item
     setScanBuffer("");
     setLastScannedCount(0);
     setActiveScannerItemId(itemId);
-    // Explicit User-Initiated Call (Safari Requirement)
-    setTimeout(() => startCamera(itemId), 50);
-  }, [startCamera]);
 
+    // 3. Initialize Scanner
+    setTimeout(async () => {
+      try {
+        if (scannerRef.current) {
+          if (scannerRef.current.isScanning) await scannerRef.current.stop();
+          scannerRef.current = null;
+        }
+
+        const html5QrCode = new Html5Qrcode("reader");
+        scannerRef.current = html5QrCode;
+
+        const config = {
+          fps: 15,
+          qrbox: { width: 250, height: 250 },
+          videoConstraints: {
+            facingMode: { exact: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+
+        try {
+          // Primary Attempt: Exact back camera with high-res constraints
+          await html5QrCode.start(
+            config.videoConstraints,
+            { fps: config.fps, qrbox: config.qrbox },
+            (decodedText) => commitScan(decodedText),
+            () => {}
+          );
+        } catch (err) {
+          console.warn("Exact environment failed, trying standard environment fallback", err);
+          // Fallback: Support older iPads or browsers that block exact constraints
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: config.fps, qrbox: config.qrbox },
+            (decodedText) => commitScan(decodedText),
+            () => {}
+          );
+        }
+      } catch (err) {
+        console.error("Camera init failed:", err);
+        setToast({ message: "Camera not found. Please enter Serial Number manually.", type: "error" });
+        scannerRef.current = null;
+      }
+    }, 100); // Tiny delay to ensure wrapper div is mounted
+  }, [commitScan, closeScanner]);
+
+  // Cleanup on unmount
   useEffect(() => {
-    if (!activeScannerItemId) {
-      closeScanner();
-    }
     return () => {
       if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current.stop();
       }
     };
-  }, [activeScannerItemId, closeScanner]);
+  }, []);
 
   // ──────────────── GRN Finalize ────────────────
   if (!po) return null
@@ -546,7 +548,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                         <button
                           type="button"
                           aria-label="Activate Barcode Scanner"
-                          onClick={() => isScanning ? closeScanner() : openScanner(item.id)}
+                          onClick={() => isScanning ? closeScanner() : startCamera(item.id)}
                           className={cn(
                             "absolute right-2 top-2 p-1.5 rounded-lg transition-all border shrink-0",
                             isScanning
