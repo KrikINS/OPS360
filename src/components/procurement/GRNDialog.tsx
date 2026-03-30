@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { 
   Loader2, CheckCircle2, XCircle, Package, Truck, 
-  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert, Camera
+  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert, Camera, RefreshCw
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -53,78 +53,89 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
   const containerId = "grn-barcode-reader";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerRef = useRef<any>(null);
+  const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
+  const [activeCamIdx, setActiveCamIdx] = useState(0);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Memoize static configs to keep useEffect stable
+  const config = useMemo(() => ({ 
+    fps: 20, 
+    qrbox: { width: 280, height: 120 },
+    aspectRatio: 1.0,
+    videoConstraints: {
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      advanced: [{ focusMode: "continuous" }] as any
+    }
+  }), []);
+
+  const formatsToSupport = useMemo(() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 14, 15, 16], []);
+
+  const startCamera = useCallback(async (scanner: any, deviceId: string) => {
+    try {
+      if (scanner.isScanning) await scanner.stop();
+      await scanner.start(
+        deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" },
+        config,
+        (decodedText: string) => {
+          if (decodedText) onScan(decodedText.trim());
+        },
+        () => {} // silent frame error
+      );
+    } catch (err) {
+      console.error("Failed to start camera:", err);
+      // Fallback to generic start if specific ID fails
+      try {
+        await scanner.start({ facingMode: "user" }, config, (txt: string) => onScan(txt.trim()), () => {});
+      } catch {
+        // terminal fallback if even user camera fails
+      }
+    }
+  }, [config, onScan]);
 
   useEffect(() => {
     let isMounted = true;
 
-    const startScanner = async () => {
+    const init = async () => {
       try {
         const { Html5Qrcode } = await import("html5-qrcode");
         if (!isMounted) return;
 
-        // Standard Barcode formats to speed up processing
-        const formatsToSupport = [
-          0, // AZTEC
-          1, // CODABAR
-          2, // CODE_39
-          3, // CODE_93
-          4, // CODE_128
-          5, // DATA_MATRIX
-          6, // EAN_8
-          7, // EAN_13
-          8, // ITF
-          10, // PDF_417
-          14, // UPC_A
-          15, // UPC_E
-          16  // UPC_EAN_EXTENSION
-        ];
-
-        // Constructor handles format prioritization
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
-        scannerRef.current = scanner;
-
-        const config = { 
-          fps: 20, 
-          qrbox: { width: 280, height: 120 },
-          aspectRatio: 1.0,
-          videoConstraints: {
-             width: { ideal: 1920 },
-             height: { ideal: 1080 },
-             // Pass focusMode if supported by the browser implementation
-             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-             advanced: [{ focusMode: "continuous" }] as any
-          }
-        };
-
-        // Try environment (back) camera first
-        try {
-          await scanner.start(
-            { facingMode: "environment" },
-            config,
-            (decodedText) => {
-              if (decodedText) onScan(decodedText.trim());
-            },
-            () => {} // frame error (silent)
+        // 1. Get Devices
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          setCameras(devices.map(d => ({ id: d.id, label: d.label })));
+          
+          // 2. Identify "back" camera index
+          const backIdx = devices.findIndex(d => 
+            d.label.toLowerCase().includes('back') || 
+            d.label.toLowerCase().includes('environment') ||
+            d.label.toLowerCase().includes('rear')
           );
-        } catch (err) {
-          console.warn("Back camera failed, trying front camera:", err);
-          // Fallback to user (front) camera
-          await scanner.start(
-            { facingMode: "user" },
-            config,
-            (decodedText) => {
-              if (decodedText) onScan(decodedText.trim());
-            },
-            () => {}
-          );
+          const initialIdx = backIdx !== -1 ? backIdx : 0;
+          setActiveCamIdx(initialIdx);
+
+          // 3. Start
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
+          scannerRef.current = scanner;
+          await startCamera(scanner, devices[initialIdx].id);
+        } else {
+          // Fallback for no labels/discovery
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const scanner = new Html5Qrcode(containerId, { formatsToSupport } as any);
+          scannerRef.current = scanner;
+          await scanner.start({ facingMode: "environment" }, config, (txt: string) => onScan(txt.trim()), () => {});
         }
       } catch (err) {
-        console.error("Camera scanner initialization failed:", err);
+        console.error("Scanner Init Error:", err);
+      } finally {
+        setIsInitializing(false);
       }
     };
 
-    startScanner();
+    init();
 
     return () => {
       isMounted = false;
@@ -133,11 +144,18 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
           scannerRef.current.stop()
             .then(() => scannerRef.current.clear())
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .catch((e: any) => console.error("Scanner stop error:", e));
+            .catch((e: any) => console.error("Scanner cleanup error:", e));
         }
       }
     };
-  }, [onScan]);
+  }, [onScan, config, formatsToSupport, startCamera]);
+
+  const switchCamera = async () => {
+    if (!scannerRef.current || cameras.length < 2) return;
+    const nextIdx = (activeCamIdx + 1) % cameras.length;
+    setActiveCamIdx(nextIdx);
+    await startCamera(scannerRef.current, cameras[nextIdx].id);
+  };
 
   return (
     <div className="relative w-full mb-4 group/camera">
@@ -145,10 +163,28 @@ function CameraScanner({ onScan }: { onScan: (text: string) => void }) {
         id={containerId} 
         className="w-full bg-black/40 rounded-2xl overflow-hidden border-2 border-blue-500/30 aspect-square md:aspect-video shadow-inner"
       />
-      <div className="absolute inset-0 pointer-events-none border-2 border-blue-500/20 rounded-2xl animate-pulse" />
-      <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded-md text-[9px] font-black uppercase text-blue-400 tracking-tighter border border-blue-500/30">
-        Live Stream Active
+      
+      {/* Overlay Controls */}
+      <div className="absolute top-2 left-2 flex items-center gap-2 pointer-events-none">
+        <div className="px-2 py-1 bg-black/60 backdrop-blur-md rounded-md text-[9px] font-black uppercase text-blue-400 tracking-tighter border border-blue-500/30">
+          {isInitializing ? "Initializing..." : cameras[activeCamIdx]?.label || "Live Stream Active"}
+        </div>
       </div>
+
+      {cameras.length > 1 && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            switchCamera();
+          }}
+          className="absolute top-2 right-2 p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-lg text-white transition-all shadow-xl"
+          title="Switch Camera"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+      )}
+
+      <div className="absolute inset-0 pointer-events-none border-2 border-blue-500/20 rounded-2xl animate-pulse" />
     </div>
   );
 }
