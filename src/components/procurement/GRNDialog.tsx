@@ -97,9 +97,7 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
     aspectRatio: window.innerWidth / window.innerHeight,
     videoConstraints: {
       width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      advanced: [{ focusMode: "continuous" }] as any
+      height: { ideal: 1080 }
     }
   }), []);
 
@@ -116,8 +114,9 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
       const isBack = cameras.find(c => c.id === deviceId)?.label.toLowerCase().match(/back|rear|environment/) || !deviceId;
       setIsBackCamera(!!isBack);
 
-      // Fix: Standard Constraints - Use { video: true } if no device id specified
-      const cameraParam = deviceId ? { deviceId: { exact: deviceId } } : { video: true };
+      // Fix: iOS Safari OverconstrainedError Mitigation
+      // Pass the raw deviceId string instead of { deviceId: { exact: ... } } to let html5-qrcode resolve it cleanly.
+      const cameraParam = deviceId ? deviceId : { video: true };
 
       await scanner.start(
         cameraParam,
