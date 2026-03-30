@@ -251,7 +251,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="
         p-0 overflow-hidden flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl
-        fixed inset-0 w-full h-full max-w-none max-h-none rounded-none
+        fixed inset-0 w-full h-[100dvh] max-w-none max-h-none rounded-none
         lg:inset-auto lg:relative lg:w-[95vw] lg:max-w-5xl lg:h-auto lg:min-h-[300px] lg:max-h-[95vh] lg:rounded-xl
         lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2
       ">
@@ -294,7 +294,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
             const activeItem = po.items.find(i => i.id === activeScannerItemId)
             const currentSns = serialNumbers[activeScannerItemId]?.split(',').map(s => s.trim()).filter(s => s !== "") || []
             return (
-              <div className="absolute top-4 right-4 z-50 w-[380px] rounded-2xl border-2 border-blue-500 bg-[#001529] text-white p-5 shadow-2xl shadow-blue-900/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="absolute top-4 right-4 z-50 w-[380px] max-h-[35dvh] rounded-2xl border-2 border-blue-500 bg-[#001529] text-white p-5 shadow-2xl shadow-blue-900/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 md:max-h-[40vh] lg:max-h-none">
                 {/* Background glow */}
                 <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
                 <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl" />
