@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { 
   Loader2, CheckCircle2, XCircle, Package, Truck, 
-  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert 
+  Landmark, FileText, Barcode, ScanLine, Zap, X, ShieldAlert, Camera 
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -189,8 +189,9 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
             () => {}
           );
           setDiagLog("Success: Rear camera (exact) initialized.");
-        } catch (err: any) {
-          const errMsg = err?.name || err?.message || "Unknown Error";
+          setDiagLog("Success: Rear camera (exact) initialized.");
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.name : String(err);
           setDiagLog(`Handshake 1 Failed: ${errMsg}`);
           // Fallback: Support older iPads or browsers that block exact constraints
           try {
@@ -201,15 +202,15 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
               () => {}
             );
             setDiagLog(prev => `${prev} -> Success: Rear camera (fallback) initialized.`);
-          } catch (err2: any) {
-            const err2Msg = err2?.name || err2?.message || "Unknown Error";
+          } catch (err2) {
+            const err2Msg = err2 instanceof Error ? err2.name : String(err2);
             setDiagLog(prev => `${prev} -> Final Failure: ${err2Msg}`);
             throw err2;
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Camera init failed:", err);
-        const finalMsg = err?.name || err?.message || "Camera blocked";
+        const finalMsg = err instanceof Error ? err.name : "Camera blocked";
         setToast({ message: `Camera error (${finalMsg}) - manual entry only`, type: "error" });
         scannerRef.current = null;
       }
@@ -419,6 +420,8 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                           type="file"
                           accept="image/*"
                           capture="environment"
+                          title="Snap / Upload Barcode Image"
+                          aria-label="Snap or upload a photo of the barcode"
                           onChange={handleFileUpload}
                           className="hidden"
                         />
