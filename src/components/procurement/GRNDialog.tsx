@@ -126,10 +126,8 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
             const raw = decodedText.trim().toUpperCase();
             if (isDuplicate(raw)) {
               playErrorBeep();
-              // Don't close or flash green, let user see it failed
               return;
             }
-
             setShowFlash(true);
             playSuccessBeep();
             onScan(raw);
@@ -156,12 +154,15 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
       // Fix: Clear State on Error
       scanner.clear();
 
-      try {
-        setIsBackCamera(false);
-        await scanner.start({ facingMode: "user" }, config, (txt: string) => onScan(txt.trim()), () => {});
-      } catch (err2) {
-         console.error("Fallback camera failed:", err2);
-         scanner.clear();
+      // Only fallback to user camera if the user didn't explicitly pick one
+      if (!deviceId) {
+        try {
+          setIsBackCamera(false);
+          await scanner.start({ facingMode: "user" }, config, (txt: string) => onScan(txt.trim()), () => {});
+        } catch (err2) {
+          console.error("Fallback camera failed:", err2);
+          scanner.clear();
+        }
       }
     } finally {
       setIsInitializing(false);
@@ -222,11 +223,18 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
     const idx = cameras.findIndex(c => c.id === targetId);
     if (idx >= 0) {
       setActiveCamIdx(idx);
+      setIsInitializing(true);
+      
+      // 1. Fully release hardware
       if (scannerRef.current.isScanning) {
           await scannerRef.current.stop().catch(() => {});
           scannerRef.current.clear();
       }
-      await startCamera(targetId);
+      
+      // 2. Critical for iOS Safari: Wait for hardware release before starting new track
+      setTimeout(() => {
+        startCamera(targetId);
+      }, 500);
     }
   };
 
