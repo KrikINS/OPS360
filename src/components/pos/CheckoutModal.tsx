@@ -153,25 +153,62 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
               )}
 
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-white/5 p-4 space-y-3 font-bold text-[11px]">
-                 <div className="flex justify-between text-slate-500 dark:text-slate-400 font-medium lowercase"><span>Taxable amount</span><span>₹{Math.round(totals.subtotal).toLocaleString()}</span></div>
-                 
-                 {/* Dynamic Tax Slabs */}
-                 {Object.entries(
-                   cart.reduce((acc, item) => {
-                     const rate = item.gst_rate;
-                     if (!acc[rate]) acc[rate] = 0;
-                     acc[rate] += (item.base_price * item.qty * rate) / 100;
-                     return acc;
-                   }, {} as Record<number, number>)
-                 ).map(([rate, tax]) => (
-                   <div key={rate} className="flex justify-between text-slate-400 dark:text-slate-500 font-medium lowercase animate-in fade-in slide-in-from-left-2 duration-300">
-                     <span>Total GST ({rate}%)</span>
-                     <span>₹{Math.round(tax as number).toLocaleString()}</span>
+                 <div className="space-y-2">
+                   <div className="flex justify-between text-slate-500 dark:text-slate-400 font-medium lowercase italic">
+                     <span>Subtotal</span>
+                     <span>₹{Math.round(totals.subtotal).toLocaleString()}</span>
                    </div>
-                 ))}
+                   <div className="flex justify-between text-rose-500 font-bold lowercase italic">
+                     <span>Discount</span>
+                     <span>-₹{totals.discount.toLocaleString()}</span>
+                   </div>
+                   <div className="flex justify-between text-slate-700 dark:text-slate-200 font-black lowercase italic py-1 border-t border-slate-100 dark:border-white/5">
+                     <span>Taxable Value</span>
+                     <span>₹{Math.round(totals.taxableValue).toLocaleString()}</span>
+                   </div>
+                   
+                   {/* Dynamic Tax Slabs with Kerala GST 50/50 Split */}
+                   {Object.entries(
+                     cart.reduce((acc, item) => {
+                       const rate = item.gst_rate;
+                       if (!acc[rate]) acc[rate] = 0;
+                       acc[rate] += (item.base_price * item.qty * rate) / 100;
+                       return acc;
+                     }, {} as Record<number, number>)
+                   ).map(([rate, tax]) => (
+                     <div key={rate} className="py-2 border-y border-slate-100/50 dark:border-white/5 first:border-t-0 last:border-b-0 animate-in fade-in slide-in-from-left-2 duration-300">
+                       <div className="flex justify-between items-center mb-1">
+                         <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-tighter">Total GST ({rate}%)</span>
+                         <span className="text-slate-700 dark:text-slate-200 font-extrabold text-[10px]">₹{Math.round(tax as number).toLocaleString()}</span>
+                       </div>
+                       <div className="grid grid-cols-2 gap-4 opacity-80 pt-1 border-t border-slate-100 dark:border-white/5">
+                         <div className="flex justify-between items-center text-[9px] pr-2">
+                           <span className="text-slate-400 dark:text-slate-500 uppercase font-bold">CGST ({Number(rate) / 2}%)</span>
+                           <span className="font-bold text-slate-500 dark:text-slate-400">₹{(Math.round(tax as number) / 2).toLocaleString()}</span>
+                         </div>
+                         <div className="flex justify-between items-center text-[9px]">
+                           <span className="text-slate-400 dark:text-slate-500 uppercase font-bold">SGST ({Number(rate) / 2}%)</span>
+                           <span className="font-bold text-slate-500 dark:text-slate-400">₹{(Math.round(tax as number) / 2).toLocaleString()}</span>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
 
                  <div className="h-px bg-slate-200 dark:bg-white/5" />
-                 <div className="flex justify-between items-baseline">
+                 
+                 <div className="pt-1.5 space-y-1">
+                   <div className="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                     <span>SGST (Kerala)</span>
+                     <span>₹{Math.round(totals.sgst).toLocaleString()}</span>
+                   </div>
+                   <div className="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                     <span>CGST (Central)</span>
+                     <span>₹{Math.round(totals.cgst).toLocaleString()}</span>
+                   </div>
+                 </div>
+
+                 <div className="flex justify-between items-baseline pt-2">
                     <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Grand Total</span>
                     <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter font-mono">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
                  </div>

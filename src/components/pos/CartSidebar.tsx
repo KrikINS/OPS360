@@ -88,7 +88,7 @@ function SerialSelector({ productId, index, onSelect }: { productId: string, ind
 }
 
 export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
-  const { cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals, assignSerialToUnit, isCartValid } = usePos()
+  const { cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals, assignSerialToUnit, isCartValid, setDiscount } = usePos()
 
   return (
     <section className="w-full lg:w-[400px] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/5 h-full transition-colors duration-300">
@@ -197,14 +197,22 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
       {/* Footer - Always Visible */}
       <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-white/5 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors">
         <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-          <div className="flex justify-between uppercase"><span>Taxable Value</span><span className="text-slate-900 dark:text-slate-200">₹{Math.round(totals.subtotal).toLocaleString()}</span></div>
-          <div className="flex justify-between uppercase text-slate-400 dark:text-slate-500 border-l-2 border-slate-200 dark:border-white/10 pl-3"><span>CGST ({totals.totalGst > 0 ? 'Split' : '0%'})</span><span>₹{Math.round(totals.cgst).toLocaleString()}</span></div>
-          <div className="flex justify-between uppercase text-slate-400 dark:text-slate-500 border-l-2 border-slate-200 dark:border-white/10 pl-3"><span>SGST ({totals.totalGst > 0 ? 'Split' : '0%'})</span><span>₹{Math.round(totals.sgst).toLocaleString()}</span></div>
+          <div className="flex justify-between uppercase"><span>Discount</span><span className="text-rose-500">-₹{totals.discount.toLocaleString()}</span></div>
           <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
               <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Apply Disc.</span>
+              <input 
+                type="number" 
+                value={totals.discount || ''} 
+                onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                placeholder="0"
+                className="w-16 h-8 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded px-2 text-right text-[10px] font-black focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
             </div>
           </div>
         </div>

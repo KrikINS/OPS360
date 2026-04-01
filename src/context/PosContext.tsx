@@ -105,6 +105,8 @@ interface PosContextType {
   currentDate: string
   totals: {
     subtotal: number
+    taxableValue: number
+    discount: number
     totalGst: number
     cgst: number
     sgst: number
@@ -117,6 +119,8 @@ interface PosContextType {
   sessionUser: { name: string, role: string, id: string, pin?: string | null }
   sessionStats: SessionStats
   isCartValid: boolean
+  discount: number
+  setDiscount: (val: number) => void
 
   // --- Actions ---
   setIsLocked: (locked: boolean) => void
@@ -177,6 +181,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
   const [isDarkMode, setIsDarkModeState] = useState(false)
   const [sessionUser, setSessionUser] = useState<{name: string, role: string, id: string, pin?: string | null}>({ name: "User", role: "staff", id: "", pin: null })
   const [sessionStats, setSessionStats] = useState<SessionStats>({ count: 0, revenue: 0 })
+  const [discount, setDiscount] = useState<number>(0)
 
   const setIsDarkMode = useCallback((dark: boolean) => {
     setIsDarkModeState(dark)
@@ -377,18 +382,32 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     }
   }, [walkInCustomer])
 
-  const totals = useMemo(() => {
+   const totals = useMemo(() => {
     const subtotal = cart.reduce((acc, item) => acc + (item.base_price * item.qty), 0)
-    const totalGst = cart.reduce((acc, item) => acc + (item.base_price * item.qty * item.gst_rate / 100), 0)
+    // Taxable value is Subtotal - Discount
+    const taxableValue = Math.max(0, subtotal - discount)
+    
+    // We distribute the discount proportionately to calculate correct GST if needed, 
+    // but for simple global discount we can just use the weighted average or apply it to the final.
+    // Standard rule: GST is on the post-discount price.
+    const totalGst = cart.reduce((acc, item) => {
+      const itemSubtotal = item.base_price * item.qty
+      const itemWeight = subtotal > 0 ? itemSubtotal / subtotal : 0
+      const itemDiscount = discount * itemWeight
+      const itemTaxable = Math.max(0, itemSubtotal - itemDiscount)
+      return acc + (itemTaxable * item.gst_rate / 100)
+    }, 0)
 
     return {
       subtotal,
+      taxableValue,
+      discount,
       totalGst,
       cgst: totalGst / 2,
       sgst: totalGst / 2,
-      grandTotal: subtotal + totalGst
+      grandTotal: taxableValue + totalGst
     }
-  }, [cart])
+  }, [cart, discount])
 
   const isCartValid = useMemo(() => {
     return cart.every(item => {
@@ -654,7 +673,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     selectedCustomer, customerResults, searchingCustomer, customerSearchQuery, phoneQuery,
     setCustomerSearchQuery, setPhoneQuery, resetCustomerContext, selectWalkInCustomer,
     toast, invoiceNumber, currentDate, totals,
-    isLocked, isCartValid,
+    isLocked, isCartValid, discount, setDiscount,
     setIsLocked,
     printInvoiceId,
     triggerInvoicePrint,

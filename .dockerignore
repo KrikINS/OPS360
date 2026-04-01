@@ -1,0 +1,22 @@
+# Dockerignore: OPS360 Ethan-Home-Appliances
+# Prevents context explosion and leaks
+
+node_modules
+.next
+.git
+.env*
+*.csv
+*.json
+build_log*
+diag_output.txt
+tmp
+ethan_logo*
+README.md
+PRD*
+Tax_Invoice*
+lint_output*
+ts_errors*
+
+# Keep these if needed for your app but usually ignored
+out
+build
