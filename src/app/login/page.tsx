@@ -10,20 +10,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import { Loader2, Eye, EyeOff, ShieldCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { ModuleLaunchpad } from "@/components/dashboard/ModuleLaunchpad"
 
-type AnimationStage = "loading" | "intro" | "form" | "launchpad"
+type AnimationStage = "loading" | "intro" | "form"
 
 const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
-  const isLaunchpad = stage === "launchpad";
-  
   return (
     <div className={cn(
       "flex flex-col items-center transition-all duration-1000 ease-in-out",
       stage === "loading" && "opacity-0",
       stage === "intro" && "scale-100 mb-0 opacity-100",
-      stage === "form" && "-mb-2 scale-[0.75] opacity-100",
-      stage === "launchpad" && "scale-[0.5] mb-0 opacity-100 fixed top-8 left-1/2 -translate-x-1/2 z-50 mt-0"
+      stage === "form" && "-mb-2 scale-[0.75] opacity-100"
     )}>
       <div className={cn(
         "transition-all duration-1000 ease-in-out relative",
@@ -35,29 +31,28 @@ const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
           width={400} 
           height={400} 
           priority 
+          sizes="(max-width: 768px) 100vw, 400px"
+          style={{ width: 'auto', height: 'auto' }}
           className={cn(
-            "drop-shadow-[0_0_50px_rgba(127,209,227,0.25)] bg-transparent object-contain transition-all duration-1000",
-            isLaunchpad && "drop-shadow-[0_0_20px_rgba(127,209,227,0.15)]"
+            "drop-shadow-[0_0_50px_rgba(127,209,227,0.25)] bg-transparent object-contain transition-all duration-1000"
           )}
         />
       </div>
       <div className={cn(
         "text-center space-y-2 transition-all duration-1000",
-        isLaunchpad ? "mt-2" : "mt-6"
+        "mt-6"
       )}>
         <div className="relative inline-block group">
           <h1 className={cn(
             "font-bold uppercase font-[family-name:var(--font-outfit)] transition-all duration-1000",
             stage === "intro" && "text-5xl text-white/60 tracking-normal",
-            stage === "form" && "text-3xl text-white tracking-normal",
-            stage === "launchpad" && "text-xl text-white/40 tracking-[0.2em]"
+            stage === "form" && "text-3xl text-white tracking-normal"
           )}>
             Ops360 ERP
           </h1>
           <div className={cn(
             "absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#7fd1e3] to-transparent shadow-[0_0_10px_rgba(127,209,227,0.5)] transition-all duration-1000",
-            stage === "loading" ? "w-0 opacity-0" : "w-full opacity-100",
-            stage === "launchpad" && "opacity-0 scale-x-0"
+            stage === "loading" ? "w-0 opacity-0" : "w-full opacity-100"
           )} />
         </div>
       </div>
@@ -70,7 +65,6 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [stage, setStage] = useState<AnimationStage>("loading")
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({})
   const [progress, setProgress] = useState(0)
   const progressRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -123,9 +117,7 @@ export default function LoginPage() {
         if (result.forcePasswordChange) {
           router.push('/auth/reset-password')
         } else {
-          setPermissions(result.permissions || {})
-          setStage("launchpad")
-          setLoading(false)
+          router.push('/launchpad')
         }
       }
     } catch (err: unknown) {
@@ -251,14 +243,6 @@ export default function LoginPage() {
             </form>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Module Launchpad - Appears after login */}
-      <div className={cn(
-        "w-full transition-all duration-1000 delay-500",
-        stage === "launchpad" ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none absolute"
-      )}>
-        <ModuleLaunchpad permissions={permissions} isVisible={stage === "launchpad"} />
       </div>
 
       {/* Developer Watermark */}

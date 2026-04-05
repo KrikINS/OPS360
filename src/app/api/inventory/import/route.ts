@@ -1,5 +1,7 @@
-import { createClient } from "@supabase/supabase-js"
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 import { NextResponse } from "next/server"
+
+export const dynamic = "force-dynamic"
 
 export interface InventoryImportItem {
   "Item Name": string
@@ -14,10 +16,7 @@ export interface InventoryImportRequest {
 }
 
 export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabase = getSupabaseAdmin()
 
   try {
     const { items }: InventoryImportRequest = await request.json()
@@ -94,8 +93,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, count: data.length })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
     console.error("Import error:", error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -208,15 +208,19 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#0F172A] transition-all duration-300 group-data-[state=collapsed]:w-[80px] group-data-[state=collapsed]:max-w-[80px]">
       {/* ── Logo Header ── */}
-      <SidebarHeader className={cn("px-4 py-5 border-b border-white/5", isCollapsed && "px-[5px]")}>
-        <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
-          <div className="relative h-[70px] w-[70px] shrink-0 overflow-hidden">
+      <SidebarHeader className={cn("px-4 py-5 border-b border-white/5 transition-all duration-300", isCollapsed && "px-0 flex justify-center py-6")}>
+        <div className={cn("flex items-center gap-3", isCollapsed && "flex-col gap-0")}>
+          <div className={cn(
+            "relative shrink-0 overflow-hidden transition-all duration-300",
+            isCollapsed ? "h-11 w-11 rounded-xl shadow-[0_0_15px_rgba(127,209,227,0.2)] border border-white/10" : "h-[70px] w-[70px]"
+          )}>
             <Image
-              src={logoUrl}
-              alt="Ethan Home Appliances"
+              src={logoUrl || "/ethan-logo-final.png"}
+              alt="Ethan"
               fill
               priority
-              className="object-contain"
+              sizes="(max-width: 768px) 44px, 70px"
+              className={cn("object-contain transition-transform duration-300", isCollapsed ? "scale-110 p-1" : "scale-100")}
             />
           </div>
           {!isCollapsed && (
@@ -528,18 +532,23 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
       </div>
 
       {/* ── Footer branding ── */}
-      <SidebarFooter className={cn("border-t border-white/5 p-2", isCollapsed && "px-0")}>
+      <SidebarFooter className={cn("border-t border-white/5 p-2", isCollapsed && "p-0 py-2")}>
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="flex justify-center">
             <SidebarMenuButton
               onClick={toggleSidebar}
               tooltip={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-              className="w-full justify-center text-slate-300 hover:text-[#7FD1E3] hover:bg-white/5"
+              className={cn(
+                "w-full transition-all duration-200 text-slate-300 hover:text-[#7FD1E3] hover:bg-white/5",
+                isCollapsed ? "h-10 w-10 p-0 justify-center flex" : "h-12 px-2"
+              )}
             >
-              {isCollapsed ? <ChevronsRight className="h-4 w-4" /> : (
-                <div className="flex items-center gap-3 w-full px-1">
-                  <ChevronsLeft className="h-4 w-4" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Minimize Sidebar</span>
+              {isCollapsed ? (
+                <ChevronsRight className="h-4 w-4" />
+              ) : (
+                <div className="flex items-center gap-3 w-full">
+                  <ChevronsLeft className="h-4 w-4 shrink-0" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Minimize Sidebar</span>
                 </div>
               )}
             </SidebarMenuButton>

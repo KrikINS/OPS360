@@ -1,0 +1,30 @@
+# .gcloudignore: OPS360 Ethan-Home-Appliances
+# Exclude local build artifacts and heavy dependencies from Cloud Build upload.
+
+.gcloudignore
+.git
+.gitignore
+
+# Local dependencies
+node_modules/
+.next/
+out/
+build/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+
+# Temporary / Local Logs
+*.log
+*.csv
+tmp/
+diag_output.txt
+build_log*
+lint_output*
+ts_errors*
+
+# Local environment (Secrets are pushed via Secret Manager or Build Args)
+.env*
+! .env.local

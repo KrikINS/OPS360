@@ -1,7 +1,9 @@
-import { createClient } from "@supabase/supabase-js"
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+
+export const dynamic = "force-dynamic"
 
 // Helper to generate a random 4-character suffix
 function generateSuffix(length: number = 4) {
@@ -60,16 +62,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Init Service Role Client
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
+    const supabaseAdmin = getSupabaseAdmin()
 
     // 4. Generate Temporary Password
     const tempPassword = `ETHAN-${generateSuffix()}`

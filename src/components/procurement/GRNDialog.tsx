@@ -140,10 +140,15 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
         () => {} // silent frame error
       );
       
-      const track = scanner.getRunningTrack();
-      if (track && track.getCapabilities) {
-        const capabilities = track.getCapabilities();
-        setHasTorch(!!capabilities.torch && !!isBack);
+      // Defensively check for getRunningTrack to avoid TypeError in certain browsers/states
+      if (typeof scanner.getRunningTrack === "function") {
+        const track = scanner.getRunningTrack();
+        if (track && track.getCapabilities) {
+          const capabilities = track.getCapabilities();
+          setHasTorch(!!capabilities.torch && !!isBack);
+        } else {
+          setHasTorch(false);
+        }
       } else {
         setHasTorch(false);
       }
@@ -151,8 +156,12 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
 
     } catch (err) {
       console.error("Failed to start camera:", err);
-      // Fix: Clear State on Error
-      scanner.clear();
+      // Fix: Safely clear state after ensuring everything stopped
+      if (scanner.isScanning) {
+        scanner.stop().catch(() => {}).then(() => scanner.clear());
+      } else {
+        scanner.clear();
+      }
 
       // Only fallback to user camera if the user didn't explicitly pick one
       if (!deviceId) {
@@ -161,7 +170,11 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
           await scanner.start({ facingMode: "user" }, config, (txt: string) => onScan(txt.trim()), () => {});
         } catch (err2) {
           console.error("Fallback camera failed:", err2);
-          scanner.clear();
+          if (scanner.isScanning) {
+            scanner.stop().catch(() => {}).then(() => scanner.clear());
+          } else {
+            scanner.clear();
+          }
         }
       }
     } finally {
@@ -228,7 +241,7 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
       // 1. Fully release hardware
       if (scannerRef.current.isScanning) {
           await scannerRef.current.stop().catch(() => {});
-          scannerRef.current.clear();
+          await scannerRef.current.clear();
       }
       
       // 2. Critical for iOS Safari: Wait for hardware release before starting new track
@@ -242,6 +255,7 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
     if (!scannerRef.current || !hasTorch || !isBackCamera) return;
     try {
       const newState = !isTorchOn;
+      if (typeof scannerRef.current.getRunningTrack !== "function") return;
       const track = scannerRef.current.getRunningTrack();
       if (track) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -254,6 +268,7 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
   const triggerFocus = async () => {
     if (!scannerRef.current) return;
     try {
+      if (typeof scannerRef.current.getRunningTrack !== "function") return;
       const track = scannerRef.current.getRunningTrack();
       if (track) {
         // Kickstart/Shake: Cycle focus mode to force hardware to re-focus
@@ -268,7 +283,7 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-200 h-[100dvh] w-screen m-0 p-4 md:p-8">
+    <div className="absolute inset-0 z-[110] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-200 h-full w-full m-0 p-4 md:p-8">
       
       {/* Centered Modal Container for the Scanner */}
       <div className="relative w-full max-w-md h-[65dvh] md:max-h-[600px] bg-black rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/10 border border-white/10 ring-1 ring-white/5">
