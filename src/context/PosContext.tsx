@@ -268,7 +268,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     if (invError || !inventoryData) return
 
     const stockMap: Record<string, number> = {}
-    ;(inventoryData as { product_id: string; current_balance: number }[]).forEach(invItem => {
+    ;(inventoryData as unknown as { product_id: string; current_balance: number }[]).forEach(invItem => {
       stockMap[invItem.product_id] = (stockMap[invItem.product_id] || 0) + (invItem.current_balance || 0)
     })
 
@@ -276,7 +276,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     const { data: productData, error: prodError } = await getPosProductsAction(productIds)
 
     if (!prodError && productData) {
-      const transformed: Product[] = (productData as Product[]).map((pItem: Product) => ({
+      const transformed: Product[] = (productData as unknown as Product[]).map((pItem: Product) => ({
         ...pItem,
         current_balance: stockMap[pItem.id] || 0
       }))
@@ -480,7 +480,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     if (error || !data) return []
 
     const flattened: { id: string, serial_number: string }[] = []
-    ;(data as { id: string; product_id: string; serial_number: string | null; serial_numbers: string[] | null }[])
+    ;(data as unknown as { id: string; product_id: string; serial_number: string | null; serial_numbers: string[] | null }[])
       .filter(row => row.product_id === productId)
       .forEach(row => {
         if (row.serial_number) {
@@ -605,16 +605,17 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
         p_payment_method: paymentMethod
       })
 
-      if (error) throw error
+      if (error || !data) throw error || new Error("Checkout failed, no data returned")
 
-      setInvoiceNumber(data.invoice_number)
-      setToast({ message: `Sale completed: ${data.invoice_number}`, type: 'success' })
+      const resData = data as any
+      setInvoiceNumber(resData.invoice_number)
+      setToast({ message: `Sale completed: ${resData.invoice_number}`, type: 'success' })
       
       clearCart()
       resetCustomerContext()
       if (selectedBranch) await fetchInventory(selectedBranch)
       await refreshSessionStats()
-      return { success: true, invoiceData: data }
+      return { success: true, invoiceData: resData as InvoiceData }
     } catch (err: unknown) {
       const errorStr = (err as Error).message
       console.error('Checkout failed:', errorStr)
@@ -634,7 +635,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
         const { data: items } = await getInvoiceItemsDetailsAction(id)
         
         if (header && items && items.length > 0) {
-          return { ...header, items }
+          return { ...(header as any), items: items as any } as InvoiceData
         }
       } catch (e) {
         console.warn(`Fetch attempt ${i + 1} failed`, e)
