@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { getUserAction, signOutAction } from "@/app/actions/user"
+import { fetchData } from "@/app/actions/generics"
 
 import { ModuleLaunchpad } from "@/components/dashboard/ModuleLaunchpad"
 import { Loader2, LogOut } from "lucide-react"
@@ -39,26 +41,29 @@ export default function LaunchpadPage() {
   const router = useRouter()
 
   const handleLogout = async () => {
-    
-    await import("@/app/actions/user").then(m => m.signOutAction())
+    await signOutAction()
     router.push('/login')
   }
 
   useEffect(() => {
     const fetchPermissions = async () => {
-      
-      const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
-      
-      if (user) {
-        const { data: profileList } = await import("@/app/actions/generics").then(m => m.fetchData("profiles"))
-        const profile = profileList && Array.isArray(profileList)
-          ? profileList.find(p => (p as Record<string, unknown>)['id'] === user.id)
-          : null
-        const profileRecord = profile as Record<string, unknown> | null | undefined
-        setPermissions((profileRecord?.['permissions'] as Record<string, boolean>) || {})
-        setRole(String(profileRecord?.['role'] || ""))
+      try {
+        const { data: { user } } = await getUserAction()
+        
+        if (user) {
+          const { data: profileList } = await fetchData("profiles")
+          const profile = profileList && Array.isArray(profileList)
+            ? profileList.find(p => (p as Record<string, unknown>)['id'] === user.id)
+            : null
+          const profileRecord = profile as Record<string, unknown> | null | undefined
+          setPermissions((profileRecord?.['permissions'] as Record<string, boolean>) || {})
+          setRole(String(profileRecord?.['role'] || ""))
+        }
+      } catch (error) {
+        console.error("Error fetching user or permissions:", error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     fetchPermissions()
