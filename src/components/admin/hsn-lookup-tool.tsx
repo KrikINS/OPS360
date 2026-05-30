@@ -52,9 +52,10 @@ export function HSNLookupTool() {
     }
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/hsn-lookup?query=${encodeURIComponent(query)}`)
-      const data = await res.json()
-      if (data.data) setResults(data.data)
+      const { searchHsnCodes } = await import("@/app/actions/hsn")
+      const { data, error } = await searchHsnCodes(query)
+      if (data) setResults(data as HSNResult[])
+      if (error) console.error(error)
     } catch (error) {
       console.error("Fetch error:", error)
     } finally {

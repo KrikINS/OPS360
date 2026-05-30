@@ -254,3 +254,15 @@ export const sequential_counters = pgTable("sequential_counters", {
   year: integer("year").notNull(),
   current_value: integer("current_value").default(0),
 }, (t) => [primaryKey({ columns: [t.prefix, t.year] })]);
+
+export const hsn_codes = pgTable("hsn_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hsn_code: varchar("hsn_code", { length: 8 }).notNull().unique(),
+  description: text("description").notNull(),
+  gst_rate: numeric("gst_rate", { precision: 5, scale: 2 }).notNull(),
+  cgst_rate: numeric("cgst_rate", { precision: 5, scale: 2 }).notNull(),
+  sgst_rate: numeric("sgst_rate", { precision: 5, scale: 2 }).notNull(),
+  igst_rate: numeric("igst_rate", { precision: 5, scale: 2 }).notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
