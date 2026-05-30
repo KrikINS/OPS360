@@ -9,6 +9,7 @@ import { PosProvider } from "@/context/PosContext"
 import { GlobalProvider } from "@/context/GlobalContext"
 import Link from "next/link"
 import { HelpCircle } from "lucide-react"
+import { NotificationBell } from "@/components/layout/NotificationBell"
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -51,6 +52,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <NotificationBell />
             <Link 
               href="/docs" 
               className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all"
