@@ -23,7 +23,7 @@ export default function GlobalMastersPage() {
 
       <Tabs defaultValue="branches" className="w-full">
         <div className="flex items-center justify-between mb-8 overflow-x-auto scrollbar-hide pb-2">
-          <TabsList className="bg-[#001529] p-1.5 rounded-2xl h-14 shrink-0 inline-flex shadow-xl border border-[#002b4d] gap-2">
+          <TabsList className="bg-[#001529] p-1.5 rounded-xl h-14 shrink-0 inline-flex shadow-xl border border-[#002b4d] gap-2">
             <TabsTrigger 
               value="branches" 
               className="text-[10px] font-black uppercase tracking-widest gap-2 px-8 h-11 rounded-xl transition-all duration-300 data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:ring-1 data-[state=active]:ring-[#7FD1E3]/50 data-[state=active]:shadow-[0_0_15px_rgba(127,209,227,0.3)] text-white/40 hover:text-white hover:bg-[#002a52] active:scale-95"
