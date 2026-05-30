@@ -84,7 +84,8 @@ export async function addBranchAction(data: Partial<typeof branches.$inferInsert
     const res = await db.insert(branches).values({ id: randomUUID(), name: data.name || "", ...data } as typeof branches.$inferInsert).returning()
     return { data: res[0] }
   } catch (error) {
-    return { error: { message: (error instanceof Error ? error.message : String(error)) } }
+    console.error("Database Error (addBranchAction):", error)
+    return { success: false, error: 'Failed to create branch. Please verify your data and try again.' }
   }
 }
 
