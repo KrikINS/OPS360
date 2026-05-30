@@ -1,14 +1,32 @@
 {
-  "hosting": {
-    "public": "public",
-    "rewrites": [
-      {
-        "source": "**",
-        "run": {
-          "serviceId": "ops360-erp",
-          "region": "asia-south1"
+  "hosting": [
+    {
+      "target": "production",
+      "public": "public",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "run": {
+            "serviceId": "ops360-erp",
+            "region": "asia-south1"
+          }
         }
-      }
-    ]
-  }
+      ]
+    },
+    {
+      "target": "staging",
+      "public": "public",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "run": {
+            "serviceId": "ops360-erp-staging",
+            "region": "asia-south1"
+          }
+        }
+      ]
+    }
+  ]
 }

@@ -1,0 +1,16 @@
+{
+  "projects": {},
+  "targets": {
+    "ops360-production-491911": {
+      "hosting": {
+        "staging": [
+          "ops360-staging"
+        ],
+        "production": [
+          "ops360-production-491911"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
