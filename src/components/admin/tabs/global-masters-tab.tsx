@@ -93,7 +93,7 @@ export function GlobalMastersTab() {
     setTableLoading(table, true)
     
     const { insertData } = await import("@/app/actions/generics")
-    const { error } = await insertData(table as 'brands' | 'categories' | 'po_terms_templates' | 'return_reason_master', data)
+    const { error } = await insertData(table as 'brands' | 'categories' | 'po_terms_templates' | 'return_reason_master', [data])
     if (error) {
       alert(`Master Update Failed: ${error.message}`)
       setTableLoading(table, false)
