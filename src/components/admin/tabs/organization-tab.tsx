@@ -77,19 +77,18 @@ export function OrganizationTab() {
       
       
       if (editingId) {
-        const { error: updateErr } = await import("@/app/actions/generics").then(m => m.updateData("branches", {
-          id: editingId,
+        const { error: updateErr, success } = await import("@/app/actions/masters").then(m => m.updateBranchAction(editingId, {
           ...formData,
           location: formData.city || "Kerala",
         }))
-        if (updateErr) throw new Error(updateErr.message)
+        if (!success && updateErr) throw new Error(typeof updateErr === 'string' ? updateErr : updateErr.message || 'Update failed')
       } else {
-        const { error: insertErr } = await import("@/app/actions/generics").then(m => m.insertData("branches", [{
+        const { error: insertErr, success } = await import("@/app/actions/masters").then(m => m.addBranchAction({
             ...formData,
             location: formData.city || "Kerala",
             type: "Main"
-        }]))
-        if (insertErr) throw new Error(insertErr.message)
+        }))
+        if (!success && insertErr) throw new Error(typeof insertErr === 'string' ? insertErr : insertErr.message || 'Insert failed')
       }
       
       await fetchBranches()

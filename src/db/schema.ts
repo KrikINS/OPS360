@@ -23,6 +23,17 @@ export const branches = pgTable("branches", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   code: text("code"),
+  full_address: text("full_address"),
+  city: text("city"),
+  state: text("state"),
+  state_code: text("state_code"),
+  pincode: text("pincode"),
+  manager_name: text("manager_name"),
+  phone: text("phone"),
+  email: text("email"),
+  gstin: text("gstin"),
+  location: text("location"),
+  type: text("type"),
   created_at: timestamp("created_at").defaultNow(),
 });
 
