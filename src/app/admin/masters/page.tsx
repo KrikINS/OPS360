@@ -2,7 +2,6 @@
 
 import { GlobalMastersTab } from "@/components/admin/tabs/global-masters-tab"
 import { HSNLookupTool } from "@/components/admin/hsn-lookup-tool"
-import { BrandingTab } from "@/components/admin/tabs/branding-tab"
 import { OrganizationTab } from "@/components/admin/tabs/organization-tab"
 import { FolderTree, Search, Building2, Palette, MapPin } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -43,12 +42,6 @@ export default function GlobalMastersPage() {
             >
               <Search className="h-3.5 w-3.5" /> HSN Discovery
             </TabsTrigger>
-            <TabsTrigger 
-              value="branding" 
-              className="text-[10px] font-black uppercase tracking-widest gap-2 px-8 h-11 rounded-xl transition-all duration-300 data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:ring-1 data-[state=active]:ring-[#7FD1E3]/50 data-[state=active]:shadow-[0_0_15px_rgba(127,209,227,0.3)] text-white/40 hover:text-white hover:bg-[#002a52] active:scale-95"
-            >
-              <Palette className="h-3.5 w-3.5" /> Brand Identity
-            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -62,10 +55,6 @@ export default function GlobalMastersPage() {
 
         <TabsContent value="hsn" className="mt-0">
           <HSNLookupTool />
-        </TabsContent>
-
-        <TabsContent value="branding" className="mt-0">
-          <BrandingTab />
         </TabsContent>
       </Tabs>
     </div>
