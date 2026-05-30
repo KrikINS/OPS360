@@ -135,7 +135,7 @@ export function GlobalMastersTab() {
     setEditingTermId(term.id)
     setNewTermName(term.name)
     setNewTermContent(term.content)
-    setIsDefaultTerm(term.is_default)
+    setIsDefaultTerm(term.is_default ?? false)
   }
 
   const cancelEditingTerm = () => {
@@ -317,8 +317,8 @@ export function GlobalMastersTab() {
                 <div key={r.id} className="p-3 flex items-center justify-between group hover:bg-white transition-colors">
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={r.is_active}
-                      onCheckedChange={() => toggleReasonStatus(r.id, r.is_active)}
+                      checked={r.is_active ?? false}
+                      onCheckedChange={() => toggleReasonStatus(r.id, r.is_active ?? false)}
                       className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
                     />
                     <span className={cn("text-sm font-semibold text-slate-700", !r.is_active && "text-slate-400 line-through")}>{r.reason_text}</span>
@@ -442,7 +442,7 @@ export function GlobalMastersTab() {
                             variant="ghost" 
                             size="sm" 
                             className={`h-9 px-3 gap-1.5 rounded-full border ${item.is_default ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'text-slate-300 border-slate-100 hover:bg-slate-100'}`}
-                            onClick={() => toggleDefaultTerm(item.id, item.is_default)}
+                            onClick={() => toggleDefaultTerm(item.id, item.is_default ?? false)}
                           >
                             <CheckCircle2 className={`h-3 w-3 ${item.is_default ? 'fill-emerald-600 text-white' : ''}`} />
                             <span className="text-[9px] font-black uppercase tracking-tighter">{item.is_default ? 'Default' : 'Set Default'}</span>
