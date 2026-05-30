@@ -89,7 +89,7 @@ type Vendor = {
   category_ids?: string[]
   credit_limit?: number
   compliance_status: 'Verified' | 'Pending' | 'Blacklisted'
-  status: 'awaiting_approval' | 'approved' | 'deactivated'
+  status: 'Pending' | 'awaiting_approval' | 'approved' | 'deactivated'
   created_at: string
 }
 
@@ -254,7 +254,7 @@ export default function VendorsClient({
     }
   }
 
-  const getFileUrl = (path?: string) => {
+  const getFileUrl = (_path?: string) => {
     // Return a dummy string for now.
     // If it's a signed URL we need to convert the usage to async or handle it server side
     return "#"
