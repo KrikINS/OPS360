@@ -11,3 +11,27 @@ export async function GET() {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    
+    await db.insert(products).values({
+      brand: body.brand,
+      category: body.category,
+      product_code: body.product_code,
+      model_name: body.model_name,
+      hsn_code: body.hsn_code,
+      base_price: body.unit_rate?.toString(),
+      gst_rate: body.tax_rate?.toString(),
+      min_stock_level: body.min_stock_level ? parseInt(body.min_stock_level) : 0,
+      warranty_months: body.warranty_months ? parseInt(body.warranty_months) : null,
+      description: body.description
+    });
+
+    return NextResponse.json({ success: true, message: 'Product created' }, { status: 201 });
+  } catch (error) {
+    console.error('Failed to create product:', error);
+    return NextResponse.json({ success: false, error: 'Database insertion failed' }, { status: 500 });
+  }
+}
