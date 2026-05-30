@@ -1,11 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-
 import { ModuleLaunchpad } from "@/components/dashboard/ModuleLaunchpad"
-import { Loader2, LogOut } from "lucide-react"
+import { LogOut } from "lucide-react"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 
@@ -34,8 +31,6 @@ const BrandIdentity = () => {
 }
 
 export default function LaunchpadClient({ initialPermissions, initialRole }: { initialPermissions: Record<string, boolean>, initialRole: string }) {
-  const router = useRouter()
-
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/login' })
   }
