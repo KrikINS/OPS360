@@ -15,22 +15,22 @@ import { ModernOrbitSpinner } from "@/components/ui/ModernOrbitSpinner"
 interface MasterItem {
   id: string
   name: string
-  created_at: string
+  created_at?: string | Date | null
 }
 
 interface TermsTemplate {
   id: string
   name: string
   content: string
-  is_default: boolean
-  created_at: string
+  is_default: boolean | null
+  created_at?: string | Date | null
 }
 
 interface ReturnReasonMaster {
   id: string
   reason_text: string
-  is_active: boolean
-  created_at: string
+  is_active: boolean | null
+  created_at?: string | Date | null
 }
 
 export function GlobalMastersTab() {
