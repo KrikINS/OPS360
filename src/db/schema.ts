@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey, serial } from "drizzle-orm/pg-core";
 
 
 export const users = pgTable("users", {
@@ -265,4 +265,13 @@ export const hsn_codes = pgTable("hsn_codes", {
   igst_rate: numeric("igst_rate", { precision: 5, scale: 2 }).notNull(),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const company_settings = pgTable("company_settings", {
+  id: serial("id").primaryKey(),
+  company_name: text("company_name").notNull(),
+  logo_url: text("logo_url"),
+  primary_color: text("primary_color"),
+  support_email: text("support_email"),
+  billing_address: text("billing_address"),
 });
