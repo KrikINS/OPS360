@@ -4,15 +4,8 @@ import { useEffect, useState } from "react"
 import { Bell } from "lucide-react"
 import Link from "next/link"
 import { getPendingApprovalsAction } from "@/app/actions/notifications"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Menu } from "@base-ui/react/menu"
+import { cn } from "@/lib/utils"
 
 export function NotificationBell() {
   const [approvals, setApprovals] = useState<Array<{ id: string, name: string, status: string | null }>>([])
@@ -30,47 +23,60 @@ export function NotificationBell() {
   }, [])
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+    <Menu.Root>
+      <Menu.Trigger className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
         <Bell className="h-5 w-5" />
         {approvals.length > 0 && (
           <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
             {approvals.length}
           </span>
         )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80" align="end">
-        <DropdownMenuLabel className="font-bold flex items-center justify-between">
-          <span>Notifications</span>
-          {approvals.length > 0 && (
-            <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-              {approvals.length} new
-            </span>
-          )}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup className="max-h-[300px] overflow-y-auto">
-          {approvals.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              No pending approvals. You're all caught up!
+      </Menu.Trigger>
+      
+      <Menu.Portal>
+        <Menu.Positioner align="end" sideOffset={4} className="isolate z-50 outline-none">
+          <Menu.Popup className={cn(
+            "z-50 min-w-80 w-80 max-h-[80vh] overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none",
+            "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
+            "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+            "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "bg-white" // ensure background is white
+          )}>
+            <div className="font-bold flex items-center justify-between px-3 py-2 text-sm border-b border-slate-100">
+              <span>Notifications</span>
+              {approvals.length > 0 && (
+                <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                  {approvals.length} new
+                </span>
+              )}
             </div>
-          ) : (
-            approvals.map(vendor => (
-              <DropdownMenuItem key={vendor.id} className="cursor-pointer p-0 focus:bg-slate-50 border-b last:border-0">
-                <Link href="/vendors" className="flex flex-col gap-1 w-full p-3 outline-none">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-amber-500" />
-                    <span className="font-semibold text-sm">Vendor Approval Required</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground pl-4 truncate w-full">
-                    {vendor.name} is awaiting approval.
-                  </span>
-                </Link>
-              </DropdownMenuItem>
-            ))
-          )}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+            
+            <div className="max-h-[300px] overflow-y-auto py-1">
+              {approvals.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No pending approvals. You're all caught up!
+                </div>
+              ) : (
+                approvals.map(vendor => (
+                  <Menu.Item 
+                    key={vendor.id} 
+                    render={<Link href="/vendors" />}
+                    className="flex flex-col gap-1 w-full p-3 outline-none cursor-pointer hover:bg-slate-50 focus:bg-slate-50 border-b border-slate-100 last:border-0 select-none data-disabled:pointer-events-none data-disabled:opacity-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-amber-500" />
+                      <span className="font-semibold text-sm">Vendor Approval Required</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground pl-4 truncate w-full block">
+                      {vendor.name} is awaiting approval.
+                    </span>
+                  </Menu.Item>
+                ))
+              )}
+            </div>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   )
 }
