@@ -1,4 +1,3 @@
-
 import VendorsClient from './client'
 
 export const metadata = {
@@ -7,12 +6,12 @@ export const metadata = {
 }
 
 export default async function VendorsPage() {
-  const { getServerSession } = await import("next-auth/next")
-  const session = await getServerSession()
-  const user = session?.user
-  
   let role = 'sales'
+  
+  const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
+  
   if (user) {
+    // We must pass user.id to get the profile
     const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
       
     if (profile) {
