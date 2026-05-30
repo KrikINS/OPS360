@@ -732,24 +732,45 @@ export default function VendorsClient({
                       </div>
                     </div>
                   </div>
-                  {(userRole === 'admin' || userRole === 'manager') && (
-                    <Select 
-                      value={selectedVendor.compliance_status || undefined} 
-                      onValueChange={(val: string | null) => {
-                        if (val) handleUpdateStatus(selectedVendor.id, undefined, val)
-                      }}
-                    >
-                      <SelectTrigger className="w-[140px] h-9">
-                        <ShieldCheck className="h-4 w-4 mr-2" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pending">Mark Pending</SelectItem>
-                        <SelectItem value="Verified">Verify Vendor</SelectItem>
-                        <SelectItem value="Blacklisted">Blacklist</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {(userRole === 'admin' || userRole === 'manager') && (selectedVendor.status === 'Pending' || selectedVendor.status === 'awaiting_approval') && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          className="bg-emerald-600 hover:bg-emerald-700 h-9"
+                          onClick={() => handleUpdateStatus(selectedVendor.id, 'approved', 'Verified')}
+                        >
+                          Approve Vendor
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          className="h-9"
+                          onClick={() => handleUpdateStatus(selectedVendor.id, 'deactivated')}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    {(userRole === 'admin' || userRole === 'manager') && (
+                      <Select 
+                        value={selectedVendor.compliance_status || undefined} 
+                        onValueChange={(val: string | null) => {
+                          if (val) handleUpdateStatus(selectedVendor.id, undefined, val)
+                        }}
+                      >
+                        <SelectTrigger className="w-[140px] h-9">
+                          <ShieldCheck className="h-4 w-4 mr-2" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Pending">Mark Pending</SelectItem>
+                          <SelectItem value="Verified">Verify Vendor</SelectItem>
+                          <SelectItem value="Blacklisted">Blacklist</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </div>
               </DialogHeader>
 
