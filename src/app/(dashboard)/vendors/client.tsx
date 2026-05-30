@@ -316,6 +316,8 @@ export default function VendorsClient({
       if (res.ok) {
         alert("Updated successfully.")
         fetchVendors()
+        window.dispatchEvent(new Event('vendor-updated'))
+        
         if (selectedVendor && selectedVendor.id === id) {
           setSelectedVendor(data)
         }

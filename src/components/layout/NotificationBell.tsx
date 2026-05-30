@@ -19,7 +19,15 @@ export function NotificationBell() {
     
     // Optional: Set up an interval to poll for new approvals
     const interval = setInterval(fetchApprovals, 60000) // Every minute
-    return () => clearInterval(interval)
+
+    // Listen for manual triggers from other components
+    const handleUpdate = () => fetchApprovals()
+    window.addEventListener('vendor-updated', handleUpdate)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('vendor-updated', handleUpdate)
+    }
   }, [])
 
   return (
