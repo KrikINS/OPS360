@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { createClient } from "@/utils/supabase/client"
+
 import { CustomerRegistryTable } from "@/components/admin/CustomerRegistryTable"
 import { AddCustomerModal } from "@/components/admin/AddCustomerModal"
 import { Users, Loader2 } from "lucide-react"
@@ -16,18 +16,18 @@ export default function CustomerRegistryPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   
-  const supabase = createClient()
+  
 
   const fetchCustomers = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .order('full_name', { ascending: true })
+    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("customers"))
 
-    if (!error && data) {
-      setCustomers(data as AdminCustomer[])
+    if (!error && data && Array.isArray(data)) {
+      const { mapToCustomer } = await import("@/utils/data-mappers")
+      const mapped = data.map(mapToCustomer) as AdminCustomer[]
+      mapped.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""))
+      setCustomers(mapped)
     }
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     let mounted = true

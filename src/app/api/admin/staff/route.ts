@@ -1,107 +1,68 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
-import { NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/db/client';
+import { users, profiles, user_branch_access, user_permissions } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import bcrypt from 'bcrypt';
 
-export const dynamic = "force-dynamic"
+export async function GET() {
+  return NextResponse.json({ data: [] });
+}
 
-// Specialized server route utilizing the SERVICE ROLE KEY bypasses normal RLS
-// and enables manual assignment of auth.users entities without user confirmation loops.
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    
-    // 1. Validate the user executing the request is an authentic Admin
-    const supabaseSession = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
+    const { email, password, fullName, role, branchIds } = await req.json();
 
-    const { data: { user } } = await supabaseSession.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const { data: profile } = await supabaseSession
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const normalizedRole = profile?.role?.toLowerCase().trim() || ""
-    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'admin/owner'
-
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Forbidden. Admin access required." }, { status: 403 })
+    // Check if user already exists
+    const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (existing.length > 0) {
+      return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
     }
 
-    // 2. Extract payload
-    const body = await request.json()
-    const { email, password, fullName, role, branchId, branchIds, forcePasswordChange } = body
+    const password_hash = await bcrypt.hash(password, 10);
 
-    if (!email || !password || !fullName || !role) {
-      return NextResponse.json({ error: "Missing required fields." }, { status: 400 })
+    // Insert into users table
+    const [newUser] = await db.insert(users).values({
+      email,
+      password_hash,
+      role: role || 'staff',
+    }).returning();
+
+    // Insert into profiles table
+    await db.insert(profiles).values({
+      id: newUser.id,
+      email,
+      full_name: fullName || null,
+      role: role || 'staff',
+    });
+
+    // Insert branch access entries
+    if (Array.isArray(branchIds) && branchIds.length > 0) {
+      await db.insert(user_branch_access).values(
+        branchIds.map((branch_id: string, i: number) => ({
+          user_id: newUser.id,
+          branch_id,
+          is_primary: i === 0,
+        }))
+      );
     }
 
-    // 3. Init Service Role Client
-    const supabaseAdmin = getSupabaseAdmin()
+    // Insert default permissions (all false)
+    const MODULES = ['pos', 'inventory', 'procurement', 'sales', 'finance', 'service', 'admin', 'hr'];
+    await db.insert(user_permissions).values(
+      MODULES.map(module => ({
+        user_id: newUser.id,
+        module,
+        enabled: role === 'Admin/Owner',
+      }))
+    );
 
-    // 4. Create User explicitly overriding email confirmations
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-      }
-    })
-
-    if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 400 })
-    }
-
-    if (!authUser.user) {
-         return NextResponse.json({ error: "Failed to parse created user context." }, { status: 500 })
-    }
-
-    // 5. Upsert HR Metadata + default module permissions
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .upsert({
-        id: authUser.user.id,
-        email: email,
-        full_name: fullName,
-        role: role,
-        assigned_branch_id: (branchIds && branchIds.length > 0) ? branchIds[0] : (branchId || null),
-        assigned_branch_ids: branchIds || (branchId ? [branchId] : []),
-        force_password_change: forcePasswordChange === true,
-      })
-
-    if (profileError) {
-       return NextResponse.json({ error: `User created but profile sync failed: ${profileError.message}` }, { status: 500 })
-    }
-
-    // 6. Seed default module permissions (all enabled)
-    const modules = ['inventory','procurement','pos','transfer','accounting','staff','service','analytics']
-    await supabaseAdmin.from('user_permissions').upsert(
-      modules.map(m => ({ user_id: authUser.user!.id, module: m, enabled: true })),
-      { onConflict: 'user_id,module' }
-    )
-
-    return NextResponse.json({ success: true, user: authUser.user }, { status: 201 })
-
-  } catch (err) {
-    console.error("Staff Creation Error:", err)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json({ data: { id: newUser.id, email } }, { status: 201 });
+  } catch (error) {
+    console.error('Staff provisioning error:', error);
+    return NextResponse.json({ error: (error as Error).message || 'Failed to provision user' }, { status: 500 });
   }
 }

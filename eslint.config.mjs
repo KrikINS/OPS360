@@ -13,6 +13,15 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Downgrade to warn during the Supabase-to-Drizzle migration:
+      // Record<string, unknown> from generics.fetchData is inherently untyped.
+      "@typescript-eslint/no-explicit-any": "warn",
+      // setState in effect is acceptable for SWR-derived values
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

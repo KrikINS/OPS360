@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Outfit, Inter } from "next/font/google";
 import "./globals.css";
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { SessionProvider } from "@/components/SessionProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -39,9 +40,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${inter.variable} antialiased`}
         suppressHydrationWarning
       >
-        <TooltipProvider>
-          {children}
-        </TooltipProvider>
+        <SessionProvider>
+          <TooltipProvider>
+            {children}
+          </TooltipProvider>
+        </SessionProvider>
       </body>
     </html>
   );

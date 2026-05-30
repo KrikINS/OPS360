@@ -22,6 +22,11 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+# Provide dummy variables for Next.js standalone build to prevent crashes
+ENV DATABASE_URL="postgres://dummy:dummy@localhost:5432/dummy"
+ENV NEXTAUTH_SECRET="dummy_secret_for_build_only_1234567890"
+ENV NEXTAUTH_URL="http://localhost:3000"
+
 RUN npm run build
 
 # Step 3: Production Runner (Final Thin Image)

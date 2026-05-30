@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/utils/supabase/client"
+
 import { 
   Search, 
   Plus, 
@@ -77,36 +77,39 @@ export default function ProductsPage() {
   const [canExport, setCanExport] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const supabase = createClient()
+  
 
   const fetchProducts = async () => {
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
     
     // Check export permission
     if (user) {
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-      const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'accounting').eq('enabled', true)
+      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+      const { data: permissionsData } = await import("@/app/actions/generics").then(m => m.fetchData("user_permissions"))
+      const permissions = permissionsData && Array.isArray(permissionsData) ? permissionsData.filter(p => p.user_id === user.id && p.module === 'accounting' && p.enabled === true) : []
       
-      const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'finance'
+      const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'SUPER_ADMIN' || profile?.role === 'finance'
       const hasAccounting = permissions && permissions.length > 0
       setCanExport(isAdmin || hasAccounting)
     }
 
-    const { data } = await supabase
-      .from("products")
-      .select("id, model_name, brand, category, product_code, base_price, hsn_code, min_stock_level, tracking_type, description, gst_rate, warranty_months, is_archived")
-      .eq("is_archived", showArchived)
-      .order("model_name")
+    const { data } = await import("@/app/actions/generics").then(m => m.fetchData("products"))
     
-    if (data) setProducts(data as Product[])
+    if (data && Array.isArray(data)) {
+      const { mapToProduct } = await import("@/utils/data-mappers")
+      const mapped = data.map(mapToProduct)
+      const filtered = mapped.filter(d => (d as Record<string, unknown>)['is_archived'] === showArchived)
+      filtered.sort((a, b) => a.model_name.localeCompare(b.model_name))
+      setProducts(filtered as unknown as Product[])
+    }
     setLoading(false)
   }
 
   const handleExport = async () => {
     setExporting(true)
     try {
-      const { data, error } = await supabase.rpc('get_export_data', { p_type: 'product_master' })
+      const { data, error } = await import("@/app/actions/generics").then(m => m.rpcCall('get_export_data', { p_type: 'product_master' }))
       if (error) throw error
       if (data) {
         exportToExcel(data as Record<string, unknown>[], 'Products')
@@ -126,7 +129,7 @@ export default function ProductsPage() {
 
   const handleArchive = async (id: string) => {
     setLoading(true)
-    const { error } = await supabase.from("products").update({ is_archived: true }).eq("id", id)
+    const { error } = await import("@/app/actions/generics").then(m => m.updateData("products", { id, is_archived: true }))
     
     if (error) {
       setToast({ message: error.message, type: 'error' })
@@ -141,7 +144,7 @@ export default function ProductsPage() {
 
   const handleRestore = async (id: string) => {
     setLoading(true)
-    const { error } = await supabase.from("products").update({ is_archived: false }).eq("id", id)
+    const { error } = await import("@/app/actions/generics").then(m => m.updateData("products", { id, is_archived: false }))
     
     if (error) {
       setToast({ message: error.message, type: 'error' })

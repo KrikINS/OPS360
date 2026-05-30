@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
+
 import { ModuleLaunchpad } from "@/components/dashboard/ModuleLaunchpad"
 import { Loader2, LogOut } from "lucide-react"
 import Image from "next/image"
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 
 const BrandIdentity = () => {
   return (
-    <div className="flex flex-col items-center scale-75">
+    <div className="flex flex-col items-center scale-[0.6]">
       <div className="relative">
         <Image 
           src="/ethan-logo-final.png" 
@@ -18,7 +18,7 @@ const BrandIdentity = () => {
           width={400} 
           height={400} 
           priority 
-          className="drop-shadow-[0_0_20px_rgba(127,209,227,0.15)] bg-transparent object-contain"
+          className="drop-shadow-[0_0_20px_rgba(127,209,227,0.15)] bg-transparent object-contain w-auto h-auto"
         />
       </div>
       <div className="text-center space-y-2 mt-2">
@@ -39,25 +39,24 @@ export default function LaunchpadPage() {
   const router = useRouter()
 
   const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    
+    await import("@/app/actions/user").then(m => m.signOutAction())
     router.push('/login')
   }
 
   useEffect(() => {
     const fetchPermissions = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      
+      const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
       
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('permissions, role')
-          .eq('id', user.id)
-          .single()
-        
-        setPermissions(profile?.permissions || {})
-        setRole(profile?.role || "")
+        const { data: profileList } = await import("@/app/actions/generics").then(m => m.fetchData("profiles"))
+        const profile = profileList && Array.isArray(profileList)
+          ? profileList.find(p => (p as Record<string, unknown>)['id'] === user.id)
+          : null
+        const profileRecord = profile as Record<string, unknown> | null | undefined
+        setPermissions((profileRecord?.['permissions'] as Record<string, boolean>) || {})
+        setRole(String(profileRecord?.['role'] || ""))
       }
       setLoading(false)
     }
@@ -97,27 +96,21 @@ export default function LaunchpadPage() {
       </div>
 
       {/* Logo Section */}
-      <div className="flex-none pt-12 pb-2 w-full flex justify-center z-10">
+      <div className="flex-none pt-4 pb-0 w-full flex justify-center z-10">
         <BrandIdentity />
       </div>
-      
+
       {/* Card Grid Section */}
-      <div className="flex-grow flex items-start justify-center px-6 pb-20 z-10 mt-2">
+      <div className="flex-grow flex items-start justify-center px-6 pb-4 z-10 -mt-10">
         <div className="w-full max-w-7xl relative">
           <ModuleLaunchpad permissions={permissions} role={role} isVisible={true} />
         </div>
       </div>
 
-      {/* Developer Watermark */}
-      <div className="flex-none pb-10 w-full flex flex-col items-center justify-center z-10 pointer-events-none select-none">
-        <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-1">Powered By</p>
-        <div className="flex items-center justify-center gap-1.5">
-          <span className="text-white/40 text-2xl font-black tracking-tighter">Krik</span>
-          <div className="relative">
-            <span className="text-[#00AEEF] text-2xl font-black tracking-tighter">INS</span>
-            <div className="absolute -inset-1 border border-[#00AEEF]/0 border-t-[#00AEEF] rounded-md animate-spin duration-[2000ms]" />
-          </div>
-        </div>
+      {/* Developer Watermark — top left */}
+      <div className="absolute top-6 left-6 z-10 pointer-events-none select-none flex flex-col gap-1">
+        <p className="text-white/30 text-[9px] font-bold uppercase tracking-[0.3em]">Powered By</p>
+        <Image src="/AppTerra .PNG" alt="AppTerra" width={120} height={40} priority className="object-contain opacity-60 w-auto h-auto" style={{ mixBlendMode: "screen" }} />
       </div>
     </div>
   )

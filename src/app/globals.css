@@ -266,3 +266,8 @@
     100% { transform: translateX(200%); }
   }
 }
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}

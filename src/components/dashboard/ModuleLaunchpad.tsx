@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
+import useSWR from "swr"
+
 import { 
   Package, 
   ShoppingCart, 
@@ -100,27 +101,20 @@ interface ModuleLaunchpadProps {
   isVisible: boolean
 }
 
+import { useSession } from "next-auth/react"
+import { getLowStockCountAction } from "@/app/actions/inventory"
+
 export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpadProps) {
   const [mounted, setMounted] = useState(false)
-  const [lowStockCount, setLowStockCount] = useState(0)
   const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null)
   const router = useRouter()
-  const supabase = createClient()
+  const { data: session } = useSession()
+  console.log("Session Role:", session?.user?.role)
 
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) return
+  const { data: countData } = useSWR(session?.user ? 'low-stock-count' : null, getLowStockCountAction)
 
-      const { data: count, error } = await supabase.rpc('get_unique_low_stock_count')
-      
-      if (!error && count !== null) {
-        setLowStockCount(Number(count))
-      }
-    }
-
-    fetchAlerts()
-  }, [supabase])
+  // Derive directly from SWR data to avoid calling setState inside an effect
+  const lowStockCount = countData?.data ? Number(countData.data) : 0
 
   useEffect(() => {
     if (isVisible) {
@@ -128,12 +122,14 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
     }
   }, [isVisible])
 
-  const normalizedRole = (role || "").toLowerCase().trim();
-  const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner';
+  const sessionRole = session?.user?.role ?? role ?? ""
+  const normalizedRole = sessionRole.toLowerCase().trim();
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
+  const isAdmin = isSuperAdmin || normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner';
 
   // Admins always see all modules; others filter by permissions
-  const allowedModules = isAdmin 
-    ? MODULES 
+  const allowedModules = isAdmin
+    ? MODULES
     : MODULES.filter(m => permissions?.[m.id])
 
   if (!isVisible) return null

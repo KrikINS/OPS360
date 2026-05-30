@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/utils/supabase/server'
+
 
 /**
  * Sets the active branch for the current session via a persistent cookie.
@@ -10,24 +10,25 @@ import { createClient } from '@/utils/supabase/server'
  * reflect the newly selected context.
  */
 export async function setActiveBranchAction(branchId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  
+  const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
 
   if (!user) throw new Error("Unauthorized")
 
   // Check if admin
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  const normalizedRole = profile?.role?.toLowerCase().trim() || ""
+  const { data: profileList } = await import("@/app/actions/generics").then(m => m.fetchData("profiles"))
+  const profile = profileList && Array.isArray(profileList)
+    ? profileList.find((p: Record<string, unknown>) => p['id'] === user.id)
+    : null
+  const normalizedRole = String((profile as Record<string, unknown> | null)?.['role'] || '').toLowerCase().trim()
   const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner'
 
   if (!isAdmin) {
     // Validate branch access
-    const { data: access, error } = await supabase
-      .from('user_branch_access')
-      .select('branch_id')
-      .eq('user_id', user.id)
-      .eq('branch_id', branchId)
-      .single()
+    const { data: accessList, error } = await import("@/app/actions/generics").then(m => m.fetchData("user_branch_access"))
+    const access = accessList && Array.isArray(accessList)
+      ? accessList.find((a: Record<string, unknown>) => a['user_id'] === user.id && a['branch_id'] === branchId)
+      : null
 
     if (error || !access) {
       throw new Error(`Forbidden: You do not have access to branch ${branchId}.`)

@@ -1,10 +1,10 @@
 "use client"
 
+import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { logout } from "@/app/login/actions"
 import { setActiveBranchAction } from "@/app/actions/branch"
-import { createClient } from "@/utils/supabase/client"
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,6 +49,18 @@ export function UserNav({ profile }: UserNavProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [switchingBranchId, setSwitchingBranchId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState("")
+  const { data: session } = useSession()
+
+  const displayEmail = session?.user?.email || profile.email
+  const displayName = session?.user?.name || profile.full_name || displayEmail.split("@")[0] || "User"
+  const rawRole = session?.user?.role || profile.role || ""
+  const displayRole = rawRole
+    ? rawRole.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : "User"
+
+  const initials = displayName
+    ? displayName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()
+    : "US"
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,13 +68,13 @@ export function UserNav({ profile }: UserNavProps) {
     setErrorMsg("")
 
     try {
-      const supabase = createClient()
+      
       // Users are only permitted to explicitly update their own display name.
       // Roles, Emails, and Branch IDs are locked and managed strictly by Admins.
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: fullName })
-        .eq("id", profile.id)
+      const { error } = await import("@/app/actions/generics").then(m => m.updateData("profiles", {
+          id: profile.id,
+          full_name: fullName 
+        }))
 
       if (error) throw error
 
@@ -92,10 +104,6 @@ export function UserNav({ profile }: UserNavProps) {
     }
   }
 
-  const initials = profile.full_name
-    ? profile.full_name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()
-    : "US"
-
   return (
     <>
       <DropdownMenu>
@@ -108,10 +116,10 @@ export function UserNav({ profile }: UserNavProps) {
           <DropdownMenuGroup>
             <div className="font-normal px-2 py-1.5">
               <div className="flex flex-col space-y-2">
-                <p className="text-sm font-medium leading-none">Welcome, {profile.full_name}</p>
-                <p className="text-xs leading-none text-muted-foreground">{profile.email}</p>
+                <p className="text-sm font-medium leading-none">Welcome, {displayName}</p>
+                <p className="text-xs leading-none text-muted-foreground">{displayEmail}</p>
                 <div className="mt-2 text-[10px] uppercase tracking-wider font-semibold text-primary bg-primary/10 w-fit px-2 py-0.5 rounded-full">
-                  {profile.role}
+                  {displayRole}
                 </div>
               </div>
             </div>
@@ -182,9 +190,10 @@ export function UserNav({ profile }: UserNavProps) {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <form action={logout}>
+            <form action={() => import("next-auth/react").then(m => m.signOut({ callbackUrl: "/login" }))}>
               <button
-                type="submit"
+                type="button"
+                onClick={() => import("next-auth/react").then(m => m.signOut({ callbackUrl: "/login" }))}
                 className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-destructive focus:bg-destructive/10 outline-none transition-colors hover:bg-destructive/10"
               >
                 <LogOut className="h-4 w-4" />

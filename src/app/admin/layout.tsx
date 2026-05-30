@@ -1,64 +1,68 @@
-import { createClient } from "@/utils/supabase/server"
+
 import { redirect } from "next/navigation"
 import { AdminSidebar } from "@/components/admin-sidebar"
 import { UserNav } from "@/components/user-nav"
 import { cookies } from "next/headers"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  const session = await getServerSession(authOptions)
+  const user = session?.user;
 
   if (!user) redirect("/login")
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single()
-    
-  // Fetch Module Permissions
-  const { data: permissionsData } = await supabase
-    .from("user_permissions")
-    .select("module, enabled")
-    .eq("user_id", user.id)
+  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
 
-  const permissionsMap = (permissionsData || []).reduce((acc, p) => {
-    acc[p.module] = p.enabled
+  type ProfileType = typeof import("@/db/schema").profiles.$inferSelect
+  type BranchType = typeof import("@/db/schema").branches.$inferSelect
+  type PermissionType = typeof import("@/db/schema").user_permissions.$inferSelect
+  const genericData = await import("@/app/actions/generics").then(m => m.fetchData("user_permissions"))
+  const allPerms = genericData.data && Array.isArray(genericData.data) ? (genericData.data as PermissionType[]).filter((p) => p.user_id === user.id) : []
+
+  const permissionsMap = allPerms.reduce((acc: Record<string, boolean>, p: PermissionType) => {
+    acc[p.module] = p.enabled || false
     return acc
-  }, {} as Record<string, boolean>)
+  }, {})
 
-  if (profile?.role !== "Admin/Owner") redirect("/unauthorized")
+  const profileRole = (profile as ProfileType)?.role ?? ""
+  const isAdminRole = profileRole === "Admin/Owner" || profileRole === "SUPER_ADMIN" || session?.user?.role === "SUPER_ADMIN"
+  if (!isAdminRole) redirect("/unauthorized")
 
   const cookieStore = await cookies()
-  const activeBranchId = cookieStore.get("active_branch_id")?.value || profile?.branch_id || ""
+  const activeBranchId = cookieStore.get("active_branch_id")?.value || (profile as ProfileType)?.branch_id || ""
 
   let branchName = ""
   if (activeBranchId) {
-    const { data: b } = await supabase.from("branches").select("name").eq("id", activeBranchId).single()
-    if (b) branchName = b.name
-  } else if (profile?.role === "Admin/Owner") {
+    const { data: bList } = await import("@/app/actions/generics").then(m => m.fetchData("branches"))
+    const b = Array.isArray(bList) ? (bList as BranchType[]).find((br) => br.id === activeBranchId) : null
+    if (b) branchName = b.name as string
+  } else if (isAdminRole) {
     branchName = "Global Access"
   }
 
   // Load all branches for switching if Admin
-  let allBranches: { id: string; name: string; is_primary: boolean }[] | undefined = undefined
-  if (profile?.role === "Admin/Owner") {
-    const { data: b_list } = await supabase.from("branches").select("id, name").order("name")
-    if (b_list) {
-      allBranches = b_list.map(b => ({ id: b.id, name: b.name, is_primary: b.id === activeBranchId }))
+  let allBranches: { id: string; name: string; is_primary: boolean }[] | undefined = []
+  if (isAdminRole) {
+    const { data: b_list } = await import("@/app/actions/generics").then(m => m.fetchData("branches"))
+    if (b_list && Array.isArray(b_list)) {
+      allBranches = b_list.map((b: BranchType) => ({ id: b.id, name: b.name, is_primary: b.id === activeBranchId }))
     }
   }
 
   const profileWithBranch = {
-    ...profile,
+    id: (profile as ProfileType)?.id || user.id,
+    full_name: (profile as ProfileType)?.full_name || "",
+    role: (profile as ProfileType)?.role || "",
     branch_id: activeBranchId,
     branch_name: branchName,
     all_branches: allBranches,
-    email: user.email ?? profile?.email ?? "",
+    email: user.email ?? (profile as ProfileType)?.email ?? "",
   }
 
   return (

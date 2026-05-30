@@ -1,307 +1,45 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
-import { NextResponse } from "next/server"
-import { createAdminClient } from "@/utils/supabase/admin"
+import { NextResponse } from 'next/server';
+import { db } from '@/db/client';
+import { sql } from 'drizzle-orm';
 
 export async function GET() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  try {
+    const res = await db.execute(sql`
+      SELECT
+        po.*,
+        row_to_json(v.*) AS vendor,
+        row_to_json(b.*) AS branch,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', d.id,
+            'discrepancy_type', d.discrepancy_type,
+            'status', d.status,
+            'admin_comment', d.admin_comment,
+            'created_at', d.created_at
+          )) FILTER (WHERE d.id IS NOT NULL), '[]'
+        ) AS discrepancies,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', vb.id,
+            'bill_number', vb.bill_number,
+            'bill_amount', vb.bill_amount,
+            'file_path', vb.file_path,
+            'created_at', vb.created_at
+          )) FILTER (WHERE vb.id IS NOT NULL), '[]'
+        ) AS vendor_bills
+      FROM purchase_orders po
+      LEFT JOIN vendors v ON po.vendor_id = v.id
+      LEFT JOIN branches b ON po.branch_id = b.id
+      LEFT JOIN discrepancies d ON d.po_id = po.id
+      LEFT JOIN vendor_bills vb ON vb.po_id = po.id
+      GROUP BY po.id, v.id, b.id
+      ORDER BY po.created_at DESC
+    `);
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.json({ error: "System configuration error: Missing environment variables" }, { status: 500 })
+    const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[];
+    const data = Array.isArray(result) ? result : (result as { rows?: Record<string, unknown>[] }).rows || [];
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
-
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll() {}
-      },
-    }
-  )
-
-  const { data, error } = await supabase
-    .from('purchase_orders')
-    .select(`
-      *,
-      vendor:vendors(name),
-      branch:branches(name),
-      items:purchase_order_items(
-        *,
-        product:products(model_name, hsn_code, base_price)
-      ),
-      grns:grns(
-        id, 
-        grn_number,
-        grn_items(
-          freight_value,
-          landed_cost,
-          quantity
-        )
-      ),
-      discrepancies:discrepancies(status),
-      vendor_bills:vendor_bills(*),
-      debit_notes:debit_notes(*)
-    `)
-    .order('created_at', { ascending: false })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  // Fetch profiles to map created_by and approved_by to human readable names
-  const { data: profiles } = await supabase.from('profiles').select('id, full_name, email')
-  const profileMap = new Map(profiles?.map(p => [p.id, { name: p.full_name || p.email, email: p.email }]) || [])
-
-  const enrichedData = data.map(po => {
-    const requester = profileMap.get(po.created_by)
-    const approver = po.approved_by ? profileMap.get(po.approved_by) : null
-    
-    return {
-      ...po,
-      requester_name: requester?.name || 'Unknown',
-      approver_name: approver?.name || null,
-      approver_email: approver?.email || null
-    }
-  })
-
-  return NextResponse.json(enrichedData)
-}
-
-export async function POST(request: Request) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
-          })
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  const body = await request.json()
-  const { vendor_id, branch_id, items, terms_content, status = 'draft', payment_terms, is_partial_billing = false } = body
-
-  if (!vendor_id || !branch_id || !items || items.length === 0) {
-    return NextResponse.json({ error: "Vendor, branch, and items are required" }, { status: 400 })
-  }
-
-  // Generate sequential PO number (PO-YYYY-XXXX)
-  const currentYear = new Date().getFullYear().toString()
-  const poPrefix = `PO-${currentYear}-`
-
-  // Use admin client for sequence check to be safe
-  const adminSupabase = createAdminClient()
-
-  // Get all POs for this year to find the true numeric maximum
-  const { data: allPOs } = await adminSupabase
-    .from('purchase_orders')
-    .select('po_number')
-    .like('po_number', `${poPrefix}%`)
-
-  let maxSequence = 0
-  if (allPOs && allPOs.length > 0) {
-    allPOs.forEach(po => {
-      const parts = po.po_number.split('-')
-      if (parts.length === 3) {
-        const num = parseInt(parts[2], 10)
-        if (!isNaN(num) && num > maxSequence) {
-          maxSequence = num
-        }
-      }
-    })
-  }
-
-  let finalSequence = maxSequence + 1
-  let po_number = `${poPrefix}${finalSequence.toString().padStart(4, '0')}`
-
-  // Double check collision (highly unlikely after fix but safe)
-  const { data: existingCheck } = await adminSupabase
-    .from('purchase_orders')
-    .select('id')
-    .eq('po_number', po_number)
-    .single()
-
-  if (existingCheck) {
-    // If somehow a collision still exists (race condition?), skip until free
-    // This is a last resort to prevent 500s
-    console.warn(`[PO-Generation] Manual collision detected for ${po_number}, trying next...`)
-    finalSequence++
-    po_number = `${poPrefix}${finalSequence.toString().padStart(4, '0')}`
-  }
-
-  // console.log(`[PO-Generation] Generated: ${po_number} (Max found: ${maxSequence})`)
-
-  // 1. Create Purchase Order
-  const { data: po, error: poError } = await supabase
-    .from('purchase_orders')
-    .insert({
-      po_number,
-      vendor_id,
-      branch_id,
-      status,
-      created_by: user.id,
-      terms_content,
-      payment_terms,
-      is_partial_billing,
-      total_amount: items.reduce((acc: number, item: { unit_price: number, quantity: number, tax_rate: number }) => 
-        acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0)
-    })
-    .select()
-    .single()
-
-  if (poError) return NextResponse.json({ error: poError.message }, { status: 500 })
-
-  // 2. Create Purchase Order Items
-  const poItems = items.map((item: { 
-    product_id: string, 
-    quantity: number, 
-    unit_price: number,
-    tax_rate: number,
-    total_item_cost: number,
-    override_reason?: string
-  }) => ({
-    po_id: po.id,
-    product_id: item.product_id,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    tax_rate: item.tax_rate,
-    total_item_cost: item.total_item_cost,
-    override_reason: item.override_reason
-  }))
-
-  const { error: itemsError } = await supabase
-    .from('purchase_order_items')
-    .insert(poItems)
-
-  if (itemsError) {
-    // Cleanup PO if items fail (simplified)
-    await supabase.from('purchase_orders').delete().eq('id', po.id)
-    return NextResponse.json({ error: itemsError.message }, { status: 500 })
-  }
-
-  return NextResponse.json(po, { status: 201 })
-}
-
-export async function PATCH(request: Request) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
-          })
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  const body = await request.json()
-  const { id, status, vendor_id, branch_id, items, terms_content, total_amount, cancellation_reason, payment_terms, revision_notes } = body
-
-  if (!id || !status) return NextResponse.json({ error: "ID and status are required" }, { status: 400 })
-
-  // Check roles for approval
-  if (status === 'approved') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const normalizedRole = profile?.role?.toLowerCase().trim() || ""
-    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'admin/owner'
-
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Only admins can approve purchase orders" }, { status: 403 })
-    }
-  }
-
-  // Only admins can send back for revision
-  if (status === 'needs_revision') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const normalizedRole = profile?.role?.toLowerCase().trim() || ""
-    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'admin/owner'
-
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Only admins can request revisions" }, { status: 403 })
-    }
-  }
-
-  const updateData: Record<string, string | number | boolean | null> = { status }
-  if (status === 'approved') updateData.approved_by = user.id
-  if (vendor_id) updateData.vendor_id = vendor_id
-  if (branch_id) updateData.branch_id = branch_id
-  if (total_amount) updateData.total_amount = total_amount
-  if (terms_content) updateData.terms_content = terms_content
-  if (payment_terms) updateData.payment_terms = payment_terms
-  if (cancellation_reason) updateData.cancellation_reason = cancellation_reason
-  // Store revision notes when sending back, clear them on resubmit
-  if (status === 'needs_revision') updateData.revision_notes = revision_notes || null
-  if (status === 'pending_approval') updateData.revision_notes = null
-  if ('is_partial_billing' in body) updateData.is_partial_billing = body.is_partial_billing
-
-  // If items are provided, we need to update items (Revise & Approve flow)
-  if (items && items.length > 0) {
-    const adminSupabase = createAdminClient()
-    
-    // 1. Delete existing items
-    const { error: deleteError } = await adminSupabase
-      .from('purchase_order_items')
-      .delete()
-      .eq('po_id', id)
-    
-    if (deleteError) return NextResponse.json({ error: "Failed to clear existing items" }, { status: 500 })
-
-    // 2. Insert new items
-    const { error: insertError } = await adminSupabase
-      .from('purchase_order_items')
-      .insert(items.map((item: { product_id: string, quantity: number, unit_price: number, tax_rate: number, total_item_cost: number, override_reason?: string }) => ({
-        po_id: id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        tax_rate: item.tax_rate,
-        total_item_cost: item.total_item_cost,
-        override_reason: item.override_reason
-      })))
-
-    if (insertError) return NextResponse.json({ error: "Failed to update items" }, { status: 500 })
-    
-    // Recalculate total if not provided explicitly
-      updateData.total_amount = items.reduce((acc: number, item: { unit_price: number, quantity: number, tax_rate: number }) => 
-        acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0)
-  }
-
-  const { data, error } = await supabase
-    .from('purchase_orders')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
 }

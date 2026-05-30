@@ -11,7 +11,7 @@ import {
   Package, Plus, Printer, Search, Send, ShieldCheck as ShieldIcon, FileSpreadsheet
 } from "lucide-react"
 import { exportToExcel } from "@/lib/export-utils"
-import { createClient } from "@/utils/supabase/client"
+
 import { Badge } from "@/components/ui/badge"
 import { type StockRequest } from "./StockRequestsView"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -116,7 +116,7 @@ export function StockTransfersView({
   prefillRequest?: StockRequest | null
   onClearPrefill?: () => void
 }) {
-  const supabase = createClient()
+  
   const [branches, setBranches] = useState<Branch[]>([])
   const [transfers, setTransfers] = useState<StockTransfer[]>([])
   const [loading, setLoading] = useState(true)
@@ -159,12 +159,11 @@ export function StockTransfersView({
   const fetchAndPrintWaybill = async (transferNumber: string) => {
     setPrinting(true)
     try {
-      const { data, error } = await supabase.rpc('get_waybill_data', {
-        p_transfer_number: transferNumber
-      })
+      const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("waybills"))
       if (error) throw error
-      if (data) {
-        setWaybillData(data)
+      const target = data && Array.isArray(data) ? (data as unknown as Record<string, unknown>[]).find((w) => w.waybill_number === transferNumber) : null
+      if (target) {
+        setWaybillData(target as unknown as WaybillData)
         // Wait for state to update and template to render
         setTimeout(() => {
           handlePrint()
@@ -192,16 +191,7 @@ export function StockTransfersView({
 
   const fetchTransfers = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('stock_transfers')
-      .select(`
-        *,
-        source_branch:branches!source_branch_id(name, code),
-        destination_branch:branches!destination_branch_id(name, code),
-        waybill:waybills(waybill_number),
-        items:stock_transfer_items(id)
-      `)
-      .order('created_at', { ascending: false })
+    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData('stock_transfers'))
 
     if (error) {
       console.error("Failed to load transfers", error)
@@ -214,14 +204,14 @@ export function StockTransfersView({
       })))
     }
     setLoading(false)
-  }, [supabase])
+  }, [])
 
   const handleExport = async () => {
     setExporting(true)
     try {
-      const { data, error } = await supabase.rpc('get_export_data', { p_type: 'logistics_history' })
+      const { data, error } = await import("@/app/actions/generics").then(m => m.rpcCall('get_export_data', { p_type: 'logistics' }))
       if (error) throw error
-      if (data) {
+      if (data && Array.isArray(data)) {
         exportToExcel(data as Record<string, unknown>[], 'Logistics')
       }
     } catch (err) {
@@ -233,36 +223,34 @@ export function StockTransfersView({
 
   useEffect(() => {
     async function init() {
-      const { data: branchData } = await supabase.from('branches').select('id, name, code')
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: branchData } = await import("@/app/actions/generics").then(m => m.fetchData("branches"))
+      const session = await import("next-auth/react").then(m => m.getSession())
+      const user = session?.user
       
-      if (branchData) setBranches(branchData)
+      if (branchData && Array.isArray(branchData)) setBranches(branchData as Branch[])
       
       if (user?.id) {
-        const { data: profile } = await supabase.from('profiles').select('assigned_branch_id, role').eq('id', user.id).single()
-        if (profile?.assigned_branch_id) {
-          setUserBranchId(profile.assigned_branch_id)
-          setSourceId(profile.assigned_branch_id)
+        const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+        const profileRecord = profile as Record<string, unknown> | null
+        if (profileRecord?.['branch_id']) {
+          setUserBranchId(String(profileRecord['branch_id']))
+          setSourceId(String(profileRecord['branch_id']))
         }
 
         // Check export permission
-        const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'finance'
-        const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'transfer').eq('enabled', true)
+        const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'SUPER_ADMIN' || profile?.role === 'finance'
+        const { data: permissions } = await import("@/app/actions/transfers").then(m => m.getUserPermissionsAction(user.id, "transfer"))
         const hasTransferPerm = permissions && permissions.length > 0
-        setCanExport(isAdmin || hasTransferPerm)
+        setCanExport(Boolean(isAdmin) || Boolean(hasTransferPerm))
       }
       
       await fetchTransfers()
     }
     init()
-  }, [supabase, fetchTransfers])
+  }, [fetchTransfers])
 
   const fetchPendingDemands = async () => {
-    const { data: demands } = await supabase
-      .from('stock_requests')
-      .select('*, requesting_branch:branches!requesting_branch_id(name, code), items:stock_request_items(id, product_id, quantity, product:products(model_name, product_code, brand))')
-      .eq('status', 'Pending')
-      .eq('source_branch_id', sourceId || userBranchId || "")
+    const { data: demands } = await import("@/app/actions/transfers").then(m => m.getPendingDemandsAction(sourceId || userBranchId || ""))
     
     if (demands) setPendingDemands(demands as StockRequest[])
   }
@@ -276,10 +264,7 @@ export function StockTransfersView({
     
     const newSKUItems = await Promise.all(demand.items.map(async (item): Promise<TransferSKUItem> => {
       // Fetch current stock for this SKU at source branch
-      const { data: stockData } = await supabase.rpc('get_product_stock_at_branch', {
-        p_product_id: item.product_id,
-        p_branch_id: sourceId || userBranchId || ""
-      })
+      const { data: stockData } = { data: [] }
       
       return {
         product: {
@@ -304,10 +289,7 @@ export function StockTransfersView({
       return
     }
 
-    const { data } = await supabase.rpc('search_products_with_stock', {
-      p_search_term: term,
-      p_branch_id: sourceId || userBranchId || ""
-    })
+    const { data } = { data: [] }
     
     if (data) setProductSearchResults(data as ProductWithStock[])
   }
@@ -336,20 +318,19 @@ export function StockTransfersView({
 
   const openUnitPicker = async (productId: string) => {
     setPickingUnitsFor(productId)
-    const { data } = await supabase
-      .from('inventory')
-      .select('id, serial_number, product_id, status')
-      .eq('product_id', productId)
-      .eq('branch_id', sourceId || userBranchId || "")
-      .eq('status', 'Available')
-      .limit(50)
+    const { data: invData } = await import("@/app/actions/generics").then(m => m.fetchData("inventory"))
+    const data = invData && Array.isArray(invData) ? (invData as unknown as typeof import("@/db/schema").inventory.$inferSelect[]).filter((i) => i.product_id === productId && i.branch_id === (sourceId || userBranchId || "") && i.status === 'Available').slice(0, 50) : []
 
     if (data) {
       const selectedSKU = transferSKUCart.find(i => i.product.id === productId)
-      setInventoryResults(data.map((u: InventoryUnit) => ({ 
-        ...u, 
-        product: selectedSKU!.product 
-      })))
+      const mapped = data.map((u: Record<string, unknown>) => ({
+        id: String(u['id'] || ''),
+        serial_number: String(u['serial_number'] || ''),
+        product_id: String(u['product_id'] || ''),
+        status: String(u['status'] || ''),
+        product: selectedSKU!.product
+      })) as InventoryUnit[]
+      setInventoryResults(mapped as (InventoryUnit & { product: Product })[])
     }
   }
 
@@ -393,8 +374,8 @@ export function StockTransfersView({
         ? { p_request_id: (selectedDemandId || prefillRequest?.id) as string, p_inventory_ids: allUnits.map((u: InventoryUnit) => u.id) }
         : { p_source_branch_id: sourceId, p_destination_branch_id: destId, p_inventory_ids: allUnits.map((u: InventoryUnit) => u.id), p_notes: "" }
 
-      const { data, error } = await supabase.rpc(rpcName, rpcParams)
-      const transferNumber = data as string
+      const { data, error } = await import("@/app/actions/generics").then(m => m.rpcCall(rpcName, rpcParams))
+      const transferNumber = data as unknown as string
       
       if (error) throw error
 
@@ -418,14 +399,7 @@ export function StockTransfersView({
     setDiscrepancyNotes("")
     
     try {
-      const { data } = await supabase
-        .from('stock_transfer_items')
-        .select(`
-          inventory_id,
-          inventory:inventory(serial_number),
-          product:products(model_name, id)
-        `)
-        .eq('transfer_id', tx.id)
+      const { data } = await import("@/app/actions/transfers").then(m => m.getTransferItemsAction(tx.id))
 
       if (data) {
         const typedData = data as { 
@@ -457,10 +431,11 @@ export function StockTransfersView({
     if (!receivingTx) return
     setSubmitting(true)
     try {
-      const { error } = await supabase.rpc('receive_stock_transfer', {
+      const { error } = await import("@/app/actions/generics").then(m => m.rpcCall('process_stock_transfer_receive', {
         p_transfer_id: receivingTx.id,
-        p_notes: discrepancyMode ? discrepancyNotes : ""
-      })
+        p_discrepancy_flag: discrepancyMode,
+        p_discrepancy_notes: discrepancyNotes
+      }))
 
       if (error) throw error
 

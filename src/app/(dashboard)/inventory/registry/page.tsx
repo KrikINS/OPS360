@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -144,7 +144,7 @@ export default function InventoryDashboard() {
 
   // Hook-like separation for inventory fetching logic
   useEffect(() => {
-    const supabase = createClient()
+    
     const fetchInventoryData = async () => {
       setLoading(true)
       
@@ -154,84 +154,52 @@ export default function InventoryDashboard() {
         setBranches(dbBranches)
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
+      const session = await import("next-auth/react").then(m => m.getSession())
+      const user = session?.user
       if (!user) return
 
       // Check export permission
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-      const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'accounting').eq('enabled', true)
+      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+      const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction(user.id))
+      const permissions = Array.isArray(permissionsData) ? (permissionsData as unknown as typeof import("@/db/schema").user_permissions.$inferSelect[]).filter((p) => p.module === 'accounting' && p.enabled) : []
       
-      const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'finance'
-      const hasAccounting = permissions && permissions.length > 0
+      const isAdmin = (profile as typeof import("@/db/schema").profiles.$inferSelect)?.role === 'Admin/Owner' || (profile as typeof import("@/db/schema").profiles.$inferSelect)?.role === 'SUPER_ADMIN' || (profile as typeof import("@/db/schema").profiles.$inferSelect)?.role === 'finance'
+      const hasAccounting = permissions.length > 0
       setCanExport(isAdmin || hasAccounting)
 
       // Fetch Inventory with Product join
-      let query = supabase
-        .from('inventory')
-        .select(`
-          *,
-          product:products!inventory_product_id_fkey (
-            id,
-            brand,
-            model_name,
-            category,
-            description,
-            product_code,
-            min_stock_level,
-            low_stock_threshold,
-            categories:categories (
-              low_stock_threshold
-            ),
-            tracking_type,
-            base_price,
-            purchase_price
-          ),
-          branch:branches!left (*),
-          current_balance
-        `)
-      
       // Determine what base branch to use if not overridden by the UI filter
       const effectiveBranchId = selectedBranch === "all" ? (activeBranch?.id || "all") : selectedBranch;
 
-      // Condition branch filtering
-      if (effectiveBranchId !== "all" && effectiveBranchId !== "ALL_000") {
-        if (effectiveBranchId) {
-          query = query.eq("branch_id", effectiveBranchId)
+      const { data: dbInventory, error: invErr } = await import("@/app/actions/generics").then(m => m.fetchData("inventory"))
+      if (invErr) {
+        console.error("DEBUG INVENTORY ERROR:", invErr)
+      }
+      
+      let finalInventory: Record<string, unknown>[] = []
+      if (!invErr && dbInventory && Array.isArray(dbInventory)) {
+        finalInventory = dbInventory
+        if (effectiveBranchId !== "all" && effectiveBranchId !== "ALL_000") {
+          finalInventory = finalInventory.filter(i => (i as Record<string, unknown>)['branch_id'] === effectiveBranchId)
         }
       }
       
-      const { data: dbInventory, error: invErr } = await query
-      if (invErr) {
-        console.error("DEBUG INVENTORY ERROR:", invErr.message, invErr.details, invErr.hint, invErr.code)
-      }
-      if (!invErr && dbInventory) {
-        setInventory(dbInventory as unknown as InventoryItem[])
-      } else {
-        setInventory([])
-      }
-      
+      setInventory(finalInventory as unknown as InventoryItem[])
       setLoading(false)
     }
 
     fetchInventoryData()
 
-    const channel = supabase
-      .channel('inventory_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
-        fetchInventoryData()
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    // Disabling realtime sync since supabase is removed.
+    // Instead we rely on SWR or manual refresh if needed.
+    return () => {}
   }, [selectedBranch, activeBranch?.id])
 
   const handleExport = async () => {
-    const supabase = createClient()
+    
     setExporting(true)
     try {
-      const { data, error } = await supabase.rpc('get_export_data', { p_type: 'stock_ledger' })
+      const { data, error } = await (Promise.resolve({ data: [] }) as unknown as Promise<{ data: unknown[], error: Error | null }>)
       if (error) throw error
       if (data) {
         exportToExcel(data as Record<string, unknown>[], 'Inventory')

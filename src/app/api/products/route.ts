@@ -1,66 +1,13 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
-import { NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
+import { db } from '@/db/client';
+import { products } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll() {}
-      },
-    }
-  )
-
-  const { data, error } = await supabase
-    .from('products')
-    .select('id, model_name, brand, category, hsn_code, base_price, description, product_code, min_stock_level, tracking_type, is_archived, gst_rate, warranty_months')
-    .eq('is_archived', false)
-    .order('model_name', { ascending: true })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
-}
-
-export async function POST(request: Request) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll() {}
-      },
-    }
-  )
-
-  const body = await request.json()
-  
-  const { data, error } = await supabase
-    .from('products')
-    .insert([{
-      model_name: body.model_name,
-      brand: body.brand,
-      category: body.category,
-      hsn_code: body.hsn_code,
-      base_price: body.base_price,
-      description: body.description,
-      product_code: body.product_code,
-      min_stock_level: body.min_stock_level || 0,
-      tracking_type: body.tracking_type || 'Stocked',
-      gst_rate: body.tax_rate ?? 18.0,
-      warranty_months: body.warranty_months ?? 12
-    }])
-    .select()
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    const data = await db.select().from(products).where(eq(products.is_archived, false));
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
-
-  return NextResponse.json(data)
 }

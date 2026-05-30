@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "public": "public",
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "ops360-erp",
+          "region": "asia-south1"
+        }
+      }
+    ]
+  }
+}

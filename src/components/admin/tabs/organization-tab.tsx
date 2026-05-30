@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { MapPin, Plus, Trash2, Phone, Mail, User, CreditCard, Edit2, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react"
-import { createClient } from "@/utils/supabase/client"
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 
 interface Branch {
@@ -57,9 +57,12 @@ export function OrganizationTab() {
 
   const fetchBranches = async () => {
     setLoadingBranches(true)
-    const supabase = createClient()
-    const { data } = await supabase.from("branches").select("*").order("name")
-    if (data) setBranches(data)
+    
+    const { data } = await import("@/app/actions/generics").then(m => m.fetchData("branches"))
+    if (data && Array.isArray(data)) {
+      const { mapToBranch } = await import("@/utils/data-mappers")
+      setBranches(data.map(mapToBranch) as Branch[])
+    }
     setLoadingBranches(false)
   }
 
@@ -71,23 +74,23 @@ export function OrganizationTab() {
     
     setLoadingBranches(true)
     try {
-      const supabase = createClient()
       
-      let res;
+      
       if (editingId) {
-        res = await supabase.from("branches").update({
+        const { error: updateErr } = await import("@/app/actions/generics").then(m => m.updateData("branches", {
+          id: editingId,
           ...formData,
           location: formData.city || "Kerala",
-        }).eq("id", editingId).select()
+        }))
+        if (updateErr) throw new Error(updateErr.message)
       } else {
-        res = await supabase.from("branches").insert({
+        const { error: insertErr } = await import("@/app/actions/generics").then(m => m.insertData("branches", [{
             ...formData,
             location: formData.city || "Kerala",
             type: "Main"
-        }).select()
+        }]))
+        if (insertErr) throw new Error(insertErr.message)
       }
-
-      if (res.error) throw res.error
       
       await fetchBranches()
       setIsAddingBranch(false)
@@ -105,8 +108,8 @@ export function OrganizationTab() {
         email: "",
         gstin: ""
       })
-    } catch (err: any) {
-      alert("Error: " + err.message)
+    } catch (err: unknown) {
+      alert("Error: " + (err instanceof Error ? err.message : String(err)))
     } finally {
       setLoadingBranches(false)
     }
@@ -114,8 +117,8 @@ export function OrganizationTab() {
 
   const deleteBranch = async (id: string) => {
     if (!confirm("Are you sure you want to delete this branch?")) return
-    const supabase = createClient()
-    const { error } = await supabase.from("branches").delete().eq("id", id)
+    
+    const { error } = await import("@/app/actions/generics").then(m => m.deleteData("branches", id))
     if (error) alert("Failed: " + error.message)
     else setBranches(prev => prev.filter(b => b.id !== id))
   }

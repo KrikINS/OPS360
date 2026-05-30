@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { createClient } from "@/utils/supabase/client"
+
 import NextImage from "next/image"
 import { 
   Search, 
@@ -136,16 +136,18 @@ export default function PurchaseReturn() {
   const [returnReasons, setReturnReasons] = useState<ReturnReasonMaster[]>([])
   
   const debitNoteRef = useRef<HTMLDivElement>(null)
-  const supabase = useMemo(() => createClient(), [])
-
   const fetchReturnReasons = useCallback(async () => {
-    const { data } = await supabase
-      .from("return_reason_master")
-      .select("*")
-      .eq("is_active", true)
-      .order("reason_text")
-    if (data) setReturnReasons(data)
-  }, [supabase])
+    const { data } = await import("@/app/actions/generics").then(m => m.fetchData("return_reason_master"))
+    if (data && Array.isArray(data)) {
+      const { mapToReturnReasonMaster } = await import("@/utils/data-mappers")
+      setReturnReasons(
+        data
+          .map(mapToReturnReasonMaster)
+          .filter(r => r.is_active)
+          .sort((a, b) => a.reason_text.localeCompare(b.reason_text))
+      )
+    }
+  }, [])
 
   useEffect(() => {
     fetchReturnReasons()
@@ -160,36 +162,29 @@ export default function PurchaseReturn() {
   const fetchReturns = useCallback(async () => {
     setFetchingReturns(true)
     try {
-      const { data, error } = await supabase
-        .from("debit_notes")
-        .select(`
-          *,
-          po:purchase_orders (
-            po_number,
-            branch:branches (name, full_address, gstin),
-            vendor:vendors (name, gstin)
-          ),
-          vendor:vendors (name, gstin)
-        `)
-        .order("created_at", { ascending: false })
+      const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("debit_notes"))
 
-      if (!error && data) {
-        setReturns((data as unknown as DebitNoteData[]).map((item) => ({
-          ...item,
-          po_number: item.po_number || item.po?.po_number || 'UNKNOWN',
-          vendor_name: item.vendor?.name || item.po?.vendor?.name || item.vendor_name || 'UNKNOWN',
-          branch: item.po?.branch,
-          vendor: item.vendor || item.po?.vendor,
-          serial_numbers: item.metadata?.serial_numbers || item.serial_numbers || [],
-          item_names: item.metadata?.item_names || []
-        })))
+      if (!error && data && Array.isArray(data)) {
+        const { mapToDebitNoteData } = await import("@/utils/data-mappers")
+        setReturns(data.map(row => {
+          const item = mapToDebitNoteData(row)
+          return {
+            ...item,
+            po_number: item.po_number || (item.po as { po_number?: string } | undefined)?.po_number || 'UNKNOWN',
+            vendor_name: item.vendor_name || (item.vendor as { name?: string } | undefined)?.name || (item.po as { vendor?: { name?: string } } | undefined)?.vendor?.name || 'UNKNOWN',
+            branch: (item.po as { branch?: unknown } | undefined)?.branch,
+            vendor: item.vendor || (item.po as { vendor?: unknown } | undefined)?.vendor,
+            serial_numbers: item.metadata?.serial_numbers || item.serial_numbers || [],
+            item_names: item.metadata?.item_names || []
+          } as DebitNoteData
+        }))
       }
     } catch (err) {
       console.error("Failed to fetch returns", err)
     } finally {
       setFetchingReturns(false)
     }
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     fetchReturnReasons()
@@ -225,17 +220,10 @@ export default function PurchaseReturn() {
 
     try {
       // Find PO by po_number
-      const { data: po, error: poError } = await supabase
-        .from("purchase_orders")
-        .select(`
-          id,
-          po_number,
-          status,
-          vendor:vendor_id (name, vendor_code),
-          branch:branch_id (name)
-        `)
-        .eq("po_number", searchQuery.trim().toUpperCase())
-        .single()
+      const { data: pos, error: poError } = await import("@/app/actions/generics").then(m => m.fetchData("purchase_orders"))
+      const { mapToPurchaseOrderLite } = await import("@/utils/data-mappers")
+      const poRaw = pos && Array.isArray(pos) ? pos.find(p => (p as Record<string, unknown>)['po_number'] === searchQuery.trim().toUpperCase()) : null
+      const po = poRaw ? mapToPurchaseOrderLite(poRaw) : null
 
       if (poError || !po) {
         setError("Purchase Order not found.")
@@ -243,14 +231,16 @@ export default function PurchaseReturn() {
         return
       }
 
-      setSelectedPO(po)
+      setSelectedPO(po as unknown as PurchaseOrder)
 
       // Get available serial numbers for this PO
-      const { data: serials, error: serialError } = await supabase
-        .from("inventory")
-        .select("id, serial_number, landed_cost, product_id, product:product_id(model_name)")
-        .eq("source_po_id", po.id)
-        .in("status", ["Available"])
+      const { data: allInventory, error: serialError } = await import("@/app/actions/generics").then(m => m.fetchData("inventory"))
+      const { mapToSerialItem } = await import("@/utils/data-mappers")
+      const serials: SerialItem[] = allInventory && Array.isArray(allInventory)
+        ? allInventory
+            .filter(i => (i as Record<string, unknown>)['source_po_id'] === po.id && (i as Record<string, unknown>)['status'] === "Available")
+            .map(mapToSerialItem) as SerialItem[]
+        : []
 
       if (serialError) {
         setError("Failed to fetch serialized inventory.")
@@ -292,21 +282,17 @@ export default function PurchaseReturn() {
         setSuccessMessage(data.message)
         
         // Fetch detailed debit note data for printing
-        const { data: dnData } = await supabase
-          .from("debit_notes")
-          .select(`
-            *,
-            po:po_id(po_number)
-          `)
-          .eq("id", data.debit_note_id)
-          .single();
+        const { data: allDns } = await import("@/app/actions/generics").then(m => m.fetchData("debit_notes"))
+        const { mapToDebitNoteData } = await import("@/utils/data-mappers")
+        const dnRaw = allDns && Array.isArray(allDns) ? allDns.find(d => (d as Record<string, unknown>)['id'] === data.debit_note_id) : null
+        const dnData = dnRaw ? mapToDebitNoteData(dnRaw) : null
 
         if (dnData) {
           setLastDebitNote({
             ...dnData,
-            po_number: dnData.po?.po_number,
-            serial_numbers: selectedSerials // These were the ones returned
-          });
+            po_number: (dnData.po as { po_number?: string } | undefined)?.po_number || dnData.po_number,
+            serial_numbers: selectedSerials
+          } as DebitNoteData)
         }
 
         setIsReturnModalOpen(false)
@@ -339,42 +325,31 @@ export default function PurchaseReturn() {
     setAuthorizingId(id)
     try {
       // 1. Authorize the debit note
-      const { data: dn, error } = await supabase
-        .from("debit_notes")
-        .update({ status: "Authorized" })
-        .eq("id", id)
-        .select("po_id, amount, debit_note_number")
-        .single();
+      const { data: updatedDnArray, error } = await import("@/app/actions/generics").then(m => m.updateData("debit_notes", { id, status: "Authorized" }))
+      const dn = updatedDnArray && updatedDnArray.length > 0 ? updatedDnArray[0] : null;
 
       if (error) throw error
       
       // 2. DISCREPANCY RECONCILIATION: Subtract return from gap
       if (dn && dn.po_id) {
-        const { data: openMismatch, error: mismatchError } = await supabase
-          .from('discrepancies')
-          .select('id, detected_gap, admin_comment')
-          .eq('po_id', dn.po_id)
-          .eq('discrepancy_type', 'Price Mismatch')
-          .neq('status', 'Resolved')
-          .maybeSingle();
+        const { data: mismatchData, error: mismatchError } = await import("@/app/actions/generics").then(m => m.fetchData('discrepancies'))
+        const openMismatch = mismatchData && Array.isArray(mismatchData) ? (mismatchData as unknown as typeof import("@/db/schema").discrepancies.$inferSelect[]).find((d) => d.po_id === dn.po_id && d.discrepancy_type === 'Price Mismatch' && d.status !== 'Resolved') : null;
 
         if (mismatchError) {
           console.error("Failed to check for existing discrepancies:", mismatchError);
         } else if (openMismatch) {
-          const newGap = Number(openMismatch.detected_gap) + Number(dn.amount);
+          const newGap = Number((openMismatch as Record<string, unknown>).detected_gap || 0) + Number(dn.amount);
           const timestamp = new Date().toLocaleString('en-IN');
           const isResolved = Math.abs(newGap) < 1;
           
           const newComment = `${openMismatch.admin_comment}\n\n[RESOLVE ${timestamp}]: Authorized Return (${dn.debit_note_number}) for ₹${Number(dn.amount).toLocaleString('en-IN')} applied. New Gap: ₹${newGap.toLocaleString('en-IN')}.${isResolved ? ' RESOLVED.' : ''}`;
           
-          const { error: updateError } = await supabase
-            .from('discrepancies')
-            .update({ 
-               detected_gap: newGap,
-               admin_comment: newComment,
-               status: isResolved ? 'Resolved' : 'Investigating'
-            })
-            .eq('id', openMismatch.id);
+          const { error: updateError } = await import("@/app/actions/generics").then(m => m.updateData('discrepancies', { 
+             id: String(openMismatch.id),
+             detected_gap: newGap,
+             admin_comment: newComment,
+             status: isResolved ? 'Resolved' : 'Investigating'
+          }))
 
           if (updateError) {
             console.error("Discrepancy reconciliation failed:", updateError);
@@ -397,13 +372,11 @@ export default function PurchaseReturn() {
     if (!editingDN) return;
     setReturnLoading(true);
     try {
-      const { error } = await supabase
-        .from("debit_notes")
-        .update({
+      const { error } = await import("@/app/actions/generics").then(m => m.updateData("debit_notes", {
+          id: editingDN.id,
           reason: editingDN.reason,
           amount: editingDN.amount
-        })
-        .eq("id", editingDN.id);
+      }))
 
       if (error) throw error;
       setSuccessMessage(`Debit Note ${editingDN.debit_note_number} updated successfully.`);

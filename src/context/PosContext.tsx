@@ -1,9 +1,19 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
-import { createClient } from "@/utils/supabase/client"
+
 
 // --- Types ---
+export type DBStub = {
+  from: (table: string) => DBStub;
+  select: (cols?: string) => DBStub;
+  eq: (col: string, val: unknown) => DBStub;
+  in: (col: string, vals: unknown[]) => DBStub;
+  single: () => Promise<{ data: unknown; error: unknown }>;
+  rpc: (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+  auth: { getSession: () => Promise<{ data: { session: { user: { id: string } } | null } }> };
+  then: (resolve: (val: { data: unknown; error: unknown }) => void) => void;
+};
 
 export type Product = {
   id: string
@@ -160,7 +170,10 @@ export function usePos() {
 
 // --- Provider Component ---
 
+import { useSession } from "next-auth/react"
+
 export function PosProvider({ children, initialBranchId }: { children: React.ReactNode, initialBranchId?: string }) {
+  const { data: session } = useSession()
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -199,13 +212,12 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
   const [invoiceNumber, setInvoiceNumber] = useState("")
   const [currentDate, setCurrentDate] = useState("")
 
-  const supabase = useMemo(() => createClient(), [])
+  
 
   const refreshSessionStats = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!session?.user) return
 
-    const { data, error } = await supabase.rpc('get_user_pos_stats')
+    const { data, error } = await import("@/app/actions/pos").then(m => m.getUserPosStatsAction())
 
     if (!error && data && data.length > 0) {
       const stats = data[0] as { full_name: string, today_sales_count: number, today_revenue: number }
@@ -220,26 +232,22 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
         }))
       }
     }
-  }, [supabase])
+  }, [session])
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }, [supabase])
+    const { signOut } = await import("next-auth/react")
+    await signOut({ callbackUrl: '/login' })
+  }, [])
 
   const updatePosPin = useCallback(async (newPin: string) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Not authenticated' }
+    if (!session?.user) return { success: false, error: 'Not authenticated' }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ pos_pin: newPin })
-      .eq('id', user.id)
+    const { error } = await import("@/app/actions/pos").then(m => m.updatePosPinAction(session.user.id, newPin))
 
     if (error) return { success: false, error: error.message }
     setSessionUser(prev => ({ ...prev, pin: newPin }))
     return { success: true }
-  }, [supabase])
+  }, [session])
 
   // Auto-refresh stats every 5 minutes
   useEffect(() => {
@@ -251,27 +259,18 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
 
   // 1. Fetch Products Logic (Reusable)
   const fetchInventory = useCallback(async (branchId: string) => {
-    // We need to aggregate stock sum across all matching inventory records for each product
-    const { data: inventoryData, error: invError } = await supabase
-      .from('inventory')
-      .select('product_id, current_balance')
-      .eq('branch_id', branchId)
-      .eq('status', 'Available')
+    const { getPosInventoryAction, getPosProductsAction } = await import("@/app/actions/pos")
 
-    if (invError) return
+    const { data: inventoryData, error: invError } = await getPosInventoryAction(branchId)
+    if (invError || !inventoryData) return
 
-    // Create a local map of product_id -> sum of current_balance
     const stockMap: Record<string, number> = {}
-    inventoryData?.forEach((invItem: { product_id: string; current_balance: number }) => {
+    ;(inventoryData as { product_id: string; current_balance: number }[]).forEach(invItem => {
       stockMap[invItem.product_id] = (stockMap[invItem.product_id] || 0) + (invItem.current_balance || 0)
     })
 
-    const { data: productData, error: prodError } = await supabase
-      .from('products')
-      .select(`
-        id, model_name, brand, category, hsn_code, base_price, gst_rate, product_code, tracking_type
-      `)
-      .eq('is_archived', false)
+    const productIds = Object.keys(stockMap)
+    const { data: productData, error: prodError } = await getPosProductsAction(productIds)
 
     if (!prodError && productData) {
       const transformed: Product[] = (productData as Product[]).map((pItem: Product) => ({
@@ -280,7 +279,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       }))
       setProducts(transformed)
     }
-  }, [supabase])
+  }, [])
 
   const refreshInventory = useCallback(async () => {
     if (selectedBranch) await fetchInventory(selectedBranch)
@@ -289,82 +288,68 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
   // 2. Initialize Branch & Walk-in Customer
   useEffect(() => {
     async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, full_name, assigned_branch_id, assigned_branch_ids, pos_pin')
-          .eq('id', session.user.id)
-          .single()
-        
+      const { getUserAction, getUserProfileAction } = await import("@/app/actions/user")
+      const { fetchData } = await import("@/app/actions/generics")
+
+      const { data: { user } } = await getUserAction()
+      if (user) {
+        const { data: profile } = await getUserProfileAction(user.id)
+
         if (profile) {
-          const profileData = profile as { role: string; full_name?: string; assigned_branch_id?: string; assigned_branch_ids?: string[]; pos_pin?: string }
+          const profileData = profile as { role: string; full_name?: string; branch_id?: string; assigned_branch_ids?: string[]; pos_pin?: string }
           setUserRole(profileData.role)
           setSessionUser({
-            id: session.user.id,
+            id: user.id,
             name: profileData.full_name || "User",
             role: profileData.role,
             pin: profileData.pos_pin
           })
-          
+
           await refreshSessionStats()
-          const branchIds = profileData.assigned_branch_ids || (profileData.assigned_branch_id ? [profileData.assigned_branch_id] : [])
-          
+          const branchIds = profileData.assigned_branch_ids || (profileData.branch_id ? [profileData.branch_id] : [])
+
+          const { data: allBranchesData } = await fetchData("branches")
+          const allBranchesList = (allBranchesData as Branch[]) || []
+
           if (branchIds.length > 0) {
             const initialBranchIdToUse = initialBranchId || branchIds[0]
             setSelectedBranch(initialBranchIdToUse)
-            
-            // If they have multiple branches, we need the names for the switcher
-            const { data: allotBranches } = await supabase
-              .from('branches')
-              .select('*')
-              .in('id', branchIds)
-            
-            if (allotBranches) {
-              const current = (allotBranches as Branch[]).find((b: Branch) => b.id === initialBranchIdToUse)
-              setBranchName(current?.name || "Main Terminal")
-              setCurrentBranchDetails(current as Branch)
-              setAllBranches(allotBranches as Branch[])
-              await fetchInventory(initialBranchIdToUse)
-            }
+
+            const allotBranches = allBranchesList.filter((b: Branch) => branchIds.includes(b.id))
+            const current = allotBranches.find((b: Branch) => b.id === initialBranchIdToUse)
+            setBranchName(current?.name || "Main Terminal")
+            setCurrentBranchDetails(current as Branch)
+            setAllBranches(allotBranches)
+            await fetchInventory(initialBranchIdToUse)
           }
 
-          // If Admin, fetch ALL branches regardless
-          if (profile.role === 'admin') {
-            const { data: allB } = await supabase.from('branches').select('*')
-            if (allB) setAllBranches(allB as Branch[])
+          const normalizedRole = profileData.role?.toLowerCase().trim()
+          const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'super_admin' || normalizedRole === 'admin'
+          if (isAdmin) {
+            setAllBranches(allBranchesList)
           }
         }
       }
 
       // Default Walk-in Customer
-      const { data: walkIn } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', SYSTEM_WALKIN_ID)
-        .single()
-      
-      if (walkIn) {
-        setWalkInCustomer(walkIn as Customer)
-      } else {
-        // Fallback search by phone if UUID record isn't created yet
-        const { data: fallback } = await supabase.from('customers').select('*').eq('phone_number', '0000000000').single()
-        if (fallback) {
-          setWalkInCustomer(fallback as Customer)
-        }
-      }
-      
-      setSelectedCustomer(null) // Start with empty customer state
-      
+      const { data: customersData } = await import("@/app/actions/generics").then(m => m.fetchData("customers"))
+      const customers = (customersData as Customer[]) || []
+      const walkIn = customers.find((c: Customer) => c.id === SYSTEM_WALKIN_ID)
+        || customers.find((c: Customer) => (c as unknown as Record<string, unknown>).phone_number === '0000000000')
+
+      if (walkIn) setWalkInCustomer(walkIn)
+
+      setSelectedCustomer(null)
+
       setInvoiceNumber(`INV-${new Date().getTime().toString().slice(-6)}`)
-      setCurrentDate(new Date().toLocaleDateString('en-IN', { 
-        day: '2-digit', month: 'short', year: 'numeric' 
+      setCurrentDate(new Date().toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric'
       }).toUpperCase())
 
       setLoading(false)
     }
     init()
-  }, [supabase, fetchInventory, refreshSessionStats, initialBranchId])
+  }, [fetchInventory, refreshSessionStats, initialBranchId])
   
   const resetCustomerContext = useCallback(() => {
     setSelectedCustomer(null)
@@ -424,17 +409,17 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     if (userRole !== 'admin' && !isAllotted) return
     
     setLoading(true)
-    const { data: branch } = await supabase.from('branches').select('*').eq('id', branchId).single()
+    const branch = allBranches.find(b => b.id === branchId)
     if (branch) {
       setSelectedBranch(branchId)
       setBranchName(branch.name)
       setCurrentBranchDetails(branch as Branch)
-      setCart([]) // Clear cart for new logistical context
+      setCart([])
       await fetchInventory(branchId)
       setToast({ message: `Switched to ${branch.name}`, type: 'success' })
     }
     setLoading(false)
-  }, [supabase, userRole, allBranches, fetchInventory])
+  }, [userRole, allBranches, fetchInventory])
 
   const addToCart = useCallback((product: Product) => {
     setCart(prev => {
@@ -486,29 +471,24 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
 
   const fetchAvailableSerials = useCallback(async (productId: string) => {
     if (!selectedBranch) return []
-    const { data, error } = await supabase
-      .from('inventory')
-      .select('id, serial_number, serial_numbers')
-      .eq('product_id', productId)
-      .eq('branch_id', selectedBranch)
-      .eq('status', 'Available')
+    const { getPosInventoryAction } = await import("@/app/actions/pos")
+    const { data, error } = await getPosInventoryAction(selectedBranch)
 
     if (error || !data) return []
 
     const flattened: { id: string, serial_number: string }[] = []
-    
-    data.forEach((row: { id: string, serial_number: string | null, serial_numbers: string[] | null }) => {
-      if (row.serial_number) {
-        flattened.push({ id: row.id, serial_number: row.serial_number })
-      } else if (Array.isArray(row.serial_numbers)) {
-        row.serial_numbers.forEach((s: string) => {
-          if (s) flattened.push({ id: row.id, serial_number: s })
-        })
-      }
-    })
+    ;(data as { id: string; product_id: string; serial_number: string | null; serial_numbers: string[] | null }[])
+      .filter(row => row.product_id === productId)
+      .forEach(row => {
+        if (row.serial_number) {
+          flattened.push({ id: row.id, serial_number: row.serial_number })
+        } else if (Array.isArray(row.serial_numbers)) {
+          row.serial_numbers.forEach(s => { if (s) flattened.push({ id: row.id, serial_number: s }) })
+        }
+      })
 
     return flattened
-  }, [supabase, selectedBranch])
+  }, [selectedBranch])
 
   const updateQty = useCallback((productId: string, delta: number) => {
     setCart(prev => {
@@ -557,9 +537,11 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     }
     setSearchingCustomer(true)
     
+    const { searchCustomerByPhoneAction, searchPosCustomersAction } = await import("@/app/actions/pos")
+
     // Try search by phone first if it looks like a number
     if (/^\+?[\d\s-]+$/.test(term) && term.replace(/\D/g, '').length >= 7) {
-      const { data, error } = await supabase.rpc('search_customer_by_phone', { p_phone: term })
+      const { data, error } = await searchCustomerByPhoneAction(term)
       if (!error && data) {
         setCustomerResults(data as Customer[])
         setSearchingCustomer(false)
@@ -568,10 +550,10 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     }
 
     // Fallback to name search
-    const { data, error } = await supabase.rpc('search_pos_customers', { search_term: term })
+    const { data, error } = await searchPosCustomersAction(term)
     if (!error && data) setCustomerResults(data as Customer[])
     setSearchingCustomer(false)
-  }, [supabase])
+  }, [])
 
   const selectCustomer = useCallback((customer: Customer) => {
     setSelectedCustomer(customer)
@@ -609,7 +591,8 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
         }
       }
 
-      const { data, error } = await supabase.rpc('process_pos_sale', {
+      const { processPosSaleAction } = await import("@/app/actions/pos")
+      const { data, error } = await processPosSaleAction({
         p_customer_id: selectedCustomer?.id || SYSTEM_WALKIN_ID,
         p_branch_id: selectedBranch,
         p_items: processedItems,
@@ -637,14 +620,15 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     } finally {
       setLoading(false)
     }
-  }, [supabase, cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats, resetCustomerContext])
+  }, [cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats, resetCustomerContext])
 
   // Helper with retry logic for fetching full invoice state
   const fetchInvoiceById = useCallback(async (id: string, retries = 3): Promise<InvoiceData | null> => {
     for (let i = 0; i < retries; i++) {
       try {
-        const { data: header } = await supabase.from('sales_invoices').select('*, branches(*), customers(*)').eq('id', id).single()
-        const { data: items } = await supabase.from('view_invoice_details').select('*').eq('invoice_id', id)
+        const { getInvoiceHeaderAction, getInvoiceItemsDetailsAction } = await import("@/app/actions/pos")
+        const { data: header } = await getInvoiceHeaderAction(id)
+        const { data: items } = await getInvoiceItemsDetailsAction(id)
         
         if (header && items && items.length > 0) {
           return { ...header, items }
@@ -658,7 +642,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       }
     }
     return null
-  }, [supabase])
+  }, [])
 
   // Auto-clear toast
   useEffect(() => {

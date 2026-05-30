@@ -1,20 +1,16 @@
-import { createClient } from '@/utils/supabase/server'
+
 import StaffClient from './client'
 
 export default async function StaffPayrollPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  
+  const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
   
   let role = 'sales'
   if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
       
     if (profile) {
-      role = profile.role
+      role = profile.role || 'sales'
     }
   }
 

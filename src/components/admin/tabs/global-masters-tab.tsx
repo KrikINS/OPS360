@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Trash2, Tag, LayoutGrid, FileText, CheckCircle2, Pencil, Save } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
-import { createClient } from "@/utils/supabase/client"
+
 import { cn } from "@/lib/utils"
 import { ModernOrbitSpinner } from "@/components/ui/ModernOrbitSpinner"
 
@@ -62,7 +62,7 @@ export function GlobalMastersTab() {
   }
 
   const fetchMasters = useCallback(async () => {
-    const supabase = createClient()
+    const { fetchData } = await import("@/app/actions/generics")
     
     const [
       { data: b },
@@ -70,16 +70,16 @@ export function GlobalMastersTab() {
       { data: t },
       { data: rr }
     ] = await Promise.all([
-      supabase.from("brands").select("*").order("name"),
-      supabase.from("categories").select("*").order("name"),
-      supabase.from("po_terms_templates").select("*").order("created_at"),
-      supabase.from("return_reason_master").select("*").order("reason_text")
+      fetchData("brands"),
+      fetchData("categories"),
+      fetchData("po_terms_templates"),
+      fetchData("return_reason_master")
     ])
 
-    if (b) setBrands(b)
-    if (c) setCategories(c)
-    if (t) setTerms(t)
-    if (rr) setReturnReasons(rr)
+    if (b) setBrands(b as typeof import("@/db/schema").brands.$inferSelect[])
+    if (c) setCategories(c as typeof import("@/db/schema").categories.$inferSelect[])
+    if (t) setTerms(t as typeof import("@/db/schema").po_terms_templates.$inferSelect[])
+    if (rr) setReturnReasons(rr as typeof import("@/db/schema").return_reason_master.$inferSelect[])
   }, [])
 
   useEffect(() => {
@@ -91,8 +91,9 @@ export function GlobalMastersTab() {
 
   const addMaster = async (table: string, data: Record<string, string | boolean>) => {
     setTableLoading(table, true)
-    const supabase = createClient()
-    const { error } = await supabase.from(table).insert(data)
+    
+    const { insertData } = await import("@/app/actions/generics")
+    const { error } = await insertData(table as 'brands' | 'categories' | 'po_terms_templates' | 'return_reason_master', data)
     if (error) {
       alert(`Master Update Failed: ${error.message}`)
       setTableLoading(table, false)
@@ -114,12 +115,14 @@ export function GlobalMastersTab() {
 
   const updateTermTemplate = async () => {
     if (!editingTermId || !newTermName.trim() || !newTermContent.trim()) return;
-    const supabase = createClient()
-    const { error } = await supabase.from("po_terms_templates").update({
+    
+    const { updateData } = await import("@/app/actions/generics")
+    const { error } = await updateData("po_terms_templates", {
+      id: editingTermId,
       name: newTermName.trim(),
       content: newTermContent.trim(),
       is_default: isDefaultTerm
-    }).eq("id", editingTermId)
+    })
     
     if (error) alert("Error updating: " + error.message)
     else {
@@ -143,29 +146,37 @@ export function GlobalMastersTab() {
   }
 
   const toggleReasonStatus = async (id: string, currentStatus: boolean) => {
-    const supabase = createClient()
-    const { error } = await supabase.from("return_reason_master").update({ is_active: !currentStatus }).eq("id", id)
+    const { updateData } = await import("@/app/actions/generics")
+    const { error } = await updateData("return_reason_master", { id, is_active: !currentStatus })
     if (error) alert(error.message)
     else fetchMasters()
   }
 
   const deleteMaster = async (table: string, id: string) => {
     if (!confirm("Are you sure? This action cannot be undone.")) return
-    const supabase = createClient()
-    const { error } = await supabase.from(table).delete().eq("id", id)
+    
+    const { deleteData } = await import("@/app/actions/generics")
+    const { error } = await deleteData(table as 'brands' | 'categories' | 'po_terms_templates' | 'return_reason_master', id)
     if (error) alert("Error deleting: " + error.message)
     else fetchMasters()
   }
 
   const toggleDefaultTerm = async (id: string, currentStatus: boolean) => {
     if (currentStatus) return // Already default
-    const supabase = createClient()
+    
+    const { updateData, fetchData } = await import("@/app/actions/generics")
     
     // Unset current default
-    await supabase.from("po_terms_templates").update({ is_default: false }).eq("is_default", true)
+    const { data: allTerms } = await fetchData("po_terms_templates")
+    if (allTerms) {
+      const defaultTerms = (allTerms as typeof import("@/db/schema").po_terms_templates.$inferSelect[]).filter(t => t.is_default)
+      for (const t of defaultTerms) {
+        await updateData("po_terms_templates", { id: t.id, is_default: false })
+      }
+    }
     
     // Set new default
-    const { error } = await supabase.from("po_terms_templates").update({ is_default: true }).eq("id", id)
+    const { error } = await updateData("po_terms_templates", { id, is_default: true })
     
     if (error) alert(error.message)
     else fetchMasters()

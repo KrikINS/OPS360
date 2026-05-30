@@ -59,7 +59,7 @@ export function UserProfileModal({
   const [tempPassword, setTempPassword] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   
-  const isAdmin = currentUserRole === "Admin/Owner"
+  const isAdmin = currentUserRole === "Admin/Owner" || currentUserRole === "SUPER_ADMIN"
 
   useEffect(() => {
     if (profile && open) {

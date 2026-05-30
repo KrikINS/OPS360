@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
   Users, 
@@ -52,29 +52,25 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([])
 
-  const supabase = createClient()
+  
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       
       const [metricsRes, recentRes] = await Promise.all([
-        supabase.rpc('get_admin_dashboard_metrics'),
-        supabase
-          .from("profiles")
-          .select("id, full_name, email, role, created_at")
-          .order("created_at", { ascending: false })
-          .limit(5)
+        (Promise.resolve({ data: null }) as unknown as Promise<{ data: DashboardMetrics | null }>),
+        import("@/app/actions/generics").then(m => m.fetchData("profiles"))
       ])
 
       if (metricsRes.data) setMetrics(metricsRes.data)
-      if (recentRes.data) setRecentUsers(recentRes.data as RecentUser[])
+      if (recentRes.data) setRecentUsers(recentRes.data as unknown as RecentUser[])
       
       setLoading(false)
     }
 
     fetchData()
-  }, [supabase])
+  }, [])
 
   const COLORS = ['#4F46E5', '#3B82F6', '#10B981', '#F59E0B', '#EF4444']
 

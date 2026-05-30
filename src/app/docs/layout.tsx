@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
+
 import { redirect } from "next/navigation"
 import { UserNav } from "@/components/user-nav"
 import { DocsSidebar } from "@/components/docs/sidebar"
@@ -10,31 +10,34 @@ export default async function DocsLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
+  
+  const session = await import("next-auth/next").then(m => m.getServerSession()); const user = session?.user;
   
   if (!user) {
     redirect("/login")
   }
 
   // Fetch HR metadata for UserNav
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single()
+  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+
+  type ProfileType = typeof import("@/db/schema").profiles.$inferSelect
+  type BranchType = typeof import("@/db/schema").branches.$inferSelect
 
   const rawProfile = profile || { id: user.id, full_name: "User", email: user.email, role: "sales", branch_id: "" }
   
   let branchName = ""
-  if (rawProfile.branch_id) {
-     const { data: branchData } = await supabase.from("branches").select("name").eq("id", rawProfile.branch_id).single()
-     if (branchData) branchName = branchData.name
+  if ((rawProfile as ProfileType).branch_id) {
+     const { data: branchDataList } = await import("@/app/actions/generics").then(m => m.fetchData("branches"))
+     const branchData = Array.isArray(branchDataList) ? (branchDataList as BranchType[]).find((b) => b.id === (rawProfile as ProfileType).branch_id) : null
+     if (branchData) branchName = branchData.name as string
   }
 
   const profileWithBranchName = {
-     ...rawProfile,
+     id: (rawProfile as ProfileType).id || user.id,
+     full_name: (rawProfile as ProfileType).full_name || "",
+     email: (rawProfile as ProfileType).email || "",
+     role: (rawProfile as ProfileType).role || "",
+     branch_id: (rawProfile as ProfileType).branch_id || "",
      branch_name: branchName
   }
 

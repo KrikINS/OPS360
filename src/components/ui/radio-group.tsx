@@ -25,7 +25,7 @@ const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
               checked: radioItem.props.value === value,
               onChange: () => !disabled && onValueChange?.(radioItem.props.value),
               disabled: disabled || radioItem.props.disabled,
-            } as any)
+            } as React.Attributes & Partial<typeof radioItem.props>)
           }
           return child
         })}

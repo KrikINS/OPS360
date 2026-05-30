@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
-import { generateProductCode, getNextSequence } from "@/lib/product-coding"
-import { createClient } from "@/utils/supabase/client"
+import { generateProductCode } from "@/lib/product-coding"
+import { getNextSequenceAction } from "@/app/actions/products"
+import { getGlobalMastersAction } from "@/app/actions/masters"
 
 interface AddProductModalProps {
   open: boolean
@@ -47,29 +48,29 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
   })
   const [generatedCode, setGeneratedCode] = useState("")
 
-  const supabase = createClient()
+
 
   useEffect(() => {
     async function fetchMasters() {
       if (!open) return
       setLoadingMasters(true)
       
-      const { data: bData } = await supabase.from("brands").select("name").order("name")
-      const { data: cData } = await supabase.from("categories").select("name").order("name")
-      
-      if (bData) setBrands(bData.map((b: { name: string }) => b.name))
-      if (cData) setCategories(cData.map((c: { name: string }) => c.name))
+      const { data } = await getGlobalMastersAction()
+      if (data) {
+        setBrands((data as { b?: { name: string }[] }).b?.map((b: { name: string }) => b.name) || [])
+        setCategories((data as { c?: { name: string }[] }).c?.map((c: { name: string }) => c.name) || [])
+      }
       
       setLoadingMasters(false)
     }
     fetchMasters()
-  }, [open, supabase])
+  }, [open])
 
   // Update EHA Code whenever category or brand changes
   useEffect(() => {
     async function updateCode() {
       if (formData.category && formData.brand) {
-        const nextSeq = await getNextSequence(supabase, formData.category, formData.brand)
+        const nextSeq = await getNextSequenceAction(formData.category, formData.brand)
         // setSequence(nextSeq)
         setGeneratedCode(generateProductCode(formData.category, formData.brand, nextSeq))
       } else {
@@ -77,7 +78,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
       }
     }
     updateCode()
-  }, [formData.category, formData.brand, supabase])
+  }, [formData.category, formData.brand])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

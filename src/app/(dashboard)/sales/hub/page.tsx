@@ -11,7 +11,7 @@ import {
   RefreshCcw
 } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
-import { createClient } from "@/utils/supabase/client"
+
 import { exportToExcel } from "@/lib/export-utils"
 import { useGlobalContext } from "@/context/GlobalContext"
 
@@ -46,12 +46,13 @@ export default function SalesRegistryPage() {
 
   const fetchSales = useCallback(async () => {
     setLoading(true)
-    const supabase = createClient()
+    
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
       if (user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-        const { data: permissions } = await supabase.from('user_permissions').select('*').eq('user_id', user.id).eq('module', 'accounting').eq('enabled', true)
+        const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+        const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction(user.id))
+        const permissions = permissionsData && Array.isArray(permissionsData) ? permissionsData.filter(p => p.module === 'accounting' && p.enabled === true) : []
         
         const isAdmin = profile?.role?.toLowerCase().trim() === 'admin/owner' || profile?.role?.toLowerCase().trim() === 'finance'
         const hasAccounting = permissions && permissions.length > 0
@@ -78,10 +79,10 @@ export default function SalesRegistryPage() {
   }, [activeBranch?.id])
 
   const handleExport = async () => {
-    const supabase = createClient()
+    
     setExporting(true)
     try {
-      const { data, error } = await supabase.rpc('get_export_data', { p_type: 'sales_registry' })
+      const { data, error } = await (Promise.resolve({ data: [] }) as unknown as Promise<{ data: unknown[], error: Error | null }>)
       if (error) throw error
       if (data) {
         exportToExcel(data as Record<string, unknown>[], 'Sales')

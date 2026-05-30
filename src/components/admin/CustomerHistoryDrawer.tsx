@@ -18,7 +18,7 @@ import {
   ShoppingBag
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/utils/supabase/client"
+
 import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
 import { useReactToPrint } from 'react-to-print'
 
@@ -55,7 +55,7 @@ export function CustomerHistoryDrawer({
   const [loading, setLoading] = useState(false)
   const [printId, setPrintId] = useState<string | null>(null)
   const [printingId, setPrintingId] = useState<string | null>(null)
-  const supabase = createClient()
+  
   const printRef = useRef<HTMLDivElement>(null)
 
   const handlePrint = useReactToPrint({
@@ -66,17 +66,7 @@ export function CustomerHistoryDrawer({
     if (!customerId) return
     
     // Fetch summary of invoices for this customer
-    const { data, error } = await supabase
-      .from('sales_invoices')
-      .select(`
-        id,
-        invoice_number,
-        created_at,
-        total_amount,
-        items:invoice_items(count)
-      `)
-      .eq('customer_id', customerId)
-      .order('created_at', { ascending: false })
+    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("sales_invoices"))
 
     if (!error && data) {
       const typedData = data as unknown as HistoricalInvoiceResponse[]
@@ -88,7 +78,7 @@ export function CustomerHistoryDrawer({
         item_count: inv.items[0]?.count || 0
       })))
     }
-  }, [customerId, supabase])
+  }, [customerId])
 
   useEffect(() => {
     let mounted = true

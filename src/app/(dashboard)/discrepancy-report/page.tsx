@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
+
 import { 
   Table, 
   TableBody, 
@@ -74,29 +74,17 @@ export default function DiscrepancyReportPage() {
   
   const router = useRouter()
 
-  const supabase = createClient()
+  
 
   const fetchDiscrepancies = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('discrepancies')
-      .select(`
-        *,
-        po:purchase_orders(
-          po_number, 
-          total_amount,
-          items:purchase_order_items(id, unit_price, quantity, received_quantity)
-        ),
-        vendor:vendors(name),
-        product:products(model_name)
-      `)
-      .order('created_at', { ascending: false })
+    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData('discrepancies'))
 
-    if (!error && data) {
-      setDiscrepancies(data)
+    if (!error && data && Array.isArray(data)) {
+      setDiscrepancies(data as Discrepancy[])
     }
     setLoading(false)
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     fetchDiscrepancies()
@@ -114,37 +102,32 @@ export default function DiscrepancyReportPage() {
           return
         }
         
-        const { error } = await supabase
-          .from('discrepancies')
-          .update({ 
-            status: 'Resolved', 
-            admin_comment: adminComment,
-            resolved_at: new Date().toISOString()
-          })
-          .eq('id', selectedDiscrepancy.id)
+        const { error } = await import("@/app/actions/generics").then(m => m.updateData('discrepancies', {
+          id: selectedDiscrepancy.id,
+          status: 'Resolved', 
+          admin_comment: adminComment,
+          resolved_at: new Date().toISOString()
+        }))
 
         if (error) throw error
 
         // Sync PO status to MATCHED in the audit trail
-        // We use a separate fetch to the existing PATCH endpoint for safety
         await fetch('/api/procurement/purchase-orders', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             id: selectedDiscrepancy.po_id, 
-            status: 'received', // Keep status but we'll flag it as matched in the UI logic
-            is_audit_matched: true // We'll try to pass this or use it in the UI
+            status: 'received',
+            is_audit_matched: true
           })
         })
       } else if (action === 'return') {
         // Link to Return logic: Update status and redirect to Procurement Returns tab
-        const { error } = await supabase
-          .from('discrepancies')
-          .update({ 
-            status: 'Investigating',
-            admin_comment: "Linked to Purchase Return workflow." 
-          })
-          .eq('id', selectedDiscrepancy.id)
+        const { error } = await import("@/app/actions/generics").then(m => m.updateData('discrepancies', {
+          id: selectedDiscrepancy.id,
+          status: 'Investigating',
+          admin_comment: "Linked to Purchase Return workflow."
+        }))
 
         if (error) throw error
         
@@ -170,23 +153,21 @@ export default function DiscrepancyReportPage() {
 
     try {
       if (action === 'reopen') {
-        const { error } = await supabase
-          .from('discrepancies')
-          .update({ 
-            status: 'Investigating', 
-            admin_comment: `REOPENED: ${reopenReason}\n\nPREVIOUS NOTE: ${selectedDiscrepancy.admin_comment}`,
-            resolved_at: null 
-          })
-          .eq('id', selectedDiscrepancy.id)
+        const { error } = await import("@/app/actions/generics").then(m => m.updateData('discrepancies', {
+          id: selectedDiscrepancy.id,
+          status: 'Investigating', 
+          admin_comment: `REOPENED: ${reopenReason}\n\nPREVIOUS NOTE: ${selectedDiscrepancy.admin_comment}`,
+          resolved_at: null
+        }))
 
         if (error) throw error
         setReopenModalOpen(false)
         setReopenReason("")
       } else if (action === 'update_gap') {
-        const { error } = await supabase
-          .from('discrepancies')
-          .update({ detected_gap: Number(newGapValue) })
-          .eq('id', selectedDiscrepancy.id)
+        const { error } = await import("@/app/actions/generics").then(m => m.updateData('discrepancies', {
+          id: selectedDiscrepancy.id,
+          detected_gap: Number(newGapValue)
+        }))
 
         if (error) throw error
         setEditGapModalOpen(false)

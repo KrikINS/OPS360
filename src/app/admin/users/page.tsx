@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 
@@ -74,46 +74,36 @@ export default function UserManagementPage() {
   const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null)
   const [modifiedUserIds, setModifiedUserIds] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
-  const supabase = createClient()
+  
   const router = useRouter()
 
   const refreshData = React.useCallback(async () => {
     setLoading(true)
-    const [statsRes, profilesRes, branchesRes] = await Promise.all([
-      supabase.rpc('get_admin_dashboard_stats'),
-      supabase.from('profiles').select('*').order('email'),
-      supabase.from('branches').select('id, name')
-    ])
-
-    if (statsRes.data) setStats(statsRes.data)
-    if (profilesRes.data) setProfiles(profilesRes.data as Profile[])
-    if (branchesRes.data) setBranches(branchesRes.data as Branch[])
+    const session = await import("next-auth/react").then(m => m.getSession()); const user = session?.user;
+    const res = await import("@/app/actions/admin-users").then(m => m.getAdminUsersDataAction(user?.id))
+    if (res.stats) setStats(res.stats)
+    if (res.profiles) setProfiles(res.profiles as unknown as Profile[])
+    if (res.branches) setBranches(res.branches as unknown as Branch[])
     setModifiedUserIds(new Set())
     setLoading(false)
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     let mounted = true
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      const [statsRes, profilesRes, branchesRes, userProfileRes] = await Promise.all([
-        supabase.rpc('get_admin_dashboard_stats'),
-        supabase.from('profiles').select('*').order('email'),
-        supabase.from('branches').select('id, name'),
-        user ? supabase.from('profiles').select('*').eq('id', user.id).single() : Promise.resolve({ data: null })
-      ])
-
+      const session = await import("next-auth/react").then(m => m.getSession()); const user = session?.user;
+      const res = await import("@/app/actions/admin-users").then(m => m.getAdminUsersDataAction(user?.id))
       if (mounted) {
-        if (statsRes.data) setStats(statsRes.data)
-        if (profilesRes.data) setProfiles(profilesRes.data as Profile[])
-        if (branchesRes.data) setBranches(branchesRes.data as Branch[])
-        if (userProfileRes.data) setCurrentUserProfile(userProfileRes.data)
+        if (res.stats) setStats(res.stats)
+        if (res.profiles) setProfiles(res.profiles as unknown as Profile[])
+        if (res.branches) setBranches(res.branches as unknown as Branch[])
+        if (res.currentUserProfile) setCurrentUserProfile(res.currentUserProfile as unknown as Profile)
         setLoading(false)
       }
     }
     init()
     return () => { mounted = false }
-  }, [supabase])
+  }, [])
 
   const togglePermission = (profileId: string, currentPerms: Record<string, boolean>, module: string, checked: boolean) => {
     const nextPerms = { ...(currentPerms || {}), [module]: checked }
@@ -164,12 +154,10 @@ export default function UserManagementPage() {
       // Clean up before saving
       const cleanUpdates = updates.map(({ ...rest }) => rest)
       
-      const { error } = await supabase
-        .from('profiles')
-        .upsert(cleanUpdates)
+      const { error } = await import("@/app/actions/generics").then(m => m.insertData("profiles", cleanUpdates))
 
       if (error) {
-        if (error.code === '42501') {
+        if ((error as { code?: string }).code === '42501') {
           setToast({ message: "Security Error: You do not have permission to update these user profiles.", type: 'error' })
         } else {
           setToast({ message: `Error saving changes: ${error.message}`, type: 'error' })
@@ -197,19 +185,17 @@ export default function UserManagementPage() {
   const handleSaveProfileFromModal = async (updated: Profile) => {
     setLoading(true)
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      const { error } = await import("@/app/actions/generics").then(m => m.updateData("profiles", {
+          id: updated.id,
           full_name: updated.full_name,
           email: updated.email,
           phone: updated.phone,
           permissions: updated.permissions,
           register_permissions: updated.register_permissions
-        })
-        .eq('id', updated.id)
+        }))
 
       if (error) {
-        if (error.code === '42501') {
+        if ((error as { code?: string }).code === '42501') {
           setToast({ message: "Security Error: You do not have permission to modify this profile.", type: 'error' })
         } else {
           setToast({ message: `Error updating profile: ${error.message}`, type: 'error' })

@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
+
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -9,14 +9,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ data: [] })
   }
 
-  const supabase = await createClient()
+  
 
   // Search by code prefix, description keyword, or search_tags
-  const { data, error } = await supabase
-    .from("hsn_master")
-    .select("*")
-    .or(`hsn_code.ilike.${query}%,description.ilike.%${query}%,search_tags.cs.{${query.toLowerCase()}}`)
-    .limit(20)
+  const { data, error } = await import("@/app/actions/generics").then(m => m.rpcCall("hsn_search", { query }))
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

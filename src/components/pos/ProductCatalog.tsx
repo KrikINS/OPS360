@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { usePos, Customer } from '@/context/PosContext'
 import { ProductGrid } from './ProductGrid'
-import { createClient } from "@/utils/supabase/client"
+
 import { PosAddCustomerModal } from './PosAddCustomerModal'
 
 export function ProductCatalog() {
-  const supabase = createClient()
+  
   const { 
     loading, 
     searchCustomers, 
@@ -34,7 +34,7 @@ export function ProductCatalog() {
     setPhoneQuery(val)
     if (val.length >= 10) {
       setVerifying(true)
-      const { data, error } = await supabase.rpc('search_customer_by_phone', { p_phone: val })
+      const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("customers"))
       if (!error && data && data.length > 0) {
         selectCustomer(data[0] as Customer)
       }

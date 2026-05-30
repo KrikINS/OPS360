@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+
 
 const adminNavItems = [
   {
@@ -57,12 +57,13 @@ export function AdminSidebar({ profile, permissions }: AdminSidebarProps) {
   const [logoUrl, setLogoUrl] = useState("/ethan-logo.png")
 
   useEffect(() => {
-    supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "logo_url")
-      .single()
-      .then((res: { data: { value: string } | null }) => { if (res.data?.value) setLogoUrl(res.data.value) })
+    import("@/app/actions/generics").then(m => m.fetchData("app_settings"))
+      .then((res: { data: typeof import("@/db/schema").app_settings.$inferSelect[] | null | undefined | unknown }) => { 
+        if (res.data && Array.isArray(res.data)) {
+          const logo = res.data.find((s: typeof import("@/db/schema").app_settings.$inferSelect) => s.key === "logo_url")
+          if (logo?.value) setLogoUrl(logo.value)
+        }
+      })
   }, [])
 
   return (
@@ -87,7 +88,7 @@ export function AdminSidebar({ profile, permissions }: AdminSidebarProps) {
         </p>
         <nav className="space-y-0.5">
           {adminNavItems
-            .filter(item => !item.module || permissions[item.module] === true || profile.role === 'Admin/Owner')
+            .filter(item => !item.module || permissions[item.module] === true || profile.role === 'Admin/Owner' || profile.role === 'SUPER_ADMIN')
             .map((item) => {
             const isActive = item.url === "/admin"
               ? pathname === "/admin"

@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, User, Package, Wrench, Loader2, CheckCircle2 } from "lucide-react"
 import { useService } from "@/context/ServiceContext"
-import { createClient } from "@/utils/supabase/client"
+import { useSession } from "next-auth/react"
+
 
 interface Customer {
   id: string
@@ -29,7 +30,7 @@ interface CreateJobModalProps {
 
 export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
   const { technicians, createJob } = useService()
-  const supabase = createClient()
+  
 
   const [loading, setLoading] = useState(false)
   const [customerSearch, setCustomerSearch] = useState("")
@@ -45,35 +46,33 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
   const [priority, setPriority] = useState<'Low' | 'Medium' | 'High' | 'Urgent'>('Medium')
   const [technicianId, setTechnicianId] = useState<string>("")
 
+  const { data: session } = useSession()
+
   // Search Customers
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (customerSearch.length > 2) {
-        const { data } = await supabase.rpc('search_pos_customers', { search_term: customerSearch })
-        if (data) setCustomers(data)
+        const { data } = await import("@/app/actions/pos").then(m => m.searchPosCustomersAction(customerSearch))
+        if (data) setCustomers(data as unknown as Customer[])
       } else {
         setCustomers([])
       }
     }, 300)
     return () => clearTimeout(delayDebounceFn)
-  }, [customerSearch, supabase])
+  }, [customerSearch])
 
   // Search Products
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (productSearch.length > 2) {
-        const { data } = await supabase
-          .from('products')
-          .select('id, model_name, brand')
-          .ilike('model_name', `%${productSearch}%`)
-          .limit(5)
-        if (data) setProducts(data)
+        const { data } = await import("@/app/actions/inventory").then(m => m.searchProductsAction(productSearch))
+        if (data) setProducts(data as unknown as Product[])
       } else {
         setProducts([])
       }
     }, 300)
     return () => clearTimeout(delayDebounceFn)
-  }, [productSearch, supabase])
+  }, [productSearch])
 
   const handleSubmit = async () => {
     if (!selectedCustomer || !title || !technicianId) {
@@ -83,9 +82,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
 
     setLoading(true)
     try {
-      // Get current user's branch for the job
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data: profile } = await supabase.from('profiles').select('branch_id').eq('id', user?.id).single()
+      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(session?.user?.id || ''))
 
       await createJob({
         customer_id: selectedCustomer.id,
@@ -238,7 +235,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
           <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Priority</label>
-               <Select value={priority} onValueChange={(val: any) => setPriority(val)}>
+               <Select value={priority} onValueChange={(val: 'Low' | 'Medium' | 'High' | 'Urgent') => setPriority(val)}>
                  <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl text-sm font-bold">
                    <SelectValue />
                  </SelectTrigger>

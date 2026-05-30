@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/utils/supabase/client'
+
 
 interface Customer {
   id: string
@@ -52,29 +52,19 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [jobs, setJobs] = useState<ServiceJob[]>([])
   const [technicians, setTechnicians] = useState<{ id: string, full_name: string | null }[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  
 
   const refreshTechnicians = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .eq('role', 'technician')
-    
-    if (!error && data) setTechnicians(data)
-  }, [supabase])
+    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("profiles"))
+    if (!error && data) {
+      setTechnicians((data as typeof import("@/db/schema").profiles.$inferSelect[]).filter(p => p.role === 'technician'))
+    }
+  }, [])
 
   const refreshJobs = useCallback(async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('service_jobs')
-        .select(`
-          *,
-          customer:customers(id, full_name, phone_number),
-          product:products(id, model_name, brand),
-          technician:profiles!service_jobs_technician_id_fkey(full_name)
-        `)
-        .order('created_at', { ascending: false })
+      const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("service_jobs"))
 
       if (error) throw error
 
@@ -90,13 +80,14 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setLoading(false)
     }
-  }, [supabase])
+  }, [])
 
   const createJob = async (job: Partial<ServiceJob>) => {
     try {
-      const { error } = await supabase
-        .from('service_jobs')
-        .insert([job])
+      const serializable = Object.fromEntries(
+        Object.entries(job).filter(([, v]) => v !== undefined && typeof v !== 'object' || v === null)
+      )
+      const { error } = await import("@/app/actions/generics").then(m => m.insertData("service_jobs", [serializable as Record<string, string | number | boolean | null>]))
 
       if (error) throw error
       await refreshJobs()
@@ -108,10 +99,7 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateJobStatus = async (id: string, status: ServiceJob['status']) => {
     try {
-      const { error } = await supabase
-        .from('service_jobs')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id)
+      const { error } = await import("@/app/actions/generics").then(m => m.updateData("service_jobs", { id, status, updated_at: new Date().toISOString() }))
 
       if (error) throw error
       await refreshJobs()

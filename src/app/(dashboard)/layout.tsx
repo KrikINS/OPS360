@@ -1,5 +1,5 @@
 import { DashboardShell } from "@/components/layout/DashboardShell"
-import { createClient } from "@/utils/supabase/server"
+
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 
@@ -8,73 +8,57 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
+  
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
   
   if (!user) {
     redirect("/login")
   }
 
   // Fetch Profile & Primary Branch Access
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single()
-
-  // Fetch All Assigned Branches from user_branch_access
-  const { data: branchAccess } = await supabase
-    .from("user_branch_access")
-    .select(`
-      branch_id,
-      is_primary,
-      branches (
-        name
-      )
-    `)
-    .eq("user_id", user.id)
+  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
 
   // Fetch Module Permissions
-  const { data: permissionsData } = await supabase
-    .from("user_permissions")
-    .select("module, enabled")
-    .eq("user_id", user.id)
+  const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction(user.id))
 
-  const permissions = (permissionsData || []).reduce((acc, p) => {
-    acc[p.module] = p.enabled
+  const permissions = Array.isArray(permissionsData) ? permissionsData.reduce((acc: Record<string, boolean>, p: typeof import("@/db/schema").user_permissions.$inferSelect) => {
+    acc[p.module] = p.enabled || false
     return acc
-  }, {} as Record<string, boolean>)
+  }, {}) : {}
 
-  const rawProfile = profile || { id: user.id, full_name: "Unknown User", email: user.email, role: "Sales Rep", assigned_branch_id: "" }
+  const rawProfile = profile || { id: user.id, full_name: user.email?.split("@")[0] || "User", email: user.email, role: "", assigned_branch_id: "" }
   
-  // Identify branch access for switching
-  let typedBranchAccess = (branchAccess || []) as unknown as Array<{
-    branch_id: string;
-    is_primary: boolean;
-    branches: { name: string } | { name: string }[] | null;
-  }>;
-
   // FOR ADMINS: Always allow switching to ALL branches in the registry
-  const normalizedRole = rawProfile?.role?.toLowerCase().trim() || "";
-  const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner';
+  const normalizedRole = (rawProfile as typeof import("@/db/schema").profiles.$inferSelect)?.role?.toLowerCase().trim() || "";
+  const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'super_admin';
   
-  if (isAdmin) {
-    const { data: all_b } = await supabase.from("branches").select("id, name")
-    if (all_b && all_b.length > 0) {
-      typedBranchAccess = all_b.map(b => ({
-        branch_id: b.id,
-        is_primary: false,
-        branches: { name: b.name }
-      }))
+  const { data: all_b } = await import("@/app/actions/generics").then(m => m.fetchData("branches"))
+  
+  let typedBranchAccess: { branch_id: string, is_primary: boolean, branches: { name: string } | { name: string }[] }[] = [];
+  
+  if (isAdmin && Array.isArray(all_b)) {
+    typedBranchAccess = (all_b as unknown as typeof import("@/db/schema").branches.$inferSelect[]).map((b) => ({
+      branch_id: b.id,
+      is_primary: false,
+      branches: { name: b.name }
+    }))
 
-      // Inject Global Overview bypass for admins
-      typedBranchAccess.unshift({
-        branch_id: "ALL_000",
-        is_primary: false,
-        branches: { name: "Global Overview (All Branches)" }
-      })
-    }
+    // Inject Global Overview bypass for admins
+    typedBranchAccess.unshift({
+      branch_id: "ALL_000",
+      is_primary: false,
+      branches: { name: "Global Overview (All Branches)" }
+    })
+  } else if (Array.isArray(all_b) && (rawProfile as typeof import("@/db/schema").profiles.$inferSelect)?.branch_id) {
+     const b = (all_b as unknown as typeof import("@/db/schema").branches.$inferSelect[]).find((b) => b.id === (rawProfile as typeof import("@/db/schema").profiles.$inferSelect).branch_id)
+     if (b) {
+         typedBranchAccess = [{
+            branch_id: b.id,
+            is_primary: true,
+            branches: { name: b.name }
+         }]
+     }
   }
 
   // Determine Active Branch (Cookie > Primary > First Allotted)
@@ -88,7 +72,7 @@ export default async function DashboardLayout({
     ? typedBranchAccess.find((ba) => ba.branch_id === activeBranchIdFromCookie)
     : (isAdmin ? typedBranchAccess[0] : (typedBranchAccess.find((ba) => ba.is_primary) || typedBranchAccess[0]))
 
-  const branchId = activeAccess?.branch_id || (rawProfile as { assigned_branch_id?: string }).assigned_branch_id || ""
+  const branchId = activeAccess?.branch_id || (rawProfile as typeof import("@/db/schema").profiles.$inferSelect).branch_id || ""
 
   // Normalized branch name extraction
   let branchName = ""
@@ -99,7 +83,10 @@ export default async function DashboardLayout({
   }
 
   const profileWithBranchName = {
-    ...rawProfile,
+    id: (rawProfile as typeof import("@/db/schema").profiles.$inferSelect).id || user.id,
+    full_name: (rawProfile as typeof import("@/db/schema").profiles.$inferSelect).full_name || "",
+    role: (rawProfile as typeof import("@/db/schema").profiles.$inferSelect).role || "",
+    email: (rawProfile as typeof import("@/db/schema").profiles.$inferSelect).email || user.email || "",
     branch_id: branchId,
     branch_name: branchName,
     all_branches: typedBranchAccess.map((ba) => {

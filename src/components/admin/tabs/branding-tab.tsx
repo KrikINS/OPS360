@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Type, Loader2, CheckCircle2, Building2 } from "lucide-react"
 import { useState, useEffect } from "react"
-import { createClient } from "@/utils/supabase/client"
+
 
 export function BrandingTab() {
   const [companyName, setCompanyName] = useState("Ops360 Systems")
@@ -17,20 +17,22 @@ export function BrandingTab() {
 
   useEffect(() => {
     const init = async () => {
-      const supabase = createClient()
-      const { data } = await supabase.from("app_settings").select("key, value").in("key", ["logo_url", "company_name"])
-      data?.forEach((row: { key: string, value: string }) => {
-        if (row.key === "logo_url" && row.value) setCurrentLogo(row.value)
-        if (row.key === "company_name" && row.value) setCompanyName(row.value)
-      })
+      
+      const { data } = await import("@/app/actions/generics").then(m => m.fetchData("app_settings"))
+      if (data && Array.isArray(data)) {
+        data.forEach((row: Record<string, unknown>) => {
+          if (row['key'] === "logo_url" && row['value']) setCurrentLogo(String(row['value']))
+          if (row['key'] === "company_name" && row['value']) setCompanyName(String(row['value']))
+        })
+      }
     }
     init()
   }, [])
 
   const saveCompanyName = async () => {
     setSavingName(true)
-    const supabase = createClient()
-    await supabase.from("app_settings").upsert({ key: "company_name", value: companyName, updated_at: new Date().toISOString() })
+    
+    await import("@/app/actions/generics").then(m => m.updateData("app_settings", { key: "company_name", value: companyName }))
     setNameSaved(true)
     setSavingName(false)
     setTimeout(() => setNameSaved(false), 3000)

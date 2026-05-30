@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createClient } from "@/utils/supabase/client"
+
 import { Loader2, UserPlus, Phone, MapPin, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react"
 import { usePos, Customer } from '@/context/PosContext'
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -54,7 +54,7 @@ export function PosAddCustomerModal({ open, onOpenChange, initialPhone }: PosAdd
     }
   }, [initialPhone])
 
-  const supabase = createClient()
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,11 +64,8 @@ export function PosAddCustomerModal({ open, onOpenChange, initialPhone }: PosAdd
     }
 
     setLoading(true)
-    const { data, error } = await supabase
-      .from('customers')
-      .insert([formData])
-      .select()
-      .single()
+    const { data: resData, error } = await import("@/app/actions/generics").then(m => m.insertData("customers", [formData]))
+    const data = resData && Array.isArray(resData) ? resData[0] : resData
 
     setLoading(false)
 

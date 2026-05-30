@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createClient } from "@/utils/supabase/client"
+
 import { Loader2, UserPlus, Phone, Mail, MapPin, AlertTriangle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -35,7 +35,7 @@ export function AddCustomerModal({ open, onOpenChange, onSuccess }: AddCustomerM
     pincode: ''
   })
 
-  const supabase = createClient()
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,9 +45,7 @@ export function AddCustomerModal({ open, onOpenChange, onSuccess }: AddCustomerM
     }
 
     setLoading(true)
-    const { error } = await supabase
-      .from('customers')
-      .insert([formData])
+    const { error } = await import("@/app/actions/customers").then(m => m.createCustomerAction(formData))
 
     setLoading(false)
 

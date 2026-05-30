@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+
 import VendorsClient from './client'
 
 export const metadata = {
@@ -7,27 +7,21 @@ export const metadata = {
 }
 
 export default async function VendorsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { getServerSession } = await import("next-auth/next")
+  const session = await getServerSession()
+  const user = session?.user
   
   let role = 'sales'
   if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
       
     if (profile) {
-      role = profile.role
+      role = profile.role || 'sales'
     }
   }
 
   // Pre-fetch vendors on the server for faster initial load
-  const { data: initialVendors } = await supabase
-    .from('vendors')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const { data: initialVendors } = await import("@/app/actions/generics").then(m => m.fetchData("vendors"))
 
-  return <VendorsClient userRole={role} initialVendors={initialVendors || []} />
+  return <VendorsClient userRole={role} initialVendors={(initialVendors as any[]) || []} />
 }

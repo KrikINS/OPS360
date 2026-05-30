@@ -52,8 +52,8 @@ interface GRNDialogProps {
 // Global Audio Context for scanner feedback (shared to avoid multiple instances)
 let audioCtx: AudioContext | null = null;
 const initAudio = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+  if (!audioCtx) audioCtx = new (window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 };
 
@@ -79,8 +79,8 @@ const playErrorBeep = () => {
 
 function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string) => void, onClose: () => void, isDuplicate: (text: string) => boolean }) {
   const containerId = "grn-full-viewfinder";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const scannerRef = useRef<any>(null);
+
+  const scannerRef = useRef<import('html5-qrcode').Html5Qrcode | null>(null);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const [activeCamIdx, setActiveCamIdx] = useState(0);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -186,8 +186,8 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
     let isMounted = true;
     import("html5-qrcode").then((mod) => {
       if (!isMounted) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      scannerRef.current = new mod.Html5Qrcode(containerId, { formatsToSupport } as any);
+
+      scannerRef.current = new mod.Html5Qrcode(containerId, { formatsToSupport } as { formatsToSupport: number[] });
     });
 
     return () => {
@@ -195,8 +195,8 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
       if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current.stop()
           .then(() => scannerRef.current.clear())
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .catch((e: any) => console.error("Scanner cleanup error:", e));
+
+          .catch((e: unknown) => console.error("Scanner cleanup error:", e));
       }
     };
   }, [formatsToSupport]);
@@ -258,8 +258,8 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
       if (typeof scannerRef.current.getRunningTrack !== "function") return;
       const track = scannerRef.current.getRunningTrack();
       if (track) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await track.applyConstraints({ advanced: [{ torch: newState }] } as any);
+
+        await track.applyConstraints({ advanced: [{ torch: newState }] } as unknown as MediaTrackConstraints);
         setIsTorchOn(newState);
       }
     } catch (err) { console.error("Torch error:", err); }
@@ -272,11 +272,11 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
       const track = scannerRef.current.getRunningTrack();
       if (track) {
         // Kickstart/Shake: Cycle focus mode to force hardware to re-focus
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await track.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: 100 }] as any });
+
+        await track.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: 100 }] } as unknown as MediaTrackConstraints);
         setTimeout(async () => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] as any });
+
+          await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] } as unknown as MediaTrackConstraints);
         }, 150);
       }
     } catch (err) { console.error("Focus error:", err); }

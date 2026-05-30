@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
+
 import {
   Sidebar,
   SidebarContent,
@@ -193,13 +193,12 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
   }
 
   useEffect(() => {
-    supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "logo_url")
-      .single()
-      .then((res: { data: { value: string } | null }) => {
-        if (res.data?.value) setLogoUrl(res.data.value)
+    import("@/app/actions/generics").then(m => m.fetchData("app_settings"))
+      .then((res: { data: typeof import("@/db/schema").app_settings.$inferSelect[] | null | undefined | unknown }) => {
+        if (res.data && Array.isArray(res.data)) {
+          const logo = res.data.find((s: typeof import("@/db/schema").app_settings.$inferSelect) => s.key === "logo_url")
+          if (logo?.value) setLogoUrl(logo.value)
+        }
       })
   }, [])
 
@@ -208,37 +207,31 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" className="border-r border-white/5 bg-[#0F172A] transition-all duration-300 group-data-[state=collapsed]:w-[80px] group-data-[state=collapsed]:max-w-[80px]">
       {/* ── Logo Header ── */}
-      <SidebarHeader className={cn("px-4 py-5 border-b border-white/5 transition-all duration-300", isCollapsed && "px-0 flex justify-center py-6")}>
-        <div className={cn("flex items-center gap-3", isCollapsed && "flex-col gap-0")}>
+      <SidebarHeader className={cn("px-4 pt-4 pb-2 border-b border-white/5 transition-all duration-300 flex flex-col items-center", isCollapsed && "px-0 pt-4 pb-2")}>
+        <div className="flex justify-center w-full">
           <div className={cn(
             "relative shrink-0 overflow-hidden transition-all duration-300",
-            isCollapsed ? "h-11 w-11 rounded-xl shadow-[0_0_15px_rgba(127,209,227,0.2)] border border-white/10" : "h-[70px] w-[70px]"
+            isCollapsed ? "h-16 w-16 rounded-xl shadow-[0_0_15px_rgba(127,209,227,0.2)] border border-white/10" : "h-[105px] w-[105px]"
           )}>
             <Image
               src={logoUrl || "/ethan-logo-final.png"}
               alt="Ethan"
               fill
               priority
-              sizes="(max-width: 768px) 44px, 70px"
+              sizes="(max-width: 768px) 64px, 105px"
               className={cn("object-contain transition-transform duration-300", isCollapsed ? "scale-110 p-1" : "scale-100")}
             />
           </div>
-          {!isCollapsed && (
-            <div className="flex items-baseline gap-2 min-w-0">
-              <span className="text-white font-semibold text-[14px] tracking-tight truncate">Ethan</span>
-              <span className="text-[#7FD1E3] text-[10px] font-bold uppercase tracking-widest whitespace-nowrap opacity-80">Ops360 ERP</span>
-            </div>
-          )}
         </div>
 
-        <div className={cn("mt-6 px-4", isCollapsed && "px-0")}>
+        <div className={cn("mt-0 px-4", isCollapsed && "px-0")}>
           <Link
             href="/launchpad"
             onClick={() => setNavigatingTo("/launchpad")}
             className={cn(
-              "flex items-center justify-center gap-2 w-full py-2 rounded-xl border border-[#7FD1E3]/30 hover:border-[#7FD1E3] transition-all duration-300 group/nav relative z-50 font-bold",
-              pathname === "/launchpad" 
-                ? "bg-[#7FD1E3]/05 border-[#7FD1E3] shadow-[0_0_15px_rgba(127,209,227,0.1)]" 
+              "flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[#7FD1E3]/30 hover:border-[#7FD1E3] transition-all duration-300 group/nav relative z-50 font-bold",
+              pathname === "/launchpad"
+                ? "bg-[#7FD1E3]/05 border-[#7FD1E3] shadow-[0_0_15px_rgba(127,209,227,0.1)]"
                 : "bg-transparent",
               isCollapsed && "px-0 border-none"
             )}
@@ -298,9 +291,9 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                         tooltip={group.title}
                         nativeButton={false}
                         className={cn(
-                          "h-12 w-full transition-all duration-150 relative tracking-tight",
-                          isActive 
-                            ? "text-white bg-[#7FD1E3]/05" 
+                          "h-9 w-full transition-all duration-150 relative tracking-tight",
+                          isActive
+                            ? "text-white bg-[#7FD1E3]/05"
                             : "text-slate-300 hover:text-white hover:bg-white/5",
                           isCollapsed && "w-full flex justify-center"
                         )}
@@ -338,7 +331,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                               isActive={isGroupActive}
                               tooltip={group.title}
                               className={cn(
-                                "h-12 w-full flex items-center justify-center px-0 transition-all duration-150 relative tracking-tight group-data-[state=collapsed]:justify-center",
+                                "h-9 w-full flex items-center justify-center px-0 transition-all duration-150 relative tracking-tight group-data-[state=collapsed]:justify-center",
                                 isGroupActive ? "text-white bg-[#7FD1E3]/05" : "text-slate-300 hover:text-white hover:bg-white/5",
                                 props.className
                               )}
@@ -409,7 +402,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                         tooltip={group.title}
                         nativeButton={false}
                         className={cn(
-                          "h-12 w-full transition-all duration-150 relative tracking-tight",
+                          "h-9 w-full transition-all duration-150 relative tracking-tight",
                           isGroupActive 
                             ? "text-white bg-[#7FD1E3]/05" 
                             : "text-slate-300 hover:text-white hover:bg-white/5",
@@ -540,7 +533,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
               tooltip={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
               className={cn(
                 "w-full transition-all duration-200 text-slate-300 hover:text-[#7FD1E3] hover:bg-white/5",
-                isCollapsed ? "h-10 w-10 p-0 justify-center flex" : "h-12 px-2"
+                isCollapsed ? "h-9 w-9 p-0 justify-center flex" : "h-9 px-2"
               )}
             >
               {isCollapsed ? (

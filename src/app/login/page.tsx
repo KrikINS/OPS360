@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { login } from "@/app/login/actions"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -107,18 +107,22 @@ export default function LoginPage() {
     setLoading(true)
     setErrorMessage(null)
     const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
     
     try {
-      const result = await login(formData)
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false
+      })
+
       if (result?.error) {
         setErrorMessage(result.error)
         setLoading(false)
-      } else if (result?.success) {
-        if (result.forcePasswordChange) {
-          router.push('/auth/reset-password')
-        } else {
-          router.push('/launchpad')
-        }
+      } else if (result?.ok) {
+        // Assume successful login implies no forced password change for now since NextAuth handles it
+        router.push('/launchpad')
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "An unexpected error occurred")
@@ -249,12 +253,7 @@ export default function LoginPage() {
       <div className="absolute bottom-6 right-8 text-center pointer-events-none select-none animate-in fade-in slide-in-from-right-4 duration-1000">
         <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-1">Powered By</p>
         <div className="flex items-center justify-center gap-1.5">
-          <span className="text-white/40 text-2xl font-black tracking-tighter">Krik</span>
-          <div className="relative">
-            <span className="text-[#00AEEF] text-2xl font-black tracking-tighter">INS</span>
-            {/* Loop Spinner for INS */}
-            <div className="absolute -inset-1 border border-[#00AEEF]/0 border-t-[#00AEEF] rounded-md animate-spin duration-[2000ms]" />
-          </div>
+          <Image src="/AppTerra .PNG" alt="AppTerra" width={120} height={40} className="object-contain opacity-60" style={{ mixBlendMode: "screen" }} />
         </div>
       </div>
       <style jsx global>{`

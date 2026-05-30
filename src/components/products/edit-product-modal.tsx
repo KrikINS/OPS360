@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+
 
 interface Product {
   id: string
@@ -94,10 +94,8 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
     try {
       if (!product) throw new Error("No product context provided")
       
-      const supabase = createClient()
-      const { error } = await supabase
-        .from("products")
-        .update({
+      const { error } = await import("@/app/actions/generics").then(m => m.updateData("products", {
+          id: product.id,
           model_name: formData.model_name,
           base_price: parseFloat(formData.base_price),
           hsn_code: formData.hsn_code,
@@ -106,8 +104,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           description: formData.description,
           tax_rate: parseFloat(formData.tax_rate),
           warranty_months: parseInt(formData.warranty_months)
-        })
-        .eq("id", product.id)
+        }))
 
       if (error) throw error
 
