@@ -54,7 +54,7 @@ export function NotificationBell() {
             <div className="max-h-[300px] overflow-y-auto py-1">
               {approvals.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                  No pending approvals. You're all caught up!
+                  No pending approvals. You&apos;re all caught up!
                 </div>
               ) : (
                 approvals.map(vendor => (
