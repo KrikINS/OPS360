@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
 
 export function NotificationBell() {
   const [approvals, setApprovals] = useState<Array<{ id: string, name: string, status: string | null }>>([])
@@ -32,15 +31,13 @@ export function NotificationBell() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all">
-          <Bell className="h-5 w-5" />
-          {approvals.length > 0 && (
-            <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
-              {approvals.length}
-            </span>
-          )}
-        </Button>
+      <DropdownMenuTrigger className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+        <Bell className="h-5 w-5" />
+        {approvals.length > 0 && (
+          <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
+            {approvals.length}
+          </span>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-80" align="end">
         <DropdownMenuLabel className="font-bold flex items-center justify-between">
@@ -59,8 +56,8 @@ export function NotificationBell() {
             </div>
           ) : (
             approvals.map(vendor => (
-              <DropdownMenuItem key={vendor.id} className="cursor-pointer p-3 focus:bg-slate-50 border-b last:border-0" asChild>
-                <Link href="/vendors" className="flex flex-col gap-1 w-full">
+              <DropdownMenuItem key={vendor.id} className="cursor-pointer p-0 focus:bg-slate-50 border-b last:border-0">
+                <Link href="/vendors" className="flex flex-col gap-1 w-full p-3 outline-none">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-amber-500" />
                     <span className="font-semibold text-sm">Vendor Approval Required</span>
