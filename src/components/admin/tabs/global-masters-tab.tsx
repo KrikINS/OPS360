@@ -280,7 +280,7 @@ export function GlobalMastersTab() {
         </Card>
 
         {/* Return Reason Master */}
-        <Card className="card-elevated">
+        <Card className="card-elevated col-span-full">
           <CardHeader className="border-b bg-slate-50/50">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Return Reason Master

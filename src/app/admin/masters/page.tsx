@@ -3,7 +3,7 @@
 import { GlobalMastersTab } from "@/components/admin/tabs/global-masters-tab"
 import { HSNLookupTool } from "@/components/admin/hsn-lookup-tool"
 import { OrganizationTab } from "@/components/admin/tabs/organization-tab"
-import { FolderTree, Search, Building2, Palette, MapPin } from "lucide-react"
+import { FolderTree, Search, Building2, MapPin } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function GlobalMastersPage() {
