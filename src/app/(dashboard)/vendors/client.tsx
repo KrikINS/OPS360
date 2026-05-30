@@ -136,6 +136,7 @@ export default function VendorsClient({
   const [isEditingGeneral, setIsEditingGeneral] = useState(false)
   const [isEditingCommercials, setIsEditingCommercials] = useState(false)
   const [editFormData, setEditFormData] = useState<Partial<Vendor>>({})
+  const canManage = ['admin', 'manager', 'owner', 'super_admin', 'admin/owner'].includes((userRole || '').toLowerCase())
   
   const [formData, setFormData] = useState({
     name: "",
@@ -733,7 +734,7 @@ export default function VendorsClient({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {(userRole === 'admin' || userRole === 'manager') && (selectedVendor.status === 'Pending' || selectedVendor.status === 'awaiting_approval') && (
+                    {canManage && (selectedVendor.status === 'Pending' || selectedVendor.status === 'awaiting_approval') && (
                       <>
                         <Button 
                           size="sm" 
@@ -752,7 +753,7 @@ export default function VendorsClient({
                         </Button>
                       </>
                     )}
-                    {(userRole === 'admin' || userRole === 'manager') && (
+                    {canManage && (
                       <Select 
                         value={selectedVendor.compliance_status || undefined} 
                         onValueChange={(val: string | null) => {
@@ -798,7 +799,7 @@ export default function VendorsClient({
                           <h4 className="font-bold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
                             <Building2 className="h-4 w-4" /> General Info
                           </h4>
-                          { (userRole === 'admin' || userRole === 'manager') && (
+                          { canManage && (
                             !isEditingGeneral ? (
                               <Button 
                                 variant="ghost" 
@@ -928,7 +929,7 @@ export default function VendorsClient({
                           <h4 className="font-bold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
                             <TrendingUp className="h-4 w-4" /> Commercials
                           </h4>
-                          { (userRole === 'admin' || userRole === 'manager') && (
+                          { canManage && (
                             !isEditingCommercials ? (
                               <Button 
                                 variant="ghost" 
@@ -1165,7 +1166,7 @@ export default function VendorsClient({
 
               <DialogFooter className="p-4 border-t bg-muted/5 flex justify-between">
                 <Button variant="ghost" onClick={() => setIsDetailOpen(false)}>Close Overview</Button>
-                {selectedVendor.status === 'awaiting_approval' && (userRole === 'admin' || userRole === 'manager') && (
+                {selectedVendor.status === 'awaiting_approval' && canManage && (
                   <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" onClick={() => handleUpdateStatus(selectedVendor.id, 'approved')}>
                     <CheckCircle2 className="h-4 w-4" /> Approve Supplier
                   </Button>
