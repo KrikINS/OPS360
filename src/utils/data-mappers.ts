@@ -51,6 +51,9 @@ export function mapToProduct(row: unknown): Product {
         gst_rate: asNumber(r?.gst_rate),
         current_balance: asNumber(r?.current_balance),
         product_code: asString(r?.product_code),
+        min_stock_level: asNumber(r?.min_stock_level),
+        warranty_months: asNumber(r?.warranty_months),
+        is_archived: asBoolean(r?.is_archived),
         tracking_type: r?.tracking_type ? asString(r.tracking_type) : undefined
     }
 }

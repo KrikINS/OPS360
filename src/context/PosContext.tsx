@@ -26,6 +26,9 @@ export type Product = {
   current_balance: number
   product_code: string
   tracking_type?: string
+  min_stock_level?: number
+  warranty_months?: number
+  is_archived?: boolean
 }
 
 export type SelectedUnit = {
