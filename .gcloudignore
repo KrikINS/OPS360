@@ -28,3 +28,32 @@ ts_errors*
 # Local environment (Secrets are pushed via Secret Manager or Build Args)
 .env*
 ! .env.local
+
+# Local tooling / secrets
+cloud_sql_proxy.exe
+cloud-sql-proxy.exe
+test.sql
+.claude/
+.firebase/
+.agents/
+
+# Scratch / one-off scripts
+fix_*.ts
+fix_*.js
+refactor_*.js
+apply-schema.ts
+fix-schema.ts
+run-migrations.ts
+verify-tables.ts
+scripts/extract-functions.ts
+dev_errors.txt
+eslint*.json
+eslint*.txt
+lint_errors*
+build_output.txt
+introspect-error.txt
+tmp_stock_transfer.txt
+tsconfig.tsbuildinfo
+*.lnk
+*.png
+*.exe
