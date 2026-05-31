@@ -1,15 +1,27 @@
 "use server"
 
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 import { db } from "@/db/client"
 import { profiles, branches, user_permissions, user_branch_access } from "@/db/schema"
 
 
 export async function getAdminUsersDataAction(userId: string | undefined) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { profiles: [], branches: [], currentUserProfile: null, stats: { total_users: 0, pending_requests: 0, recent_logins: 0 }, error: 'Unauthorized: not authenticated' }
+  }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  const isAdmin = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
+  if (!isAdmin) {
+    return { profiles: [], branches: [], currentUserProfile: null, stats: { total_users: 0, pending_requests: 0, recent_logins: 0 }, error: 'Insufficient permission' }
+  }
+
   try {
     const allProfiles = await db.select().from(profiles)
     const allBranches = await db.select().from(branches)
 
-    // Construct the permissions payload similarly to legacy format
     const permsList = await db.select().from(user_permissions)
     const branchAccess = await db.select().from(user_branch_access)
 
@@ -31,8 +43,8 @@ export async function getAdminUsersDataAction(userId: string | undefined) {
 
     const currentUserProfile = userId ? profilesWithDetails.find(p => p.id === userId) : null
 
-    return { 
-      profiles: profilesWithDetails, 
+    return {
+      profiles: profilesWithDetails,
       branches: allBranches,
       currentUserProfile,
       stats: {

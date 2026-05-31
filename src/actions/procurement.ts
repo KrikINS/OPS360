@@ -396,6 +396,11 @@ export async function createReturnToVendor(input: {
     return { success: false as const, error: 'Insufficient permission: manager required' }
   }
 
+  if (!session.user.branchId) {
+    return { success: false as const, error: 'No branch assigned to your account' }
+  }
+  const userBranchId = session.user.branchId
+
   try {
     for (const item of input.items) {
       const availableRows = await db
@@ -404,7 +409,7 @@ export async function createReturnToVendor(input: {
         .where(
           and(
             eq(inventory.product_id, item.productId),
-            eq(inventory.branch_id, session.user.branchId),
+            eq(inventory.branch_id, userBranchId),
             eq(inventory.status, 'Available')
           )
         )
@@ -427,7 +432,7 @@ export async function createReturnToVendor(input: {
       await db.insert(inventory_transactions).values(
         ids.map(id => ({
           product_id: item.productId,
-          branch_id: session.user.branchId,
+          branch_id: userBranchId,
           transaction_type: 'return_to_vendor',
           quantity: -1,
           reference_id: input.poId,

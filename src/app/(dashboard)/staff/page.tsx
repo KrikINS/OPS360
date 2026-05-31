@@ -1,20 +1,16 @@
 
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { getStaffDirectory } from '@/actions/hr'
 import StaffClient from './client'
 
 export default async function StaffPayrollPage() {
-  
-  const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
-  
-  let role = 'sales'
-  if (user) {
-    const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
-      
-    if (profile) {
-      role = profile.role || 'sales'
-    }
-  }
+  const session = await getServerSession(authOptions)
+  const role = (session?.user?.role ?? '').toLowerCase()
+  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
 
-  const isAdmin = role === 'admin'
+  const result = await getStaffDirectory()
+  const staff = result.success ? result.staff : []
 
-  return <StaffClient isAdmin={isAdmin} />
+  return <StaffClient isAdmin={isAdmin} staff={staff} />
 }

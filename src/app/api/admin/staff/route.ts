@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import { db } from '@/db/client';
 import { users, profiles, user_branch_access, user_permissions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -9,14 +11,22 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const role = (session.user.role ?? '').toLowerCase();
+  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
-    const { email, password, fullName, role, branchIds } = await req.json();
+    const { email, password, fullName, role: newUserRole, branchIds } = await req.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    // Check if user already exists
     const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (existing.length > 0) {
       return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
@@ -24,22 +34,19 @@ export async function POST(req: NextRequest) {
 
     const password_hash = await bcrypt.hash(password, 10);
 
-    // Insert into users table
     const [newUser] = await db.insert(users).values({
       email,
       password_hash,
-      role: role || 'staff',
+      role: newUserRole || 'staff',
     }).returning();
 
-    // Insert into profiles table
     await db.insert(profiles).values({
       id: newUser.id,
       email,
       full_name: fullName || null,
-      role: role || 'staff',
+      role: newUserRole || 'staff',
     });
 
-    // Insert branch access entries
     if (Array.isArray(branchIds) && branchIds.length > 0) {
       await db.insert(user_branch_access).values(
         branchIds.map((branch_id: string, i: number) => ({
@@ -50,13 +57,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert default permissions (all false)
     const MODULES = ['pos', 'inventory', 'procurement', 'sales', 'finance', 'service', 'admin', 'hr'];
     await db.insert(user_permissions).values(
       MODULES.map(module => ({
         user_id: newUser.id,
         module,
-        enabled: role === 'Admin/Owner',
+        enabled: newUserRole === 'Admin/Owner',
       }))
     );
 
