@@ -60,23 +60,26 @@ steps:
       - 'TEST_DATABASE_URL=$_TEST_DB_URL'
       - 'NODE_ENV=test'
 
-  # Build the Docker image only after all tests pass.
+  # Build + tag the Docker image only after all tests pass.
+  # SHORT_SHA is set by trigger-based builds; falls back to 'manual' for gcloud builds submit.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build'
+    entrypoint: 'bash'
     args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${SHORT_SHA}'
-      - '.'
+      - '-c'
+      - |
+        SHA=${SHORT_SHA:-manual}
+        docker build \
+          -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:$SHA \
+          -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest \
+          .
     waitFor: ['test']
 
-  # Also tag the immutable SHA image as :latest so production can pull it.
+  # tag-latest is now done inline in build; this is a no-op kept for pipeline compatibility.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'tag-latest'
-    args:
-      - 'tag'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${SHORT_SHA}'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest'
+    entrypoint: 'bash'
+    args: ['-c', 'echo "already tagged :latest in build step"']
     waitFor: ['build']
 
   # Push both :${SHORT_SHA} and :latest tags in one command.
