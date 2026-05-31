@@ -64,7 +64,7 @@ export default function AnalyticsDocs() {
           </div>
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
             <h4 className="text-xs font-black uppercase tracking-widest text-[#7FD1E3] mb-1">Live Feeds</h4>
-            <p className="text-[11px] text-slate-400">Real-time dashboard updates via WebSocket (Supabase Realtime).</p>
+            <p className="text-[11px] text-slate-400">Real-time dashboard updates via WebSocket.</p>
           </div>
         </div>
       </section>

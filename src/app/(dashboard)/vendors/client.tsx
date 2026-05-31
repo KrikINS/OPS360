@@ -255,7 +255,8 @@ export default function VendorsClient({
     }
   }
 
-  const getFileUrl = (_path?: string) => {
+  const getFileUrl = (path?: string) => {
+    if (!path) return "#"
     // Return a dummy string for now.
     // If it's a signed URL we need to convert the usage to async or handle it server side
     return "#"
@@ -370,7 +371,7 @@ export default function VendorsClient({
           </div>
         </div>
 
-        {(userRole === 'admin' || userRole === 'manager' || userRole === 'sales') && (
+        {(userRole === 'owner' || userRole === 'admin' || userRole === 'manager' || userRole === 'sales') && (
           <Button 
             onClick={() => {
               setFormStep(1)

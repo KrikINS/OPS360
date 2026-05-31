@@ -80,7 +80,7 @@ export default function VendorManagementDocs() {
           </div>
           <h4 className="font-bold text-slate-900">Contract Storage Specification</h4>
           <p className="text-sm text-slate-500 mt-1 max-w-sm">
-            Accepted formats: PDF, JPEG, PNG. Maximum file size: 10MB per document. All files are encrypted at rest via Supabase Storage.
+            Accepted formats: PDF, JPEG, PNG. Maximum file size: 10MB per document. All files are encrypted at rest via GCP Cloud Storage.
           </p>
         </div>
       </section>

@@ -1,33 +1,87 @@
-# cloudbuild.yaml: OPS360 Ethan-Home-Appliances
-# Standard GCP build config for Next.js Standalone
-# Using substitutions for build-time environment variables
+# cloudbuild.yaml — OPS360 STAGING
+# Runs unit + integration tests against a local PostgreSQL instance,
+# then builds and pushes the Docker image only if all tests pass.
+# Triggered on: staging branch / staging Cloud Build trigger.
 
 steps:
-  # Debug Step: Verify workspace context
+  # Debug: verify workspace
   - name: 'alpine'
     entrypoint: 'sh'
     args: ['-c', 'ls -la']
-    
+
+  # Single container: install PostgreSQL + Node 20, start Postgres,
+  # wait until it accepts connections, then run the full test suite.
+  # Both services share localhost so TEST_DATABASE_URL resolves correctly.
+  - name: 'ubuntu'
+    id: 'test'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+
+        # ── Install PostgreSQL ──────────────────────────────────────────
+        apt-get update -qq
+        apt-get install -y -qq postgresql > /dev/null
+
+        # ── Install Node 20 via NodeSource ─────────────────────────────
+        apt-get install -y -qq curl ca-certificates > /dev/null
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /dev/null
+        apt-get install -y -qq nodejs > /dev/null
+
+        # ── Start PostgreSQL and create test DB ────────────────────────
+        service postgresql start
+        su postgres -c "createuser --superuser testuser"
+        su postgres -c "createdb -O testuser ops360_test"
+        su postgres -c "psql -c \"ALTER USER testuser PASSWORD 'testpass';\""
+
+        # ── Wait until PostgreSQL is actually accepting connections ─────
+        until pg_isready -h localhost -p 5432 -U testuser; do
+          echo "Waiting for PostgreSQL..."
+          sleep 1
+        done
+
+        # ── Run tests ──────────────────────────────────────────────────
+        npm ci
+        npm run test:unit
+        npm run test:integration
+    env:
+      - 'TEST_DATABASE_URL=$_TEST_DB_URL'
+      - 'NODE_ENV=test'
+
+  # Build the Docker image only after all tests pass.
   - name: 'gcr.io/cloud-builders/docker'
+    id: 'build'
     args:
       - 'build'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_SUPABASE_URL=${_SUPABASE_URL}'
-      - '--build-arg'
-      - 'NEXT_PUBLIC_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${SHORT_SHA}'
       - '.'
+    waitFor: ['test']
 
-images:
-  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest'
+  # Also tag the immutable SHA image as :latest so production can pull it.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'tag-latest'
+    args:
+      - 'tag'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:${SHORT_SHA}'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest'
+    waitFor: ['build']
+
+  # Push both :${SHORT_SHA} and :latest tags in one command.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}'
+    waitFor: ['tag-latest']
 
 substitutions:
   _REGION: 'asia-south1'
   _REPO_NAME: 'ops360-repo'
   _APP_NAME: 'ops360-app'
-  _SUPABASE_URL: ''
-  _SUPABASE_ANON_KEY: ''
+  _TEST_DB_URL: 'postgresql://testuser:testpass@localhost:5432/ops360_test'
 
 options:
   logging: CLOUD_LOGGING_ONLY

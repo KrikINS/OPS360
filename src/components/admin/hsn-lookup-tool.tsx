@@ -18,7 +18,7 @@ import {
 interface HSNResult {
   hsn_code: string
   description: string
-  gst_rate: number
+  gst_rate: number | string
 }
 
 interface Product {

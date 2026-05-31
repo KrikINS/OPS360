@@ -1,0 +1,447 @@
+/**
+ * Integration tests for Inventory + Stock Transfer Server Actions.
+ *
+ * Covers:
+ *  - Inter-branch stock transfer request → approval → completion
+ *  - Serial-number tracked inventory allocation
+ *  - Stock adjustment (shrinkage, damage write-offs)
+ *  - Preventing cross-branch data access
+ */
+
+import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
+import { getServerSession } from 'next-auth'
+import { and, eq } from 'drizzle-orm'
+import * as schema from '@/db/schema'
+import {
+  setupTestDb, cleanupTestDb, teardownTestDb,
+  seedBranch, seedProduct, seedInventoryUnits, seedCounter,
+} from '@/test/db'
+import {
+  requestStockTransfer,
+  approveStockTransfer,
+  completeStockTransfer,
+  rejectStockTransfer,
+  adjustStock,
+  allocateSerialNumber,
+  getInventorySummary,
+} from '@/actions/inventory'
+import type { TestDb } from '@/test/db'
+
+let db: TestDb
+
+beforeAll(async () => { db = await setupTestDb() })
+afterEach(async () => { await cleanupTestDb(db) })
+afterAll(async () => { await teardownTestDb() })
+
+// ---------------------------------------------------------------------------
+// Stock transfer — happy path
+// ---------------------------------------------------------------------------
+
+describe('stock transfer — full lifecycle', () => {
+  it('completes a transfer: deducts from source, adds to destination', async () => {
+    const source = await seedBranch(db, { name: 'Mumbai', gstin: '27AAAAA0000A1Z5' })
+    const dest   = await seedBranch(db, { name: 'Pune',   gstin: '27BBBBB0000B1Z3' })
+    const product = await seedProduct(db, { branchId: source.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: source.id, count: 20 })
+    // Same product registered in destination branch (different stock entry)
+    const destProduct = await seedProduct(db, {
+      branchId: dest.id,
+      sku: product.sku,   // same SKU — linked product
+    })
+    await seedInventoryUnits(db, { productId: destProduct.id, branchId: dest.id, count: 5 })
+    await seedCounter(db, source.id, 'TRANSFER')
+
+    // Step 1: source branch staff requests transfer
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000003', branchId: source.id, role: 'staff' },
+    })
+    const request = await requestStockTransfer({
+      fromBranchId: source.id,
+      toBranchId: dest.id,
+      items: [{ productId: product.id, requestedQty: 8 }],
+      notes: 'Urgent restock',
+    })
+    expect(request.success).toBe(true)
+    if (!request.transfer) throw new Error('Transfer not created')
+    expect(request.transfer.status).toBe('pending')
+
+    // Step 2: destination branch manager approves
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000004', branchId: dest.id, role: 'manager' },
+    })
+    const approved = await approveStockTransfer({ transferId: request.transfer.id })
+    if (!approved.transfer) throw new Error('Transfer not approved')
+    expect(approved.transfer.status).toBe('approved')
+
+    // Step 3: source branch marks as dispatched / completed
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000003', branchId: source.id, role: 'staff' },
+    })
+    const completed = await completeStockTransfer({ transferId: request.transfer.id })
+    expect(completed.success).toBe(true)
+
+    // Stock changes are applied atomically
+    const srcAvailable = await db.select().from(schema.inventory).where(
+      and(
+        eq(schema.inventory.product_id, product.id),
+        eq(schema.inventory.branch_id, source.id),
+        eq(schema.inventory.status, 'Available'),
+      )
+    )
+    const dstAvailable = await db.select().from(schema.inventory).where(
+      and(
+        eq(schema.inventory.product_id, destProduct.id),
+        eq(schema.inventory.branch_id, dest.id),
+        eq(schema.inventory.status, 'Available'),
+      )
+    )
+    expect(srcAvailable.length).toBe(12)   // 20 - 8
+    expect(dstAvailable.length).toBe(13)   // 5 + 8
+  })
+
+  it('does not modify stock until transfer is completed', async () => {
+    const source = await seedBranch(db, { name: 'Mumbai', gstin: '27AAAAA0000A1Z5' })
+    const dest   = await seedBranch(db, { name: 'Pune',   gstin: '27BBBBB0000B1Z3' })
+    const product = await seedProduct(db, { branchId: source.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: source.id, count: 20 })
+    await seedCounter(db, source.id, 'TRANSFER')
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: source.id, role: 'staff' },
+    })
+    const request = await requestStockTransfer({
+      fromBranchId: source.id,
+      toBranchId: dest.id,
+      items: [{ productId: product.id, requestedQty: 5 }],
+      notes: '',
+    })
+    if (!request.transfer) throw new Error('Transfer not created')
+
+    // Stock must not change yet — transfer is still pending
+    const unitsAfterRequest = await db.select().from(schema.inventory).where(
+      and(
+        eq(schema.inventory.product_id, product.id),
+        eq(schema.inventory.branch_id, source.id),
+        eq(schema.inventory.status, 'Available'),
+      )
+    )
+    expect(unitsAfterRequest.length).toBe(20)
+
+    // Approve but don't complete
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000002', branchId: dest.id, role: 'manager' },
+    })
+    await approveStockTransfer({ transferId: request.transfer.id })
+
+    const unitsAfterApproval = await db.select().from(schema.inventory).where(
+      and(
+        eq(schema.inventory.product_id, product.id),
+        eq(schema.inventory.branch_id, source.id),
+        eq(schema.inventory.status, 'Available'),
+      )
+    )
+    expect(unitsAfterApproval.length).toBe(20)  // still unchanged
+  })
+
+  it('rejects transfer when source has insufficient stock', async () => {
+    const source = await seedBranch(db, { name: 'Mumbai', gstin: '27AAAAA0000A1Z5' })
+    const dest   = await seedBranch(db, { name: 'Pune',   gstin: '27BBBBB0000B1Z3' })
+    const product = await seedProduct(db, { branchId: source.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: source.id, count: 3 })
+    await seedCounter(db, source.id, 'TRANSFER')
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: source.id, role: 'staff' },
+    })
+
+    const result = await requestStockTransfer({
+      fromBranchId: source.id,
+      toBranchId: dest.id,
+      items: [{ productId: product.id, requestedQty: 10 }],
+      notes: '',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/insufficient stock/i)
+  })
+
+  it('cancels transfer and keeps stock unchanged when rejected', async () => {
+    const source = await seedBranch(db, { name: 'Mumbai', gstin: '27AAAAA0000A1Z5' })
+    const dest   = await seedBranch(db, { name: 'Pune',   gstin: '27BBBBB0000B1Z3' })
+    const product = await seedProduct(db, { branchId: source.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: source.id, count: 15 })
+    await seedCounter(db, source.id, 'TRANSFER')
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: source.id, role: 'staff' },
+    })
+    const request = await requestStockTransfer({
+      fromBranchId: source.id,
+      toBranchId: dest.id,
+      items: [{ productId: product.id, requestedQty: 5 }],
+      notes: '',
+    })
+    if (!request.transfer) throw new Error('Transfer not created')
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000002', branchId: dest.id, role: 'manager' },
+    })
+    const rejected = await rejectStockTransfer({
+      transferId: request.transfer.id,
+      reason: 'Overstocked at destination',
+    })
+    if (!rejected.transfer) throw new Error('Transfer not rejected')
+
+    expect(rejected.transfer.status).toBe('rejected')
+
+    const unitsUnchanged = await db.select().from(schema.inventory).where(
+      and(
+        eq(schema.inventory.product_id, product.id),
+        eq(schema.inventory.branch_id, source.id),
+        eq(schema.inventory.status, 'Available'),
+      )
+    )
+    expect(unitsUnchanged.length).toBe(15)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Branch-scoping — staff cannot see other branch inventory
+// ---------------------------------------------------------------------------
+
+describe('getInventorySummary — branch scoping', () => {
+  it('returns only products belonging to the user branch', async () => {
+    const branchA = await seedBranch(db, { name: 'Branch A', gstin: '27AAAAA0000A1Z5' })
+    const branchB = await seedBranch(db, { name: 'Branch B', gstin: '27BBBBB0000B1Z3' })
+
+    const productA1 = await seedProduct(db, { branchId: branchA.id, sku: 'SKU-A1' })
+    const productA2 = await seedProduct(db, { branchId: branchA.id, sku: 'SKU-A2' })
+    await seedProduct(db, { branchId: branchB.id, sku: 'SKU-B1' })
+
+    await seedInventoryUnits(db, {
+      productId: productA1.id,
+      branchId: branchA.id,
+      count: 3,
+    })
+    await seedInventoryUnits(db, {
+      productId: productA2.id,
+      branchId: branchA.id,
+      count: 3,
+    })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branchA.id, role: 'staff' },
+    })
+
+    const summary = await getInventorySummary({ branchId: branchA.id })
+
+    expect(summary.products!).toHaveLength(2)
+    expect(summary.products!.map((p) => p.sku)).toEqual(
+      expect.arrayContaining(['SKU-A1', 'SKU-A2'])
+    )
+    expect(summary.products!.map((p) => p.sku)).not.toContain('SKU-B1')
+  })
+
+  it('rejects when user requests a different branch inventory', async () => {
+    const branchA = await seedBranch(db, { name: 'Branch X', gstin: '27AAAAA0000A1Z5' })
+    const branchB = await seedBranch(db, { name: 'Branch Y', gstin: '27BBBBB0000B1Z3' })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branchA.id, role: 'staff' },
+    })
+
+    const result = await getInventorySummary({ branchId: branchB.id })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/unauthorized|branch/i)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Stock adjustment
+// ---------------------------------------------------------------------------
+
+describe('adjustStock', () => {
+  it('adds stock for positive adjustment (found items)', async () => {
+    const branch = await seedBranch(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    await adjustStock({
+      branchId: branch.id,
+      productId: product.id,
+      adjustmentQty: 5,
+      reason: 'Stock count correction — found extra units',
+    })
+
+    const updatedUnits = await db.select().from(schema.inventory).where(
+      and(
+        eq(schema.inventory.product_id, product.id),
+        eq(schema.inventory.branch_id, branch.id),
+        eq(schema.inventory.status, 'Available'),
+      )
+    )
+    expect(updatedUnits.length).toBe(15)
+  })
+
+  it('reduces stock for negative adjustment (shrinkage/damage)', async () => {
+    const branch = await seedBranch(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    await adjustStock({
+      branchId: branch.id,
+      productId: product.id,
+      adjustmentQty: -3,
+      reason: 'Damaged — water spillage',
+    })
+
+    const updatedUnits = await db.select().from(schema.inventory).where(
+      and(
+        eq(schema.inventory.product_id, product.id),
+        eq(schema.inventory.branch_id, branch.id),
+        eq(schema.inventory.status, 'Available'),
+      )
+    )
+    expect(updatedUnits.length).toBe(7)
+  })
+
+  it('rejects adjustment that would make stock go negative', async () => {
+    const branch = await seedBranch(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 3 })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await adjustStock({
+      branchId: branch.id,
+      productId: product.id,
+      adjustmentQty: -10,
+      reason: 'Error',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/negative stock|insufficient/i)
+  })
+
+  it('requires a reason for adjustment audit trail', async () => {
+    const branch = await seedBranch(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await adjustStock({
+      branchId: branch.id,
+      productId: product.id,
+      adjustmentQty: 2,
+      reason: '',  // no reason
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/reason required/i)
+  })
+
+  it('rejects stock adjustment by staff (manager role required)', async () => {
+    const branch = await seedBranch(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
+    })
+
+    const result = await adjustStock({
+      branchId: branch.id,
+      productId: product.id,
+      adjustmentQty: 5,
+      reason: 'Test',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/permission|manager/i)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Serial number tracking
+// ---------------------------------------------------------------------------
+
+describe('allocateSerialNumber', () => {
+  it('allocates an available serial number to a transaction', async () => {
+    const branch = await seedBranch(db)
+    const product = await seedProduct(db, { branchId: branch.id, serialTracked: true })
+    await seedCounter(db, branch.id, 'INVOICE')
+
+    // Seed a serial number as available
+    const sn1 = crypto.randomUUID()
+    await db.insert(schema.serialNumbers).values({
+      id: sn1,
+      productId: product.id,
+      branchId: branch.id,
+      serialNumber: 'SN-ABC-001',
+      status: 'available',
+    })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
+    })
+
+    const txId = crypto.randomUUID()
+    const result = await allocateSerialNumber({
+      productId: product.id,
+      branchId: branch.id,
+      serialNumber: 'SN-ABC-001',
+      transactionId: txId,
+    })
+
+    expect(result.success).toBe(true)
+
+    const sn = await db.query.serialNumbers.findFirst({
+      where: eq(schema.serialNumbers.serialNumber, 'SN-ABC-001'),
+    })
+    expect(sn?.status).toBe('sold')
+    expect(sn?.transactionId).toBe(txId)
+  })
+
+  it('rejects allocation of an already-sold serial number', async () => {
+    const branch = await seedBranch(db)
+    const product = await seedProduct(db, { branchId: branch.id, serialTracked: true })
+
+    const sn2 = crypto.randomUUID()
+    await db.insert(schema.serialNumbers).values({
+      id: sn2,
+      productId: product.id,
+      branchId: branch.id,
+      serialNumber: 'SN-ABC-002',
+      status: 'sold',
+      transactionId: crypto.randomUUID(),
+    })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
+    })
+
+    const result = await allocateSerialNumber({
+      productId: product.id,
+      branchId: branch.id,
+      serialNumber: 'SN-ABC-002',
+      transactionId: crypto.randomUUID(),
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/already sold|not available/i)
+  })
+})

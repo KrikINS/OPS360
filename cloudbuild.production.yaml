@@ -1,0 +1,44 @@
+# cloudbuild.production.yaml — OPS360 PRODUCTION
+# Does NOT rebuild the Docker image or re-run tests.
+# Pulls the image already built and verified by the staging pipeline,
+# then deploys it to the production Cloud Run service.
+# Triggered on: production branch / production Cloud Build trigger,
+# AFTER the staging build has succeeded and pushed the image.
+
+steps:
+  # Pull the staging-verified image from Artifact Registry.
+  # This confirms the image exists before attempting a deploy.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'pull-image'
+    args:
+      - 'pull'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest'
+
+  # Deploy the pulled image to the production Cloud Run service.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--quiet'
+    waitFor: ['pull-image']
+
+substitutions:
+  _REGION: 'asia-south1'
+  _REPO_NAME: 'ops360-repo'
+  _APP_NAME: 'ops360-app'
+  _SERVICE_NAME: 'ops360-app-prod'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_STANDARD_2'
+
+timeout: '600s'

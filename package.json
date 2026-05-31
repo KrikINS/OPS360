@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "db:push:staging": "dotenv -e .env.staging -- drizzle-kit push",
-    "db:push:production": "dotenv -e .env.production -- drizzle-kit push"
+    "db:push:production": "dotenv -e .env.production -- drizzle-kit push",
+    "test": "vitest",
+    "test:unit": "vitest --project unit",
+    "test:integration": "cross-env NODE_ENV=test vitest --project integration",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
@@ -25,7 +30,6 @@
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "next-auth": "^4.24.14",
-    "pg": "^8.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-to-print": "3.3.0",
@@ -43,13 +47,17 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.7",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "pg": "^8.21.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   }
 }

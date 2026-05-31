@@ -67,12 +67,13 @@ export async function searchPosCustomersAction(term: string) {
 
 export async function processPosSaleAction(payload: Record<string, unknown>) {
   try {
-    const res = await db.execute(sql`SELECT process_pos_sale(${payload}::jsonb)`)
+    const res = await db.execute(sql`SELECT process_pos_sale(${JSON.stringify(payload)}::jsonb)`)
     const result = res as unknown as { rows?: { process_pos_sale: Record<string, unknown> }[] } | { process_pos_sale: Record<string, unknown> }[]
     const data = Array.isArray(result) ? result[0]?.process_pos_sale : result.rows?.[0]?.process_pos_sale
     return { data }
-  } catch (error) {
-    return { error: { message: String(error) } }
+  } catch (error: any) {
+    const errorString = String(error) + (error.cause ? " CAUSE: " + String(error.cause) : "");
+    return { error: { message: errorString } }
   }
 }
 

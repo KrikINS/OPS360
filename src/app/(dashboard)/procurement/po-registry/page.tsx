@@ -338,7 +338,7 @@ export default function ProcurementGRNPage() {
       const filteredData = grnData && Array.isArray(grnData) ? (grnData as unknown as { po_id: string, id: string }[]).filter((g) => g.po_id === po.id && (!grnId || g.id === grnId)) : []
 
       if (grnError) {
-        console.error('Supabase Query Error:', grnError);
+        console.error('Query error:', grnError);
         throw new Error(`Data retrieval failed: ${grnError.message}`);
       }
       
@@ -843,7 +843,7 @@ Are you sure you want to proceed?`)) return;
       
       const file_paths: string[] = []
       if (billFiles.length > 0) {
-        // File upload via storage not available without supabase - skip file upload and proceed with bill record
+        // File upload requires server-side GCS implementation — skipping for now, proceeding with bill record
         console.warn('File upload skipped: storage requires server-side implementation')
       }
 

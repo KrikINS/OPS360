@@ -232,11 +232,22 @@ export const sales_invoices = pgTable("sales_invoices", {
   invoice_number: text("invoice_number"),
   total_amount: numeric("total_amount"),
   created_at: timestamp("created_at").defaultNow(),
+  branch_id: uuid("branch_id"),
+  payment_mode: text("payment_mode"),
+  user_id: uuid("user_id"),
+  subtotal: numeric("subtotal"),
+  cgst: numeric("cgst"),
+  sgst: numeric("sgst"),
+  igst: numeric("igst"),
+  status: text("status").default('active'),
 });
 
 export const invoice_items = pgTable("invoice_items", {
   id: uuid("id").primaryKey().defaultRandom(),
   invoice_id: uuid("invoice_id"),
+  product_id: uuid("product_id"),
+  qty: integer("qty"),
+  unit_price: numeric("unit_price"),
 });
 
 export const customers = pgTable("customers", {
@@ -266,6 +277,16 @@ export const hsn_codes = pgTable("hsn_codes", {
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
+
+export const serialNumbers = pgTable("serial_numbers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  productId: uuid("product_id"),
+  branchId: uuid("branch_id"),
+  serialNumber: text("serial_number").notNull().unique(),
+  status: text("status").notNull().default("available"),
+  transactionId: uuid("transaction_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+})
 
 export const company_settings = pgTable("company_settings", {
   id: serial("id").primaryKey(),

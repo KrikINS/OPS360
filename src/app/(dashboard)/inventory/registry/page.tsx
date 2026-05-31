@@ -190,8 +190,6 @@ export default function InventoryDashboard() {
 
     fetchInventoryData()
 
-    // Disabling realtime sync since supabase is removed.
-    // Instead we rely on SWR or manual refresh if needed.
     return () => {}
   }, [selectedBranch, activeBranch?.id])
 

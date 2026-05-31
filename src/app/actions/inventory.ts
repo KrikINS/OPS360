@@ -4,7 +4,7 @@ import { db } from "@/db/client"
 import { inventory, products, branches, user_permissions } from "@/db/schema"
 import { eq, or, and, sql } from "drizzle-orm"
 
-export async function fetchInventoryDataAction(userId: string) {
+export async function fetchInventoryDataAction(userId: string, branchId?: string) {
   try {
     // Check export permission
     const permissions = await db.select()
@@ -21,7 +21,7 @@ export async function fetchInventoryDataAction(userId: string) {
     const allBranches = await db.select().from(branches)
 
     // Fetch Inventory with Product join
-    const query = db.select({
+    let query = db.select({
       id: inventory.id,
       serial_number: inventory.serial_number,
       status: inventory.status,
@@ -43,6 +43,10 @@ export async function fetchInventoryDataAction(userId: string) {
     })
     .from(inventory)
     .leftJoin(products, eq(inventory.product_id, products.id))
+    
+    if (branchId) {
+      query = query.where(eq(inventory.branch_id, branchId)) as any
+    }
 
     const dbInventory = await query;
     
