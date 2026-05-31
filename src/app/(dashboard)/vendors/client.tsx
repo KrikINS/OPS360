@@ -615,7 +615,7 @@ export default function VendorsClient({
               <DialogFooter className="flex justify-between items-center sm:justify-between">
                 <div>
                   {formStep > 1 && (
-                    <Button type="button" variant="outline" onClick={() => setFormStep(v => v - 1)}>
+                    <Button type="button" variant="outline" onClick={(e) => { e.preventDefault(); setFormStep(v => v - 1); }}>
                       Previous
                     </Button>
                   )}
@@ -623,7 +623,7 @@ export default function VendorsClient({
                 <div className="flex gap-2">
                   <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
                   {formStep < 3 ? (
-                    <Button type="button" className="bg-[#001529]" onClick={() => setFormStep(v => v + 1)}>
+                    <Button type="button" className="bg-[#001529]" onClick={(e) => { e.preventDefault(); setFormStep(v => v + 1); }}>
                       Next Step
                     </Button>
                   ) : (
