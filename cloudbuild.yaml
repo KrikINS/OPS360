@@ -68,9 +68,9 @@ steps:
     args:
       - '-c'
       - |
-        SHA=${SHORT_SHA:-manual}
+        _SHA=$${SHORT_SHA:-manual}
         docker build \
-          -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:$SHA \
+          -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:$$_SHA \
           -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest \
           .
     waitFor: ['test']
