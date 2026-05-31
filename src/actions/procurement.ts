@@ -3,7 +3,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
-import { purchase_orders } from '@/db/schema'
+import { purchase_orders, vendors, branches, products, hsn_codes } from '@/db/schema'
 import { eq, sql } from 'drizzle-orm'
 import { getPurchaseOrdersAction, getGRNReceiptsAction } from '@/app/actions/procurement'
 
@@ -49,6 +49,55 @@ export async function createPurchaseOrder(input: {
 
     const totalAmount = input.items.reduce((s, i) => s + i.orderedQty * i.unitCost, 0)
 
+    // ── Fetch vendor and branch state codes for GST determination ──
+    const [vendorRow] = await db
+      .select({ stateCode: vendors.state_code })
+      .from(vendors)
+      .where(eq(vendors.id, input.vendorId))
+      .limit(1)
+
+    const [branchRow] = await db
+      .select({ stateCode: branches.state_code })
+      .from(branches)
+      .where(eq(branches.id, input.branchId))
+      .limit(1)
+
+    const isInterState = vendorRow?.stateCode !== branchRow?.stateCode
+
+    // ── Calculate GST per line item ──
+    // products.hsn_code is a text column matching hsn_codes.hsn_code
+    let totalCgst = 0
+    let totalSgst = 0
+    let totalIgst = 0
+
+    for (const item of input.items) {
+      const lineValue = item.orderedQty * item.unitCost
+
+      const [hsnRow] = await db
+        .select({
+          cgstRate: hsn_codes.cgst_rate,
+          sgstRate: hsn_codes.sgst_rate,
+          igstRate: hsn_codes.igst_rate,
+        })
+        .from(products)
+        .innerJoin(hsn_codes, eq(products.hsn_code, hsn_codes.hsn_code))
+        .where(eq(products.id, item.productId))
+        .limit(1)
+
+      if (hsnRow) {
+        if (isInterState) {
+          totalIgst += lineValue * (Number(hsnRow.igstRate) / 100)
+        } else {
+          totalCgst += lineValue * (Number(hsnRow.cgstRate) / 100)
+          totalSgst += lineValue * (Number(hsnRow.sgstRate) / 100)
+        }
+      }
+    }
+
+    totalCgst = Math.round(totalCgst * 100) / 100
+    totalSgst = Math.round(totalSgst * 100) / 100
+    totalIgst = Math.round(totalIgst * 100) / 100
+
     const inserted = await db
       .insert(purchase_orders)
       .values({
@@ -58,6 +107,9 @@ export async function createPurchaseOrder(input: {
         branch_id: input.branchId,
         created_by: session.user.id,
         total_amount: String(totalAmount),
+        cgst_amount: String(totalCgst),
+        sgst_amount: String(totalSgst),
+        igst_amount: String(totalIgst),
       })
       .returning()
 
@@ -67,9 +119,9 @@ export async function createPurchaseOrder(input: {
       poNumber: rawPo.po_number,
       status: rawPo.status,
       subtotal: rawPo.total_amount ? Number(rawPo.total_amount) : 0,
-      cgst: 0,
-      sgst: 0,
-      igst: 0,
+      cgst: rawPo.cgst_amount ? Number(rawPo.cgst_amount) : 0,
+      sgst: rawPo.sgst_amount ? Number(rawPo.sgst_amount) : 0,
+      igst: rawPo.igst_amount ? Number(rawPo.igst_amount) : 0,
       items: input.items,
     } : undefined
     

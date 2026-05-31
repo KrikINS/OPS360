@@ -35,20 +35,26 @@ That cleanup is tracked separately in the procurement action files.
 - All 44 unit tests pass âœ“
 - npm run test:integration passes with real DB (pending DB setup)
 
-5. **GST Calculations in Procurement**
-   - Location: \src/actions/procurement.ts\ -> \createPurchaseOrder\
-   - Problem: The GST calculation logic is missing. The action currently hardcodes \cgst: 0, sgst: 0, igst: 0\ and does not look up vendor/branch states or HSN GST rates. The integration tests have been marked as \it.todo\ pending actual implementation.
+### 5. GST Calculations in Procurement (RESOLVED 2026-06-01)
+   - Location: `src/actions/procurement.ts` â†’ `createPurchaseOrder`
+   - Resolution: GST calculation implemented. Vendor and branch `state_code`
+     columns are compared to determine inter-state vs intra-state supply.
+     HSN rates are fetched per line item via `products.hsn_code = hsn_codes.hsn_code`
+     join. CGST+SGST applied for intra-state; IGST applied for inter-state.
+     Totals persisted to `purchase_orders.cgst_amount`, `sgst_amount`, `igst_amount`
+     (columns added to schema and both test + staging DBs).
+     Both `it.todo` tests now pass. Suite: 79 passed | 4 todo | 0 failed.
 
 
-### 6. GRN table missing from schema (HIGH — procurement gap)
-File: \src/actions/procurement.ts\ — \createGRN\
+### 6. GRN table missing from schema (HIGH ï¿½ procurement gap)
+File: \src/actions/procurement.ts\ ï¿½ \createGRN\
 Tests: 3 tests marked it.todo
 Issue: \createGRN\ calls \getGRNReceiptsAction\ which queries \grn_receipts\ table that does not exist in \src/db/schema.ts\. The entire GRN receipt flow is unimplemented at the DB layer.
 Fix: Add \grn_receipts\ (or \goods_receipt_notes\) table to schema, run \drizzle-kit push\, implement \createGRN\ logic against real table.
 
 
 ### 7. createReturnToVendor not implemented (MEDIUM)
-File: \src/actions/procurement.ts\ — \createReturnToVendor\
+File: \src/actions/procurement.ts\ ï¿½ \createReturnToVendor\
 Tests: 1 test marked it.todo
 Issue: Function is a stub. Returns success: true without writing to any table. No inventory rows are updated.
 Fix: Implement to update N inventory rows for the returned product+branch from 'Available' to 'Returned', then return { success: true }. Use same pattern as adjustStock.

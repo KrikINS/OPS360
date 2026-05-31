@@ -14,7 +14,7 @@ import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest
 import { getServerSession } from 'next-auth'
 import {
   setupTestDb, cleanupTestDb, teardownTestDb,
-  seedBranch, seedVendor, seedProduct, seedCounter,
+  seedBranch, seedVendor, seedProduct, seedCounter, seedHsn,
 } from '@/test/db'
 import {
   createPurchaseOrder,
@@ -58,9 +58,53 @@ describe('createPurchaseOrder', () => {
     expect(result.po.poNumber).toMatch(/^PO\//)
   })
 
-  it.todo('applies inter-state IGST when vendor state differs from branch state')
+  it('applies inter-state IGST when vendor state differs from branch state', async () => {
+    const branch = await seedBranch(db, { stateCode: '27' }) // Maharashtra
+    const vendor = await seedVendor(db, { stateCode: '29' }) // Karnataka
+    const hsn = await seedHsn(db, { igstRate: 18, cgstRate: 9, sgstRate: 9 })
+    const product = await seedProduct(db, { branchId: branch.id, hsnId: hsn.id })
+    await seedCounter(db, branch.id, 'PO')
 
-  it.todo('uses CGST+SGST when vendor and branch are in the same state')
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await createPurchaseOrder({
+      branchId: branch.id,
+      vendorId: vendor.id,
+      items: [{ productId: product.id, orderedQty: 5, unitCost: 1000 }],
+      expectedDeliveryDate: '2025-06-01',
+    }) as any
+
+    expect(result.success).toBe(true)
+    expect(result.po.igst).toBeGreaterThan(0)
+    expect(result.po.cgst).toBe(0)
+    expect(result.po.sgst).toBe(0)
+  })
+
+  it('uses CGST+SGST when vendor and branch are in the same state', async () => {
+    const branch = await seedBranch(db, { stateCode: '27' }) // Maharashtra
+    const vendor = await seedVendor(db, { stateCode: '27' }) // Maharashtra
+    const hsn = await seedHsn(db, { cgstRate: 9, sgstRate: 9, igstRate: 18 })
+    const product = await seedProduct(db, { branchId: branch.id, hsnId: hsn.id })
+    await seedCounter(db, branch.id, 'PO')
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await createPurchaseOrder({
+      branchId: branch.id,
+      vendorId: vendor.id,
+      items: [{ productId: product.id, orderedQty: 5, unitCost: 1000 }],
+      expectedDeliveryDate: '2025-06-01',
+    }) as any
+
+    expect(result.success).toBe(true)
+    expect(result.po.cgst).toBeGreaterThan(0)
+    expect(result.po.sgst).toBeGreaterThan(0)
+    expect(result.po.igst).toBe(0)
+  })
 })
 
 // ---------------------------------------------------------------------------

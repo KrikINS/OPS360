@@ -75,14 +75,16 @@ type SeedBranchOpts = {
   name?: string
   gstin?: string
   state?: string
+  stateCode?: string
 }
 
 export async function seedBranch(db: TestDb, opts: SeedBranchOpts = {}) {
+  const stateCode = opts.stateCode ?? '27'
   const branch = {
     name: opts.name ?? 'Test Branch Mumbai',
-    gstin: opts.gstin ?? '27AAAAA0000A1Z5',
+    gstin: opts.gstin ?? `${stateCode}AAAAA0000A1Z5`,
     state: opts.state ?? 'Maharashtra',
-    state_code: '27',
+    state_code: stateCode,
     full_address: '123 Test Street, Mumbai',
     phone: '9999999999',
     type: 'Store',
@@ -150,7 +152,21 @@ type SeedProductOpts = {
 
 export async function seedProduct(db: TestDb, opts: SeedProductOpts = {}) {
   if (!opts.branchId) await seedBranch(db)
-  const hsn = await seedHsn(db)
+
+  // If a specific HSN record id is provided, look it up; otherwise create a fresh one
+  let hsn: typeof schema.hsn_codes.$inferSelect
+  if (opts.hsnId) {
+    const [found] = await db
+      .select()
+      .from(schema.hsn_codes)
+      .where(sql`${schema.hsn_codes.id} = ${opts.hsnId}`)
+      .limit(1)
+    if (!found) throw new Error(`seedProduct: hsn_codes row not found for id ${opts.hsnId}`)
+    hsn = found
+  } else {
+    hsn = await seedHsn(db)
+  }
+
   const productCode = opts.sku ?? `SKU-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
   const productData = {
@@ -170,14 +186,16 @@ export async function seedProduct(db: TestDb, opts: SeedProductOpts = {}) {
 type SeedVendorOpts = {
   gstin?: string
   state?: string
+  stateCode?: string
 }
 
 export async function seedVendor(db: TestDb, opts: SeedVendorOpts = {}) {
+  const stateCode = opts.stateCode ?? '29'
   const vendor = {
     name: 'Test Supplier Pvt Ltd',
-    gstin: opts.gstin ?? '29BBBBB0000B1Z3',
+    gstin: opts.gstin ?? `${stateCode}BBBBB0000B1Z3`,
     state: opts.state ?? 'Karnataka',
-    state_code: '29',
+    state_code: stateCode,
     phone: '9888888888',
     email: 'vendor@test.com',
     status: 'Active',
