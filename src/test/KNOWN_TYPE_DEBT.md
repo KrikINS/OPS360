@@ -36,26 +36,34 @@ That cleanup is tracked separately in the procurement action files.
 - npm run test:integration passes with real DB (pending DB setup)
 
 ### 5. GST Calculations in Procurement (RESOLVED 2026-06-01)
-   - Location: `src/actions/procurement.ts` → `createPurchaseOrder`
-   - Resolution: GST calculation implemented. Vendor and branch `state_code`
+   - Location: src/actions/procurement.ts -> createPurchaseOrder
+   - Resolution: GST calculation implemented. Vendor and branch state_code
      columns are compared to determine inter-state vs intra-state supply.
-     HSN rates are fetched per line item via `products.hsn_code = hsn_codes.hsn_code`
+     HSN rates are fetched per line item via products.hsn_code = hsn_codes.hsn_code
      join. CGST+SGST applied for intra-state; IGST applied for inter-state.
-     Totals persisted to `purchase_orders.cgst_amount`, `sgst_amount`, `igst_amount`
+     Totals persisted to purchase_orders.cgst_amount, sgst_amount, igst_amount
      (columns added to schema and both test + staging DBs).
-     Both `it.todo` tests now pass. Suite: 79 passed | 4 todo | 0 failed.
+     Both it.todo tests now pass. Suite: 79 passed | 4 todo | 0 failed.
 
-
-### 6. GRN table missing from schema (HIGH � procurement gap)
-File: \src/actions/procurement.ts\ � \createGRN\
-Tests: 3 tests marked it.todo
-Issue: \createGRN\ calls \getGRNReceiptsAction\ which queries \grn_receipts\ table that does not exist in \src/db/schema.ts\. The entire GRN receipt flow is unimplemented at the DB layer.
-Fix: Add \grn_receipts\ (or \goods_receipt_notes\) table to schema, run \drizzle-kit push\, implement \createGRN\ logic against real table.
-
+### 6. GRN receipt flow (RESOLVED 2026-06-01)
+File: src/actions/procurement.ts -> createGRN
+Resolution: Full GRN receipt flow implemented.
+- Added po_items, grn_receipts, grn_items tables to schema.
+- Added product_id, po_item_id, ordered_qty, received_qty, shortfall
+  columns to discrepancies table.
+- createPurchaseOrder now inserts po_items rows and returns them with real IDs.
+- createGRN generates a GRN number, calculates landed cost per unit,
+  inserts grn_receipts header, grn_items per line, one inventory row
+  per received unit (status=Available, landed_cost set), and a discrepancies
+  row for any shortfall. Updates po_items.received_qty.
+- Removed dead getGRNReceiptsAction call.
+- All 3 GRN it.todo tests now pass. Suite: 82 passed | 1 todo | 0 failed.
 
 ### 7. createReturnToVendor not implemented (MEDIUM)
-File: \src/actions/procurement.ts\ � \createReturnToVendor\
+File: src/actions/procurement.ts -> createReturnToVendor
 Tests: 1 test marked it.todo
-Issue: Function is a stub. Returns success: true without writing to any table. No inventory rows are updated.
-Fix: Implement to update N inventory rows for the returned product+branch from 'Available' to 'Returned', then return { success: true }. Use same pattern as adjustStock.
-
+Issue: Function is a stub. Returns success: true without writing to any table.
+No inventory rows are updated.
+Fix: Implement to update N inventory rows for the returned product+branch from
+'Available' to 'Returned', then return { success: true }.
+Use same pattern as adjustStock.

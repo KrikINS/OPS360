@@ -119,6 +119,11 @@ export const discrepancies = pgTable("discrepancies", {
   status: text("status"),
   admin_comment: text("admin_comment"),
   created_at: timestamp("created_at").defaultNow(),
+  product_id: uuid("product_id"),
+  po_item_id: uuid("po_item_id"),
+  ordered_qty: integer("ordered_qty"),
+  received_qty: integer("received_qty"),
+  shortfall: integer("shortfall"),
 });
 
 export const app_settings = pgTable("app_settings", {
@@ -299,3 +304,36 @@ export const company_settings = pgTable("company_settings", {
   support_email: text("support_email"),
   billing_address: text("billing_address"),
 });
+
+export const po_items = pgTable("po_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  po_id: uuid("po_id").notNull(),
+  product_id: uuid("product_id").notNull(),
+  ordered_qty: integer("ordered_qty").notNull(),
+  unit_cost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
+  received_qty: integer("received_qty").default(0),
+  created_at: timestamp("created_at").defaultNow(),
+})
+
+export const grn_receipts = pgTable("grn_receipts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  grn_number: text("grn_number").notNull(),
+  po_id: uuid("po_id").notNull(),
+  branch_id: uuid("branch_id").notNull(),
+  created_by: uuid("created_by").notNull(),
+  total_landed_cost: numeric("total_landed_cost", { precision: 12, scale: 2 }).default('0'),
+  has_discrepancy: boolean("has_discrepancy").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+})
+
+export const grn_items = pgTable("grn_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  grn_id: uuid("grn_id").notNull(),
+  po_item_id: uuid("po_item_id").notNull(),
+  product_id: uuid("product_id").notNull(),
+  ordered_qty: integer("ordered_qty").notNull(),
+  received_qty: integer("received_qty").notNull(),
+  unit_cost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
+  landed_unit_cost: numeric("landed_unit_cost", { precision: 12, scale: 2 }).default('0'),
+  created_at: timestamp("created_at").defaultNow(),
+})

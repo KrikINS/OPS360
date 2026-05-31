@@ -36,6 +36,10 @@ export async function cleanupTestDb(db: TestDb): Promise<void> {
   // RESTART IDENTITY resets serial sequences so IDs are predictable across tests.
   await db.execute(sql`
     TRUNCATE TABLE
+      grn_items,
+      grn_receipts,
+      discrepancies,
+      po_items,
       stock_transfer_items,
       stock_transfers,
       stock_requests,

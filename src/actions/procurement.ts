@@ -3,9 +3,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
-import { purchase_orders, vendors, branches, products, hsn_codes } from '@/db/schema'
+import { purchase_orders, po_items, grn_receipts, grn_items, discrepancies, vendors, branches, products, hsn_codes, inventory } from '@/db/schema'
 import { eq, sql } from 'drizzle-orm'
-import { getPurchaseOrdersAction, getGRNReceiptsAction } from '@/app/actions/procurement'
+import { getPurchaseOrdersAction } from '@/app/actions/procurement'
 
 export type PurchaseOrderItem = {
   productId: string
@@ -114,7 +114,27 @@ export async function createPurchaseOrder(input: {
       .returning()
 
     const rawPo = inserted[0]
-    const po = rawPo ? {
+    if (!rawPo) return { success: false as const, error: 'Insert returned no rows' }
+
+    // Insert line items into po_items
+    if (input.items.length > 0) {
+      await db.insert(po_items).values(
+        input.items.map(item => ({
+          po_id: rawPo.id,
+          product_id: item.productId,
+          ordered_qty: item.orderedQty,
+          unit_cost: String(item.unitCost),
+        }))
+      )
+    }
+
+    // Query back inserted po_items so callers have real IDs
+    const insertedItems = await db
+      .select()
+      .from(po_items)
+      .where(eq(po_items.po_id, rawPo.id))
+
+    const po = {
       id: rawPo.id,
       poNumber: rawPo.po_number,
       status: rawPo.status,
@@ -122,9 +142,14 @@ export async function createPurchaseOrder(input: {
       cgst: rawPo.cgst_amount ? Number(rawPo.cgst_amount) : 0,
       sgst: rawPo.sgst_amount ? Number(rawPo.sgst_amount) : 0,
       igst: rawPo.igst_amount ? Number(rawPo.igst_amount) : 0,
-      items: input.items,
-    } : undefined
-    
+      items: insertedItems.map(i => ({
+        id: i.id,
+        productId: i.product_id,
+        orderedQty: i.ordered_qty,
+        unitCost: Number(i.unit_cost),
+      })),
+    }
+
     return { success: true as const, po }
   } catch (error) { console.error('PROCUREMENT ERROR:', error);
     return { success: false as const, error: (error as Error).message }
@@ -193,31 +218,163 @@ export async function createGRN(input: {
   }
 
   try {
-    // Verify PO is approved
-    const poRows = await db
+    // 1. Verify PO is approved
+    const [po] = await db
       .select()
       .from(purchase_orders)
       .where(eq(purchase_orders.id, input.poId))
+      .limit(1)
 
-    const po = poRows[0]
     if (!po) return { success: false as const, error: 'Purchase order not found' }
     if (po.status !== 'approved') {
       return { success: false as const, error: 'Purchase order is not approved — must approve before receiving' }
     }
 
-    const grnResult = await getGRNReceiptsAction(input.poId)
-    if (grnResult.error) {
-      return { success: false as const, error: grnResult.error.message }
+    // 2. Generate GRN number
+    const year = new Date().getFullYear()
+    await db.execute(sql`
+      INSERT INTO sequential_counters (prefix, year, current_value)
+      VALUES ('GRN', ${year}, 1)
+      ON CONFLICT (prefix, year) DO UPDATE
+        SET current_value = sequential_counters.current_value + 1
+    `)
+    const counterRes = await db.execute(sql`
+      SELECT current_value FROM sequential_counters
+      WHERE prefix = 'GRN' AND year = ${year}
+    `)
+    const counterResult = counterRes as unknown as { rows?: { current_value: number }[] } | { current_value: number }[]
+    const counterValue = Array.isArray(counterResult)
+      ? counterResult[0]?.current_value
+      : (counterResult as { rows?: { current_value: number }[] }).rows?.[0]?.current_value
+    const grnNumber = `GRN/${year}/${counterValue}`
+
+    // 3. Total landed cost spread across all received units
+    const totalLandedCost = Object.values(input.landedCosts)
+      .reduce((sum, v) => sum + (v ?? 0), 0)
+    const totalReceivedUnits = input.items.reduce((sum, i) => sum + i.receivedQty, 0)
+    const landedCostPerUnit = totalReceivedUnits > 0
+      ? totalLandedCost / totalReceivedUnits
+      : 0
+
+    // 4. Process each line item
+    type GrnItemData = {
+      poItemId: string
+      productId: string
+      orderedQty: number
+      receivedQty: number
+      unitCost: number
+      landedUnitCost: number
+      shortfall: number
+    }
+    const grnItemsData: GrnItemData[] = []
+    let hasDiscrepancy = false
+
+    for (const item of input.items) {
+      const [poItem] = await db
+        .select()
+        .from(po_items)
+        .where(eq(po_items.id, item.poItemId))
+        .limit(1)
+
+      if (!poItem) {
+        return { success: false as const, error: `PO item not found: ${item.poItemId}` }
+      }
+
+      const shortfall = poItem.ordered_qty - item.receivedQty
+      if (shortfall > 0) hasDiscrepancy = true
+
+      const landedUnitCost = Math.round(
+        (Number(poItem.unit_cost) + landedCostPerUnit) * 100
+      ) / 100
+
+      grnItemsData.push({
+        poItemId: item.poItemId,
+        productId: poItem.product_id,
+        orderedQty: poItem.ordered_qty,
+        receivedQty: item.receivedQty,
+        unitCost: Number(poItem.unit_cost),
+        landedUnitCost,
+        shortfall,
+      })
+    }
+
+    // 5. Insert grn_receipts header
+    const [grnHeader] = await db
+      .insert(grn_receipts)
+      .values({
+        grn_number: grnNumber,
+        po_id: input.poId,
+        branch_id: input.branchId,
+        created_by: session.user.id,
+        total_landed_cost: String(Math.round(totalLandedCost * 100) / 100),
+        has_discrepancy: hasDiscrepancy,
+      })
+      .returning()
+
+    // 6. Insert grn_items + inventory rows + discrepancy records
+    for (const item of grnItemsData) {
+      // grn_items row
+      await db.insert(grn_items).values({
+        grn_id: grnHeader.id,
+        po_item_id: item.poItemId,
+        product_id: item.productId,
+        ordered_qty: item.orderedQty,
+        received_qty: item.receivedQty,
+        unit_cost: String(item.unitCost),
+        landed_unit_cost: String(item.landedUnitCost),
+      })
+
+      // Inventory rows — one Available unit per received qty
+      if (item.receivedQty > 0) {
+        await db.insert(inventory).values(
+          Array.from({ length: item.receivedQty }, () => ({
+            product_id: item.productId,
+            branch_id: input.branchId,
+            status: 'Available',
+            price: String(item.unitCost),
+            landed_cost: String(item.landedUnitCost),
+            source_po_id: input.poId,
+          }))
+        )
+      }
+
+      // Discrepancy record for any shortfall
+      if (item.shortfall > 0) {
+        await db.insert(discrepancies).values({
+          po_id: input.poId,
+          product_id: item.productId,
+          po_item_id: item.poItemId,
+          discrepancy_type: 'short_shipment',
+          status: 'open',
+          ordered_qty: item.orderedQty,
+          received_qty: item.receivedQty,
+          shortfall: item.shortfall,
+        })
+      }
+
+      // Update po_items.received_qty
+      await db
+        .update(po_items)
+        .set({ received_qty: item.receivedQty })
+        .where(eq(po_items.id, item.poItemId))
     }
 
     return {
       success: true as const,
       grn: {
+        id: grnHeader.id,
+        grnNumber,
         poId: input.poId,
-        items: input.items,
-        landedCosts: input.landedCosts,
-        hasDiscrepancy: false,
-        discrepancyItems: [],
+        hasDiscrepancy,
+        discrepancyItems: grnItemsData
+          .filter(i => i.shortfall > 0)
+          .map(i => ({
+            productId: i.productId,
+            orderedQty: i.orderedQty,
+            receivedQty: i.receivedQty,
+            shortfall: i.shortfall,
+          })),
+        items: grnItemsData,
       },
     }
   } catch (error) { console.error('PROCUREMENT ERROR:', error);
