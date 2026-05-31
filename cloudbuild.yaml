@@ -42,7 +42,7 @@ steps:
         done
 
         # ── Run tests ──────────────────────────────────────────────────
-        npm ci
+        npm install --no-audit --prefer-offline || npm install --no-audit
         npm run test:unit
         npm run test:integration
     env:
