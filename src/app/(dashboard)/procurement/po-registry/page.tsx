@@ -107,7 +107,7 @@ type Product = {
   model_name: string
   brand: string
   hsn_code: string
-  base_price: number
+  base_price: number | null
   product_code: string
 }
 
@@ -548,7 +548,7 @@ export default function ProcurementGRNPage() {
     if (product && !poItems.find(i => i.product_id === productId)) {
       // Calculate tax and total using compliance utility, passing vendor state
       const costDetails = calculateLandedCost(
-        product.base_price,
+        product.base_price ?? 0,
         0,
         product.hsn_code,
         selectedVendor?.state // Uses Kerala default if vendor state is missing
@@ -558,7 +558,7 @@ export default function ProcurementGRNPage() {
         id: `draft-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         product_id: product.id,
         quantity: 1,
-        unit_price: product.base_price,
+        unit_price: product.base_price ?? 0,
         received_quantity: 0,
         tax_rate: costDetails.gstRate,
         total_item_cost: costDetails.totalBatchCost,
@@ -1180,7 +1180,7 @@ Are you sure you want to proceed?`)) return;
                                 <div className="flex items-center gap-3 text-[10px] uppercase font-black tracking-widest text-slate-400">
                                   <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">SKU: {p.product_code}</span>
                                   <span>{p.brand}</span>
-                                  <span className="text-blue-500">₹{p.base_price.toLocaleString()}</span>
+                                  <span className="text-blue-500">₹{p.base_price?.toLocaleString() ?? '0'}</span>
                                 </div>
                               </CommandItem>
                             ))}
@@ -1233,7 +1233,7 @@ Are you sure you want to proceed?`)) return;
                                   className={cn(
                                     "w-36 pl-5 h-8 text-xs font-bold transition-all",
                                     (products.find(p => p.id === item.product_id)?.base_price && (
-                                      Math.abs((item.unit_price - products.find(p => p.id === item.product_id)!.base_price) / products.find(p => p.id === item.product_id)!.base_price) > 0.1
+                                      Math.abs((item.unit_price - (products.find(p => p.id === item.product_id)?.base_price ?? 0)) / (products.find(p => p.id === item.product_id)?.base_price ?? 1)) > 0.1
                                     ))
                                       ? "border-amber-400 bg-amber-50 focus:ring-amber-500 pr-8 shadow-[0_0_0_1px_rgba(251,191,36,0.3)] animate-pulse"
                                       : "border-slate-200"
@@ -1278,7 +1278,7 @@ Are you sure you want to proceed?`)) return;
                                         <div className="space-y-1 text-[11px]">
                                           <p className="flex items-center gap-1.5"><ShieldAlert className="h-3 w-3" /> Price Deviation Detected</p>
                                           <p className="opacity-90 font-medium">Entered: ₹{item.unit_price.toLocaleString()}</p>
-                                          <p className="opacity-90 font-medium text-amber-100">Master: ₹{products.find(p => p.id === item.product_id)?.base_price.toLocaleString()}</p>
+                                          <p className="opacity-90 font-medium text-amber-100">Master: ₹{products.find(p => p.id === item.product_id)?.base_price?.toLocaleString() ?? '0'}</p>
                                           <p className="pt-1 mt-1 border-t border-white/20">The price deviates by more than 10% from the Product Master Registry.</p>
                                         </div>
                                       </TooltipContent>
@@ -1328,7 +1328,7 @@ Are you sure you want to proceed?`)) return;
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">₹{(item.unit_price * item.quantity).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">₹{((item.unit_price ?? 0) * (item.quantity ?? 0)).toLocaleString()}</TableCell>
                             <TableCell>
                               <Button variant="ghost" size="sm" onClick={() => setPoItems(poItems.filter((_, i: number) => i !== idx))}>Remove</Button>
                             </TableCell>
@@ -3082,7 +3082,7 @@ Are you sure you want to proceed?`)) return;
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] font-bold text-slate-400 tracking-widest uppercase">
-                            {new Date(bill.created_at).toLocaleDateString()}
+                            {bill.created_at ? new Date(bill.created_at).toLocaleDateString() : '—'}
                           </span>
                           <button 
                             type="button"
