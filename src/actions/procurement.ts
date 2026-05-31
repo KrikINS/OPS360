@@ -3,8 +3,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
-import { purchase_orders, po_items, grn_receipts, grn_items, discrepancies, vendors, branches, products, hsn_codes, inventory } from '@/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { purchase_orders, po_items, grn_receipts, grn_items, discrepancies, vendors, branches, products, hsn_codes, inventory, inventory_transactions } from '@/db/schema'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { getPurchaseOrdersAction } from '@/app/actions/procurement'
 
 export type PurchaseOrderItem = {
@@ -391,12 +391,55 @@ export async function createReturnToVendor(input: {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
   }
 
+  const role = (session.user.role ?? '').toLowerCase()
+  if (role !== 'manager' && role !== 'admin' && role !== 'super_admin' && role !== 'admin/owner') {
+    return { success: false as const, error: 'Insufficient permission: manager required' }
+  }
+
   try {
-    const { getPurchaseOrdersAction: _getPO } = await import('@/app/actions/procurement')
-    void _getPO
-    void input
+    for (const item of input.items) {
+      const availableRows = await db
+        .select({ id: inventory.id })
+        .from(inventory)
+        .where(
+          and(
+            eq(inventory.product_id, item.productId),
+            eq(inventory.branch_id, session.user.branchId),
+            eq(inventory.status, 'Available')
+          )
+        )
+        .limit(item.qty)
+
+      if (availableRows.length < item.qty) {
+        return {
+          success: false as const,
+          error: `Insufficient stock to return — only ${availableRows.length} units available for product ${item.productId}`,
+        }
+      }
+
+      const ids = availableRows.map(r => r.id)
+
+      await db
+        .update(inventory)
+        .set({ status: 'Returned', updated_at: new Date() })
+        .where(inArray(inventory.id, ids))
+
+      await db.insert(inventory_transactions).values(
+        ids.map(id => ({
+          product_id: item.productId,
+          branch_id: session.user.branchId,
+          transaction_type: 'return_to_vendor',
+          quantity: -1,
+          reference_id: input.poId,
+          created_by: session.user.id,
+          inventory_id: id,
+        }))
+      )
+    }
+
     return { success: true as const }
-  } catch (error) { console.error('PROCUREMENT ERROR:', error);
+  } catch (error) {
+    console.error('PROCUREMENT ERROR:', error)
     return { success: false as const, error: (error as Error).message }
   }
 }

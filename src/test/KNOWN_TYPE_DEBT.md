@@ -59,11 +59,13 @@ Resolution: Full GRN receipt flow implemented.
 - Removed dead getGRNReceiptsAction call.
 - All 3 GRN it.todo tests now pass. Suite: 82 passed | 1 todo | 0 failed.
 
-### 7. createReturnToVendor not implemented (MEDIUM)
+### 7. createReturnToVendor not implemented (RESOLVED 2026-06-01)
 File: src/actions/procurement.ts -> createReturnToVendor
-Tests: 1 test marked it.todo
-Issue: Function is a stub. Returns success: true without writing to any table.
-No inventory rows are updated.
-Fix: Implement to update N inventory rows for the returned product+branch from
-'Available' to 'Returned', then return { success: true }.
-Use same pattern as adjustStock.
+Resolution: Implemented. Flips qty inventory rows from Available to Returned
+per item, scoped to session.user.branchId. Checks available stock before
+updating — rejects with an error if insufficient. Records each flipped row
+in inventory_transactions (transaction_type='return_to_vendor') for audit trail.
+Also added branchId to next-auth Session/User/JWT type augmentation in
+src/types/next-auth.d.ts so session.user.branchId compiles without error.
+1 test now passing. 0 todo items remain in procurement.test.ts.
+Suite: 83 passed | 0 todo | 0 failed.

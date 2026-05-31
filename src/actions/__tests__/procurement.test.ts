@@ -22,6 +22,7 @@ import {
   createPurchaseOrder,
   approvePurchaseOrder,
   createGRN,
+  createReturnToVendor,
 } from '@/actions/procurement'
 import type { TestDb } from '@/test/db'
 
@@ -373,5 +374,69 @@ describe('createGRN', () => {
 // ---------------------------------------------------------------------------
 
 describe('createReturnToVendor', () => {
-  it.todo('decrements stock when goods are returned')
+  it('decrements stock when goods are returned', async () => {
+    const branch = await seedBranch(db)
+    const vendor = await seedVendor(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedCounter(db, branch.id, 'PO')
+    await seedCounter(db, branch.id, 'GRN')
+
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: {
+        id: '00000000-0000-0000-0000-000000000001',
+        branchId: branch.id,
+        role: 'manager',
+      },
+    })
+
+    // Create and approve a PO, receive 10 units via GRN
+    const po = await createPurchaseOrder({
+      branchId: branch.id,
+      vendorId: vendor.id,
+      items: [{ productId: product.id, orderedQty: 10, unitCost: 500 }],
+      expectedDeliveryDate: '2025-06-01',
+    }) as any
+    await approvePurchaseOrder({ poId: po.po.id })
+    await createGRN({
+      poId: po.po.id,
+      branchId: branch.id,
+      items: [{ poItemId: po.po.items[0].id, receivedQty: 10 }],
+      landedCosts: {},
+    })
+    // Stock is now 10 Available units
+
+    // Return 3 units
+    const result = await createReturnToVendor({
+      poId: po.po.id,
+      items: [{ productId: product.id, qty: 3, reason: 'Damaged on arrival' }],
+    })
+
+    expect(result.success).toBe(true)
+
+    // 7 units should remain Available
+    const available = await db
+      .select()
+      .from(schema.inventory)
+      .where(
+        and(
+          eq(schema.inventory.product_id, product.id),
+          eq(schema.inventory.branch_id, branch.id),
+          eq(schema.inventory.status, 'Available')
+        )
+      )
+    expect(available.length).toBe(7)
+
+    // 3 units should be Returned
+    const returned = await db
+      .select()
+      .from(schema.inventory)
+      .where(
+        and(
+          eq(schema.inventory.product_id, product.id),
+          eq(schema.inventory.branch_id, branch.id),
+          eq(schema.inventory.status, 'Returned')
+        )
+      )
+    expect(returned.length).toBe(3)
+  })
 })
