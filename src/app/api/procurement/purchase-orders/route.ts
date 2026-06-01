@@ -15,14 +15,20 @@ export async function GET() {
         row_to_json(b.*) AS branch,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
-            'id', pi.id,
-            'po_id', pi.po_id,
-            'product_id', pi.product_id,
-            'ordered_qty', pi.ordered_qty,
-            'unit_cost', pi.unit_cost,
+            'id',                pi.id,
+            'po_id',             pi.po_id,
+            'product_id',        pi.product_id,
+            'quantity',          pi.ordered_qty,
+            'unit_price',        pi.unit_cost,
+            'tax_rate',          COALESCE(h.gst_rate, p.gst_rate, 0),
+            'total_item_cost',   pi.ordered_qty * pi.unit_cost * (1 + COALESCE(h.gst_rate, p.gst_rate, 0) / 100),
+            'received_quantity', COALESCE(pi.received_qty, 0),
             'product', jsonb_build_object(
-              'id', p.id,
-              'model_name', p.model_name
+              'id',           p.id,
+              'model_name',   p.model_name,
+              'product_code', p.product_code,
+              'hsn_code',     p.hsn_code,
+              'brand',        p.brand
             )
           )) FILTER (WHERE pi.id IS NOT NULL), '[]'
         ) AS items,
@@ -49,6 +55,7 @@ export async function GET() {
       LEFT JOIN branches b ON po.branch_id = b.id
       LEFT JOIN po_items pi ON pi.po_id = po.id
       LEFT JOIN products p ON pi.product_id = p.id
+      LEFT JOIN hsn_codes h ON h.hsn_code = p.hsn_code
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
       GROUP BY po.id, v.id, b.id
@@ -169,14 +176,20 @@ export async function POST(request: NextRequest) {
         row_to_json(b.*) AS branch,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
-            'id', pi.id,
-            'po_id', pi.po_id,
-            'product_id', pi.product_id,
-            'ordered_qty', pi.ordered_qty,
-            'unit_cost', pi.unit_cost,
+            'id',                pi.id,
+            'po_id',             pi.po_id,
+            'product_id',        pi.product_id,
+            'quantity',          pi.ordered_qty,
+            'unit_price',        pi.unit_cost,
+            'tax_rate',          COALESCE(h.gst_rate, p.gst_rate, 0),
+            'total_item_cost',   pi.ordered_qty * pi.unit_cost * (1 + COALESCE(h.gst_rate, p.gst_rate, 0) / 100),
+            'received_quantity', COALESCE(pi.received_qty, 0),
             'product', jsonb_build_object(
-              'id', p.id,
-              'model_name', p.model_name
+              'id',           p.id,
+              'model_name',   p.model_name,
+              'product_code', p.product_code,
+              'hsn_code',     p.hsn_code,
+              'brand',        p.brand
             )
           )) FILTER (WHERE pi.id IS NOT NULL), '[]'
         ) AS items,
@@ -203,6 +216,7 @@ export async function POST(request: NextRequest) {
       LEFT JOIN branches b ON po.branch_id = b.id
       LEFT JOIN po_items pi ON pi.po_id = po.id
       LEFT JOIN products p ON pi.product_id = p.id
+      LEFT JOIN hsn_codes h ON h.hsn_code = p.hsn_code
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
       WHERE po.id = ${poRecord.id}
@@ -296,14 +310,20 @@ export async function PATCH(request: NextRequest) {
         row_to_json(b.*) AS branch,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
-            'id', pi.id,
-            'po_id', pi.po_id,
-            'product_id', pi.product_id,
-            'ordered_qty', pi.ordered_qty,
-            'unit_cost', pi.unit_cost,
+            'id',                pi.id,
+            'po_id',             pi.po_id,
+            'product_id',        pi.product_id,
+            'quantity',          pi.ordered_qty,
+            'unit_price',        pi.unit_cost,
+            'tax_rate',          COALESCE(h.gst_rate, p.gst_rate, 0),
+            'total_item_cost',   pi.ordered_qty * pi.unit_cost * (1 + COALESCE(h.gst_rate, p.gst_rate, 0) / 100),
+            'received_quantity', COALESCE(pi.received_qty, 0),
             'product', jsonb_build_object(
-              'id', p.id,
-              'model_name', p.model_name
+              'id',           p.id,
+              'model_name',   p.model_name,
+              'product_code', p.product_code,
+              'hsn_code',     p.hsn_code,
+              'brand',        p.brand
             )
           )) FILTER (WHERE pi.id IS NOT NULL), '[]'
         ) AS items,
@@ -330,6 +350,7 @@ export async function PATCH(request: NextRequest) {
       LEFT JOIN branches b ON po.branch_id = b.id
       LEFT JOIN po_items pi ON pi.po_id = po.id
       LEFT JOIN products p ON pi.product_id = p.id
+      LEFT JOIN hsn_codes h ON h.hsn_code = p.hsn_code
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
       WHERE po.id = ${id}
