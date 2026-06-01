@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getStaffDirectory } from '@/actions/hr'
 import StaffClient from './client'
+import ClockWidget from '@/components/hr/ClockWidget'
 
 export default async function StaffPayrollPage() {
   const session = await getServerSession(authOptions)
@@ -12,5 +13,10 @@ export default async function StaffPayrollPage() {
   const result = await getStaffDirectory()
   const staff = result.success ? result.staff : []
 
-  return <StaffClient isAdmin={isAdmin} staff={staff} />
+  return (
+    <div className="space-y-6">
+      <ClockWidget />
+      <StaffClient isAdmin={isAdmin} staff={staff} />
+    </div>
+  )
 }
