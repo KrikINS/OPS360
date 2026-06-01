@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey, serial } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey, serial, date } from "drizzle-orm/pg-core";
 
 
 export const users = pgTable("users", {
@@ -335,5 +335,29 @@ export const grn_items = pgTable("grn_items", {
   received_qty: integer("received_qty").notNull(),
   unit_cost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
   landed_unit_cost: numeric("landed_unit_cost", { precision: 12, scale: 2 }).default('0'),
+  created_at: timestamp("created_at").defaultNow(),
+})
+
+export const attendance_records = pgTable("attendance_records", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").notNull(),
+  branch_id: uuid("branch_id").notNull(),
+  date: date("date").notNull(),
+  clock_in: timestamp("clock_in").notNull(),
+  clock_out: timestamp("clock_out"),
+  duration_minutes: integer("duration_minutes"),
+  notes: text("notes"),
+  created_at: timestamp("created_at").defaultNow(),
+})
+
+export const attendance_corrections = pgTable("attendance_corrections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  attendance_id: uuid("attendance_id").notNull(),
+  corrected_by: uuid("corrected_by").notNull(),
+  original_clock_in: timestamp("original_clock_in").notNull(),
+  original_clock_out: timestamp("original_clock_out"),
+  new_clock_in: timestamp("new_clock_in").notNull(),
+  new_clock_out: timestamp("new_clock_out"),
+  reason: text("reason").notNull(),
   created_at: timestamp("created_at").defaultNow(),
 })

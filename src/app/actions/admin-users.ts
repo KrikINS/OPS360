@@ -6,6 +6,20 @@ import { db } from "@/db/client"
 import { profiles, branches, user_permissions, user_branch_access } from "@/db/schema"
 
 
+export async function getBranchesAction() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { data: [] as { id: string; name: string }[], error: 'Unauthorized' }
+  }
+  try {
+    const rows = await db.select({ id: branches.id, name: branches.name }).from(branches).orderBy(branches.name)
+    return { data: rows }
+  } catch (error) {
+    console.error(error)
+    return { data: [] as { id: string; name: string }[] }
+  }
+}
+
 export async function getAdminUsersDataAction(userId: string | undefined) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {

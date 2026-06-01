@@ -36,6 +36,8 @@ export async function cleanupTestDb(db: TestDb): Promise<void> {
   // RESTART IDENTITY resets serial sequences so IDs are predictable across tests.
   await db.execute(sql`
     TRUNCATE TABLE
+      attendance_corrections,
+      attendance_records,
       grn_items,
       grn_receipts,
       discrepancies,
@@ -230,4 +232,33 @@ export async function seedCounter(db: TestDb, branchId: string, type: string, va
     year: new Date().getFullYear(),
     current_value: value,
   }).onConflictDoNothing()
+}
+
+export async function seedAttendanceRecord(
+  db: TestDb,
+  opts: {
+    userId: string
+    branchId: string
+    date: string
+    clockIn: Date
+    clockOut?: Date
+  }
+) {
+  const durationMinutes = opts.clockOut
+    ? Math.round((opts.clockOut.getTime() - opts.clockIn.getTime()) / 60000)
+    : null
+
+  const [record] = await db
+    .insert(schema.attendance_records)
+    .values({
+      user_id: opts.userId,
+      branch_id: opts.branchId,
+      date: opts.date,
+      clock_in: opts.clockIn,
+      clock_out: opts.clockOut ?? null,
+      duration_minutes: durationMinutes,
+    })
+    .returning()
+
+  return record
 }
