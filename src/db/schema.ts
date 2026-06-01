@@ -361,3 +361,30 @@ export const attendance_corrections = pgTable("attendance_corrections", {
   reason: text("reason").notNull(),
   created_at: timestamp("created_at").defaultNow(),
 })
+
+export const service_jobs = pgTable("service_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  job_id: text("job_id").notNull().unique(),
+  branch_id: uuid("branch_id").notNull(),
+  customer_id: uuid("customer_id"),
+  product_id: uuid("product_id"),
+  technician_id: uuid("technician_id"),
+  title: text("title").notNull(),
+  description: text("description"),
+  priority: text("priority").notNull().default('Medium'),
+  status: text("status").notNull().default('Pending'),
+  estimated_cost: numeric("estimated_cost", { precision: 12, scale: 2 }),
+  actual_cost: numeric("actual_cost", { precision: 12, scale: 2 }),
+  created_by: uuid("created_by").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+})
+
+export const service_job_items = pgTable("service_job_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  job_id: uuid("job_id").notNull(),
+  product_id: uuid("product_id").notNull(),
+  qty: integer("qty").notNull().default(1),
+  unit_cost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+})

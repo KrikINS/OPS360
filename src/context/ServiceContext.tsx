@@ -1,80 +1,72 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-
-
-interface Customer {
-  id: string
-  full_name: string
-  phone_number: string
-}
-
-interface Product {
-  id: string
-  model_name: string
-  brand: string
-}
+import { getServiceJobs, createServiceJob, updateJobStatus } from '@/actions/service'
+import { getStaffDirectory } from '@/actions/hr'
 
 export interface ServiceJob {
   id: string
-  job_id: string
-  customer_id: string
-  product_id: string | null
-  branch_id: string
-  technician_id: string | null
+  jobId: string
+  branchId: string
+  customerId: string | null
+  productId: string | null
+  technicianId: string | null
   title: string
   description: string | null
   priority: 'Low' | 'Medium' | 'High' | 'Urgent'
   status: 'Pending' | 'In-Progress' | 'Awaiting-Spares' | 'Completed' | 'Cancelled'
-  created_at: string
-  updated_at: string
-  customer?: Customer
-  product?: Product
-  technician_name?: string
+  estimatedCost: string | null
+  actualCost: string | null
+  createdAt: Date | null
+  updatedAt: Date | null
+  customerName: string | null
+  customerPhone: string | null
+  productName: string | null
+  technicianName: string | null
 }
 
 interface ServiceContextType {
   jobs: ServiceJob[]
-  technicians: { id: string, full_name: string | null }[]
+  technicians: { id: string; full_name: string | null }[]
   loading: boolean
   refreshJobs: () => Promise<void>
   updateJobStatus: (id: string, status: ServiceJob['status']) => Promise<void>
-  createJob: (job: Partial<ServiceJob>) => Promise<void>
+  createJob: (job: {
+    title: string
+    description?: string
+    priority?: string
+    customerId?: string
+    productId?: string
+    technicianId?: string
+    estimatedCost?: number
+  }) => Promise<void>
 }
 
 const ServiceContext = createContext<ServiceContextType | undefined>(undefined)
 
-interface RawServiceJob extends ServiceJob {
-  technician: { full_name: string | null } | null
-}
-
 export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [jobs, setJobs] = useState<ServiceJob[]>([])
-  const [technicians, setTechnicians] = useState<{ id: string, full_name: string | null }[]>([])
+  const [technicians, setTechnicians] = useState<{ id: string; full_name: string | null }[]>([])
   const [loading, setLoading] = useState(true)
-  
 
   const refreshTechnicians = useCallback(async () => {
-    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("profiles"))
-    if (!error && data) {
-      setTechnicians((data as typeof import("@/db/schema").profiles.$inferSelect[]).filter(p => p.role === 'technician'))
+    const result = await getStaffDirectory()
+    if (result.success) {
+      setTechnicians(
+        result.staff
+          .filter(s => s.role === 'technician')
+          .map(s => ({ id: s.userId, full_name: s.fullName ?? null }))
+      )
     }
   }, [])
 
   const refreshJobs = useCallback(async () => {
     setLoading(true)
     try {
-      const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("service_jobs"))
-
-      if (error) throw error
-
-      const rawData = data as unknown as RawServiceJob[]
-      const mappedJobs: ServiceJob[] = rawData.map((job) => ({
-        ...job,
-        technician_name: job.technician?.full_name || 'Unassigned'
-      }))
-
-      setJobs(mappedJobs)
+      const result = await getServiceJobs()
+      if (result.success) {
+        setJobs(result.jobs as ServiceJob[])
+      }
     } catch (err) {
       console.error('Error fetching service jobs:', err)
     } finally {
@@ -82,30 +74,16 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [])
 
-  const createJob = async (job: Partial<ServiceJob>) => {
-    try {
-      const serializable = Object.fromEntries(
-        Object.entries(job).filter(([, v]) => v !== undefined && typeof v !== 'object' || v === null)
-      )
-      const { error } = await import("@/app/actions/generics").then(m => m.insertData("service_jobs", [serializable as Record<string, string | number | boolean | null>]))
-
-      if (error) throw error
-      await refreshJobs()
-    } catch (err) {
-      console.error('Error creating job:', err)
-      throw err
-    }
+  const createJob = async (job: Parameters<typeof createServiceJob>[0]) => {
+    const result = await createServiceJob(job)
+    if (!result.success) throw new Error(result.error)
+    await refreshJobs()
   }
 
-  const updateJobStatus = async (id: string, status: ServiceJob['status']) => {
-    try {
-      const { error } = await import("@/app/actions/generics").then(m => m.updateData("service_jobs", { id, status, updated_at: new Date().toISOString() }))
-
-      if (error) throw error
-      await refreshJobs()
-    } catch (err) {
-      console.error('Error updating job status:', err)
-    }
+  const handleUpdateJobStatus = async (id: string, status: ServiceJob['status']) => {
+    const result = await updateJobStatus({ jobId: id, newStatus: status })
+    if (!result.success) throw new Error(result.error)
+    await refreshJobs()
   }
 
   useEffect(() => {
@@ -114,7 +92,14 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [refreshJobs, refreshTechnicians])
 
   return (
-    <ServiceContext.Provider value={{ jobs, technicians, loading, refreshJobs, updateJobStatus, createJob }}>
+    <ServiceContext.Provider value={{
+      jobs,
+      technicians,
+      loading,
+      refreshJobs,
+      updateJobStatus: handleUpdateJobStatus,
+      createJob,
+    }}>
       {children}
     </ServiceContext.Provider>
   )

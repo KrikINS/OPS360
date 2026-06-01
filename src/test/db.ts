@@ -48,6 +48,8 @@ export async function cleanupTestDb(db: TestDb): Promise<void> {
       inventory_transactions,
       inventory,
       serial_numbers,
+      service_job_items,
+      service_jobs,
       sequential_counters,
       purchase_orders,
       vendor_bills,
@@ -232,6 +234,36 @@ export async function seedCounter(db: TestDb, branchId: string, type: string, va
     year: new Date().getFullYear(),
     current_value: value,
   }).onConflictDoNothing()
+}
+
+export async function seedServiceJob(
+  db: TestDb,
+  opts: {
+    branchId: string
+    createdBy: string
+    title?: string
+    priority?: string
+    status?: string
+    customerId?: string
+  }
+) {
+  const year = new Date().getFullYear()
+  const jobId = `SRV/${year}/TEST-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+
+  const [job] = await db
+    .insert(schema.service_jobs)
+    .values({
+      job_id: jobId,
+      branch_id: opts.branchId,
+      created_by: opts.createdBy,
+      title: opts.title ?? 'Test Service Job',
+      priority: opts.priority ?? 'Medium',
+      status: opts.status ?? 'Pending',
+      customer_id: opts.customerId ?? null,
+    })
+    .returning()
+
+  return job
 }
 
 export async function seedAttendanceRecord(
