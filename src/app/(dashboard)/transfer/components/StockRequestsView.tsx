@@ -191,9 +191,12 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
       setProductResults([])
       return
     }
-    const { data, error } = await (Promise.resolve({ data: [] }) as unknown as Promise<{ data: unknown[], error: Error | null }>)
-    
-    if (!error && data) setProductResults(data as Product[])
+    const { data, error } = await import('@/app/actions/transfers')
+      .then(m => m.searchProductsForTransferAction(term))
+
+    if (!error && data) {
+      setProductResults(data.map(p => ({ ...p, available_units: 0 })) as Product[])
+    }
   }, [targetSourceId])
 
   const updateCartQty = (id: string, qty: number) => {
@@ -207,9 +210,10 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
   const handleExport = async () => {
     setExporting(true)
     try {
-      const { data, error } = await (Promise.resolve({ data: [] }) as unknown as Promise<{ data: unknown[], error: Error | null }>)
-      if (error) throw error
-      if (data) {
+      const { data, error } = await import('@/app/actions/generics')
+        .then(m => m.rpcCall('get_export_data', { p_type: 'logistics' }))
+      if (error) throw new Error(error.message)
+      if (data && Array.isArray(data)) {
         exportToExcel(data as Record<string, unknown>[], 'Logistics')
       }
     } catch (err) {
@@ -223,9 +227,29 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
     if (!targetSourceId || requestCart.length === 0 || !userBranchId) return
     setSubmitting(true)
     try {
-      const { data: requestNumber, error: reqErr } = await (Promise.resolve({ data: "REQ-001", error: null }) as unknown as Promise<{ data: string, error: Error | null }>)
+      const requestNumber = `REQ/${new Date().getFullYear()}/${Date.now().toString().slice(-6)}`
 
-      if (reqErr) throw reqErr
+      const { data, error: reqErr } = await import('@/app/actions/generics')
+        .then(m => m.insertData('stock_requests', [{
+          source_branch_id: targetSourceId,
+          requesting_branch_id: userBranchId,
+          request_number: requestNumber,
+          status: 'Pending',
+          priority,
+        }]))
+
+      if (reqErr) throw new Error(reqErr.message)
+
+      const newRequest = data && Array.isArray(data) ? data[0] as Record<string, unknown> : null
+      if (newRequest?.id) {
+        await Promise.all(requestCart.map(item =>
+          import('@/app/actions/generics').then(m => m.insertData('stock_request_items', [{
+            request_id: String(newRequest.id),
+            product_id: item.product.id,
+            quantity: item.quantity,
+          }]))
+        ))
+      }
 
       setIsCreating(false)
       setRequestCart([])
@@ -291,10 +315,11 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
 
     setSubmitting(true)
     try {
+      const allInventoryIds = Object.values(selectedUnits).flat()
+      const { error } = await import('@/app/actions/transfers')
+        .then(m => m.fulfillStockRequestAction(fulfillingRequest.id, allInventoryIds))
 
-      const { error } = await (Promise.resolve({ error: null }) as unknown as Promise<{ error: Error | null }>)
-
-      if (error) throw error
+      if (error) throw new Error(error.message ?? 'Fulfillment failed')
 
       setFulfillingRequest(null)
       fetchRequests()

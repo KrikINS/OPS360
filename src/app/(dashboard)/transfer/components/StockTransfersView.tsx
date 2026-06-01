@@ -263,9 +263,9 @@ export function StockTransfersView({
     setSelectedDemandId(demand.id)
     
     const newSKUItems = await Promise.all(demand.items.map(async (item): Promise<TransferSKUItem> => {
-      // Fetch current stock for this SKU at source branch
-      const { data: stockData } = { data: [] }
-      
+      const { data: stockData } = await import('@/app/actions/transfers')
+        .then(m => m.getProductStockCountAction(item.product_id, sourceId || userBranchId || ""))
+
       return {
         product: {
           id: item.product_id,
@@ -289,9 +289,10 @@ export function StockTransfersView({
       return
     }
 
-    const { data } = { data: [] }
-    
-    if (data) setProductSearchResults(data as ProductWithStock[])
+    const { data } = await import('@/app/actions/transfers')
+      .then(m => m.searchProductsForTransferAction(term))
+
+    if (data) setProductSearchResults(data.map(p => ({ ...p, available_units: 0 })) as ProductWithStock[])
   }
 
   const addSKUToTransfer = (p: ProductWithStock) => {

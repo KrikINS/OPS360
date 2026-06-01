@@ -2,6 +2,32 @@
 
 import { db } from "@/db/client"
 import { sql } from "drizzle-orm"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+
+const ALLOWED_TABLES = new Set([
+  'profiles', 'branches', 'products', 'inventory',
+  'stock_requests', 'stock_request_items', 'stock_transfers', 'stock_transfer_items',
+  'waybills', 'user_branch_access', 'user_permissions',
+  'purchase_orders', 'vendors', 'customers', 'hsn_codes',
+  'service_jobs', 'sales_invoices', 'invoice_items',
+  'grn_receipts', 'po_items', 'discrepancies',
+  'attendance_records', 'sequential_counters',
+  'inventory_transactions', 'vendor_audit_log',
+])
+
+const ALLOWED_FUNCTIONS = new Set([
+  'process_pos_sale',
+  'process_stock_transfer_send',
+  'process_stock_transfer_receive',
+  'fulfill_stock_request',
+  'get_unique_low_stock_count',
+  'get_user_pos_stats',
+  'get_admin_dashboard_metrics',
+  'get_vendor_docs',
+  'get_export_data',
+  'get_next_logistics_id',
+])
 
 type Primitive = string | number | boolean | null
 type PayloadValue = Primitive | string[] | null | Record<string, unknown> | unknown
@@ -15,6 +41,9 @@ function escapeValue(v: unknown): string {
 
 export async function fetchData(tableName: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: 'Unauthorized' } }
+    if (!ALLOWED_TABLES.has(tableName)) return { error: { message: `Table '${tableName}' is not accessible` } }
     const res = await db.execute(sql.raw(`SELECT * FROM "${tableName}"`))
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
     const data = Array.isArray(result) ? result : result.rows || []
@@ -26,6 +55,9 @@ export async function fetchData(tableName: string) {
 
 export async function insertData(tableName: string, payload: Record<string, PayloadValue>[]) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: 'Unauthorized' } }
+    if (!ALLOWED_TABLES.has(tableName)) return { error: { message: `Table '${tableName}' is not accessible` } }
     const row = payload[0]
     const keys = Object.keys(row).map(k => `"${k}"`).join(', ')
     const values = Object.values(row).map(escapeValue).join(', ')
@@ -40,6 +72,9 @@ export async function insertData(tableName: string, payload: Record<string, Payl
 
 export async function updateData(tableName: string, payload: Record<string, PayloadValue>) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: 'Unauthorized' } }
+    if (!ALLOWED_TABLES.has(tableName)) return { error: { message: `Table '${tableName}' is not accessible` } }
     const { id, ...rest } = payload
     if (!id) throw new Error('updateData: payload must contain an `id` field')
     const setClause = Object.entries(rest).map(([k, v]) => `"${k}" = ${escapeValue(v)}`).join(', ')
@@ -63,6 +98,9 @@ export async function deleteData(tableName: string, id: string) {
 
 export async function rpcCall(funcName: string, args: Record<string, unknown>) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: 'Unauthorized' } }
+    if (!ALLOWED_FUNCTIONS.has(funcName)) return { error: { message: `Function '${funcName}' is not accessible` } }
     const argsStr = args ? `'${JSON.stringify(args)}'::jsonb` : ''
     const res = await db.execute(sql.raw(`SELECT * FROM ${funcName}(${argsStr})`))
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
