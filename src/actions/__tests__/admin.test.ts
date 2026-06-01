@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST as provisionUser } from '@/app/api/admin/staff/route'
+import { POST as resetPassword } from '@/app/api/admin/reset-password/route'
 import { getAdminUsersDataAction, getBranchesAction, updateUserPermissionsAction } from '@/app/actions/admin-users'
 import {
   setupTestDb, cleanupTestDb, teardownTestDb,
@@ -463,5 +464,129 @@ describe('updateUserPermissionsAction — branch assignment', () => {
 
     expect(access).toHaveLength(1)
     expect(access[0].branch_id).toBe(branch2.id)
+  })
+})
+
+function makeResetRequest(body: Record<string, unknown>) {
+  return new NextRequest('http://localhost/api/admin/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+// ─────────────────────────────────────────────────────
+// POST /api/admin/reset-password
+// ─────────────────────────────────────────────────────
+
+describe('POST /api/admin/reset-password', () => {
+  it('resets password and sets force_password_change', async () => {
+    const branch = await seedBranch(db)
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    const provisionRes = await provisionUser(makeProvisionRequest({
+      email: 'resetme@ops360.com',
+      password: 'OriginalPass123!',
+      role: 'staff',
+      branchIds: [branch.id],
+    }))
+    const provisionBody = await provisionRes.json()
+    const targetUserId = provisionBody.data.id
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    const res = await resetPassword(makeResetRequest({ userId: targetUserId }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.temporaryPassword).toMatch(/^ETHAN-[A-Z0-9]{4}$/)
+
+    const user = await db
+      .select({ password_hash: schema.users.password_hash })
+      .from(schema.users)
+      .where(eq(schema.users.id, targetUserId))
+      .limit(1)
+
+    const passwordChanged = await import('bcrypt').then(b =>
+      b.compare(body.temporaryPassword, user[0].password_hash)
+    )
+    expect(passwordChanged).toBe(true)
+
+    const profile = await db
+      .select({ force_password_change: schema.profiles.force_password_change })
+      .from(schema.profiles)
+      .where(eq(schema.profiles.id, targetUserId))
+      .limit(1)
+
+    expect(profile[0].force_password_change).toBe(true)
+  })
+
+  it('rejects unauthenticated requests with 401', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce(null)
+    const res = await resetPassword(makeResetRequest({ userId: STAFF_ID }))
+    expect(res.status).toBe(401)
+  })
+
+  it('rejects staff role with 403', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: STAFF_ID, role: 'staff', branchId: null },
+    })
+    const res = await resetPassword(makeResetRequest({ userId: ADMIN_ID }))
+    expect(res.status).toBe(403)
+  })
+
+  it('rejects missing userId with 400', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    const res = await resetPassword(makeResetRequest({}))
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects non-existent userId with 404', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    const res = await resetPassword(
+      makeResetRequest({ userId: '00000000-0000-0000-0000-000000000099' })
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('generates unique temp passwords on repeated resets', async () => {
+    const branch = await seedBranch(db)
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    await provisionUser(makeProvisionRequest({
+      email: 'multireset@ops360.com',
+      password: 'Pass123!',
+      role: 'staff',
+      branchIds: [branch.id],
+    }))
+    const user = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, 'multireset@ops360.com'))
+      .limit(1)
+
+    const passwords: string[] = []
+    for (let i = 0; i < 2; i++) {
+      vi.mocked(getServerSession).mockResolvedValueOnce({
+        user: { id: ADMIN_ID, role: 'admin', branchId: null },
+      })
+      const res = await resetPassword(
+        makeResetRequest({ userId: user[0].id })
+      )
+      const body = await res.json()
+      passwords.push(body.temporaryPassword)
+    }
+
+    passwords.forEach(p => expect(p).toMatch(/^ETHAN-[A-Z0-9]{4}$/))
+    expect(passwords).toHaveLength(2)
   })
 })
