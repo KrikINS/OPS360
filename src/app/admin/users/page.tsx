@@ -26,6 +26,8 @@ import { ChevronDown } from "lucide-react"
 
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { getSession } from 'next-auth/react'
+import { getAdminUsersDataAction, updateUserPermissionsAction, updateProfileDetailsAction } from '@/app/actions/admin-users'
 
 import {
   Table, 
@@ -79,8 +81,8 @@ export default function UserManagementPage() {
 
   const refreshData = React.useCallback(async () => {
     setLoading(true)
-    const session = await import("next-auth/react").then(m => m.getSession()); const user = session?.user;
-    const res = await import("@/app/actions/admin-users").then(m => m.getAdminUsersDataAction(user?.id))
+    const session = await getSession()
+    const res = await getAdminUsersDataAction(session?.user?.id)
     if (res.stats) setStats(res.stats)
     if (res.profiles) setProfiles(res.profiles as unknown as Profile[])
     if (res.branches) setBranches(res.branches as unknown as Branch[])
@@ -91,8 +93,8 @@ export default function UserManagementPage() {
   useEffect(() => {
     let mounted = true
     async function init() {
-      const session = await import("next-auth/react").then(m => m.getSession()); const user = session?.user;
-      const res = await import("@/app/actions/admin-users").then(m => m.getAdminUsersDataAction(user?.id))
+      const session = await getSession()
+      const res = await getAdminUsersDataAction(session?.user?.id)
       if (mounted) {
         if (res.stats) setStats(res.stats)
         if (res.profiles) setProfiles(res.profiles as unknown as Profile[])
@@ -146,29 +148,26 @@ export default function UserManagementPage() {
 
   const handleSaveBatch = async () => {
     if (modifiedUserIds.size === 0) return
-    
     setLoading(true)
     try {
       const updates = profiles.filter(p => modifiedUserIds.has(p.id))
-      
-      // Clean up before saving
-      const cleanUpdates = updates.map(({ ...rest }) => rest)
-      
-      const { error } = await import("@/app/actions/generics").then(m => m.insertData("profiles", cleanUpdates))
 
-      if (error) {
-        if ((error as { code?: string }).code === '42501') {
-          setToast({ message: "Security Error: You do not have permission to update these user profiles.", type: 'error' })
-        } else {
-          setToast({ message: `Error saving changes: ${error.message}`, type: 'error' })
+      for (const user of updates) {
+        const result = await updateUserPermissionsAction({
+          userId: user.id,
+          role: user.role ?? 'staff',
+          permissions: user.permissions ?? {},
+        })
+        if (!result.success) {
+          throw new Error(result.error ?? 'Failed to save')
         }
-      } else {
-        setToast({ message: `Access protocols successfully updated for ${modifiedUserIds.size} users`, type: 'success' })
-        setModifiedUserIds(new Set())
-        await refreshData()
-        router.refresh()
-        setTimeout(() => setToast(null), 3000)
       }
+
+      setToast({ message: `Access protocols successfully updated for ${modifiedUserIds.size} users`, type: 'success' })
+      setModifiedUserIds(new Set())
+      await refreshData()
+      router.refresh()
+      setTimeout(() => setToast(null), 3000)
     } catch (err) {
       const error = err as Error
       setToast({ message: `System error: ${error.message || "Unknown error during save"}`, type: 'error' })
@@ -185,28 +184,26 @@ export default function UserManagementPage() {
   const handleSaveProfileFromModal = async (updated: Profile) => {
     setLoading(true)
     try {
-      const { error } = await import("@/app/actions/generics").then(m => m.updateData("profiles", {
-          id: updated.id,
-          full_name: updated.full_name,
+      const [profileResult, permResult] = await Promise.all([
+        updateProfileDetailsAction({
+          userId: updated.id,
+          fullName: updated.full_name,
           email: updated.email,
-          phone: updated.phone,
-          permissions: updated.permissions,
-          register_permissions: updated.register_permissions
-        }))
+        }),
+        updateUserPermissionsAction({
+          userId: updated.id,
+          role: updated.role ?? 'staff',
+          permissions: updated.permissions ?? {},
+        }),
+      ])
 
-      if (error) {
-        if ((error as { code?: string }).code === '42501') {
-          setToast({ message: "Security Error: You do not have permission to modify this profile.", type: 'error' })
-        } else {
-          setToast({ message: `Error updating profile: ${error.message}`, type: 'error' })
-        }
+      if (!profileResult.success || !permResult.success) {
+        const msg = profileResult.error ?? permResult.error ?? 'Failed to update profile'
+        setToast({ message: `Error updating profile: ${msg}`, type: 'error' })
       } else {
         setToast({ message: "Identity metadata successfully synchronized", type: 'success' })
         await refreshData()
-        
-        // RE-SYNC SELECTED PROFILE TO PREVENT STALE MODAL STATE
         setSelectedProfile(prev => prev ? updated : null)
-        
         router.refresh()
         setTimeout(() => setToast(null), 3000)
       }

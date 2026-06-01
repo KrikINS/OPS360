@@ -3,7 +3,8 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/client"
-import { profiles, branches, user_permissions, user_branch_access } from "@/db/schema"
+import { profiles, branches, user_permissions, user_branch_access, users } from "@/db/schema"
+import { eq, and } from "drizzle-orm"
 
 
 export async function getBranchesAction() {
@@ -70,5 +71,89 @@ export async function getAdminUsersDataAction(userId: string | undefined) {
   } catch (error) {
     console.error(error)
     return { profiles: [], branches: [], currentUserProfile: null, stats: { total_users: 0, pending_requests: 0, recent_logins: 0 } }
+  }
+}
+
+export async function updateUserPermissionsAction(input: {
+  userId: string
+  role: string
+  permissions: Record<string, boolean>
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  if (!isAdmin) {
+    return { success: false, error: 'Admin role required' }
+  }
+
+  try {
+    await db
+      .update(users)
+      .set({ role: input.role })
+      .where(eq(users.id, input.userId))
+
+    await db
+      .update(profiles)
+      .set({ role: input.role })
+      .where(eq(profiles.id, input.userId))
+
+    // No unique constraint on (user_id, module) — delete then insert
+    const modules = Object.keys(input.permissions)
+    for (const module of modules) {
+      await db
+        .delete(user_permissions)
+        .where(
+          and(
+            eq(user_permissions.user_id, input.userId),
+            eq(user_permissions.module, module)
+          )
+        )
+      await db.insert(user_permissions).values({
+        user_id: input.userId,
+        module,
+        enabled: input.permissions[module],
+      })
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('UPDATE PERMISSIONS ERROR:', error)
+    return { success: false, error: (error as Error).message }
+  }
+}
+
+export async function updateProfileDetailsAction(input: {
+  userId: string
+  fullName: string | null
+  email: string | null
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  if (!isAdmin) {
+    return { success: false, error: 'Admin role required' }
+  }
+
+  try {
+    await db
+      .update(profiles)
+      .set({
+        full_name: input.fullName,
+        email: input.email,
+      })
+      .where(eq(profiles.id, input.userId))
+
+    return { success: true }
+  } catch (error) {
+    console.error('UPDATE PROFILE ERROR:', error)
+    return { success: false, error: (error as Error).message }
   }
 }
