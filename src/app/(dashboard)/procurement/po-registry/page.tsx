@@ -785,21 +785,28 @@ export default function ProcurementGRNPage() {
       setPoTerms({ gstin: vendor.gstin || "", terms: po.payment_terms || vendor.payment_terms || "Immediate" })
     }
     setSelectedBranch(po.branch_id)
-    setPoItems(po.items.map((item) => ({
-      id: item.id || `rev-${Date.now()}-${Math.random()}`,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      received_quantity: item.received_quantity,
-      tax_rate: item.tax_rate,
-      total_item_cost: item.total_item_cost,
-      override_reason: item.override_reason,
-      product: {
-        model_name: item.product?.model_name || 'Item',
-        product_code: item.product?.product_code || '',
-        hsn_code: item.product?.hsn_code || '---'
-      }
-    })))
+    
+    // Handle items safely - map over items array if it exists
+    if (po.items && Array.isArray(po.items)) {
+      setPoItems(po.items.map((item) => ({
+        id: item.id || `rev-${Date.now()}-${Math.random()}`,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        received_quantity: item.received_quantity,
+        tax_rate: item.tax_rate,
+        total_item_cost: item.total_item_cost,
+        override_reason: item.override_reason,
+        product: {
+          model_name: item.product?.model_name || 'Item',
+          product_code: item.product?.product_code || '',
+          hsn_code: item.product?.hsn_code || '---'
+        }
+      })))
+    } else {
+      setPoItems([])
+    }
+    
     setCreationTerms(po.terms_content || "")
     setIsPartialBilling(po.is_partial_billing || false)
     setIsCreatingPO(true)
