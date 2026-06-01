@@ -12,6 +12,7 @@ import { db } from '@/db/client'
 import * as schema from '@/db/schema'
 import { eq, and, sql, inArray } from 'drizzle-orm'
 import crypto from 'crypto'
+import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 export async function requestStockTransfer(input: {
   fromBranchId: string
   toBranchId: string
@@ -198,8 +199,8 @@ export async function getInventorySummary(input: { branchId: string }) {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
   }
 
-  const userBranchId = (session.user as Record<string, unknown>).branchId as string | undefined
-  if (userBranchId && userBranchId !== input.branchId) {
+  const effectiveBranchId = await getEffectiveBranchId(session)
+  if (effectiveBranchId && effectiveBranchId !== input.branchId) {
     const role = (session.user.role ?? '').toLowerCase()
     const isAdmin = role === 'admin' || role === 'super_admin' || role === 'admin/owner'
     if (!isAdmin) {

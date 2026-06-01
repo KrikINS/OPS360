@@ -89,6 +89,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ChevronsUpDown, Check } from "lucide-react"
+import { useSession } from 'next-auth/react'
 import ProcessReturns from "../return/page"
 import DiscrepancyReportPage from "../../discrepancy-report/page"
 
@@ -241,8 +242,17 @@ export default function ProcurementGRNPage() {
   const initialTab = searchParams.get('tab') || 'all'
   const [activeTab, setActiveTab] = useState(initialTab)
 
+  const { data: session } = useSession()
+
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
+
+  // Pre-fill branch from session on mount so the PO form has a sensible default
+  useEffect(() => {
+    if (!selectedBranch && session?.user?.branchId) {
+      setSelectedBranch(session.user.branchId)
+    }
+  }, [session, selectedBranch])
   const [poTerms, setPoTerms] = useState({ gstin: "", terms: "" })
   const [expectedDelivery, setExpectedDelivery] = useState("")
   const [poItems, setPoItems] = useState<POItem[]>([])
