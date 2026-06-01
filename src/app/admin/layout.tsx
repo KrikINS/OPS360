@@ -51,7 +51,7 @@ export default async function AdminLayout({
   if (isAdminRole) {
     const { data: b_list } = await import("@/app/actions/generics").then(m => m.fetchData("branches"))
     if (b_list && Array.isArray(b_list)) {
-      allBranches = b_list.map((b: BranchType) => ({ id: b.id, name: b.name, is_primary: b.id === activeBranchId }))
+      allBranches = (b_list as BranchType[]).map((b) => ({ id: b.id, name: b.name, is_primary: b.id === activeBranchId }))
     }
   }
 

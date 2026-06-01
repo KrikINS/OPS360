@@ -3,6 +3,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
+import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import {
   profiles,
   user_branch_access,
@@ -16,7 +17,7 @@ import {
   stock_transfers,
   vendor_audit_log,
 } from '@/db/schema'
-import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm'
 
 export type StaffRow = {
   userId: string
@@ -54,11 +55,12 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
       .orderBy(profiles.full_name)
 
     if (!isAdmin) {
-      if (!session.user.branchId) {
-        return { success: false as const, error: 'No branch assigned to your account' }
+      const effectiveBranchId = await getEffectiveBranchId(session);
+      if (!effectiveBranchId) {
+        return { success: false as const, error: 'No branch assigned to your account' };
       }
       const rows = await query.where(
-        eq(user_branch_access.branch_id, session.user.branchId)
+        eq(user_branch_access.branch_id, effectiveBranchId)
       )
       return { success: true as const, staff: rows }
     }
@@ -85,8 +87,9 @@ export async function clockIn(input?: { notes?: string }) {
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized' }
   }
-  if (!session.user.branchId) {
-    return { success: false as const, error: 'No branch assigned to your account' }
+  const effectiveBranchId = await getEffectiveBranchId(session);
+  if (!effectiveBranchId) {
+    return { success: false as const, error: 'No branch assigned to your account' };
   }
 
   const today = new Date().toISOString().split('T')[0]
@@ -115,7 +118,7 @@ export async function clockIn(input?: { notes?: string }) {
     .insert(attendance_records)
     .values({
       user_id: session.user.id,
-      branch_id: session.user.branchId,
+      branch_id: effectiveBranchId,
       date: today,
       clock_in: new Date(),
       notes: input?.notes ?? null,
@@ -185,7 +188,8 @@ export async function getAttendanceByBranch(input: {
     return { success: false as const, error: 'Manager role required' }
   }
 
-  const targetBranchId = input.branchId ?? session.user.branchId
+  const effectiveBranchIdFromCookie = await getEffectiveBranchId(session);
+  const targetBranchId = input.branchId ?? effectiveBranchIdFromCookie;
   if (!targetBranchId) {
     return { success: false as const, error: 'No branch specified' }
   }
@@ -327,7 +331,6 @@ export async function getActivityLog(input: {
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized' }
   }
-
   const role = (session.user.role ?? '').toLowerCase()
   const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
   const isManager = isAdmin || role === 'manager'
@@ -335,9 +338,10 @@ export async function getActivityLog(input: {
   const effectiveUserId: string | null = isManager
     ? (input.userId ?? null)
     : session.user.id
+  const effectiveBranchIdFromCookie = await getEffectiveBranchId(session);
   const effectiveBranchId: string | null = isAdmin
     ? (input.branchId ?? null)
-    : session.user.branchId ?? null
+    : effectiveBranchIdFromCookie
 
   const limit = Math.min(input.limit ?? 50, 200)
   const offset = input.offset ?? 0

@@ -116,7 +116,7 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
 
       // Fix: iOS Safari OverconstrainedError Mitigation
       // Pass the raw deviceId string instead of { deviceId: { exact: ... } } to let html5-qrcode resolve it cleanly.
-      const cameraParam = deviceId ? deviceId : { video: true };
+      const cameraParam: string | MediaTrackConstraints = deviceId ? deviceId : ({ video: true } as unknown as MediaTrackConstraints);
 
       await scanner.start(
         cameraParam,
@@ -141,8 +141,10 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
       );
       
       // Defensively check for getRunningTrack to avoid TypeError in certain browsers/states
-      if (typeof scanner.getRunningTrack === "function") {
-        const track = scanner.getRunningTrack();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const scannerAny = scanner as any;
+      if (typeof scannerAny.getRunningTrack === "function") {
+        const track = scannerAny.getRunningTrack();
         if (track && track.getCapabilities) {
           const capabilities = track.getCapabilities();
           setHasTorch(!!capabilities.torch && !!isBack);
@@ -187,14 +189,15 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
     import("html5-qrcode").then((mod) => {
       if (!isMounted) return;
 
-      scannerRef.current = new mod.Html5Qrcode(containerId, { formatsToSupport } as { formatsToSupport: number[] });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      scannerRef.current = new mod.Html5Qrcode(containerId, { verbose: false, formatsToSupport } as any);
     });
 
     return () => {
       isMounted = false;
       if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current.stop()
-          .then(() => scannerRef.current.clear())
+          .then(() => (scannerRef.current as unknown as { clear: () => void })?.clear())
 
           .catch((e: unknown) => console.error("Scanner cleanup error:", e));
       }
@@ -255,8 +258,9 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
     if (!scannerRef.current || !hasTorch || !isBackCamera) return;
     try {
       const newState = !isTorchOn;
-      if (typeof scannerRef.current.getRunningTrack !== "function") return;
-      const track = scannerRef.current.getRunningTrack();
+      if (typeof (scannerRef.current as unknown as Record<string, unknown>).getRunningTrack !== "function") return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const track = (scannerRef.current as any).getRunningTrack();
       if (track) {
 
         await track.applyConstraints({ advanced: [{ torch: newState }] } as unknown as MediaTrackConstraints);
@@ -268,8 +272,9 @@ function CameraScanner({ onScan, onClose, isDuplicate }: { onScan: (text: string
   const triggerFocus = async () => {
     if (!scannerRef.current) return;
     try {
-      if (typeof scannerRef.current.getRunningTrack !== "function") return;
-      const track = scannerRef.current.getRunningTrack();
+      if (typeof (scannerRef.current as unknown as Record<string, unknown>).getRunningTrack !== "function") return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const track = (scannerRef.current as any).getRunningTrack();
       if (track) {
         // Kickstart/Shake: Cycle focus mode to force hardware to re-focus
 

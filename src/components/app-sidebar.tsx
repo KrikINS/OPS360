@@ -194,9 +194,9 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
 
   useEffect(() => {
     import("@/app/actions/generics").then(m => m.fetchData("app_settings"))
-      .then((res: { data: typeof import("@/db/schema").app_settings.$inferSelect[] | null | undefined | unknown }) => {
+      .then((res) => {
         if (res.data && Array.isArray(res.data)) {
-          const logo = res.data.find((s: typeof import("@/db/schema").app_settings.$inferSelect) => s.key === "logo_url")
+          const logo = (res.data as typeof import("@/db/schema").app_settings.$inferSelect[]).find((s) => s.key === "logo_url")
           if (logo?.value) setLogoUrl(logo.value)
         }
       })

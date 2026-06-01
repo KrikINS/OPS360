@@ -9,9 +9,11 @@ const nextConfig: NextConfig = {
     // !! WARN !!
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  ...({
+    eslint: {
+      ignoreDuringBuilds: true,
+    },
+  } as Record<string, unknown>),
 };
 
 export default nextConfig;

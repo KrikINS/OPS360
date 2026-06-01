@@ -3,6 +3,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
+import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import { sql } from 'drizzle-orm'
 import {
   processPosSaleAction,
@@ -27,8 +28,12 @@ export async function createTransaction(input: {
   }
 
   const role = (session.user.role ?? '').toLowerCase()
-  if (role !== 'admin' && role !== 'manager' && role !== 'super_admin' && role !== 'admin/owner') {
-    if (session.user.branchId !== input.branchId) {
+  const effectiveBranchId = await getEffectiveBranchId(session);
+  if (!effectiveBranchId) {
+    return { success: false as const, error: 'No branch assigned to your account' };
+  }
+  if (!['admin', 'manager', 'super_admin', 'admin/owner'].includes(role)) {
+    if (effectiveBranchId !== input.branchId) {
       return { success: false as const, error: 'Unauthorized: branch mismatch' }
     }
   }
@@ -71,7 +76,7 @@ export async function voidTransaction(input: {
     await db.transaction(async (tx) => {
       // Get branch id
       const inv = await tx.execute(sql`SELECT branch_id FROM sales_invoices WHERE id = ${input.transactionId}::uuid`);
-      const branchId = (inv.rows[0] as any)?.branch_id;
+      const branchId = (inv.rows[0] as { branch_id: string | null } | undefined)?.branch_id;
       
       if (!branchId) throw new Error("Invoice not found");
 
@@ -82,7 +87,7 @@ export async function voidTransaction(input: {
       const items = await tx.execute(sql`SELECT product_id, qty as quantity FROM invoice_items WHERE invoice_id = ${input.transactionId}::uuid`);
       
       // Restore stock and log transactions
-      for (const item of items.rows as any[]) {
+      for (const item of items.rows as { product_id: string; quantity: number }[]) {
         await tx.execute(sql`
           WITH updated_inv AS (
             SELECT id FROM inventory

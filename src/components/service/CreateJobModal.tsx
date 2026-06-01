@@ -85,14 +85,12 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
       const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(session?.user?.id || ''))
 
       await createJob({
-        customer_id: selectedCustomer.id,
-        product_id: selectedProduct?.id || null,
-        branch_id: profile?.branch_id || '00000000-0000-0000-0000-000000000000',
-        technician_id: technicianId,
+        customerId: selectedCustomer.id,
+        productId: selectedProduct?.id || undefined,
+        technicianId: technicianId || undefined,
         title,
         description,
         priority,
-        status: 'Pending'
       })
       onOpenChange(false)
       // Reset form
@@ -235,7 +233,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
           <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Priority</label>
-               <Select value={priority} onValueChange={(val: 'Low' | 'Medium' | 'High' | 'Urgent') => setPriority(val)}>
+               <Select value={priority} onValueChange={(val) => setPriority(val as 'Low' | 'Medium' | 'High' | 'Urgent')}>
                  <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl text-sm font-bold">
                    <SelectValue />
                  </SelectTrigger>

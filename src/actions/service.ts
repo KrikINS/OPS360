@@ -3,6 +3,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
+import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import {
   service_jobs, service_job_items,
   customers, products, profiles,
@@ -35,8 +36,9 @@ export async function createServiceJob(input: {
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized' }
   }
-  if (!session.user.branchId) {
-    return { success: false as const, error: 'No branch assigned' }
+  const effectiveBranchId = await getEffectiveBranchId(session);
+  if (!effectiveBranchId) {
+    return { success: false as const, error: 'No branch assigned to your account' };
   }
   if (!input.title?.trim()) {
     return { success: false as const, error: 'Job title is required' }
@@ -63,7 +65,7 @@ export async function createServiceJob(input: {
       .insert(service_jobs)
       .values({
         job_id: jobId,
-        branch_id: session.user.branchId,
+        branch_id: effectiveBranchId,
         customer_id: input.customerId ?? null,
         product_id: input.productId ?? null,
         technician_id: input.technicianId ?? null,
@@ -109,7 +111,8 @@ export async function updateJobStatus(input: {
 
   const role = (session.user.role ?? '').toLowerCase()
   const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-  if (!isAdmin && existing.branch_id !== session.user.branchId) {
+  const effectiveBranchId = await getEffectiveBranchId(session);
+  if (!isAdmin && existing.branch_id !== effectiveBranchId) {
     return { success: false as const, error: 'Unauthorized — job belongs to a different branch' }
   }
 
@@ -192,8 +195,11 @@ export async function getServiceJobs(input?: {
   try {
     const conditions = []
 
-    if (!isAdmin && session.user.branchId) {
-      conditions.push(eq(service_jobs.branch_id, session.user.branchId))
+    if (!isAdmin) {
+      const effectiveBranchId = await getEffectiveBranchId(session);
+      if (effectiveBranchId) {
+        conditions.push(eq(service_jobs.branch_id, effectiveBranchId))
+      }
     }
     if (input?.status) {
       conditions.push(eq(service_jobs.status, input.status))
@@ -282,7 +288,8 @@ export async function getServiceJobById(jobId: string) {
 
   const role = (session.user.role ?? '').toLowerCase()
   const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-  if (!isAdmin && job.branchId !== session.user.branchId) {
+  const effectiveBranchId = await getEffectiveBranchId(session);
+  if (!isAdmin && job.branchId !== effectiveBranchId) {
     return { success: false as const, error: 'Unauthorized' }
   }
 

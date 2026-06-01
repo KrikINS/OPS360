@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import { setupTestDb, cleanupTestDb, seedBranch, seedProduct, seedInventoryUnits, seedCounter } from '@/test/db';
+import { setupTestDb, seedBranch, seedProduct, seedInventoryUnits, seedCounter } from '@/test/db';
 import { sql } from 'drizzle-orm';
 
 describe('pos debug', () => {
@@ -27,10 +27,10 @@ describe('pos debug', () => {
         sql`SELECT process_pos_sale(${JSON.stringify(payload)}::jsonb)`
       );
       console.log("SUCCESS:", res);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("ERROR CAUGHT!");
       console.dir(err, { depth: null });
-      console.dir(err.cause, { depth: null });
+      console.dir((err as NodeJS.ErrnoException).cause, { depth: null });
     }
   }, 30000); // 30s timeout
 });

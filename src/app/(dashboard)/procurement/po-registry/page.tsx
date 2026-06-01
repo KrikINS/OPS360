@@ -1264,9 +1264,9 @@ Are you sure you want to proceed?`)) return;
                                     }
                                   }}
                                 />
-                                {(products.find(p => p.id === item.product_id)?.base_price && (
-                                  Math.abs((item.unit_price - products.find(p => p.id === item.product_id)!.base_price) / products.find(p => p.id === item.product_id)!.base_price) > 0.1
-                                )) && (
+                                {(products.find(p => p.id === item.product_id)?.base_price &&
+                                  Math.abs((item.unit_price - (products.find(p => p.id === item.product_id)?.base_price ?? 0)) / (products.find(p => p.id === item.product_id)?.base_price ?? 1)) > 0.1
+                                ) && (
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger render={

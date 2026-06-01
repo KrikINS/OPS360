@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
 import { purchase_orders, po_items, grn_receipts, grn_items, discrepancies, vendors, branches, products, hsn_codes, inventory, inventory_transactions } from '@/db/schema'
+import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { getPurchaseOrdersAction } from '@/app/actions/procurement'
 
@@ -388,10 +389,11 @@ export async function createReturnToVendor(input: {
     return { success: false as const, error: 'Insufficient permission: manager required' }
   }
 
-  if (!session.user.branchId) {
+  const effectiveBranchId = await getEffectiveBranchId(session);
+  if (!effectiveBranchId) {
     return { success: false as const, error: 'No branch assigned to your account' }
   }
-  const userBranchId = session.user.branchId
+  const userBranchId = effectiveBranchId
 
   try {
     for (const item of input.items) {

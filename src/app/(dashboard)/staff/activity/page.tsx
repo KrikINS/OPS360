@@ -21,7 +21,10 @@ export default async function ActivityPage() {
 
   return (
     <ActivityClient
-      activities={activityResult.success ? activityResult.activities : []}
+      activities={activityResult.success ? activityResult.activities.map(a => ({
+        ...a,
+        timestamp: a.timestamp ?? new Date().toISOString(),
+      })) : []}
       staff={staffResult.success ? staffResult.staff : []}
       isAdmin={isAdmin}
       isManager={isManager}

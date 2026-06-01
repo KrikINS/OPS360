@@ -11,7 +11,7 @@ function getEnv(key) {
     const content = fs.readFileSync(envPath, 'utf8');
     const match = content.match(new RegExp(`^${key}=(.*)$`, 'm'));
     return match ? match[1].trim() : null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -41,9 +41,9 @@ async function fixBranches() {
          // Usually, we can't create tables via standard Supabase client unless a specific RPC is set up.
          // Given I can't run DDL easily without the MCP tools, I'll inform the user if this fails.
        }
-       console.error(\`Error seeding \${name}:\`, error.message);
+       console.error(`Error seeding ${name}:`, error.message);
     } else {
-       console.log(\`Successfully seeded/verified: \${name}\`);
+       console.log(`Successfully seeded/verified: ${name}`);
     }
   }
 

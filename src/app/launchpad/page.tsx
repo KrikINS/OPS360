@@ -19,7 +19,7 @@ export default async function LaunchpadPage() {
   const profileList = await db.select().from(profiles).where(eq(profiles.id, session.user.id));
   const profile = profileList[0];
 
-  const permissions = (profile?.permissions as Record<string, boolean>) || {};
+  const permissions = ((profile as Record<string, unknown>)?.permissions as Record<string, boolean>) || {};
   const role = profile?.role || "";
 
   return <LaunchpadClient initialPermissions={permissions} initialRole={role} />;

@@ -8,7 +8,7 @@ import {
 import type { TestDb } from '@/test/db'
 import {
   createServiceJob, updateJobStatus,
-  assignTechnician, getServiceJobs, getServiceJobById,
+  assignTechnician, getServiceJobs,
 } from '@/actions/service'
 
 let db: TestDb

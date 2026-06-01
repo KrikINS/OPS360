@@ -2,7 +2,7 @@
 
 import { db } from "@/db/client"
 import { eq } from "drizzle-orm"
-import { app_settings, company_settings } from "@/db/schema"
+import { company_settings } from "@/db/schema"
 
 export async function getCompanySettings() {
   try {

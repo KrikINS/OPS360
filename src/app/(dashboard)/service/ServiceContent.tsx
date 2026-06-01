@@ -84,7 +84,7 @@ export function ServiceContent() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[10px] font-black py-0.5 px-2 bg-slate-200 rounded text-slate-600 uppercase tracking-tighter">
-                        {job.job_id}
+                        {job.jobId}
                       </span>
                       <Badge variant="outline" className={`text-[10px] font-bold uppercase ${
                         job.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
@@ -111,19 +111,19 @@ export function ServiceContent() {
                 <div className="space-y-2.5 pt-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-slate-400 font-bold uppercase tracking-widest">Customer</span>
-                    <span className="font-semibold text-slate-700">{job.customer?.full_name || 'Walk-in'}</span>
+                    <span className="font-semibold text-slate-700">{job.customerName || 'Walk-in'}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-slate-400 font-bold uppercase tracking-widest">Platform</span>
-                    <span className="font-semibold text-slate-700">{job.product?.model_name || 'General Inquiry'}</span>
+                    <span className="font-semibold text-slate-700">{job.productName || 'General Inquiry'}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-slate-400 font-bold uppercase tracking-widest">Lead Tech</span>
                     <div className="flex items-center gap-2">
                       <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
-                        {job.technician_name?.charAt(0)}
+                        {job.technicianName?.charAt(0)}
                       </div>
-                      <span className="font-semibold text-slate-700">{job.technician_name}</span>
+                      <span className="font-semibold text-slate-700">{job.technicianName}</span>
                     </div>
                   </div>
                 </div>
@@ -131,7 +131,7 @@ export function ServiceContent() {
                 <div className="pt-4 mt-2 flex items-center justify-between border-t border-slate-50 text-[10px]">
                   <div className="flex items-center gap-1.5 text-slate-400">
                     <Clock size={12} />
-                    <span className="font-bold uppercase tracking-tighter">Opened: {new Date(job.created_at).toLocaleDateString()}</span>
+                    <span className="font-bold uppercase tracking-tighter">Opened: {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}</span>
                   </div>
                   {job.status === 'Completed' ? (
                     <div className="flex items-center gap-1 text-emerald-600 font-black uppercase tracking-widest">
