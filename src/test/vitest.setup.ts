@@ -7,6 +7,8 @@ vi.mock('next/cache', () => ({
 }))
 
 // Mock next/headers — Server Actions use cookies() and headers()
+// No active_branch_id cookie in tests — getEffectiveBranchId falls back to
+// session.user.branchId, which each test controls via mockResolvedValueOnce.
 vi.mock('next/headers', () => ({
   cookies: vi.fn(() => ({
     get: vi.fn(),

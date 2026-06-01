@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
+import { setActiveBranchAction } from '@/app/actions/branch'
 
 
 // --- Types ---
@@ -410,7 +411,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     // Check if user is allotted to this branch OR is admin
     const isAllotted = allBranches.some(b => b.id === branchId)
     if (userRole !== 'admin' && !isAllotted) return
-    
+
     setLoading(true)
     const branch = allBranches.find(b => b.id === branchId)
     if (branch) {
@@ -418,6 +419,9 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       setBranchName(branch.name)
       setCurrentBranchDetails(branch as Branch)
       setCart([])
+      // Persist the selected branch in the cookie so Server Actions and
+      // page refreshes see the same branch the user has chosen in the POS.
+      await setActiveBranchAction(branchId)
       await fetchInventory(branchId)
       setToast({ message: `Switched to ${branch.name}`, type: 'success' })
     }
@@ -607,7 +611,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
 
       if (error || !data) throw error || new Error("Checkout failed, no data returned")
 
-      const resData = data as any
+      const resData = data as { invoice_number: string } & InvoiceData
       setInvoiceNumber(resData.invoice_number)
       setToast({ message: `Sale completed: ${resData.invoice_number}`, type: 'success' })
       
@@ -635,7 +639,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
         const { data: items } = await getInvoiceItemsDetailsAction(id)
         
         if (header && items && items.length > 0) {
-          return { ...(header as any), items: items as any } as InvoiceData
+          return { ...(header as Partial<InvoiceData>), items: items as InvoiceData['items'] } as InvoiceData
         }
       } catch (e) {
         console.warn(`Fetch attempt ${i + 1} failed`, e)
