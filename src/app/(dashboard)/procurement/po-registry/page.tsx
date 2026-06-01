@@ -631,7 +631,13 @@ export default function ProcurementGRNPage() {
         resetForm()
         // Refresh POs
         const poRes = await fetch('/api/procurement/purchase-orders')
-        setActivePOs(await poRes.json())
+        if (poRes.ok) {
+          const poData = await poRes.json()
+          setActivePOs(Array.isArray(poData) ? poData : [])
+        } else {
+          console.error('Failed to fetch updated PO list')
+          alert('PO created successfully, but failed to refresh list. Please refresh the page.')
+        }
       } else {
         const error = await res.json()
         console.error(error.error || "Failed to process PO")

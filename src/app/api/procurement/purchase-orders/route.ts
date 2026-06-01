@@ -30,12 +30,22 @@ export async function GET() {
             'file_path', vb.file_path,
             'created_at', vb.created_at
           )) FILTER (WHERE vb.id IS NOT NULL), '[]'
-        ) AS vendor_bills
+        ) AS vendor_bills,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', poi.id,
+            'product_id', poi.product_id,
+            'ordered_qty', poi.ordered_qty,
+            'unit_cost', poi.unit_cost,
+            'received_qty', poi.received_qty
+          )) FILTER (WHERE poi.id IS NOT NULL), '[]'
+        ) AS po_items
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
+      LEFT JOIN po_items poi ON poi.po_id = po.id
       GROUP BY po.id, v.id, b.id
       ORDER BY po.created_at DESC
     `);
@@ -169,12 +179,22 @@ export async function POST(request: NextRequest) {
             'file_path', vb.file_path,
             'created_at', vb.created_at
           )) FILTER (WHERE vb.id IS NOT NULL), '[]'
-        ) AS vendor_bills
+        ) AS vendor_bills,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', poi.id,
+            'product_id', poi.product_id,
+            'ordered_qty', poi.ordered_qty,
+            'unit_cost', poi.unit_cost,
+            'received_qty', poi.received_qty
+          )) FILTER (WHERE poi.id IS NOT NULL), '[]'
+        ) AS po_items
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
+      LEFT JOIN po_items poi ON poi.po_id = po.id
       WHERE po.id = ${poRecord.id}
       GROUP BY po.id, v.id, b.id
     `);
@@ -281,12 +301,22 @@ export async function PATCH(request: NextRequest) {
             'file_path', vb.file_path,
             'created_at', vb.created_at
           )) FILTER (WHERE vb.id IS NOT NULL), '[]'
-        ) AS vendor_bills
+        ) AS vendor_bills,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', poi.id,
+            'product_id', poi.product_id,
+            'ordered_qty', poi.ordered_qty,
+            'unit_cost', poi.unit_cost,
+            'received_qty', poi.received_qty
+          )) FILTER (WHERE poi.id IS NOT NULL), '[]'
+        ) AS po_items
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
+      LEFT JOIN po_items poi ON poi.po_id = po.id
       WHERE po.id = ${id}
       GROUP BY po.id, v.id, b.id
     `);
