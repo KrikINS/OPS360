@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST as provisionUser } from '@/app/api/admin/staff/route'
-import { getAdminUsersDataAction, getBranchesAction } from '@/app/actions/admin-users'
+import { getAdminUsersDataAction, getBranchesAction, updateUserPermissionsAction } from '@/app/actions/admin-users'
 import {
   setupTestDb, cleanupTestDb, teardownTestDb,
   seedBranch,
@@ -377,5 +377,91 @@ describe('getBranchesAction', () => {
     const result = await getBranchesAction()
     expect(result.error).toMatch(/unauthorized/i)
     expect(result.data).toHaveLength(0)
+  })
+})
+
+// ─────────────────────────────────────────────────────
+// updateUserPermissionsAction — branch assignment
+// ─────────────────────────────────────────────────────
+
+describe('updateUserPermissionsAction — branch assignment', () => {
+  it('saves branch assignments to user_branch_access', async () => {
+    const branch1 = await seedBranch(db, { name: 'Branch One', gstin: '27AAAAA0000A1Z5' })
+    const branch2 = await seedBranch(db, { name: 'Branch Two', gstin: '27BBBBB0000B1Z3' })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    await provisionUser(makeProvisionRequest({
+      email: 'branchtest@ops360.com',
+      password: 'SecurePass123!',
+      role: 'staff',
+      branchIds: [branch1.id],
+    }))
+
+    const user = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, 'branchtest@ops360.com'))
+      .limit(1)
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    const result = await updateUserPermissionsAction({
+      userId: user[0].id,
+      role: 'staff',
+      permissions: { pos: true, inventory: false },
+      branchIds: [branch1.id, branch2.id],
+    })
+
+    expect(result.success).toBe(true)
+
+    const access = await db
+      .select()
+      .from(schema.user_branch_access)
+      .where(eq(schema.user_branch_access.user_id, user[0].id))
+
+    expect(access).toHaveLength(2)
+    expect(access.find(a => a.is_primary)?.branch_id).toBe(branch1.id)
+  })
+
+  it('replaces existing branch assignments on update', async () => {
+    const branch1 = await seedBranch(db, { name: 'Old Branch', gstin: '27AAAAA0000A1Z5' })
+    const branch2 = await seedBranch(db, { name: 'New Branch', gstin: '27BBBBB0000B1Z3' })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    await provisionUser(makeProvisionRequest({
+      email: 'replacetest@ops360.com',
+      password: 'SecurePass123!',
+      role: 'staff',
+      branchIds: [branch1.id],
+    }))
+
+    const user = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, 'replacetest@ops360.com'))
+      .limit(1)
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    await updateUserPermissionsAction({
+      userId: user[0].id,
+      role: 'staff',
+      permissions: {},
+      branchIds: [branch2.id],
+    })
+
+    const access = await db
+      .select()
+      .from(schema.user_branch_access)
+      .where(eq(schema.user_branch_access.user_id, user[0].id))
+
+    expect(access).toHaveLength(1)
+    expect(access[0].branch_id).toBe(branch2.id)
   })
 })

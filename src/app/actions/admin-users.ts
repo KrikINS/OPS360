@@ -78,6 +78,7 @@ export async function updateUserPermissionsAction(input: {
   userId: string
   role: string
   permissions: Record<string, boolean>
+  branchIds: string[]
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -117,6 +118,21 @@ export async function updateUserPermissionsAction(input: {
         module,
         enabled: input.permissions[module],
       })
+    }
+
+    // Delete all existing branch assignments then insert the new set
+    await db
+      .delete(user_branch_access)
+      .where(eq(user_branch_access.user_id, input.userId))
+
+    if (input.branchIds.length > 0) {
+      await db.insert(user_branch_access).values(
+        input.branchIds.map((branchId, i) => ({
+          user_id: input.userId,
+          branch_id: branchId,
+          is_primary: i === 0,
+        }))
+      )
     }
 
     return { success: true }

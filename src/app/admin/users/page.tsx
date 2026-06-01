@@ -157,6 +157,7 @@ export default function UserManagementPage() {
           userId: user.id,
           role: user.role ?? 'staff',
           permissions: user.permissions ?? {},
+          branchIds: user.assigned_branch_ids ?? [],
         })
         if (!result.success) {
           throw new Error(result.error ?? 'Failed to save')
