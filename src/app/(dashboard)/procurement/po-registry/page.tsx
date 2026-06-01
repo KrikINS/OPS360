@@ -90,6 +90,7 @@ import {
 } from "@/components/ui/popover"
 import { ChevronsUpDown, Check } from "lucide-react"
 import { useSession } from 'next-auth/react'
+import { approvePurchaseOrder, rejectPurchaseOrder } from '@/actions/procurement'
 import ProcessReturns from "../return/page"
 import DiscrepancyReportPage from "../../discrepancy-report/page"
 
@@ -659,7 +660,7 @@ export default function ProcurementGRNPage() {
         throw new Error("User session expired. Please refresh and try again.");
       }
 
-      const result = await import("@/actions/procurement").then(m => m.approvePurchaseOrder({ poId }))
+      const result = await approvePurchaseOrder({ poId })
 
       if (!result.success) {
         throw new Error(result.error || "Failed to approve PO");
@@ -691,25 +692,19 @@ export default function ProcurementGRNPage() {
 
 
   const handleRejectPO = async (poId: string) => {
-    if (!confirm("Are you sure you want to reject this Purchase Order?")) return
+    if (!confirm('Are you sure you want to reject this Purchase Order?')) return
     try {
-      const res = await fetch('/api/procurement/purchase-orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: poId, status: 'cancelled' })
-      })
-      if (res.ok) {
+      const result = await rejectPurchaseOrder({ poId })
+      if (result.success) {
         const poRes = await fetch('/api/procurement/purchase-orders')
         setActivePOs(await poRes.json())
-        alert("Purchase Order rejected successfully.")
+        alert('Purchase Order rejected successfully.')
       } else {
-        const data = await res.json()
-        alert("Failed to reject PO: " + (data.error || res.statusText))
+        alert(result.error || 'Failed to reject PO')
       }
-    } catch (error: unknown) {
-       console.error("Failed to reject PO", error)
-       const errorMsg = error instanceof Error ? error.message : "An error occurred rejecting the PO";
-       alert(errorMsg)
+    } catch (err) {
+      console.error('Reject error:', err)
+      alert('An unexpected error occurred.')
     }
   }
 
@@ -766,8 +761,9 @@ export default function ProcurementGRNPage() {
         setRevisionDialogPO(null)
         setRevisionNotesInput("")
       } else {
-        const err = await res.json()
-        console.error("Failed to send back for revision:", err.error)
+        const errData = await res.json().catch(() => ({}))
+        console.error("Failed to send back for revision:", errData.error)
+        alert(errData.error || 'Failed to request revision. Please try again.')
       }
     } catch (err: unknown) {
       console.error("Failed to send back for revision:", err)

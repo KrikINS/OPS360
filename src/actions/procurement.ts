@@ -174,7 +174,8 @@ export async function approvePurchaseOrder(input: { poId: string }) {
     if (!existing[0]) {
       return { success: false as const, error: 'Purchase order not found' }
     }
-    if (existing[0].status !== 'draft') {
+    const approvableStatuses = ['draft', 'pending_approval']
+    if (!approvableStatuses.includes(existing[0].status ?? '')) {
       return { success: false as const, error: 'Purchase order cannot be approved — invalid status' }
     }
 
@@ -201,6 +202,50 @@ export async function approvePurchaseOrder(input: { poId: string }) {
   } catch (error) { console.error('PROCUREMENT ERROR:', error);
     return { success: false as const, error: (error as Error).message }
   }
+}
+
+export async function rejectPurchaseOrder(input: {
+  poId: string
+  reason?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false as const, error: 'Unauthorized' }
+  }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  const isManager = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
+  if (!isManager) {
+    return { success: false as const, error: 'Manager role required' }
+  }
+
+  const [existing] = await db
+    .select()
+    .from(purchase_orders)
+    .where(eq(purchase_orders.id, input.poId))
+    .limit(1)
+
+  if (!existing) {
+    return { success: false as const, error: 'Purchase order not found' }
+  }
+
+  const rejectableStatuses = ['draft', 'pending_approval']
+  if (!rejectableStatuses.includes(existing.status ?? '')) {
+    return {
+      success: false as const,
+      error: `Cannot reject a PO with status: ${existing.status}`,
+    }
+  }
+
+  await db
+    .update(purchase_orders)
+    .set({
+      status: 'cancelled',
+      cancellation_reason: input.reason ?? null,
+    })
+    .where(eq(purchase_orders.id, input.poId))
+
+  return { success: true as const }
 }
 
 export async function createGRN(input: {

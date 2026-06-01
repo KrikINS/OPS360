@@ -21,6 +21,7 @@ import {
 import {
   createPurchaseOrder,
   approvePurchaseOrder,
+  rejectPurchaseOrder,
   createGRN,
   createReturnToVendor,
 } from '@/actions/procurement'
@@ -196,6 +197,38 @@ describe('approvePurchaseOrder', () => {
     expect(result.error).toMatch(/permission|role|manager/i)
   })
 
+  it('approves a PO with pending_approval status', async () => {
+    const branch = await seedBranch(db)
+    const vendor = await seedVendor(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedCounter(db, branch.id, 'PO')
+
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const po = await createPurchaseOrder({
+      branchId: branch.id,
+      vendorId: vendor.id,
+      items: [{ productId: product.id, orderedQty: 1, unitCost: 100 }],
+      expectedDeliveryDate: '2025-06-01',
+    }) as any
+
+    // Simulate UI-created PO: status stored as pending_approval
+    await db
+      .update(schema.purchase_orders)
+      .set({ status: 'pending_approval' })
+      .where(eq(schema.purchase_orders.id, po.po.id))
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await approvePurchaseOrder({ poId: po.po.id })
+    expect(result.success).toBe(true)
+    expect((result as any).po.status).toBe('approved')
+  })
+
   it('cannot approve an already-approved PO', async () => {
     const branch = await seedBranch(db)
     const vendor = await seedVendor(db)
@@ -218,6 +251,86 @@ describe('approvePurchaseOrder', () => {
     const again = await approvePurchaseOrder({ poId: created.po.id })
     expect(again.success).toBe(false)
     expect(again.error).toMatch(/already approved|invalid status/i)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PO rejection flow
+// ---------------------------------------------------------------------------
+
+describe('rejectPurchaseOrder', () => {
+  it('cancels a pending_approval PO', async () => {
+    const branch = await seedBranch(db)
+    const vendor = await seedVendor(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedCounter(db, branch.id, 'PO')
+
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const po = await createPurchaseOrder({
+      branchId: branch.id,
+      vendorId: vendor.id,
+      items: [{ productId: product.id, orderedQty: 1, unitCost: 100 }],
+      expectedDeliveryDate: '2025-06-01',
+    }) as any
+
+    await db
+      .update(schema.purchase_orders)
+      .set({ status: 'pending_approval' })
+      .where(eq(schema.purchase_orders.id, po.po.id))
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await rejectPurchaseOrder({ poId: po.po.id })
+    expect(result.success).toBe(true)
+
+    const updated = await db
+      .select()
+      .from(schema.purchase_orders)
+      .where(eq(schema.purchase_orders.id, po.po.id))
+      .limit(1)
+    expect(updated[0].status).toBe('cancelled')
+  })
+
+  it('cannot reject an already approved PO', async () => {
+    const branch = await seedBranch(db)
+    const vendor = await seedVendor(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedCounter(db, branch.id, 'PO')
+
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const po = await createPurchaseOrder({
+      branchId: branch.id,
+      vendorId: vendor.id,
+      items: [{ productId: product.id, orderedQty: 1, unitCost: 100 }],
+      expectedDeliveryDate: '2025-06-01',
+    }) as any
+    await approvePurchaseOrder({ poId: po.po.id })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await rejectPurchaseOrder({ poId: po.po.id })
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/cannot reject/i)
+  })
+
+  it('rejects rejection by staff role', async () => {
+    const branch = await seedBranch(db)
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000002', branchId: branch.id, role: 'staff' },
+    })
+    const result = await rejectPurchaseOrder({ poId: 'any-id' })
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/manager/i)
   })
 })
 
