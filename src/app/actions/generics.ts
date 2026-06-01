@@ -14,6 +14,8 @@ const ALLOWED_TABLES = new Set([
   'grn_receipts', 'po_items', 'discrepancies',
   'attendance_records', 'sequential_counters',
   'inventory_transactions', 'vendor_audit_log',
+  'po_terms_templates', 'vendor_product_map', 'vendor_bills',
+  'grns', 'stock_request_items',
 ])
 
 const ALLOWED_FUNCTIONS = new Set([
@@ -89,6 +91,9 @@ export async function updateData(tableName: string, payload: Record<string, Payl
 
 export async function deleteData(tableName: string, id: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: 'Unauthorized' } }
+    if (!ALLOWED_TABLES.has(tableName)) return { error: { message: `Table '${tableName}' is not accessible` } }
     await db.execute(sql.raw(`DELETE FROM "${tableName}" WHERE id = ${escapeValue(id)}`))
     return { data: null }
   } catch (error) {

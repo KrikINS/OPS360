@@ -11,7 +11,7 @@ function getEnv(key) {
     const content = fs.readFileSync(envPath, 'utf8');
     const match = content.match(new RegExp(`^${key}=(.*)$`, 'm'));
     return match ? match[1].trim() : null;
-  } catch (_e) {
+  } catch {
     return null;
   }
 }

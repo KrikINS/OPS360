@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 const items = [{ 
   'Brand': 'Ethan', 
   'Item Name': 'Ethan Arctic 1.5T', 

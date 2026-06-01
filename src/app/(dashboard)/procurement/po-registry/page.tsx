@@ -653,22 +653,10 @@ export default function ProcurementGRNPage() {
         throw new Error("User session expired. Please refresh and try again.");
       }
 
-      
-      const { data, error } = await (Promise.resolve({ data: { success: true } }) as unknown as Promise<{ data: { success?: boolean; message?: string }, error: { message?: string, details?: string, hint?: string, code?: string } | null }>)
+      const result = await import("@/app/actions/procurement").then(m => m.approvePurchaseOrder({ poId }))
 
-      if (error) {
-        // Log the actual error object properties for debugging
-        console.error("RPC Error Details:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        throw new Error(error.message || "Approval RPC failed");
-      }
-
-      if (data && data.success === false) {
-        throw new Error(data.message || "Database side approval failed");
+      if (!result.success) {
+        throw new Error(result.error || "Failed to approve PO");
       }
 
       // Refresh data
@@ -676,19 +664,14 @@ export default function ProcurementGRNPage() {
       const updatedPOs = await poRes.json()
       setActivePOs(updatedPOs)
       
-      // Update local state first for immediate UI feedback
-      setActivePOs(prev => prev.map(p => 
-        p.id === poId ? { ...p, status: 'approved', approved_by: userId } : p
-      ))
-      
-      // Automatically switch to GRN Registry (Pending Fulfilment) tab
-      setActiveTab('pending')
-      setViewingPO(null)
-      
       // Update viewing modal if open
       if (viewingPO && viewingPO.id === poId) {
         setViewingPO(updatedPOs.find((p: PurchaseOrder) => p.id === poId))
       }
+      
+      // Automatically switch to GRN Registry (Pending Fulfilment) tab
+      setActiveTab('pending')
+      setViewingPO(null)
       
       alert("Purchase Order Approved successfully.")
     } catch (err: unknown) {
@@ -728,13 +711,13 @@ export default function ProcurementGRNPage() {
     if (!shortClosingPO || !shortCloseReason) return
     setIsShortClosing(true)
     
-    // Final Reason text assembly
-
     try {
-      
-      const { error } = await (Promise.resolve({ error: null }) as unknown as Promise<{ error: Error | null }>)
+      const result = await import("@/app/actions/generics").then(m => m.updateData('purchase_orders', { 
+        id: shortClosingPO.id, 
+        status: 'SHORT_CLOSED'
+      }))
 
-      if (error) throw error
+      if (result.error) throw new Error(result.error.message || "Failed to short-close PO")
 
       // Refresh data
       const poRes = await fetch('/api/procurement/purchase-orders')
