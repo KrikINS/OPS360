@@ -195,6 +195,7 @@ export default function UserManagementPage() {
           userId: updated.id,
           role: updated.role ?? 'staff',
           permissions: updated.permissions ?? {},
+          branchIds: updated.assigned_branch_ids || [],
         }),
       ])
 

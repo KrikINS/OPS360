@@ -168,7 +168,7 @@ type PurchaseOrder = {
   revision_notes?: string
   terms_content?: string
   payment_terms?: string
-  items?: {
+  items: {
     id: string
     product_id: string
     quantity: number
@@ -659,7 +659,7 @@ export default function ProcurementGRNPage() {
         throw new Error("User session expired. Please refresh and try again.");
       }
 
-      const result = await import("@/app/actions/procurement").then(m => m.approvePurchaseOrder({ poId }))
+      const result = await import("@/actions/procurement").then(m => m.approvePurchaseOrder({ poId }))
 
       if (!result.success) {
         throw new Error(result.error || "Failed to approve PO");
@@ -1957,7 +1957,7 @@ Are you sure you want to proceed?`)) return;
                               </TableCell>
                               <TableCell className="py-4 px-2">
                                 <div className="space-y-3">
-                                  {po.items.map((item) => {
+                                  {(po.items || []).map((item) => {
                                     const progress = (item.received_quantity / item.quantity) * 100;
                                     return (
                                       <div key={item.id} className="space-y-1">
@@ -2016,7 +2016,7 @@ Are you sure you want to proceed?`)) return;
                                       <FileText className="h-4 w-4 mr-2" /> View Purchase Order
                                     </DropdownMenuItem>
 
-                                    {po.items.some(i => i.received_quantity > 0) && (
+                                    {(po.items || []).some(i => i.received_quantity > 0) && (
                                       <>
                                         {po.grns && po.grns.length > 0 ? (
                                           po.grns.map((grn) => (
@@ -2185,18 +2185,18 @@ Are you sure you want to proceed?`)) return;
                           return searchMatch;
                         })
                         .map((po) => {
-                             const subtotal = po.items.reduce((acc, item) => {
+                             const subtotal = (po.items || []).reduce((acc, item) => {
                                const qtyToAudit = po.status === 'SHORT_CLOSED' ? Number(item.received_quantity) : Number(item.quantity);
                                return acc + (Number(item.unit_price) * qtyToAudit);
                              }, 0);
-                             const taxTotal = po.items.reduce((acc, item) => {
+                             const taxTotal = (po.items || []).reduce((acc, item) => {
                                const qtyToAudit = po.status === 'SHORT_CLOSED' ? Number(item.received_quantity) : Number(item.quantity);
                                return acc + (Number(item.unit_price) * qtyToAudit * (Number(item.tax_rate) / 100));
                              }, 0);
                              const poTotal = subtotal + taxTotal;
                              
-                             const grnSubtotal = po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity)), 0);
-                             const grnTaxTotal = po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity) * (Number(item.tax_rate) / 100)), 0);
+                             const grnSubtotal = (po.items || []).reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity)), 0);
+                             const grnTaxTotal = (po.items || []).reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity) * (Number(item.tax_rate) / 100)), 0);
                              const grnFreightTotal = po.grns?.reduce((acc: number, grn: { grn_items?: { freight_value: number }[] }) => 
                                acc + (grn.grn_items?.reduce((iAcc: number, item: { freight_value: number }) => iAcc + Number(item.freight_value || 0), 0) || 0), 0) || 0;
                              const grnTotal = grnSubtotal + grnTaxTotal + grnFreightTotal;
@@ -2320,7 +2320,7 @@ Are you sure you want to proceed?`)) return;
                                       </DropdownMenuItem>
 
 
-                                    {po.items.some(i => i.received_quantity > 0) && (
+                                    {(po.items || []).some(i => i.received_quantity > 0) && (
                                       <>
                                         {po.grns && po.grns.length > 0 ? (
                                           po.grns.map((grn) => (
@@ -2569,7 +2569,7 @@ Are you sure you want to proceed?`)) return;
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {viewingPO.items.map((item: POItem, idx: number) => {
+                        {(viewingPO.items || []).map((item: POItem, idx: number) => {
                           const qty = Number(item.quantity)
                           const price = Number(item.unit_price)
                           const rate = Number(item.tax_rate)
