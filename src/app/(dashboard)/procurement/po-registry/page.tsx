@@ -168,7 +168,7 @@ type PurchaseOrder = {
   revision_notes?: string
   terms_content?: string
   payment_terms?: string
-  items: {
+  items?: {
     id: string
     product_id: string
     quantity: number
@@ -909,8 +909,8 @@ Are you sure you want to proceed?`)) return;
       }
 
       // Quantity Mismatch Detection (Compares inventory registry vs order)
-      const totalOrderedQty = uploadBillPO.items.reduce((acc, item) => acc + item.quantity, 0);
-      const totalReceivedQty = uploadBillPO.items.reduce((acc, item) => acc + (item.received_quantity || 0), 0);
+      const totalOrderedQty = (uploadBillPO.items || []).reduce((acc, item) => acc + item.quantity, 0);
+      const totalReceivedQty = (uploadBillPO.items || []).reduce((acc, item) => acc + (item.received_quantity || 0), 0);
       const qtyGap = totalReceivedQty - totalOrderedQty;
 
       if (Math.abs(qtyGap) > 0 && (uploadBillPO.status === 'received' || uploadBillPO.status === 'PARTIALLY_RETURNED')) {
@@ -1600,9 +1600,9 @@ Are you sure you want to proceed?`)) return;
                               </TableCell>
                               <TableCell className="py-2 px-2 text-slate-500 border-r border-slate-100/50">
                                 <div className="font-semibold text-slate-700">
-                                  {po.items[0]?.product?.model_name || '---'}
+                                  {po.items?.[0]?.product?.model_name || '---'}
                                 </div>
-                                {po.items.length > 1 && (
+                                {po.items?.length > 1 && (
                                   <div className="text-[9px] text-slate-400 font-bold uppercase">
                                     + {po.items.length - 1} OTHER ITEMS
                                   </div>
@@ -1628,19 +1628,19 @@ Are you sure you want to proceed?`)) return;
                                   <Tooltip>
                                     <TooltipTrigger render={
                                       <span className="cursor-help hover:text-blue-600 transition-colors">
-                                        {formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0))}
+                                        {formatCurrency((po.items || []).reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * (1 + Number(item.tax_rate) / 100)), 0))}
                                       </span>
                                     } />
                                     <TooltipContent className="bg-[#001529] text-white border-slate-700 w-64">
                                       <div className="space-y-2 text-[10px]">
                                         <div className="flex justify-between gap-4">
                                           <span className="text-white/60 uppercase font-bold tracking-wider text-[8px]">Excl. Tax</span>
-                                          <span className="font-mono">{formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity)), 0))}</span>
+                                          <span className="font-mono">{formatCurrency((po.items || []).reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity)), 0))}</span>
                                         </div>
                                         <div className="space-y-1 border-t border-white/10 pt-2">
                                           <p className="text-[8px] font-black uppercase text-blue-400 tracking-widest mb-1">GST Breakdown</p>
                                           {Object.entries(
-                                            po.items.reduce((acc: Record<number, { tax: number }>, item) => {
+                                            (po.items || []).reduce((acc: Record<number, { tax: number }>, item) => {
                                               const rate = Number(item.tax_rate);
                                               const tax = Number(item.unit_price) * Number(item.quantity) * (rate / 100);
                                               if (!acc[rate]) acc[rate] = { tax: 0 };
@@ -1656,7 +1656,7 @@ Are you sure you want to proceed?`)) return;
                                         </div>
                                         <div className="flex justify-between gap-4 border-t border-white/20 pt-1 font-black text-blue-400">
                                           <span className="uppercase tracking-wider text-[8px]">Total GST</span>
-                                          <span className="font-mono">{formatCurrency(po.items.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * Number(item.tax_rate) / 100), 0))}</span>
+                                          <span className="font-mono">{formatCurrency((po.items || []).reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity) * Number(item.tax_rate) / 100), 0))}</span>
                                         </div>
                                       </div>
                                     </TooltipContent>
