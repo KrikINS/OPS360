@@ -6,7 +6,7 @@ import {
 } from '@/test/db'
 import {
   clockIn, clockOut, getAttendanceByBranch,
-  getMyAttendance, correctAttendance,
+  getMyAttendance, correctAttendance, getActivityLog,
 } from '@/actions/hr'
 import type { TestDb } from '@/test/db'
 
@@ -253,5 +253,109 @@ describe('correctAttendance', () => {
     })
     expect(result.success).toBe(false)
     expect(result.error).toMatch(/manager/i)
+  })
+})
+
+// ── getActivityLog ────────────────────────────────────────────────────────────
+
+describe('getActivityLog', () => {
+  it('returns activities from multiple sources', async () => {
+    const branch = await seedBranch(db)
+    const today = new Date().toISOString().split('T')[0]
+
+    await seedAttendanceRecord(db, {
+      userId: MANAGER_ID,
+      branchId: branch.id,
+      date: today,
+      clockIn: new Date(),
+    })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: MANAGER_ID, branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await getActivityLog({ fromDate: today, toDate: today }) as any
+    expect(result.success).toBe(true)
+    expect(result.activities.length).toBeGreaterThanOrEqual(1)
+    const hrActivity = result.activities.find(
+      (a: any) => a.module === 'HR' && a.actionType === 'clock_in'
+    )
+    expect(hrActivity).toBeDefined()
+    expect(hrActivity?.userId).toBe(MANAGER_ID)
+  })
+
+  it('staff can only see their own activity', async () => {
+    const branch = await seedBranch(db)
+    const today = new Date().toISOString().split('T')[0]
+
+    await seedAttendanceRecord(db, {
+      userId: MANAGER_ID,
+      branchId: branch.id,
+      date: today,
+      clockIn: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    })
+    await seedAttendanceRecord(db, {
+      userId: STAFF_ID,
+      branchId: branch.id,
+      date: today,
+      clockIn: new Date(Date.now() - 60 * 60 * 1000),
+    })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
+    })
+
+    const result = await getActivityLog({ fromDate: today, toDate: today }) as any
+    expect(result.success).toBe(true)
+    const otherUserActivity = result.activities.filter(
+      (a: any) => a.userId === MANAGER_ID
+    )
+    expect(otherUserActivity.length).toBe(0)
+  })
+
+  it('manager can filter by specific staff member', async () => {
+    const branch = await seedBranch(db)
+    const today = new Date().toISOString().split('T')[0]
+
+    await seedAttendanceRecord(db, {
+      userId: MANAGER_ID,
+      branchId: branch.id,
+      date: today,
+      clockIn: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    })
+    await seedAttendanceRecord(db, {
+      userId: STAFF_ID,
+      branchId: branch.id,
+      date: today,
+      clockIn: new Date(Date.now() - 60 * 60 * 1000),
+    })
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: MANAGER_ID, branchId: branch.id, role: 'manager' },
+    })
+
+    const result = await getActivityLog({ userId: STAFF_ID, fromDate: today, toDate: today }) as any
+    expect(result.success).toBe(true)
+    const nonStaffActivity = result.activities.filter(
+      (a: any) => a.userId !== STAFF_ID
+    )
+    expect(nonStaffActivity.length).toBe(0)
+  })
+
+  it('returns empty array when no activity in date range', async () => {
+    const branch = await seedBranch(db)
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: MANAGER_ID, branchId: branch.id, role: 'manager' },
+    })
+    const result = await getActivityLog({ fromDate: '2020-01-01', toDate: '2020-01-02' }) as any
+    expect(result.success).toBe(true)
+    expect(result.activities.length).toBe(0)
+  })
+
+  it('rejects unauthenticated requests', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce(null)
+    const result = await getActivityLog({})
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/unauthorized/i)
   })
 })
