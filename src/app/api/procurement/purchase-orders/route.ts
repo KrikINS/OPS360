@@ -15,6 +15,19 @@ export async function GET() {
         row_to_json(b.*) AS branch,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
+            'id', pi.id,
+            'po_id', pi.po_id,
+            'product_id', pi.product_id,
+            'ordered_qty', pi.ordered_qty,
+            'unit_cost', pi.unit_cost,
+            'product', jsonb_build_object(
+              'id', p.id,
+              'model_name', p.model_name
+            )
+          )) FILTER (WHERE pi.id IS NOT NULL), '[]'
+        ) AS items,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
             'id', d.id,
             'discrepancy_type', d.discrepancy_type,
             'status', d.status,
@@ -34,6 +47,8 @@ export async function GET() {
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
+      LEFT JOIN po_items pi ON pi.po_id = po.id
+      LEFT JOIN products p ON pi.product_id = p.id
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
       GROUP BY po.id, v.id, b.id
@@ -123,7 +138,7 @@ export async function POST(request: NextRequest) {
         is_partial_billing: is_partial_billing || false,
         terms_content,
         payment_terms,
-      })
+      } as any)
       .returning();
 
     const poRecord = inserted[0];
@@ -154,6 +169,19 @@ export async function POST(request: NextRequest) {
         row_to_json(b.*) AS branch,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
+            'id', pi.id,
+            'po_id', pi.po_id,
+            'product_id', pi.product_id,
+            'ordered_qty', pi.ordered_qty,
+            'unit_cost', pi.unit_cost,
+            'product', jsonb_build_object(
+              'id', p.id,
+              'model_name', p.model_name
+            )
+          )) FILTER (WHERE pi.id IS NOT NULL), '[]'
+        ) AS items,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
             'id', d.id,
             'discrepancy_type', d.discrepancy_type,
             'status', d.status,
@@ -173,6 +201,8 @@ export async function POST(request: NextRequest) {
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
+      LEFT JOIN po_items pi ON pi.po_id = po.id
+      LEFT JOIN products p ON pi.product_id = p.id
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
       WHERE po.id = ${poRecord.id}
@@ -266,6 +296,19 @@ export async function PATCH(request: NextRequest) {
         row_to_json(b.*) AS branch,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
+            'id', pi.id,
+            'po_id', pi.po_id,
+            'product_id', pi.product_id,
+            'ordered_qty', pi.ordered_qty,
+            'unit_cost', pi.unit_cost,
+            'product', jsonb_build_object(
+              'id', p.id,
+              'model_name', p.model_name
+            )
+          )) FILTER (WHERE pi.id IS NOT NULL), '[]'
+        ) AS items,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
             'id', d.id,
             'discrepancy_type', d.discrepancy_type,
             'status', d.status,
@@ -285,6 +328,8 @@ export async function PATCH(request: NextRequest) {
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
+      LEFT JOIN po_items pi ON pi.po_id = po.id
+      LEFT JOIN products p ON pi.product_id = p.id
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
       WHERE po.id = ${id}

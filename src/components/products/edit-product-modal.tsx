@@ -188,7 +188,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
             <div className="space-y-2">
               <Label htmlFor="edit-tracking">Tracking Type</Label>
               <Select 
-                onValueChange={(v) => setFormData({ ...formData, tracking_type: v || "Stocked" })}
+                onValueChange={(v) => setFormData({ ...formData, tracking_type: (v as string) || "Stocked" })}
                 value={formData.tracking_type}
               >
                 <SelectTrigger>
