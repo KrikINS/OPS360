@@ -85,6 +85,37 @@ describe('createPurchaseOrder', () => {
     expect(result.po.sgst).toBe(0)
   })
 
+  it('generates unique PO numbers under concurrent load', async () => {
+    const branch = await seedBranch(db)
+    const vendor = await seedVendor(db)
+    const product = await seedProduct(db, { branchId: branch.id })
+    await seedCounter(db, branch.id, 'PO')
+
+    const requests = Array.from({ length: 10 }, () => {
+      vi.mocked(getServerSession).mockResolvedValueOnce({
+        user: {
+          id: '00000000-0000-0000-0000-000000000001',
+          branchId: branch.id,
+          role: 'manager',
+        },
+      })
+      return createPurchaseOrder({
+        branchId: branch.id,
+        vendorId: vendor.id,
+        items: [{ productId: product.id, orderedQty: 1, unitCost: 100 }],
+        expectedDeliveryDate: '2025-06-01',
+      })
+    })
+
+    const results = await Promise.all(requests)
+    const successful = results.filter(r => r.success) as any[]
+    const poNumbers = successful.map(r => r.po.poNumber)
+    const unique = new Set(poNumbers)
+
+    expect(successful.length).toBe(10)
+    expect(unique.size).toBe(10)
+  })
+
   it('uses CGST+SGST when vendor and branch are in the same state', async () => {
     const branch = await seedBranch(db, { stateCode: '27' }) // Maharashtra
     const vendor = await seedVendor(db, { stateCode: '27' }) // Maharashtra

@@ -30,22 +30,18 @@ export async function createPurchaseOrder(input: {
   }
 
   try {
-    // Generate PO number using the sequential_counters table
     const year = new Date().getFullYear()
-    await db.execute(sql`
+    const poCounterRes = await db.execute(sql`
       INSERT INTO sequential_counters (prefix, year, current_value)
       VALUES ('PO', ${year}, 1)
       ON CONFLICT (prefix, year) DO UPDATE
         SET current_value = sequential_counters.current_value + 1
+      RETURNING current_value
     `)
-    const counterRes = await db.execute(sql`
-      SELECT current_value FROM sequential_counters WHERE prefix = 'PO' AND year = ${year}
-    `)
-    const counterResult = counterRes as unknown as { rows?: { current_value: number }[] } | { current_value: number }[]
-    const counterValue = Array.isArray(counterResult)
-      ? counterResult[0]?.current_value
-      : (counterResult as { rows?: { current_value: number }[] }).rows?.[0]?.current_value
-    const poNumber = `PO/${year}/${counterValue}`
+    const poCounterRows = (poCounterRes as unknown as { rows?: { current_value: number }[] }).rows
+      ?? (poCounterRes as unknown as { current_value: number }[])
+    const poCounterValue = poCounterRows[0]?.current_value
+    const poNumber = `PO/${year}/${poCounterValue}`
 
     const totalAmount = input.items.reduce((s, i) => s + i.orderedQty * i.unitCost, 0)
 
@@ -232,20 +228,16 @@ export async function createGRN(input: {
 
     // 2. Generate GRN number
     const year = new Date().getFullYear()
-    await db.execute(sql`
+    const grnCounterRes = await db.execute(sql`
       INSERT INTO sequential_counters (prefix, year, current_value)
       VALUES ('GRN', ${year}, 1)
       ON CONFLICT (prefix, year) DO UPDATE
         SET current_value = sequential_counters.current_value + 1
+      RETURNING current_value
     `)
-    const counterRes = await db.execute(sql`
-      SELECT current_value FROM sequential_counters
-      WHERE prefix = 'GRN' AND year = ${year}
-    `)
-    const counterResult = counterRes as unknown as { rows?: { current_value: number }[] } | { current_value: number }[]
-    const counterValue = Array.isArray(counterResult)
-      ? counterResult[0]?.current_value
-      : (counterResult as { rows?: { current_value: number }[] }).rows?.[0]?.current_value
+    const grnCounterRows = (grnCounterRes as unknown as { rows?: { current_value: number }[] }).rows
+      ?? (grnCounterRes as unknown as { current_value: number }[])
+    const counterValue = grnCounterRows[0]?.current_value
     const grnNumber = `GRN/${year}/${counterValue}`
 
     // 3. Total landed cost spread across all received units
