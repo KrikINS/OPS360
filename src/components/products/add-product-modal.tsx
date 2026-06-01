@@ -41,7 +41,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     category: "",
     hsn_code: "",
     base_price: "",
-    tax_rate: "18",
+    gst_rate: "18",
     warranty_months: "12",
     min_stock_level: "0",
     description: "",
@@ -91,7 +91,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
         body: JSON.stringify({
           ...formData,
           base_price: parseFloat(formData.base_price),
-          tax_rate: parseFloat(formData.tax_rate),
+          gst_rate: parseFloat(formData.gst_rate),
           warranty_months: parseInt(formData.warranty_months),
           min_stock_level: parseInt(formData.min_stock_level),
           product_code: generatedCode
@@ -108,7 +108,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
         category: "",
         hsn_code: "",
         base_price: "",
-        tax_rate: "18",
+        gst_rate: "18",
         warranty_months: "12",
         min_stock_level: "0",
         description: "",
@@ -206,9 +206,9 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 value={formData.base_price}
                 onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
               />
-              {formData.base_price && formData.tax_rate && (
+              {formData.base_price && formData.gst_rate && (
                 <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                  Estimated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  Estimated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </p>
               )}
             </div>
@@ -216,14 +216,14 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="tax_rate">Tax Rate (%) *</Label>
+              <Label htmlFor="gst_rate">GST Rate (%) *</Label>
               <Input 
-                id="tax_rate" 
+                id="gst_rate" 
                 type="number" 
                 step="0.1" 
                 required
-                value={formData.tax_rate}
-                onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
+                value={formData.gst_rate}
+                onChange={(e) => setFormData({ ...formData, gst_rate: e.target.value })}
               />
             </div>
             <div className="space-y-2">

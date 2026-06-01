@@ -30,7 +30,7 @@ interface Product {
   min_stock_level: number
   tracking_type: string
   description: string
-  tax_rate?: number
+  gst_rate?: number
   warranty_months?: number
   is_archived?: boolean
 }
@@ -55,7 +55,7 @@ interface FormState {
   min_stock_level: string
   tracking_type: string
   description: string
-  tax_rate: string
+  gst_rate: string
   warranty_months: string
 }
 
@@ -68,7 +68,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
     min_stock_level: product?.min_stock_level?.toString() || "0",
     tracking_type: product?.tracking_type || "Stocked",
     description: product?.description || "",
-    tax_rate: product?.tax_rate?.toString() || "18",
+    gst_rate: product?.gst_rate?.toString() || "18",
     warranty_months: product?.warranty_months?.toString() || "12"
   })
 
@@ -81,7 +81,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
         min_stock_level: product.min_stock_level?.toString() || "0",
         tracking_type: product.tracking_type || "Stocked",
         description: product.description || "",
-        tax_rate: product.tax_rate?.toString() || "18",
+        gst_rate: product.gst_rate?.toString() || "18",
         warranty_months: product.warranty_months?.toString() || "12"
       })
     }
@@ -102,7 +102,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           min_stock_level: parseInt(formData.min_stock_level),
           tracking_type: formData.tracking_type,
           description: formData.description,
-          tax_rate: parseFloat(formData.tax_rate),
+          gst_rate: parseFloat(formData.gst_rate),
           warranty_months: parseInt(formData.warranty_months)
         }))
 
@@ -145,9 +145,9 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
                 required
               />
-              {formData.base_price && formData.tax_rate && (
+              {formData.base_price && formData.gst_rate && (
                 <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                  Estimated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.tax_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  Estimated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </p>
               )}
             </div>
@@ -163,13 +163,13 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-tax">Tax Rate (%) *</Label>
+              <Label htmlFor="edit-tax">GST Rate (%) *</Label>
               <Input 
                 id="edit-tax" 
                 type="number" 
                 step="0.1" 
-                value={formData.tax_rate}
-                onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
+                value={formData.gst_rate}
+                onChange={(e) => setFormData({ ...formData, gst_rate: e.target.value })}
                 required
               />
             </div>

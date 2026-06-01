@@ -22,8 +22,8 @@ export async function POST(request: Request) {
       product_code: body.product_code,
       model_name: body.model_name,
       hsn_code: body.hsn_code,
-      base_price: body.unit_rate?.toString(),
-      gst_rate: body.tax_rate?.toString(),
+      base_price: body.base_price?.toString() || body.unit_rate?.toString(),
+      gst_rate: body.gst_rate?.toString() || body.tax_rate?.toString(),
       min_stock_level: body.min_stock_level ? parseInt(body.min_stock_level) : 0,
       warranty_months: body.warranty_months ? parseInt(body.warranty_months) : null,
       description: body.description
