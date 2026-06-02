@@ -2185,9 +2185,7 @@ Are you sure you want to proceed?`)) return;
                              
                              const grnSubtotal = (po.items || []).reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity)), 0);
                              const grnTaxTotal = (po.items || []).reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.received_quantity) * (Number(item.tax_rate) / 100)), 0);
-                             const grnFreightTotal = po.grns?.reduce((acc: number, grn: { grn_items?: { freight_value: number }[] }) => 
-                               acc + (grn.grn_items?.reduce((iAcc: number, item: { freight_value: number }) => iAcc + Number(item.freight_value || 0), 0) || 0), 0) || 0;
-                             const grnTotal = grnSubtotal + grnTaxTotal + grnFreightTotal;
+                             const grnTotal = grnSubtotal + grnTaxTotal;
                              
                              const billAmount = po.vendor_bills?.reduce((acc: number, b: VendorBill) => acc + Number(b.bill_amount), 0) || 0;
                              
