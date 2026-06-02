@@ -68,6 +68,7 @@ type InventoryItem = {
   hsn_code: string
   status: string
   branch_id: string
+  branch_name: string | null
   product_id: string
   price: number
   landed_cost: number
