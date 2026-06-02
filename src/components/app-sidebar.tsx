@@ -111,13 +111,6 @@ const navigationGroups = [
     ]
   },
   {
-    id: "pos",
-    title: "Retail POS",
-    icon: Receipt,
-    url: "/pos",
-    items: []
-  },
-  {
     id: "accounting",
     title: "Finance & Accounts",
     icon: Wallet,

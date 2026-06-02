@@ -8,8 +8,9 @@ import { UserNav } from "@/components/user-nav"
 import { PosProvider } from "@/context/PosContext"
 import { GlobalProvider } from "@/context/GlobalContext"
 import Link from "next/link"
-import { HelpCircle } from "lucide-react"
+import { HelpCircle, Receipt } from "lucide-react"
 import { NotificationBell } from "@/components/layout/NotificationBell"
+import { Button } from "@/components/ui/button"
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -27,6 +28,9 @@ interface DashboardShellProps {
 export function DashboardShell({ children, profile, permissions }: DashboardShellProps) {
   const pathname = usePathname()
   const isPos = pathname === '/pos'
+  const isAdmin = ['admin/owner', 'admin', 'owner', 'super_admin'].includes(
+    (profile.role ?? '').toLowerCase().trim()
+  )
 
   if (isPos) {
     return (
@@ -51,10 +55,21 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
               Ops360 <span className="text-muted-foreground font-normal">- {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} Dashboard</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {(isAdmin || permissions?.pos === true) && (
+              <Link href="/pos">
+                <Button
+                  size="sm"
+                  className="bg-[#001529] hover:bg-[#002a52] text-white gap-2 shadow-sm font-medium"
+                >
+                  <Receipt className="h-4 w-4" />
+                  <span className="hidden sm:inline">POS Terminal</span>
+                </Button>
+              </Link>
+            )}
             <NotificationBell />
-            <Link 
-              href="/docs" 
+            <Link
+              href="/docs"
               className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all"
               title="Help & Documentation"
             >

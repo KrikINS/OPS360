@@ -38,6 +38,7 @@ interface POItem {
 interface PurchaseOrder {
   id: string
   po_number: string
+  branch_id: string
   vendor: { name: string }
   items: POItem[]
 }
@@ -472,7 +473,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
       .then(data => {
         const branchList: { id: string; name: string }[] = data.data ?? []
         setAvailableBranches(branchList)
-        const poBranch = branchList.find(b => b.id === po.branch_id)
+        const poBranch = branchList.find(b => b.id === po?.branch_id)
         if (poBranch) {
           setReceivingBranchId(poBranch.id)
         } else if (branchList.length === 1) {
@@ -480,7 +481,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
         }
       })
       .catch(console.error)
-  }, [po.branch_id])
+  }, [po?.branch_id])
 
   // ──────────────── Auto-focus scanner input when panel opens ────────────────
   useEffect(() => {

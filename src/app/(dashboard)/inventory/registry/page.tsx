@@ -695,7 +695,7 @@ export default function InventoryDashboard() {
                                 {group.total_network_stock <= (group.product?.low_stock_threshold ?? group.product?.categories?.low_stock_threshold ?? 10) && (
                                   <TooltipProvider>
                                     <Tooltip>
-                                      <TooltipTrigger asChild>
+                                      <TooltipTrigger>
                                         <Button
                                           variant="ghost"
                                           size="sm"
