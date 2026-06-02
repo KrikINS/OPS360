@@ -69,9 +69,14 @@ export async function getGRNReceiptsAction(poId: string) {
       ORDER BY gr.created_at DESC
     `)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('GRN RECEIPTS RAW RESULT keys:', Object.keys((res as any) ?? {}))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('GRN RECEIPTS ROWS:', (res as any).rows ?? res)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = (res as any).rows ?? (res as any) ?? []
     return { data }
   } catch (error) {
+    console.error('GRN RECEIPTS FULL ERROR:', error)
     return { error: { message: (error instanceof Error ? error.message : String(error)) } }
   }
 }
