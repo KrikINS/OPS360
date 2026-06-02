@@ -215,9 +215,11 @@ type PurchaseOrder = {
 }
 
 type GRNRawItem = {
-  quantity: number
-  serial_numbers: string[]
-  products: {
+  id: string
+  product_id: string
+  received_qty: number
+  serial_numbers: string[] | null
+  product: {
     model_name: string
     product_code: string
     hsn_code: string
@@ -227,10 +229,12 @@ type GRNRawItem = {
 type GRNRawData = {
   id: string
   grn_number: string
+  po_id: string
   created_at: string
   condition_notes: string
-  profiles: { full_name: string } | { full_name: string }[] | null
-  grn_items: GRNRawItem[] | GRNRawItem | null
+  originator_name: string | null
+  branch_name: string | null
+  grn_items: GRNRawItem[] | null
 }
 
 export default function ProcurementGRNPage() {
@@ -360,10 +364,7 @@ export default function ProcurementGRNPage() {
 
       const grnRecord = filteredData[0];
       const rawData = grnRecord as unknown as GRNRawData;
-      
-      // Robust profile mapping (PostgREST can return object or array depending on introspection)
-      const profile = Array.isArray(rawData.profiles) ? rawData.profiles[0] : rawData.profiles;
-      const grnItems = Array.isArray(rawData.grn_items) ? rawData.grn_items : (rawData.grn_items ? [rawData.grn_items] : []);
+      const grnItems = Array.isArray(rawData.grn_items) ? rawData.grn_items : [];
 
       const newGrnData: GRNData = {
         id: rawData.id,
@@ -372,19 +373,15 @@ export default function ProcurementGRNPage() {
         po_id: po.id,
         created_at: rawData.created_at,
         condition_notes: rawData.condition_notes,
-        originator_name: profile?.full_name || 'System Operator',
+        originator_name: rawData.originator_name || 'System Operator',
         approver_email: po.approver_email,
         branch_id: po.branch_id,
-        branch_name: branches.find(b => b.id === po.branch_id)?.name || po.branch?.name,
-        items: grnItems.map(item => {
-          // Robust product mapping (PostgREST can return object or array)
-          const productData = Array.isArray(item.products) ? item.products[0] : item.products;
-          return {
-            product: productData || { model_name: 'Unknown', product_code: 'N/A', hsn_code: 'N/A' },
-            quantity: item.quantity,
-            serial_numbers: item.serial_numbers || []
-          };
-        })
+        branch_name: rawData.branch_name || branches.find(b => b.id === po.branch_id)?.name || po.branch?.name,
+        items: grnItems.map(item => ({
+          product: item.product || { model_name: 'Unknown', product_code: 'N/A', hsn_code: 'N/A' },
+          quantity: item.received_qty,
+          serial_numbers: item.serial_numbers || []
+        }))
       };
 
       setCurrentGrnData(newGrnData);

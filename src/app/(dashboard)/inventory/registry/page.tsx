@@ -101,6 +101,7 @@ interface ProductGroup {
 }
 
 import { useGlobalContext } from "@/context/GlobalContext"
+import { getInventoryRegistryAction } from "@/actions/inventory"
 
 export default function InventoryDashboard() {
   const { activeBranch } = useGlobalContext()
@@ -170,19 +171,16 @@ export default function InventoryDashboard() {
       // Determine what base branch to use if not overridden by the UI filter
       const effectiveBranchId = selectedBranch === "all" ? (activeBranch?.id || "all") : selectedBranch;
 
-      const { data: dbInventory, error: invErr } = await import("@/app/actions/generics").then(m => m.fetchData("inventory"))
-      if (invErr) {
-        console.error("DEBUG INVENTORY ERROR:", invErr)
+      const inventoryResult = await getInventoryRegistryAction()
+      if (!inventoryResult.success) {
+        console.error("DEBUG INVENTORY ERROR:", inventoryResult.error)
       }
-      
-      let finalInventory: Record<string, unknown>[] = []
-      if (!invErr && dbInventory && Array.isArray(dbInventory)) {
-        finalInventory = dbInventory
-        if (effectiveBranchId !== "all" && effectiveBranchId !== "ALL_000") {
-          finalInventory = finalInventory.filter(i => (i as Record<string, unknown>)['branch_id'] === effectiveBranchId)
-        }
+
+      let finalInventory = inventoryResult.success ? inventoryResult.data : []
+      if (effectiveBranchId !== "all" && effectiveBranchId !== "ALL_000") {
+        finalInventory = finalInventory.filter(i => i.branch_id === effectiveBranchId)
       }
-      
+
       setInventory(finalInventory as unknown as InventoryItem[])
       setLoading(false)
     }

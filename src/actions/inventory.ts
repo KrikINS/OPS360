@@ -279,4 +279,46 @@ export async function allocateSerialNumber(input: {
   }
 }
 
+export async function getInventoryRegistryAction() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false as const, error: 'Unauthorized' }
+  }
+
+  try {
+    const rows = await db
+      .select({
+        id:           schema.inventory.id,
+        serial_number: schema.inventory.serial_number,
+        status:       schema.inventory.status,
+        branch_id:    schema.inventory.branch_id,
+        product_id:   schema.inventory.product_id,
+        price:        schema.inventory.price,
+        landed_cost:  schema.inventory.landed_cost,
+        source_po_id: schema.inventory.source_po_id,
+        created_at:   schema.inventory.created_at,
+        hsn_code:     schema.products.hsn_code,
+        product: {
+          id:              schema.products.id,
+          brand:           schema.products.brand,
+          model_name:      schema.products.model_name,
+          category:        schema.products.category,
+          description:     schema.products.description,
+          product_code:    schema.products.product_code,
+          base_price:      schema.products.base_price,
+          min_stock_level: schema.products.min_stock_level,
+          tracking_type:   schema.products.tracking_type,
+        },
+      })
+      .from(schema.inventory)
+      .leftJoin(schema.products, eq(schema.inventory.product_id, schema.products.id))
+      .orderBy(schema.inventory.created_at)
+
+    return { success: true as const, data: rows }
+  } catch (error) {
+    console.error('INVENTORY REGISTRY ERROR:', error)
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
 export { getStockTransfersAction }

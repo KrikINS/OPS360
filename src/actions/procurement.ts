@@ -397,6 +397,24 @@ export async function createGRN(input: {
         .where(eq(po_items.id, item.poItemId))
     }
 
+    // Determine if all items are fully received and transition PO status
+    const allPoItems = await db
+      .select()
+      .from(po_items)
+      .where(eq(po_items.po_id, input.poId))
+
+    const allFullyReceived = allPoItems.every(poItem => {
+      const grnItem = grnItemsData.find(g => g.poItemId === poItem.id)
+      return grnItem && grnItem.receivedQty >= poItem.ordered_qty
+    })
+
+    const newPoStatus = allFullyReceived ? 'received' : 'partially_received'
+
+    await db
+      .update(purchase_orders)
+      .set({ status: newPoStatus })
+      .where(eq(purchase_orders.id, input.poId))
+
     return {
       success: true as const,
       grn: {
