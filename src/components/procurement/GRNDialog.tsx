@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { 
-  Loader2, CheckCircle2, XCircle, Package, Truck, 
-  Landmark, FileText, Barcode, Zap, X, ShieldAlert, Camera, RefreshCw, Target
+  Loader2, CheckCircle2, XCircle, Package, Truck,
+  Landmark, FileText, Barcode, Zap, X, Camera, RefreshCw, Target
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -774,11 +774,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                           ref={(el) => { freightRefs.current[item.id] = el }}
                           type="number"
                           placeholder="0"
-                          className={cn(
-                            "h-9 text-[10px] pl-4 pr-1 border-slate-200 bg-slate-50/30 focus:bg-white focus:border-blue-500 text-slate-900 font-black rounded-lg transition-all min-w-0 w-full",
-                            (parseFloat(freightCharges[item.id] || "0") + item.unit_price > (item.product.base_price || 0) * 5) && 
-                            "border-amber-400 bg-amber-50 focus:border-amber-500"
-                          )}
+                          className="h-9 text-[10px] pl-4 pr-1 border-slate-200 bg-slate-50/30 focus:bg-white focus:border-blue-500 text-slate-900 font-black rounded-lg transition-all min-w-0 w-full"
                           value={freightCharges[item.id] || ""}
                           max="1000000" // ₹10L freight cap per row
                           onPaste={(e) => {
@@ -798,11 +794,6 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                             setFreightCharges({ ...freightCharges, [item.id]: val })
                           }}
                         />
-                        {(parseFloat(freightCharges[item.id] || "0") + item.unit_price > (item.product.base_price || 0) * 5) && (
-                          <div className="absolute -top-6 left-0 text-[8px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded uppercase flex items-center gap-1 animate-in fade-in zoom-in">
-                            <ShieldAlert className="h-3 w-3" /> Integrity Check: Landed Cost abnormally high
-                          </div>
-                        )}
                       </div>
                     </div>
 
