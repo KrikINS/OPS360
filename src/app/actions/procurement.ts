@@ -80,3 +80,37 @@ export async function getGRNReceiptsAction(poId: string) {
     return { error: { message: (error instanceof Error ? error.message : String(error)) } }
   }
 }
+
+export async function getDiscrepanciesAction() {
+  try {
+    const res = await db.execute(sql`
+      SELECT
+        d.id,
+        d.po_id,
+        d.product_id,
+        d.po_item_id,
+        d.discrepancy_type,
+        d.status,
+        d.admin_comment,
+        d.ordered_qty,
+        d.received_qty,
+        d.shortfall,
+        d.created_at,
+        po.po_number,
+        po.vendor_id,
+        v.name        AS vendor_name,
+        p.model_name  AS product_name,
+        p.product_code
+      FROM discrepancies d
+      LEFT JOIN purchase_orders po ON po.id = d.po_id
+      LEFT JOIN vendors          v  ON v.id  = po.vendor_id
+      LEFT JOIN products         p  ON p.id  = d.product_id
+      ORDER BY d.created_at DESC
+    `)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (res as any).rows ?? (res as any) ?? []
+    return { data }
+  } catch (error) {
+    return { error: { message: (error instanceof Error ? error.message : String(error)) } }
+  }
+}

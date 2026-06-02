@@ -270,7 +270,7 @@ export default function InventoryDashboard() {
       
       const pg = productGroups[pCode];
       pg.total_network_stock += 1;
-      pg.total_network_landed_cost += (item.landed_cost || item.price);
+      pg.total_network_landed_cost += Number(item.landed_cost || item.price || 0);
       const days = calculateDaysInStock(item.created_at);
       if (days > pg.max_network_aging) pg.max_network_aging = days;
 
@@ -279,7 +279,7 @@ export default function InventoryDashboard() {
       if (!bg) {
         bg = {
           branch_id: bId,
-          branch_name: branches.find(b => b.id === bId)?.name || "—",
+          branch_name: item.branch_name || "—",
           total_stock: 0,
           total_landed_cost: 0,
           max_aging: 0,
@@ -288,17 +288,17 @@ export default function InventoryDashboard() {
         };
         pg.branches.push(bg);
       }
-      
+
       bg.items.push(item);
       bg.total_stock += 1;
-      bg.total_landed_cost += (item.landed_cost || item.price);
+      bg.total_landed_cost += Number(item.landed_cost || item.price || 0);
       if (days > bg.max_aging) bg.max_aging = days;
     });
 
     return Object.values(productGroups).sort((a, b) => {
       return sortOrder === 'oldest' ? b.max_network_aging - a.max_network_aging : a.max_network_aging - b.max_network_aging;
     });
-  }, [filteredInventory, branches, sortOrder]);
+  }, [filteredInventory, sortOrder]);
 
   // Real-time Summary Stats for the Summary Strip
   const summaryStats = useMemo(() => {

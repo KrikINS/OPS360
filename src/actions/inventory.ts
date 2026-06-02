@@ -292,6 +292,7 @@ export async function getInventoryRegistryAction() {
         serial_number: schema.inventory.serial_number,
         status:       schema.inventory.status,
         branch_id:    schema.inventory.branch_id,
+        branch_name:  schema.branches.name,
         product_id:   schema.inventory.product_id,
         price:        schema.inventory.price,
         landed_cost:  schema.inventory.landed_cost,
@@ -312,6 +313,7 @@ export async function getInventoryRegistryAction() {
       })
       .from(schema.inventory)
       .leftJoin(schema.products, eq(schema.inventory.product_id, schema.products.id))
+      .leftJoin(schema.branches, eq(schema.inventory.branch_id, schema.branches.id))
       .orderBy(schema.inventory.created_at)
 
     return { success: true as const, data: rows }

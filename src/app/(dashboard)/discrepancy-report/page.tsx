@@ -27,27 +27,20 @@ import { buttonVariants } from "@/components/ui/button"
 
 type Discrepancy = {
   id: string;
-  po_id: string;
-  vendor_id: string;
+  po_id: string | null;
+  vendor_id: string | null;
   discrepancy_type: string;
-  detected_gap: number;
   status: string;
   admin_comment: string | null;
   created_at: string;
-  resolved_at: string | null;
-  display_id?: string;
-  po?: { 
-    po_number: string; 
-    total_amount: number;
-    items: Array<{
-      id: string;
-      unit_price: number;
-      quantity: number;
-      received_quantity: number;
-    }>
-  };
-  vendor?: { name: string };
-  product?: { model_name: string };
+  ordered_qty: number | null;
+  received_qty: number | null;
+  shortfall: number | null;
+  // flat fields from JOIN
+  po_number: string | null;
+  vendor_name: string | null;
+  product_name: string | null;
+  product_code: string | null;
 };
 
 export default function DiscrepancyReportPage() {
@@ -78,7 +71,7 @@ export default function DiscrepancyReportPage() {
 
   const fetchDiscrepancies = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData('discrepancies'))
+    const { data, error } = await import("@/app/actions/procurement").then(m => m.getDiscrepanciesAction())
 
     if (!error && data && Array.isArray(data)) {
       setDiscrepancies(data as Discrepancy[])
@@ -166,7 +159,7 @@ export default function DiscrepancyReportPage() {
       } else if (action === 'update_gap') {
         const { error } = await import("@/app/actions/generics").then(m => m.updateData('discrepancies', {
           id: selectedDiscrepancy.id,
-          detected_gap: Number(newGapValue)
+          shortfall: Number(newGapValue)
         }))
 
         if (error) throw error
@@ -189,10 +182,10 @@ export default function DiscrepancyReportPage() {
   )
   
   const filteredDiscrepancies = discrepancies.filter(item => {
-    const searchMatch = !searchTerm || 
-      item.po?.po_number?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      item.vendor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.product?.model_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const searchMatch = !searchTerm ||
+      item.po_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.vendor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.id.toLowerCase().includes(searchTerm.toLowerCase())
     
     const statusMatch = statusFilter === "all" || item.status === statusFilter
@@ -328,39 +321,30 @@ export default function DiscrepancyReportPage() {
                     </TableCell>
                     <TableCell className="py-4 px-2 font-bold text-[#001529] font-mono border-r border-slate-100/50">
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[11px]">{item.po?.po_number || "NO_REF"}</span>
+                        <span className="text-[11px]">{item.po_number || "NO_REF"}</span>
                         <span className="text-[9px] text-slate-400 font-bold uppercase">
-                          {item.product?.model_name || "Unknown Product"}
+                          {item.product_name || "Unknown Product"}
+                          {item.product_code ? ` · ${item.product_code}` : ''}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className="py-4 px-2 font-bold text-slate-600 border-r border-slate-100/50">
-                      {item.vendor?.name}
+                      {item.vendor_name || "—"}
                     </TableCell>
                     <TableCell className="py-4 px-2 border-r border-slate-100/50 text-center">
                       <Badge variant="secondary" className={cn(
                         "font-black text-[9px] uppercase tracking-tighter py-0 px-2 shadow-sm border",
-                        item.discrepancy_type === 'Price Mismatch' ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200"
+                        item.discrepancy_type?.toLowerCase().includes('price') ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200"
                       )}>
-                        {item.discrepancy_type}
+                        {item.discrepancy_type?.toUpperCase().replace(/_/g, ' ') ?? 'UNKNOWN'}
                       </Badge>
                     </TableCell>
                     <TableCell className="py-4 px-2 border-r border-slate-100/50 text-right font-black font-mono">
-                      <div className={cn(
-                        "text-sm",
-                        item.detected_gap < 0 ? "text-red-500" : "text-emerald-600"
-                      )}>
-                        {item.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || item.discrepancy_type === 'Quantity Mismatch'
-                          ? (
-                            <div className="flex flex-col items-end">
-                              <span className="font-bold">{item.detected_gap} Unit{Math.abs(item.detected_gap) !== 1 ? 's' : ''}</span>
-                              <span className="text-[9px] opacity-50 font-bold">
-                                {item.detected_gap < 0 ? 'SHRINKAGE' : 'OVERAGE'}
-                              </span>
-                            </div>
-                          )
-                          : formatCurrency(item.detected_gap)
-                        }
+                      <div className="text-sm text-red-500">
+                        <div className="flex flex-col items-end">
+                          <span className="font-bold">{item.shortfall ?? 0} Unit{(item.shortfall ?? 0) !== 1 ? 's' : ''}</span>
+                          <span className="text-[9px] opacity-50 font-bold">SHORTFALL</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="py-4 px-2 border-r border-slate-100/50 text-center">
@@ -413,7 +397,7 @@ export default function DiscrepancyReportPage() {
                               <DropdownMenuItem 
                                 onClick={() => {
                                   setSelectedDiscrepancy(item);
-                                  setNewGapValue(item.detected_gap.toString());
+                                  setNewGapValue((item.shortfall ?? 0).toString());
                                   setEditGapModalOpen(true);
                                 }}
                                 className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 cursor-pointer font-bold text-[10px] uppercase tracking-wider py-2.5 rounded-lg"
@@ -467,7 +451,7 @@ export default function DiscrepancyReportPage() {
               Execute Resolution Logic
             </DialogTitle>
             <DialogDescription className="text-slate-400 font-medium text-xs mt-2">
-              Select a corporate resolution path for the detected mismatch in <span className="text-white font-mono">{selectedDiscrepancy?.po?.po_number}</span>.
+              Select a corporate resolution path for the detected mismatch in <span className="text-white font-mono">{selectedDiscrepancy?.po_number}</span>.
             </DialogDescription>
           </DialogHeader>
 
@@ -481,8 +465,8 @@ export default function DiscrepancyReportPage() {
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Detected Gap</p>
                 <p className="text-sm font-black text-red-500">
                   {selectedDiscrepancy?.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch'
-                    ? `${selectedDiscrepancy?.detected_gap} Unit${Math.abs(selectedDiscrepancy?.detected_gap || 0) !== 1 ? 's' : ''}`
-                    : formatCurrency(selectedDiscrepancy?.detected_gap || 0)
+                    ? `${selectedDiscrepancy?.shortfall ?? 0} Unit${Math.abs(selectedDiscrepancy?.shortfall ?? 0 || 0) !== 1 ? 's' : ''}`
+                    : formatCurrency(selectedDiscrepancy?.shortfall ?? 0 || 0)
                   }
                 </p>
               </div>
@@ -573,7 +557,7 @@ export default function DiscrepancyReportPage() {
               Reopen Investigation
             </DialogTitle>
             <DialogDescription className="text-amber-100 font-medium text-xs mt-2">
-              Provide a reason for reopening the audit for <span className="text-white font-mono">{selectedDiscrepancy?.po?.po_number}</span>.
+              Provide a reason for reopening the audit for <span className="text-white font-mono">{selectedDiscrepancy?.po_number}</span>.
             </DialogDescription>
           </DialogHeader>
           <div className="p-6 space-y-4">
@@ -670,7 +654,7 @@ export default function DiscrepancyReportPage() {
               Resolution History
             </DialogTitle>
             <DialogDescription className="text-slate-400 font-medium text-xs mt-2">
-              Permanent audit log for <span className="text-white font-mono">{selectedDiscrepancy?.po?.po_number}</span>.
+              Permanent audit log for <span className="text-white font-mono">{selectedDiscrepancy?.po_number}</span>.
             </DialogDescription>
           </DialogHeader>
           <div className="p-6 space-y-4">
