@@ -416,6 +416,8 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   const [conditionNotes, setConditionNotes] = useState("")
   const [availableNoteTemplates, setAvailableNoteTemplates] = useState<{ id: string; name: string; content: string; is_default: boolean }[]>([])
   const [selectedNoteTemplateId, setSelectedNoteTemplateId] = useState<string>('')
+  const [receivingBranchId, setReceivingBranchId] = useState<string>('')
+  const [availableBranches, setAvailableBranches] = useState<{ id: string; name: string }[]>([])
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null)
   const [duplicates, setDuplicates] = useState<string[]>([])
 
@@ -462,6 +464,23 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
     }
     loadTemplates()
   }, [])
+
+  // ──────────────── Load user-accessible branches on mount ────────────────
+  useEffect(() => {
+    fetch('/api/user-branches')
+      .then(r => r.json())
+      .then(data => {
+        const branchList: { id: string; name: string }[] = data.data ?? []
+        setAvailableBranches(branchList)
+        const poBranch = branchList.find(b => b.id === po.branch_id)
+        if (poBranch) {
+          setReceivingBranchId(poBranch.id)
+        } else if (branchList.length === 1) {
+          setReceivingBranchId(branchList[0].id)
+        }
+      })
+      .catch(console.error)
+  }, [po.branch_id])
 
   // ──────────────── Auto-focus scanner input when panel opens ────────────────
   useEffect(() => {
@@ -572,14 +591,14 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
       const res = await fetch('/api/procurement/inventory-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ po_id: po.id, items: grnItems, condition_notes: conditionNotes })
+        body: JSON.stringify({ po_id: po.id, items: grnItems, condition_notes: conditionNotes, branch_id: receivingBranchId })
       })
       const data = await res.json()
       if (res.ok) {
         setToast({ message: "GRN processed and inventory synced successfully!", type: "success" })
         setTimeout(() => {
           onSuccess(); onClose()
-          setFreightCharges({}); setSerialNumbers({}); setConditionNotes(""); setSelectedNoteTemplateId("")
+          setFreightCharges({}); setSerialNumbers({}); setConditionNotes(""); setSelectedNoteTemplateId(""); setReceivingBranchId("")
         }, 1500)
       } else {
         setToast({ message: data.error || "Failed to process GRN", type: "error" })
@@ -593,7 +612,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="md:max-w-5xl w-[95vw] p-0 overflow-hidden min-h-[300px] h-auto max-h-[95vh] flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl">
+      <DialogContent className="md:max-w-5xl w-[95vw] p-0 overflow-hidden h-[95vh] flex flex-col border-none shadow-2xl bg-white/95 backdrop-blur-xl">
         
         {/* ── Header ── */}
         <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-[#001529] via-[#002140] to-[#001529] text-white p-8 space-y-2 relative overflow-hidden">
@@ -622,6 +641,26 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
                 <div className="text-sm font-bold">Real-time Atomic</div>
               </div>
             </div>
+          </div>
+          {/* ── Receiving Branch Selector ── */}
+          <div className="flex items-center gap-3 px-2 pt-3 border-t border-slate-700/50">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">
+              RECEIVING BRANCH:
+            </span>
+            {availableBranches.length === 1 ? (
+              <span className="text-sm text-white font-medium">{availableBranches[0].name}</span>
+            ) : (
+              <select
+                value={receivingBranchId}
+                onChange={e => setReceivingBranchId(e.target.value)}
+                className="text-sm bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-white flex-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Select receiving branch...</option>
+                {availableBranches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            )}
           </div>
         </DialogHeader>
 
@@ -929,7 +968,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
           <Button
             className="bg-blue-600 hover:bg-blue-700 text-white min-w-[280px] h-12 px-8 font-black uppercase text-[12px] tracking-widest shadow-xl shadow-blue-500/20 rounded-xl transition-all"
             onClick={handleFinalize}
-            disabled={isProcessing || duplicates.length > 0}
+            disabled={isProcessing || duplicates.length > 0 || !receivingBranchId}
           >
             {isProcessing ? (
               <>

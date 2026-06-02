@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { po_id, items, condition_notes } = body
+    const { po_id, items, condition_notes, branch_id } = body
 
     if (!po_id || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -24,27 +24,30 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Resolve branch: cookie → session → PO's own branch_id
-    let branchId = await getEffectiveBranchId(session)
+    // Priority: dialog selection → cookie/session → PO's own branch_id
+    let branchId: string | null = branch_id ?? null
+
     if (!branchId) {
-      const [po] = await db
+      branchId = await getEffectiveBranchId(session) ?? null
+    }
+
+    if (!branchId) {
+      const [poRow] = await db
         .select({ branch_id: purchase_orders.branch_id })
         .from(purchase_orders)
         .where(eq(purchase_orders.id, po_id))
         .limit(1)
-      branchId = po?.branch_id ?? null
+      branchId = poRow?.branch_id ?? null
     }
 
     if (!branchId) {
       return NextResponse.json(
-        { error: 'Could not determine receiving branch. Please select a branch and try again.' },
+        { error: 'Please select a receiving branch.' },
         { status: 400 }
       )
     }
 
     // Map GRNDialog item shape to createGRN input shape.
-    // GRNDialog sends: { product_id, unit_price, hsn_code, freight, serial_numbers, item_id }
-    // createGRN expects: { poItemId, receivedQty, serialNumbers }
     const grnItems = items.map((item: {
       item_id: string
       serial_numbers: string[]
@@ -55,7 +58,6 @@ export async function POST(req: NextRequest) {
       serialNumbers: item.serial_numbers,
     }))
 
-    // Sum freight across all line items for the landed cost spread
     const totalFreight = items.reduce(
       (sum: number, item: { freight?: number }) => sum + (item.freight ?? 0),
       0
