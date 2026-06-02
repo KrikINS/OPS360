@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signIn, getSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
-import { Loader2, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import { Loader2, Eye, EyeOff, ShieldCheck, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type AnimationStage = "loading" | "intro" | "form"
@@ -61,6 +61,8 @@ const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
 }
 
 export default function LoginPage() {
+  const searchParams = useSearchParams()
+  const passwordChanged = searchParams.get('passwordChanged')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -177,6 +179,13 @@ export default function LoginPage() {
           <CardContent className="p-8">
             <h3 className="text-white/90 text-center font-semibold mb-6">Staff Authentication</h3>
             
+            {passwordChanged === 'true' && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Password changed successfully. Please log in with your new password.
+              </div>
+            )}
+
             {errorMessage && (
               <div className="bg-red-500/10 text-red-400 text-xs p-3 rounded-lg mb-6 border border-red-500/20 text-center animate-in shake-in duration-300">
                 {errorMessage}

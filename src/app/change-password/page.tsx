@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,7 +47,8 @@ export default function ChangePasswordPage() {
       })
       const data = await res.json()
       if (data.success) {
-        router.push('/launchpad')
+        await signOut({ redirect: false })
+        router.push('/login?passwordChanged=true')
       } else {
         setError(data.error ?? 'Failed to change password.')
       }
