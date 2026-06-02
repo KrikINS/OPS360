@@ -69,6 +69,7 @@ import { numberToWords } from "@/lib/number-to-words"
 import { GRNDialog } from "@/components/procurement/GRNDialog"
 import { POPrintTemplate } from "@/components/procurement/POPrintTemplate"
 import { GRNPrintTemplate } from "@/components/procurement/GRNPrintTemplate"
+import { AddProductModal } from "@/components/products/add-product-modal"
 import {
   Tooltip,
   TooltipContent,
@@ -295,6 +296,7 @@ export default function ProcurementGRNPage() {
   const [mappedProductIds, setMappedProductIds] = useState<string[]>([])
   const [selectedProductId, setSelectedProductId] = useState<string>("")
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false)
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   // Revision workflow state
   const [revisionDialogPO, setRevisionDialogPO] = useState<PurchaseOrder | null>(null)
   const [revisionNotesInput, setRevisionNotesInput] = useState("")
@@ -1134,7 +1136,17 @@ Are you sure you want to proceed?`)) return;
             {selectedVendor && (
               <div className="pt-4 border-t space-y-4">
                 <div className="space-y-4">
-                  <Label className="text-lg">Add Items</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-lg">Add Items</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddProductOpen(true)}
+                      className="gap-1 text-xs"
+                    >
+                      <Plus className="h-3 w-3" /> New Product
+                    </Button>
+                  </div>
                   <Popover open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen}>
                     <PopoverTrigger render={
                       <Button
@@ -1143,8 +1155,8 @@ Are you sure you want to proceed?`)) return;
                         aria-expanded={isProductSearchOpen}
                         className="w-full justify-between h-10 border-slate-200 font-medium text-slate-700"
                       >
-                        {selectedProductId 
-                          ? products.find((p) => p.id === selectedProductId)?.model_name 
+                        {selectedProductId
+                          ? products.find((p) => p.id === selectedProductId)?.model_name
                           : "Search by Product Name, SKU, or Model Number..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -1153,7 +1165,22 @@ Are you sure you want to proceed?`)) return;
                       <Command className="border-none shadow-none">
                         <CommandInput placeholder="Type to search..." className="h-9 border-none focus:ring-0" />
                         <CommandList className="max-h-[300px] overflow-y-auto scrollbar-thin">
-                          <CommandEmpty>No product found in master registry.</CommandEmpty>
+                          <CommandEmpty>
+                            <div className="py-3 text-center space-y-2">
+                              <p className="text-sm text-muted-foreground">No product found in master registry.</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setIsProductSearchOpen(false)
+                                  setIsAddProductOpen(true)
+                                }}
+                                className="gap-1 text-xs"
+                              >
+                                <Plus className="h-3 w-3" /> Add New Product
+                              </Button>
+                            </div>
+                          </CommandEmpty>
                           <CommandGroup heading="Master Registry Products">
                             {products
                               .filter(p => !mappedProductIds.length || mappedProductIds.includes(p.id))
@@ -2845,6 +2872,21 @@ Are you sure you want to proceed?`)) return;
           </DialogContent>
         </Dialog>
       )}
+
+      <AddProductModal
+        open={isAddProductOpen}
+        onOpenChange={setIsAddProductOpen}
+        onSuccess={async () => {
+          setIsAddProductOpen(false)
+          try {
+            const res = await fetch('/api/products')
+            if (res.ok) {
+              const data = await res.json()
+              setProducts(Array.isArray(data) ? data : [])
+            }
+          } catch (e) { console.error('Product refresh failed', e) }
+        }}
+      />
 
       {/* Hidden PDF Generation Container */}
       <div className="fixed -left-[9999px] top-0">

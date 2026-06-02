@@ -693,17 +693,26 @@ export default function InventoryDashboard() {
                                   {formattedCount}
                                 </span>
                                 {group.total_network_stock <= (group.product?.low_stock_threshold ?? group.product?.categories?.low_stock_threshold ?? 10) && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-5 w-5 p-0 hover:bg-rose-50 text-rose-500 mt-1"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      router.push(`/transfer?tab=requests&demand=${group.product?.id}`);
-                                    }}
-                                  >
-                                    <Send className="h-3 w-3" />
-                                  </Button>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-5 w-5 p-0 hover:bg-rose-50 text-rose-500 mt-1"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(`/transfer?tab=requests&demand=${group.product?.id}`);
+                                          }}
+                                        >
+                                          <Send className="h-3 w-3" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="right">
+                                        <p>Transfer Stock</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 )}
                                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Network</span>
                               </div>

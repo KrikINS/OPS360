@@ -371,7 +371,7 @@ export default function VendorsClient({
           </div>
         </div>
 
-        {(userRole === 'owner' || userRole === 'admin' || userRole === 'manager' || userRole === 'sales') && (
+        {(['owner', 'admin', 'admin/owner', 'super_admin', 'manager', 'sales'].includes((userRole || '').toLowerCase())) && (
           <Button 
             onClick={() => {
               setFormStep(1)
