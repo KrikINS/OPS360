@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getAttendanceByBranch } from '@/actions/hr'
 import { getBranchesAction } from '@/app/actions/admin-users'
+import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import AttendanceClient from './client'
 
 export default async function AttendancePage() {
@@ -19,9 +20,10 @@ export default async function AttendancePage() {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     .toISOString().split('T')[0]
 
-  const [attendanceResult, branchesResult] = await Promise.all([
+  const [attendanceResult, branchesResult, effectiveBranchId] = await Promise.all([
     getAttendanceByBranch({ fromDate: sevenDaysAgo, toDate: today }),
     isAdmin ? getBranchesAction() : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    getEffectiveBranchId(session),
   ])
 
   return (
@@ -29,7 +31,7 @@ export default async function AttendancePage() {
       records={attendanceResult.success ? attendanceResult.records : []}
       branches={isAdmin ? (branchesResult.data ?? []) : []}
       isAdmin={isAdmin}
-      currentBranchId={session.user.branchId ?? ''}
+      currentBranchId={effectiveBranchId ?? ''}
     />
   )
 }

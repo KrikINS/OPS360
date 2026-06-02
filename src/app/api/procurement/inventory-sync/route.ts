@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createGRN } from '@/actions/procurement'
+import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const branchId = await getEffectiveBranchId(session)
+  if (!branchId) {
+    return NextResponse.json(
+      { error: 'No active branch selected. Please select a branch before processing a GRN.' },
+      { status: 400 }
+    )
   }
 
   try {
@@ -40,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const result = await createGRN({
       poId: po_id,
-      branchId: session.user.branchId ?? '',
+      branchId: branchId,
       items: grnItems,
       landedCosts: { freight: totalFreight },
     })
