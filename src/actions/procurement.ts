@@ -6,6 +6,7 @@ import { db } from '@/db/client'
 import { purchase_orders, po_items, grn_receipts, grn_items, discrepancies, vendors, branches, products, hsn_codes, inventory, inventory_transactions } from '@/db/schema'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import { and, eq, inArray, sql } from 'drizzle-orm'
+import { postGRNJournal } from '@/actions/finance'
 import { getPurchaseOrdersAction } from '@/app/actions/procurement'
 
 export type PurchaseOrderItem = {
@@ -306,6 +307,7 @@ export async function createGRN(input: {
       landedUnitCost: number
       shortfall: number
       serialNumbers: string[]
+      taxRate?: number
     }
     const grnItemsData: GrnItemData[] = []
     let hasDiscrepancy = false
@@ -430,6 +432,24 @@ export async function createGRN(input: {
       .update(purchase_orders)
       .set({ status: newPoStatus })
       .where(eq(purchase_orders.id, input.poId))
+
+    // Post journal entry — fire and forget, don't fail the GRN
+    try {
+      const gstTotal = grnItemsData.reduce((sum, item) => {
+        const taxable = item.receivedQty * item.unitCost
+        return sum + (taxable * ((item.taxRate ?? 0) / 100))
+      }, 0)
+      await postGRNJournal({
+        grnId: grnHeader.id,
+        poId: input.poId,
+        branchId: input.branchId,
+        createdBy: session.user.id,
+        totalLandedCost: Number(grnHeader.total_landed_cost ?? 0),
+        totalGST: gstTotal,
+      })
+    } catch (journalError) {
+      console.error('GRN journal post failed:', journalError)
+    }
 
     return {
       success: true as const,

@@ -9,6 +9,7 @@ import {
   processPosSaleAction,
   getInvoiceHeaderAction,
 } from '@/app/actions/pos'
+import { postSalesJournal } from '@/actions/finance'
 
 export type TransactionItem = {
   productId: string
@@ -53,6 +54,24 @@ export async function createTransaction(input: {
   const result = await processPosSaleAction(payload)
   if (result.error) {
     return { success: false as const, error: result.error.message }
+  }
+
+  // Post sales journal — fire and forget, don't fail the transaction
+  try {
+    const saleTotal = input.items.reduce((s, i) => s + i.qty * i.unitPrice, 0)
+    await postSalesJournal({
+      invoiceId: String((result.data as Record<string, unknown>)?.id ?? ''),
+      branchId: input.branchId,
+      createdBy: session.user.id,
+      saleTotal,
+      subtotal: saleTotal,
+      cgst: 0,
+      sgst: 0,
+      igst: 0,
+      cogs: 0,
+    })
+  } catch (journalError) {
+    console.error('Sales journal post failed:', journalError)
   }
 
   return { success: true as const, transaction: result.data as Record<string, unknown> }

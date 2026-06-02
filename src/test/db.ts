@@ -38,6 +38,10 @@ export async function cleanupTestDb(db: TestDb): Promise<void> {
     TRUNCATE TABLE
       attendance_corrections,
       attendance_records,
+      journal_lines,
+      journal_entries,
+      expense_records,
+      accounts,
       grn_items,
       grn_receipts,
       discrepancies,

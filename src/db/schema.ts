@@ -228,6 +228,59 @@ export const po_terms_templates = pgTable("po_terms_templates", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// ── Finance & Accounts ──────────────────────────────
+
+export const accounts = pgTable("accounts", {
+  id:         uuid("id").primaryKey().defaultRandom(),
+  code:       text("code").notNull().unique(),
+  name:       text("name").notNull(),
+  type:       text("type").notNull(),
+  parent_id:  uuid("parent_id"),
+  branch_id:  uuid("branch_id"),
+  is_system:  boolean("is_system").default(false),
+  is_active:  boolean("is_active").default(true),
+  created_at: timestamp("created_at").defaultNow(),
+})
+
+export const journal_entries = pgTable("journal_entries", {
+  id:               uuid("id").primaryKey().defaultRandom(),
+  date:             timestamp("date").notNull().defaultNow(),
+  description:      text("description").notNull(),
+  reference_source: text("reference_source").notNull(),
+  reference_id:     text("reference_id"),
+  branch_id:        uuid("branch_id").notNull(),
+  financial_year:   text("financial_year").notNull(),
+  status:           text("status").notNull().default('posted'),
+  auto_generated:   boolean("auto_generated").default(false),
+  created_by:       uuid("created_by").notNull(),
+  created_at:       timestamp("created_at").defaultNow(),
+})
+
+export const journal_lines = pgTable("journal_lines", {
+  id:               uuid("journal_line_id").primaryKey().defaultRandom(),
+  journal_entry_id: uuid("journal_entry_id").notNull(),
+  account_id:       uuid("account_id").notNull(),
+  debit:            numeric("debit", { precision: 15, scale: 2 }).default("0"),
+  credit:           numeric("credit", { precision: 15, scale: 2 }).default("0"),
+  description:      text("description"),
+})
+
+export const expense_records = pgTable("expense_records", {
+  id:               uuid("id").primaryKey().defaultRandom(),
+  branch_id:        uuid("branch_id").notNull(),
+  created_by:       uuid("created_by").notNull(),
+  amount:           numeric("amount", { precision: 15, scale: 2 }).notNull(),
+  expense_account:  text("expense_account").notNull(),
+  payment_account:  text("payment_account").notNull().default('1010'),
+  description:      text("description").notNull(),
+  receipt_url:      text("receipt_url"),
+  status:           text("status").notNull().default('pending'),
+  approved_by:      uuid("approved_by"),
+  approved_at:      timestamp("approved_at"),
+  journal_entry_id: uuid("journal_entry_id"),
+  created_at:       timestamp("created_at").defaultNow(),
+})
+
 export const grn_notes_templates = pgTable("grn_notes_templates", {
   id:         uuid("id").primaryKey().defaultRandom(),
   name:       text("name").notNull(),
