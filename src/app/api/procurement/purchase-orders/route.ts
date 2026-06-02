@@ -6,6 +6,14 @@ import { authOptions } from '@/lib/auth';
 import { purchase_orders, po_items } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
+type POItemPayload = {
+  product_id: string
+  quantity: number
+  unit_price: number
+}
+
+type SqlRows = { rows?: Record<string, unknown>[] }
+
 export async function GET() {
   try {
     const res = await db.execute(sql`
@@ -155,7 +163,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate totals
     const totalAmount = items.reduce(
-      (sum: number, item: any) => sum + item.quantity * item.unit_price,
+      (sum: number, item: POItemPayload) => sum + item.quantity * item.unit_price,
       0
     );
 
@@ -173,7 +181,7 @@ export async function POST(request: NextRequest) {
         is_partial_billing: is_partial_billing || false,
         terms_content,
         payment_terms,
-      } as any)
+      } as Record<string, unknown>)
       .returning();
 
     const poRecord = inserted[0];
@@ -187,7 +195,7 @@ export async function POST(request: NextRequest) {
     // Insert PO items
     if (items && items.length > 0) {
       await db.insert(po_items).values(
-        items.map((item: any) => ({
+        items.map((item: POItemPayload) => ({
           po_id: poRecord.id,
           product_id: item.product_id,
           ordered_qty: item.quantity,
@@ -279,7 +287,7 @@ export async function POST(request: NextRequest) {
     `);
 
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[];
-    const data = Array.isArray(result) ? result[0] : (result as any).rows?.[0];
+    const data = Array.isArray(result) ? result[0] : (result as SqlRows).rows?.[0];
     return NextResponse.json(data);
   } catch (error) {
     console.error('PO creation error:', error);
@@ -329,7 +337,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update PO
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       ...rest,
       status: status || existing[0].status,
     };
@@ -348,7 +356,7 @@ export async function PATCH(request: NextRequest) {
 
       // Insert new items
       await db.insert(po_items).values(
-        items.map((item: any) => ({
+        items.map((item: POItemPayload) => ({
           po_id: id,
           product_id: item.product_id,
           ordered_qty: item.quantity,
@@ -440,7 +448,7 @@ export async function PATCH(request: NextRequest) {
     `);
 
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[];
-    const data = Array.isArray(result) ? result[0] : (result as any).rows?.[0];
+    const data = Array.isArray(result) ? result[0] : (result as SqlRows).rows?.[0];
     return NextResponse.json(data);
   } catch (error) {
     console.error('PO update error:', error);
