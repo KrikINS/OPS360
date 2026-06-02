@@ -3,19 +3,14 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { createGRN } from '@/actions/procurement'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
+import { db } from '@/db/client'
+import { purchase_orders } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const branchId = await getEffectiveBranchId(session)
-  if (!branchId) {
-    return NextResponse.json(
-      { error: 'No active branch selected. Please select a branch before processing a GRN.' },
-      { status: 400 }
-    )
   }
 
   try {
@@ -25,6 +20,24 @@ export async function POST(req: NextRequest) {
     if (!po_id || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { error: 'po_id and items are required' },
+        { status: 400 }
+      )
+    }
+
+    // Resolve branch: cookie → session → PO's own branch_id
+    let branchId = await getEffectiveBranchId(session)
+    if (!branchId) {
+      const [po] = await db
+        .select({ branch_id: purchase_orders.branch_id })
+        .from(purchase_orders)
+        .where(eq(purchase_orders.id, po_id))
+        .limit(1)
+      branchId = po?.branch_id ?? null
+    }
+
+    if (!branchId) {
+      return NextResponse.json(
+        { error: 'Could not determine receiving branch. Please select a branch and try again.' },
         { status: 400 }
       )
     }
