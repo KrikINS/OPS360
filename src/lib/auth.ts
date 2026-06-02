@@ -2,7 +2,7 @@ import type { NextAuthOptions, Session, User } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/db/client";
-import { users, user_branch_access } from "@/db/schema";
+import { users, user_branch_access, profiles } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -53,12 +53,21 @@ export const authOptions: NextAuthOptions = {
 
         const primaryBranchId = branchAccess[0]?.branchId ?? null;
 
+        const profileResult = await db
+          .select({ forcePasswordChange: profiles.force_password_change })
+          .from(profiles)
+          .where(eq(profiles.id, user.id))
+          .limit(1);
+
+        const forcePasswordChange = profileResult[0]?.forcePasswordChange ?? false;
+
         return {
           id: String(user.id),
           email: user.email,
           role: user.role,
           name: (user as unknown as Record<string, string>).full_name ?? null,
           branchId: primaryBranchId,
+          forcePasswordChange,
         };
       }
     })
@@ -70,6 +79,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.role = user.role ?? token.role;
         token.branchId = user.branchId ?? token.branchId;
+        token.forcePasswordChange = user.forcePasswordChange ?? false;
       }
       return token;
     },
@@ -78,6 +88,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = String(token.id);
         session.user.role = token.role;
         session.user.branchId = token.branchId ?? null;
+        session.user.forcePasswordChange = token.forcePasswordChange as boolean;
       }
       return session;
     }

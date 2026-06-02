@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -121,8 +121,12 @@ export default function LoginPage() {
         setErrorMessage(result.error)
         setLoading(false)
       } else if (result?.ok) {
-        // Assume successful login implies no forced password change for now since NextAuth handles it
-        router.push('/launchpad')
+        const session = await getSession()
+        if (session?.user?.forcePasswordChange) {
+          router.push('/change-password')
+        } else {
+          router.push('/launchpad')
+        }
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "An unexpected error occurred")
