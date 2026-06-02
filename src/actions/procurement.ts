@@ -304,6 +304,7 @@ export async function createGRN(input: {
       unitCost: number
       landedUnitCost: number
       shortfall: number
+      serialNumbers: string[]
     }
     const grnItemsData: GrnItemData[] = []
     let hasDiscrepancy = false
@@ -334,6 +335,7 @@ export async function createGRN(input: {
         unitCost: Number(poItem.unit_cost),
         landedUnitCost,
         shortfall,
+        serialNumbers: item.serialNumbers ?? [],
       })
     }
 
