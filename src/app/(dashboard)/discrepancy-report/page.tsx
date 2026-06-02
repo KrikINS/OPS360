@@ -464,10 +464,10 @@ export default function DiscrepancyReportPage() {
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Detected Gap</p>
                 <p className="text-sm font-black text-red-500">
-                  {selectedDiscrepancy?.discrepancy_type.toUpperCase() === 'QUANTITY_MISMATCH' || selectedDiscrepancy?.discrepancy_type === 'Quantity Mismatch'
-                    ? `${selectedDiscrepancy?.shortfall ?? 0} Unit${Math.abs(selectedDiscrepancy?.shortfall ?? 0 || 0) !== 1 ? 's' : ''}`
-                    : formatCurrency(selectedDiscrepancy?.shortfall ?? 0 || 0)
-                  }
+                  {(() => {
+                    const gap = selectedDiscrepancy?.shortfall ?? 0
+                    return `${gap} Unit${Math.abs(gap) !== 1 ? 's' : ''} Short`
+                  })()}
                 </p>
               </div>
             </div>
