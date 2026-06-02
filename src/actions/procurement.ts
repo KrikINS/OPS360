@@ -269,7 +269,8 @@ export async function createGRN(input: {
       .limit(1)
 
     if (!po) return { success: false as const, error: 'Purchase order not found' }
-    if (po.status !== 'approved') {
+    const allowedStatuses = ['approved', 'partially_received']
+    if (!allowedStatuses.includes(po.status ?? '')) {
       return { success: false as const, error: 'Purchase order is not approved — must approve before receiving' }
     }
 
