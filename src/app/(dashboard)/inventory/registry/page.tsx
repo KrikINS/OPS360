@@ -151,7 +151,7 @@ export default function InventoryDashboard() {
       const branchRes = await fetch("/api/branches")
       if (branchRes.ok) {
         const dbBranches = await branchRes.json()
-        setBranches(dbBranches)
+        setBranches(Array.isArray(dbBranches) ? dbBranches : (dbBranches?.data ?? []))
       }
 
       const session = await import("next-auth/react").then(m => m.getSession())

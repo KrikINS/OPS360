@@ -380,7 +380,7 @@ export default function ProcurementGRNPage() {
         items: grnItems.map(item => ({
           product: item.product || { model_name: 'Unknown', product_code: 'N/A', hsn_code: 'N/A' },
           quantity: item.received_qty,
-          serial_numbers: item.serial_numbers || []
+          serial_numbers: (item.serial_numbers || []).filter((sn: unknown) => sn != null && sn !== '')
         }))
       };
 
@@ -1566,7 +1566,6 @@ Are you sure you want to proceed?`)) return;
                         <TableRow>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
-                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Payment</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
@@ -1587,11 +1586,6 @@ Are you sure you want to proceed?`)) return;
                                 {po.po_number}
                               </TableCell>
                               <TableCell className="py-2 px-2 font-semibold text-slate-600 border-r border-slate-100/50">{po.vendor?.name}</TableCell>
-                              <TableCell className="py-2 px-2 border-r border-slate-100/50">
-                                <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">
-                                  {po.payment_terms || po.vendor?.payment_terms || 'Immediate'}
-                                </span>
-                              </TableCell>
                               <TableCell className="py-2 px-2 text-slate-500 border-r border-slate-100/50">
                                 <div className="font-semibold text-slate-700">
                                   {po.items?.[0]?.product?.model_name || '---'}
@@ -2763,7 +2757,6 @@ Are you sure you want to proceed?`)) return;
                   <div className="pl-6 border-l-2 border-slate-200">
                     <p className="font-bold text-lg text-slate-900 leading-none">{viewingGRN.branch_name || "Central Warehouse"}</p>
                     <p className="text-xs text-slate-500 font-medium mt-1">Inventory Intake Point</p>
-                    <p className="text-[10px] text-slate-400 mt-1 italic">Storage Zone: SEC-A / RECEIVED</p>
                   </div>
                 </div>
 
@@ -2782,7 +2775,7 @@ Are you sure you want to proceed?`)) return;
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-[#001529]">
                     <ShieldAlert className="h-4 w-4" />
-                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Condition Details</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Inspection Notes</Label>
                   </div>
                   <div className="pl-6 border-l-2 border-slate-200">
                     <p className="text-[10px] text-slate-600 font-medium leading-relaxed italic">

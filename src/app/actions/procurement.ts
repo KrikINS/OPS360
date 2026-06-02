@@ -37,7 +37,7 @@ export async function getGRNReceiptsAction(poId: string) {
               'received_qty',     gi.received_qty,
               'landed_unit_cost', gi.landed_unit_cost,
               'serial_numbers', (
-                SELECT json_agg(inv.serial_number)
+                SELECT json_agg(inv.serial_number) FILTER (WHERE inv.serial_number IS NOT NULL)
                 FROM inventory inv
                 WHERE inv.source_po_id = gr.po_id
                   AND inv.product_id   = gi.product_id

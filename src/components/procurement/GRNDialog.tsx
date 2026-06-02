@@ -842,7 +842,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
           <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-200/60 space-y-3">
             <Label className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
               <FileText className="h-4 w-4 text-blue-500/70" />
-              Condition Notes / Internal Audit
+              Inspection Notes
             </Label>
             <Textarea
               placeholder="Describe physical condition, seal status, or any discrepancies for the audit trail..."
