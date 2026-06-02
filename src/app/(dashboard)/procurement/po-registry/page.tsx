@@ -2559,9 +2559,9 @@ Are you sure you want to proceed?`)) return;
                           <TableHead className="font-black uppercase text-[9px] tracking-tight text-black">HSN/SAC</TableHead>
                           <TableHead className="text-center font-black uppercase text-[9px] tracking-tight text-black">Qty</TableHead>
                           <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Unit Price</TableHead>
+                          <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Subtotal</TableHead>
                           <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black min-w-[100px]">Tax Slab</TableHead>
                           <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Total GST</TableHead>
-                          <TableHead className="text-right font-black uppercase text-[9px] tracking-tight text-black">Subtotal</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -2583,6 +2583,9 @@ Are you sure you want to proceed?`)) return;
                               <TableCell className="text-slate-500 font-mono text-[10px] font-bold tracking-tighter align-top pt-4">{item.product?.hsn_code || '---'}</TableCell>
                               <TableCell className="text-center font-black text-slate-900 text-sm align-top pt-4">{qty}</TableCell>
                               <TableCell className="text-right font-bold text-slate-600 align-top pt-4">{formatCurrency(price)}</TableCell>
+                              <TableCell className="text-right font-black text-[#001529] align-top pt-4">
+                                {formatCurrency(lineTotal)}
+                              </TableCell>
                               <TableCell className="text-right align-top pt-4">
                                 <div className="flex flex-col items-end">
                                   <span className="text-[10px] font-bold text-[#001529]">GST @ {rate}%</span>
@@ -2591,9 +2594,6 @@ Are you sure you want to proceed?`)) return;
                               </TableCell>
                               <TableCell className="text-right font-bold text-slate-500 align-top pt-4">
                                 {formatCurrency(taxTotal)}
-                              </TableCell>
-                              <TableCell className="text-right font-black text-[#001529] align-top pt-4">
-                                {formatCurrency(lineTotal)}
                               </TableCell>
                             </TableRow>
                           )
