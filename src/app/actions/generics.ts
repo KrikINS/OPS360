@@ -15,7 +15,7 @@ const ALLOWED_TABLES = new Set([
   'attendance_records', 'sequential_counters',
   'inventory_transactions', 'vendor_audit_log',
   'po_terms_templates', 'vendor_product_map', 'vendor_bills',
-  'grns', 'stock_request_items',
+  'stock_request_items',
 ])
 
 const ALLOWED_FUNCTIONS = new Set([

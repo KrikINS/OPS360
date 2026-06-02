@@ -72,7 +72,6 @@ type InventoryItem = {
   price: number
   landed_cost: number
   created_at: string
-  current_balance: number
   serial_numbers: string[]
   product: ProductMetadata
 }
@@ -229,7 +228,7 @@ export default function InventoryDashboard() {
   const filteredInventory = inventory.filter(item => {
     // 1. Tab Level Filtering
     const isActiveTab = activeTab === 'active'
-    const isItemActive = (item.status === 'Available' || item.status === 'In-Transit') && (item.current_balance > 0)
+    const isItemActive = item.status === 'Available' || item.status === 'In-Transit'
     
     if (isActiveTab && !isItemActive) return false
     if (!isActiveTab && isItemActive) return false
@@ -272,7 +271,7 @@ export default function InventoryDashboard() {
       }
       
       const pg = productGroups[pCode];
-      pg.total_network_stock += (item.current_balance || 0);
+      pg.total_network_stock += 1;
       pg.total_network_landed_cost += (item.landed_cost || item.price);
       const days = calculateDaysInStock(item.created_at);
       if (days > pg.max_network_aging) pg.max_network_aging = days;
@@ -293,7 +292,7 @@ export default function InventoryDashboard() {
       }
       
       bg.items.push(item);
-      bg.total_stock += (item.current_balance || 0);
+      bg.total_stock += 1;
       bg.total_landed_cost += (item.landed_cost || item.price);
       if (days > bg.max_aging) bg.max_aging = days;
     });
@@ -313,7 +312,7 @@ export default function InventoryDashboard() {
 
     // Calculate Financials from the currently filtered dataset
     filteredInventory.forEach(item => {
-      const qty = item.current_balance || 0;
+      const qty = 1;
       stats.totalCost += (item.landed_cost || item.price || 0) * qty;
       stats.totalRevenue += (item.product?.base_price || 0) * qty;
     });
@@ -823,7 +822,7 @@ export default function InventoryDashboard() {
                                                                 });
                                                               });
                                                             } else {
-                                                              const count = item.current_balance || 1;
+                                                              const count = 1;
                                                               for(let i=0; i<count; i++) {
                                                                 units.push({
                                                                   id: `${item.id}-${i}`,

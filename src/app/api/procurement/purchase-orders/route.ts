@@ -49,7 +49,8 @@ export async function GET() {
             'file_path', vb.file_path,
             'created_at', vb.created_at
           )) FILTER (WHERE vb.id IS NOT NULL), '[]'
-        ) AS vendor_bills
+        ) AS vendor_bills,
+        COALESCE(grn_agg.grns_data, '[]'::json) AS grns
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
@@ -58,6 +59,33 @@ export async function GET() {
       LEFT JOIN hsn_codes h ON h.hsn_code = p.hsn_code
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
+      LEFT JOIN LATERAL (
+        SELECT json_agg(
+          json_build_object(
+            'id',                gr.id,
+            'grn_number',        gr.grn_number,
+            'has_discrepancy',   gr.has_discrepancy,
+            'total_landed_cost', gr.total_landed_cost,
+            'created_at',        gr.created_at,
+            'grn_items', (
+              SELECT json_agg(
+                json_build_object(
+                  'id',               gi.id,
+                  'product_id',       gi.product_id,
+                  'ordered_qty',      gi.ordered_qty,
+                  'received_qty',     gi.received_qty,
+                  'landed_unit_cost', gi.landed_unit_cost,
+                  'freight_value',    gi.landed_unit_cost * gi.received_qty
+                )
+              )
+              FROM grn_items gi
+              WHERE gi.grn_id = gr.id
+            )
+          )
+        ) AS grns_data
+        FROM grn_receipts gr
+        WHERE gr.po_id = po.id
+      ) grn_agg ON true
       GROUP BY po.id, v.id, b.id
       ORDER BY po.created_at DESC
     `);
@@ -210,7 +238,8 @@ export async function POST(request: NextRequest) {
             'file_path', vb.file_path,
             'created_at', vb.created_at
           )) FILTER (WHERE vb.id IS NOT NULL), '[]'
-        ) AS vendor_bills
+        ) AS vendor_bills,
+        COALESCE(grn_agg.grns_data, '[]'::json) AS grns
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
@@ -219,6 +248,33 @@ export async function POST(request: NextRequest) {
       LEFT JOIN hsn_codes h ON h.hsn_code = p.hsn_code
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
+      LEFT JOIN LATERAL (
+        SELECT json_agg(
+          json_build_object(
+            'id',                gr.id,
+            'grn_number',        gr.grn_number,
+            'has_discrepancy',   gr.has_discrepancy,
+            'total_landed_cost', gr.total_landed_cost,
+            'created_at',        gr.created_at,
+            'grn_items', (
+              SELECT json_agg(
+                json_build_object(
+                  'id',               gi.id,
+                  'product_id',       gi.product_id,
+                  'ordered_qty',      gi.ordered_qty,
+                  'received_qty',     gi.received_qty,
+                  'landed_unit_cost', gi.landed_unit_cost,
+                  'freight_value',    gi.landed_unit_cost * gi.received_qty
+                )
+              )
+              FROM grn_items gi
+              WHERE gi.grn_id = gr.id
+            )
+          )
+        ) AS grns_data
+        FROM grn_receipts gr
+        WHERE gr.po_id = po.id
+      ) grn_agg ON true
       WHERE po.id = ${poRecord.id}
       GROUP BY po.id, v.id, b.id
     `);
@@ -344,7 +400,8 @@ export async function PATCH(request: NextRequest) {
             'file_path', vb.file_path,
             'created_at', vb.created_at
           )) FILTER (WHERE vb.id IS NOT NULL), '[]'
-        ) AS vendor_bills
+        ) AS vendor_bills,
+        COALESCE(grn_agg.grns_data, '[]'::json) AS grns
       FROM purchase_orders po
       LEFT JOIN vendors v ON po.vendor_id = v.id
       LEFT JOIN branches b ON po.branch_id = b.id
@@ -353,6 +410,33 @@ export async function PATCH(request: NextRequest) {
       LEFT JOIN hsn_codes h ON h.hsn_code = p.hsn_code
       LEFT JOIN discrepancies d ON d.po_id = po.id
       LEFT JOIN vendor_bills vb ON vb.po_id = po.id
+      LEFT JOIN LATERAL (
+        SELECT json_agg(
+          json_build_object(
+            'id',                gr.id,
+            'grn_number',        gr.grn_number,
+            'has_discrepancy',   gr.has_discrepancy,
+            'total_landed_cost', gr.total_landed_cost,
+            'created_at',        gr.created_at,
+            'grn_items', (
+              SELECT json_agg(
+                json_build_object(
+                  'id',               gi.id,
+                  'product_id',       gi.product_id,
+                  'ordered_qty',      gi.ordered_qty,
+                  'received_qty',     gi.received_qty,
+                  'landed_unit_cost', gi.landed_unit_cost,
+                  'freight_value',    gi.landed_unit_cost * gi.received_qty
+                )
+              )
+              FROM grn_items gi
+              WHERE gi.grn_id = gr.id
+            )
+          )
+        ) AS grns_data
+        FROM grn_receipts gr
+        WHERE gr.po_id = po.id
+      ) grn_agg ON true
       WHERE po.id = ${id}
       GROUP BY po.id, v.id, b.id
     `);

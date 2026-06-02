@@ -91,6 +91,7 @@ import {
 import { ChevronsUpDown, Check } from "lucide-react"
 import { useSession } from 'next-auth/react'
 import { approvePurchaseOrder, rejectPurchaseOrder } from '@/actions/procurement'
+import { getGRNReceiptsAction } from '@/app/actions/procurement'
 import ProcessReturns from "../return/page"
 import DiscrepancyReportPage from "../../discrepancy-report/page"
 
@@ -344,7 +345,7 @@ export default function ProcurementGRNPage() {
     setIsDownloading(grnId ? `${grnId}_grn` : `${po.id}_grn`);
     try {
       ;
-      const { data: grnData, error: grnError } = await import("@/app/actions/generics").then(m => m.fetchData("grns"))
+      const { data: grnData, error: grnError } = await getGRNReceiptsAction(po.id)
       
       const filteredData = grnData && Array.isArray(grnData) ? (grnData as unknown as { po_id: string, id: string }[]).filter((g) => g.po_id === po.id && (!grnId || g.id === grnId)) : []
 
