@@ -251,8 +251,9 @@ export async function rejectPurchaseOrder(input: {
 export async function createGRN(input: {
   poId: string
   branchId: string
-  items: Array<{ poItemId: string; receivedQty: number }>
+  items: Array<{ poItemId: string; receivedQty: number; serialNumbers?: string[] }>
   landedCosts: { freight?: number; customs?: number; insurance?: number; handling?: number }
+  conditionNotes?: string | null
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -346,6 +347,7 @@ export async function createGRN(input: {
         created_by: session.user.id,
         total_landed_cost: String(Math.round(totalLandedCost * 100) / 100),
         has_discrepancy: hasDiscrepancy,
+        condition_notes: input.conditionNotes ?? null,
       })
       .returning()
 
@@ -362,18 +364,29 @@ export async function createGRN(input: {
         landed_unit_cost: String(item.landedUnitCost),
       })
 
-      // Inventory rows — one Available unit per received qty
-      if (item.receivedQty > 0) {
-        await db.insert(inventory).values(
-          Array.from({ length: item.receivedQty }, () => ({
-            product_id: item.productId,
-            branch_id: input.branchId,
-            status: 'Available',
-            price: String(item.unitCost),
-            landed_cost: String(item.landedUnitCost),
-            source_po_id: input.poId,
+      // Inventory rows — one row per serial number (or anonymous rows if no SNs)
+      const inventoryRows = item.serialNumbers && item.serialNumbers.length > 0
+        ? item.serialNumbers.map(sn => ({
+            product_id:    item.productId,
+            branch_id:     input.branchId,
+            status:        'Available',
+            serial_number: sn,
+            price:         String(item.unitCost),
+            landed_cost:   String(item.landedUnitCost),
+            source_po_id:  input.poId,
           }))
-        )
+        : Array.from({ length: item.receivedQty }, () => ({
+            product_id:    item.productId,
+            branch_id:     input.branchId,
+            status:        'Available',
+            serial_number: null,
+            price:         String(item.unitCost),
+            landed_cost:   String(item.landedUnitCost),
+            source_po_id:  input.poId,
+          }))
+
+      if (inventoryRows.length > 0) {
+        await db.insert(inventory).values(inventoryRows)
       }
 
       // Discrepancy record for any shortfall

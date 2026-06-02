@@ -231,7 +231,7 @@ type GRNRawData = {
   grn_number: string
   po_id: string
   created_at: string
-  condition_notes: string
+  condition_notes: string | null
   originator_name: string | null
   branch_name: string | null
   grn_items: GRNRawItem[] | null
@@ -372,7 +372,7 @@ export default function ProcurementGRNPage() {
         po_number: po.po_number,
         po_id: po.id,
         created_at: rawData.created_at,
-        condition_notes: rawData.condition_notes,
+        condition_notes: rawData.condition_notes || '',
         originator_name: rawData.originator_name || 'System Operator',
         approver_email: po.approver_email,
         branch_id: po.branch_id,

@@ -31,14 +31,15 @@ export async function POST(req: NextRequest) {
 
     // Map GRNDialog item shape to createGRN input shape.
     // GRNDialog sends: { product_id, unit_price, hsn_code, freight, serial_numbers, item_id }
-    // createGRN expects: { poItemId, receivedQty }
+    // createGRN expects: { poItemId, receivedQty, serialNumbers }
     const grnItems = items.map((item: {
       item_id: string
       serial_numbers: string[]
       freight?: number
     }) => ({
-      poItemId: item.item_id,
-      receivedQty: item.serial_numbers.length,
+      poItemId:      item.item_id,
+      receivedQty:   item.serial_numbers.length,
+      serialNumbers: item.serial_numbers,
     }))
 
     // Sum freight across all line items for the landed cost spread
@@ -48,10 +49,11 @@ export async function POST(req: NextRequest) {
     )
 
     const result = await createGRN({
-      poId: po_id,
-      branchId: branchId,
-      items: grnItems,
-      landedCosts: { freight: totalFreight },
+      poId:           po_id,
+      branchId:       branchId,
+      items:          grnItems,
+      landedCosts:    { freight: totalFreight },
+      conditionNotes: condition_notes ?? null,
     })
 
     if (!result.success) {
@@ -60,9 +62,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-
-    // condition_notes acknowledged — stored in GRN receipt via createGRN audit trail
-    void condition_notes
 
     return NextResponse.json({
       success: true,

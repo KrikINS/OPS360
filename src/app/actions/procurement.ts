@@ -24,6 +24,7 @@ export async function getGRNReceiptsAction(poId: string) {
         gr.created_by,
         gr.total_landed_cost,
         gr.has_discrepancy,
+        gr.condition_notes,
         gr.created_at,
         p.full_name AS originator_name,
         b.name      AS branch_name,
@@ -63,7 +64,7 @@ export async function getGRNReceiptsAction(poId: string) {
       WHERE gr.po_id = ${poId}
       GROUP BY gr.id, gr.grn_number, gr.po_id, gr.branch_id,
                gr.created_by, gr.total_landed_cost,
-               gr.has_discrepancy, gr.created_at,
+               gr.has_discrepancy, gr.condition_notes, gr.created_at,
                p.full_name, b.name
       ORDER BY gr.created_at DESC
     `)

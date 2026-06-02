@@ -323,6 +323,7 @@ export const grn_receipts = pgTable("grn_receipts", {
   created_by: uuid("created_by").notNull(),
   total_landed_cost: numeric("total_landed_cost", { precision: 12, scale: 2 }).default('0'),
   has_discrepancy: boolean("has_discrepancy").default(false),
+  condition_notes: text("condition_notes"),
   created_at: timestamp("created_at").defaultNow(),
 })
 
