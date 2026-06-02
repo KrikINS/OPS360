@@ -224,9 +224,9 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                     <th className="p-3 text-left font-black uppercase text-[8px] tracking-tight text-black">HSN/SAC</th>
                     <th className="p-3 text-center font-black uppercase text-[8px] tracking-tight text-black">Qty</th>
                     <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Unit Price</th>
+                    <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Subtotal</th>
                     <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Tax Slab</th>
                     <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Total GST</th>
-                    <th className="p-3 text-right font-black uppercase text-[8px] tracking-tight text-black">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody className="text-[10px] text-black bg-white">
@@ -252,6 +252,9 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                           {qty}
                         </td>
                         <td className="p-3 text-right font-bold text-black align-top">{formatCurrency(price)}</td>
+                        <td className="p-3 text-right font-black text-black align-top">
+                           {formatCurrency(lineTotal)}
+                        </td>
                         <td className="p-3 text-right align-top">
                            <div className="flex flex-col items-end">
                               <span className="font-bold text-black">GST @ {rate}%</span>
@@ -260,9 +263,6 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                         </td>
                         <td className="p-3 text-right font-bold text-black align-top">
                            {formatCurrency(taxTotal)}
-                        </td>
-                        <td className="p-3 text-right font-black text-black align-top">
-                           {formatCurrency(lineTotal)}
                         </td>
                       </tr>
                     )
