@@ -414,6 +414,8 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
   const [freightCharges, setFreightCharges] = useState<Record<string, string>>({})
   const [serialNumbers, setSerialNumbers] = useState<Record<string, string>>({})
   const [conditionNotes, setConditionNotes] = useState("")
+  const [availableNoteTemplates, setAvailableNoteTemplates] = useState<{ id: string; name: string; content: string; is_default: boolean }[]>([])
+  const [selectedNoteTemplateId, setSelectedNoteTemplateId] = useState<string>('')
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null)
   const [duplicates, setDuplicates] = useState<string[]>([])
 
@@ -442,6 +444,24 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
       return () => clearTimeout(timer)
     }
   }, [toast, serialNumbers])
+
+  // ──────────────── Load GRN note templates on mount ────────────────
+  useEffect(() => {
+    async function loadTemplates() {
+      const { data, error } = await import('@/app/actions/generics')
+        .then(m => m.fetchData('grn_notes_templates'))
+      if (!error && Array.isArray(data)) {
+        const templates = data as { id: string; name: string; content: string; is_default: boolean }[]
+        setAvailableNoteTemplates(templates)
+        const defaultTemplate = templates.find(t => t.is_default)
+        if (defaultTemplate) {
+          setConditionNotes(defaultTemplate.content)
+          setSelectedNoteTemplateId(defaultTemplate.id)
+        }
+      }
+    }
+    loadTemplates()
+  }, [])
 
   // ──────────────── Auto-focus scanner input when panel opens ────────────────
   useEffect(() => {
@@ -559,7 +579,7 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
         setToast({ message: "GRN processed and inventory synced successfully!", type: "success" })
         setTimeout(() => {
           onSuccess(); onClose()
-          setFreightCharges({}); setSerialNumbers({}); setConditionNotes("")
+          setFreightCharges({}); setSerialNumbers({}); setConditionNotes(""); setSelectedNoteTemplateId("")
         }, 1500)
       } else {
         setToast({ message: data.error || "Failed to process GRN", type: "error" })
@@ -838,17 +858,45 @@ export function GRNDialog({ po, isOpen, onClose, onSuccess }: GRNDialogProps) {
             </div>
           </div>
 
-          {/* ── Condition Notes ── */}
+          {/* ── Inspection Notes ── */}
           <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-200/60 space-y-3">
-            <Label className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-blue-500/70" />
-              Inspection Notes
-            </Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-500/70" />
+                Inspection Notes
+              </Label>
+              {availableNoteTemplates.length > 0 && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Template:</span>
+                  <select
+                    value={selectedNoteTemplateId}
+                    onChange={(e) => {
+                      const template = availableNoteTemplates.find(t => t.id === e.target.value)
+                      if (template) {
+                        setConditionNotes(template.content)
+                        setSelectedNoteTemplateId(template.id)
+                      } else {
+                        setSelectedNoteTemplateId('')
+                      }
+                    }}
+                    className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[200px]"
+                  >
+                    <option value="">Custom note...</option>
+                    {availableNoteTemplates.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
             <Textarea
               placeholder="Describe physical condition, seal status, or any discrepancies for the audit trail..."
               className="min-h-[120px] bg-white border-slate-200 text-slate-900 text-sm focus:border-blue-500 ring-offset-white transition-all font-medium rounded-xl shadow-sm"
               value={conditionNotes}
-              onChange={(e) => setConditionNotes(e.target.value)}
+              onChange={(e) => {
+                setConditionNotes(e.target.value)
+                setSelectedNoteTemplateId('')
+              }}
             />
           </div>
         </div>

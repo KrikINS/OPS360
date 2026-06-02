@@ -228,6 +228,14 @@ export const po_terms_templates = pgTable("po_terms_templates", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+export const grn_notes_templates = pgTable("grn_notes_templates", {
+  id:         uuid("id").primaryKey().defaultRandom(),
+  name:       text("name").notNull(),
+  content:    text("content").notNull(),
+  is_default: boolean("is_default").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 export const return_reason_master = pgTable("return_reason_master", {
   id: uuid("id").primaryKey().defaultRandom(),
   reason_text: text("reason_text").notNull(),

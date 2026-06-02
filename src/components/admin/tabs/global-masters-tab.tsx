@@ -37,6 +37,7 @@ export function GlobalMastersTab() {
   const [brands, setBrands] = useState<MasterItem[]>([])
   const [categories, setCategories] = useState<MasterItem[]>([])
   const [terms, setTerms] = useState<TermsTemplate[]>([])
+  const [grnNoteTemplates, setGrnNoteTemplates] = useState<TermsTemplate[]>([])
   const [returnReasons, setReturnReasons] = useState<ReturnReasonMaster[]>([])
   
   const [newBrand, setNewBrand] = useState("")
@@ -47,6 +48,11 @@ export function GlobalMastersTab() {
   const [newTermContent, setNewTermContent] = useState("")
   const [isDefaultTerm, setIsDefaultTerm] = useState(false)
   const [editingTermId, setEditingTermId] = useState<string | null>(null)
+
+  const [newGrnNoteName, setNewGrnNoteName] = useState("")
+  const [newGrnNoteContent, setNewGrnNoteContent] = useState("")
+  const [isDefaultGrnNote, setIsDefaultGrnNote] = useState(false)
+  const [editingGrnNoteId, setEditingGrnNoteId] = useState<string | null>(null)
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [success, setSuccess] = useState<Record<string, boolean>>({})
 
@@ -68,17 +74,20 @@ export function GlobalMastersTab() {
       { data: b },
       { data: c },
       { data: t },
+      { data: gnt },
       { data: rr }
     ] = await Promise.all([
       fetchData("brands"),
       fetchData("categories"),
       fetchData("po_terms_templates"),
+      fetchData("grn_notes_templates"),
       fetchData("return_reason_master")
     ])
 
     if (b) setBrands(b as typeof import("@/db/schema").brands.$inferSelect[])
     if (c) setCategories(c as typeof import("@/db/schema").categories.$inferSelect[])
     if (t) setTerms(t as typeof import("@/db/schema").po_terms_templates.$inferSelect[])
+    if (gnt) setGrnNoteTemplates(gnt as typeof import("@/db/schema").grn_notes_templates.$inferSelect[])
     if (rr) setReturnReasons(rr as typeof import("@/db/schema").return_reason_master.$inferSelect[])
   }, [])
 
@@ -143,6 +152,48 @@ export function GlobalMastersTab() {
     setNewTermName("")
     setNewTermContent("")
     setIsDefaultTerm(false)
+  }
+
+  const updateGrnNoteTemplate = async () => {
+    if (!editingGrnNoteId || !newGrnNoteName.trim() || !newGrnNoteContent.trim()) return
+    const { updateData } = await import("@/app/actions/generics")
+    const { error } = await updateData("grn_notes_templates", {
+      id: editingGrnNoteId,
+      name: newGrnNoteName.trim(),
+      content: newGrnNoteContent.trim(),
+      is_default: isDefaultGrnNote
+    })
+    if (error) alert("Error updating: " + error.message)
+    else { cancelEditingGrnNote(); fetchMasters() }
+  }
+
+  const startEditingGrnNote = (template: TermsTemplate) => {
+    setEditingGrnNoteId(template.id)
+    setNewGrnNoteName(template.name)
+    setNewGrnNoteContent(template.content)
+    setIsDefaultGrnNote(template.is_default ?? false)
+  }
+
+  const cancelEditingGrnNote = () => {
+    setEditingGrnNoteId(null)
+    setNewGrnNoteName("")
+    setNewGrnNoteContent("")
+    setIsDefaultGrnNote(false)
+  }
+
+  const toggleDefaultGrnNote = async (id: string, currentStatus: boolean) => {
+    if (currentStatus) return
+    const { updateData, fetchData } = await import("@/app/actions/generics")
+    const { data: allTemplates } = await fetchData("grn_notes_templates")
+    if (allTemplates) {
+      const defaults = (allTemplates as typeof import("@/db/schema").grn_notes_templates.$inferSelect[]).filter(t => t.is_default)
+      for (const t of defaults) {
+        await updateData("grn_notes_templates", { id: t.id, is_default: false })
+      }
+    }
+    const { error } = await updateData("grn_notes_templates", { id, is_default: true })
+    if (error) alert(error.message)
+    else fetchMasters()
   }
 
   const toggleReasonStatus = async (id: string, currentStatus: boolean) => {
@@ -474,6 +525,159 @@ export function GlobalMastersTab() {
                       <tr>
                         <td colSpan={3} className="px-4 py-12 text-center text-slate-400 text-xs italic">
                           No terms templates defined. Add one to pre-fill POs.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      {/* GRN Notes Templates */}
+      <Card className="card-elevated">
+        <CardHeader className="border-b bg-slate-50/50">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <FileText className="h-4 w-4 text-emerald-600" /> GRN Inspection Notes Templates
+          </CardTitle>
+          <CardDescription className="text-xs">Create and manage reusable inspection note templates for Goods Receipt Notes.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className={`lg:col-span-1 space-y-4 p-4 rounded-xl border ${editingGrnNoteId ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50/30'}`}>
+              <div className="flex justify-between items-center">
+                <p className={`text-xs font-black uppercase tracking-wider ${editingGrnNoteId ? 'text-amber-600' : 'text-slate-400'}`}>
+                  {editingGrnNoteId ? 'Edit Template' : 'Add New Template'}
+                </p>
+                {editingGrnNoteId && (
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-slate-400 hover:text-slate-700" onClick={cancelEditingGrnNote}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-bold text-slate-500">Template Name</Label>
+                  <Input
+                    placeholder="e.g., Standard Inspection"
+                    value={newGrnNoteName}
+                    onChange={e => setNewGrnNoteName(e.target.value)}
+                    className="bg-white border-slate-200"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-bold text-slate-500">Notes Content</Label>
+                  <Textarea
+                    placeholder="Enter the inspection note text..."
+                    rows={6}
+                    value={newGrnNoteContent}
+                    onChange={e => setNewGrnNoteContent(e.target.value)}
+                    className="bg-white border-slate-200 text-sm font-medium leading-relaxed"
+                  />
+                </div>
+                <div className="flex items-center space-x-2 py-2">
+                  <Checkbox
+                    id="default-grn-note"
+                    checked={isDefaultGrnNote}
+                    onCheckedChange={(checked: boolean) => setIsDefaultGrnNote(checked)}
+                  />
+                  <Label htmlFor="default-grn-note" className="text-xs font-semibold cursor-pointer">Set as default for new GRNs</Label>
+                </div>
+                {editingGrnNoteId ? (
+                  <Button
+                    onClick={updateGrnNoteTemplate}
+                    disabled={!newGrnNoteName.trim() || !newGrnNoteContent.trim()}
+                    className="w-full bg-amber-600 hover:bg-amber-700 font-black uppercase tracking-widest text-[10px]"
+                  >
+                    <Save className="h-3 w-3 mr-2" /> Update Template
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      if (newGrnNoteName.trim() && newGrnNoteContent.trim()) {
+                        addMaster("grn_notes_templates", {
+                          name: newGrnNoteName.trim(),
+                          content: newGrnNoteContent.trim(),
+                          is_default: isDefaultGrnNote
+                        })
+                        setNewGrnNoteName("")
+                        setNewGrnNoteContent("")
+                        setIsDefaultGrnNote(false)
+                      }
+                    }}
+                    disabled={!newGrnNoteName.trim() || !newGrnNoteContent.trim() || loading['grn_notes_templates']}
+                    className={cn(
+                      "w-full font-black uppercase tracking-widest text-[10px] transition-all duration-300",
+                      success['grn_notes_templates'] ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#001529]"
+                    )}
+                  >
+                    {loading['grn_notes_templates'] ? (
+                      <ModernOrbitSpinner size="sm" />
+                    ) : success['grn_notes_templates'] ? (
+                      <><CheckCircle2 className="h-3 w-3 mr-2" /> Template Saved</>
+                    ) : (
+                      <><Plus className="h-3 w-3 mr-2" /> Save Template</>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 space-y-4">
+              <div className="border rounded-xl bg-white overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 border-b">
+                    <tr className="text-[10px] uppercase font-black tracking-[0.1em] text-slate-400">
+                      <th className="px-4 py-3">Template Name</th>
+                      <th className="px-4 py-3">Default</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {grnNoteTemplates.map(item => (
+                      <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-4">
+                          <p className="text-sm font-extrabold text-[#001529]">{item.name}</p>
+                          <p className="text-[10px] text-slate-400 mt-1 line-clamp-1 italic">{item.content}</p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-9 px-3 gap-1.5 rounded-full border ${item.is_default ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'text-slate-300 border-slate-100 hover:bg-slate-100'}`}
+                            onClick={() => toggleDefaultGrnNote(item.id, item.is_default ?? false)}
+                          >
+                            <CheckCircle2 className={`h-3 w-3 ${item.is_default ? 'fill-emerald-600 text-white' : ''}`} />
+                            <span className="text-[9px] font-black uppercase tracking-tighter">{item.is_default ? 'Default' : 'Set Default'}</span>
+                          </Button>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-slate-400 hover:text-[#001529] hover:bg-slate-100"
+                              onClick={() => startEditingGrnNote(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-slate-400 hover:text-destructive hover:bg-red-50"
+                              onClick={() => deleteMaster("grn_notes_templates", item.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {grnNoteTemplates.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-12 text-center text-slate-400 text-xs italic">
+                          No GRN note templates defined. Add one to pre-fill inspection notes.
                         </td>
                       </tr>
                     )}
