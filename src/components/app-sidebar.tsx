@@ -39,7 +39,8 @@ import {
   BookOpen,
   ChevronsLeft,
   ChevronsRight,
-  LayoutDashboard
+  LayoutDashboard,
+  Scale
 } from "lucide-react"
 import {
   Collapsible,

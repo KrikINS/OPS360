@@ -30,7 +30,8 @@ import {
   Scale,
   LayoutGrid,
   X,
-  Ban
+  Ban,
+  Wallet
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -95,6 +96,7 @@ import { approvePurchaseOrder, rejectPurchaseOrder } from '@/actions/procurement
 import { getGRNReceiptsAction } from '@/app/actions/procurement'
 import ProcessReturns from "../return/page"
 import DiscrepancyReportPage from "../../discrepancy-report/page"
+import { settleVendorPayment } from '@/actions/finance'
 
 // Types
 type Vendor = {
@@ -308,6 +310,16 @@ export default function ProcurementGRNPage() {
   const [billFiles, setBillFiles] = useState<File[]>([])
   const [viewingInvoices, setViewingInvoices] = useState<PurchaseOrder | null>(null)
   const [isUploadingBill, setIsUploadingBill] = useState(false)
+  const [paymentPO, setPaymentPO] = useState<PurchaseOrder | null>(null)
+  const [payAmount, setPayAmount] = useState('')
+  const [payMethod, setPayMethod] = useState('bank')
+  const [payRef, setPayRef] = useState('')
+  const [payNotes, setPayNotes] = useState('')
+  const [payDate, setPayDate] = useState(
+    new Date().toISOString().split('T')[0]
+  )
+  const [payError, setPayError] = useState('')
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [isSubmittingRevision, setIsSubmittingRevision] = useState(false)
   const [shortClosingPO, setShortClosingPO] = useState<PurchaseOrder | null>(null)
   const [isShortClosing, setIsShortClosing] = useState(false)
@@ -1833,6 +1845,20 @@ Are you sure you want to proceed?`)) return;
                                             <Plus className="h-4 w-4 mr-2" /> Upload Addl. Bill
                                           </DropdownMenuItem>
                                         )}
+
+                                        {(['received', 'partially_received', 'approved', 'PARTIALLY_RETURNED', 'RETURNED'] as string[]).includes(po.status) && (
+                                          <DropdownMenuItem 
+                                            onClick={() => {
+                                              setPaymentPO(po)
+                                              setPayAmount(String(po.total_amount ?? ''))
+                                              setPayError('')
+                                            }}
+                                            className="text-purple-700 focus:text-purple-700 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                          >
+                                            <Wallet className="h-4 w-4 mr-2" />
+                                            Record Payment
+                                          </DropdownMenuItem>
+                                        )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
@@ -3286,6 +3312,153 @@ Are you sure you want to proceed?`)) return;
               Confirm Cancellation
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!paymentPO}
+        onOpenChange={open => !open && setPaymentPO(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-purple-600" />
+              Record Vendor Payment
+            </DialogTitle>
+          </DialogHeader>
+
+          {paymentPO && (
+            <div className="space-y-4">
+              {/* PO info */}
+              <div className="p-3 bg-slate-50 rounded-lg text-sm space-y-1">
+                <p><span className="font-medium">PO:</span> {paymentPO.po_number}</p>
+                <p><span className="font-medium">Vendor:</span> {paymentPO.vendor_name ?? '—'}</p>
+                <p><span className="font-medium">PO Total:</span> ₹{Number(paymentPO.total_amount ?? 0).toLocaleString('en-IN')}</p>
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  Payment Amount (₹)
+                </Label>
+                <Input
+                  type="number"
+                  value={payAmount}
+                  onChange={e => setPayAmount(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+
+              {/* Payment method */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  Payment Method
+                </Label>
+                <select
+                  value={payMethod}
+                  onChange={e => setPayMethod(e.target.value)}
+                  className="w-full text-sm border rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                >
+                  <option value="bank">Bank Transfer</option>
+                  <option value="upi">UPI</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="cash">Cash</option>
+                </select>
+              </div>
+
+              {/* Reference number */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  Reference Number
+                  <span className="text-slate-400 font-normal ml-1">(UTR / Cheque / UPI)</span>
+                </Label>
+                <Input
+                  value={payRef}
+                  onChange={e => setPayRef(e.target.value)}
+                  placeholder="e.g. UTR123456789"
+                />
+              </div>
+
+              {/* Payment date */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  Payment Date
+                </Label>
+                <Input
+                  type="date"
+                  value={payDate}
+                  onChange={e => setPayDate(e.target.value)}
+                />
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  Notes <span className="text-slate-400 font-normal">(optional)</span>
+                </Label>
+                <Input
+                  value={payNotes}
+                  onChange={e => setPayNotes(e.target.value)}
+                  placeholder="Additional payment notes..."
+                />
+              </div>
+
+              {payError && (
+                <p className="text-sm text-red-600">
+                  {payError}
+                </p>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setPaymentPO(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!payAmount || Number(payAmount) <= 0) {
+                      setPayError('Enter a valid amount')
+                      return
+                    }
+                    setIsPaymentLoading(true)
+                    setPayError('')
+                    try {
+                      const result = await settleVendorPayment({
+                        poId: paymentPO.id,
+                        amount: Number(payAmount),
+                        paymentMethod: payMethod,
+                        referenceNumber: payRef || undefined,
+                        notes: payNotes || undefined,
+                        paymentDate: new Date(payDate),
+                      })
+                      if (result.success) {
+                        setPaymentPO(null)
+                        setPayAmount('')
+                        setPayRef('')
+                        setPayNotes('')
+                        const poRes = await fetch('/api/procurement/purchase-orders')
+                        const fetchedData = await poRes.json()
+                        setActivePOs(fetchedData.data || fetchedData)
+                        alert('Payment recorded successfully. Journal entry posted.')
+                      } else {
+                        setPayError(result.error ?? 'Failed to record payment')
+                      }
+                    } catch {
+                      setPayError('An unexpected error occurred')
+                    } finally {
+                      setIsPaymentLoading(false)
+                    }
+                  }}
+                  disabled={isPaymentLoading}
+                  className="bg-purple-700 hover:bg-purple-800 text-white"
+                >
+                  {isPaymentLoading ? 'Recording...' : 'Record Payment'}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       </div>

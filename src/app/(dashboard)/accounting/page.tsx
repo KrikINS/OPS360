@@ -14,7 +14,11 @@ import AccountingClient from './client'
 export default async function AccountingPage({
   searchParams,
 }: {
-  searchParams: { tab?: string }
+  searchParams: {
+    tab?: string
+    fromDate?: string
+    toDate?: string
+  }
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) redirect('/login')
@@ -25,29 +29,32 @@ export default async function AccountingPage({
 
   const branchId = await getEffectiveBranchId(session)
 
-  // Current financial year
+  // Current financial year defaults
   const now = new Date()
   const fyStart = now.getMonth() + 1 >= 4
     ? `${now.getFullYear()}-04-01`
     : `${now.getFullYear() - 1}-04-01`
   const fyEnd = now.toISOString().split('T')[0]
 
+  const fromDate = searchParams.fromDate ?? fyStart
+  const toDate = searchParams.toDate ?? fyEnd
+
   // Fetch all data in parallel
   const [plResult, bsResult, gstResult,
          journalResult, expenseResult] = await Promise.all([
     getProfitAndLoss({
       branchId: isAdmin ? undefined : branchId ?? undefined,
-      fromDate: fyStart,
-      toDate: fyEnd,
+      fromDate,
+      toDate,
     }),
     getBalanceSheet({
       branchId: isAdmin ? undefined : branchId ?? undefined,
-      asOfDate: fyEnd,
+      asOfDate: toDate,
     }),
     getGSTSummary({
       branchId: isAdmin ? undefined : branchId ?? undefined,
-      fromDate: fyStart,
-      toDate: fyEnd,
+      fromDate,
+      toDate,
     }),
     getJournalEntries({
       branchId: isAdmin ? undefined : branchId ?? undefined,
@@ -70,6 +77,10 @@ export default async function AccountingPage({
         ? expenseResult.expenses : []}
       userId={session.user.id}
       branchId={branchId}
+      fromDate={fromDate}
+      toDate={toDate}
+      fyStart={fyStart}
+      fyEnd={fyEnd}
     />
   )
 }

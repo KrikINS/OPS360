@@ -56,6 +56,7 @@ export async function cleanupTestDb(db: TestDb): Promise<void> {
       service_jobs,
       sequential_counters,
       purchase_orders,
+      vendor_payments,
       vendor_bills,
       sales_invoices,
       invoice_items,

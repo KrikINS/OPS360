@@ -1,6 +1,0 @@
-fix: remove middleware — replace with page-level guards
-
-- Delete middleware.ts — withAuth was breaking auth flow
-- change-password page guards itself via useSession
-- login page already redirects based on forcePasswordChange
-- No middleware needed for this feature

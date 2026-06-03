@@ -113,6 +113,21 @@ export const vendor_bills = pgTable("vendor_bills", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+export const vendor_payments = pgTable("vendor_payments", {
+  id:               uuid("id").primaryKey().defaultRandom(),
+  po_id:            uuid("po_id").notNull(),
+  vendor_id:        uuid("vendor_id").notNull(),
+  branch_id:        uuid("branch_id").notNull(),
+  amount:           numeric("amount", { precision: 15, scale: 2 }).notNull(),
+  payment_method:   text("payment_method").notNull().default('bank'), // bank|cash|upi|cheque
+  reference_number: text("reference_number"),   // cheque/UTR/UPI ref
+  payment_date:     timestamp("payment_date").notNull().defaultNow(),
+  notes:            text("notes"),
+  journal_entry_id: uuid("journal_entry_id"),   // set after posting
+  created_by:       uuid("created_by").notNull(),
+  created_at:       timestamp("created_at").defaultNow(),
+});
+
 export const discrepancies = pgTable("discrepancies", {
   id: uuid("id").primaryKey().defaultRandom(),
   po_id: uuid("po_id"),

@@ -15,6 +15,7 @@ import {
   rejectExpense,
   getProfitAndLoss,
   getFinancialYear,
+  settleVendorPayment,
 } from '@/actions/finance'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,6 +37,7 @@ async function seedAccounts(db: ReturnType<typeof setupTestDb> extends Promise<i
 async function seedCoa(d: any) {
   await d.insert(schema.accounts).values([
     { code: '1010', name: 'Cash',               type: 'Asset',     is_system: true },
+    { code: '1020', name: 'Bank',               type: 'Asset',     is_system: true },
     { code: '1040', name: 'Inventory Asset',    type: 'Asset',     is_system: true },
     { code: '1050', name: 'GST ITC',            type: 'Tax',       is_system: true },
     { code: '2010', name: 'Accounts Payable',   type: 'Liability', is_system: true },
@@ -341,5 +343,110 @@ describe('getProfitAndLoss', () => {
     if (!result.success) return
     expect(result.totalRevenue).toBe(10000)
     expect(result.netProfit).toBeGreaterThan(0)
+  })
+})
+
+describe('Accounts Payable Settlement', () => {
+  it('posts correct journal and saves payment record', async () => {
+    const branch = await seedBranch(db)
+    await seedCoa(db)
+
+    // Insert dummy vendor & PO
+    const [vendor] = await db.insert(schema.vendors).values({
+      name: 'Test Vendor',
+      status: 'Active'
+    }).returning()
+
+    const [po] = await db.insert(schema.purchase_orders).values({
+      po_number: 'PO-TEST-100',
+      branch_id: branch.id,
+      vendor_id: vendor.id,
+      status: 'received',
+      total_amount: '5000',
+      created_by: ADMIN_ID
+    }).returning()
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+
+    const res = await settleVendorPayment({
+      poId: po.id,
+      amount: 5000,
+      paymentMethod: 'bank',
+      referenceNumber: 'UTR123',
+    })
+
+    expect(res.success).toBe(true)
+    if (!res.success) return
+
+    expect(res.payment).toBeDefined()
+    expect(Number(res.payment.amount)).toBe(5000)
+
+    // Verify Journal Entry
+    const lines = await db
+      .select({
+        debit: schema.journal_lines.debit,
+        credit: schema.journal_lines.credit,
+        account_code: schema.accounts.code
+      })
+      .from(schema.journal_lines)
+      .innerJoin(schema.accounts, eq(schema.journal_lines.account_id, schema.accounts.id))
+      .where(eq(schema.journal_lines.journal_entry_id, res.entry.id))
+
+    expect(lines).toHaveLength(2)
+    const dr = lines.find((l: typeof lines[0]) => Number(l.debit) > 0)
+    const cr = lines.find((l: typeof lines[0]) => Number(l.credit) > 0)
+
+    expect(dr.account_code).toBe('2010') // AP debited
+    expect(cr.account_code).toBe('1020') // Bank credited
+    expect(Number(dr.debit)).toBe(5000)
+    expect(Number(cr.credit)).toBe(5000)
+  })
+
+  it('rejects payment if PO status is invalid', async () => {
+    const branch = await seedBranch(db)
+    
+    const [vendor] = await db.insert(schema.vendors).values({
+      name: 'Test Vendor', status: 'Active'
+    }).returning()
+
+    const [po] = await db.insert(schema.purchase_orders).values({
+      po_number: 'PO-TEST-101',
+      branch_id: branch.id,
+      vendor_id: vendor.id,
+      status: 'draft', // Cannot pay draft
+      total_amount: '5000',
+      created_by: ADMIN_ID
+    }).returning()
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+
+    const res = await settleVendorPayment({
+      poId: po.id,
+      amount: 5000,
+      paymentMethod: 'bank',
+    })
+
+    expect(res.success).toBe(false)
+    expect(res.error).toMatch(/status/)
+  })
+
+  it('restricts staff from settling payments', async () => {
+    const res = await settleVendorPayment({
+      poId: '123', amount: 100, paymentMethod: 'cash'
+    })
+    expect(res.success).toBe(false) // No session
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: STAFF_ID, role: 'staff', branchId: null },
+    })
+    const res2 = await settleVendorPayment({
+      poId: '123', amount: 100, paymentMethod: 'cash'
+    })
+    expect(res2.success).toBe(false)
+    expect(res2.error).toMatch(/manager/i)
   })
 })
