@@ -105,6 +105,8 @@ steps:
       - '${_REGION}'
       - '--platform'
       - 'managed'
+      - '--update-env-vars'
+      - 'NEXTAUTH_URL=https://ops360-dev.myappterra.com'
       - '--quiet'
     waitFor: ['push']
 
