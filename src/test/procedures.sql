@@ -44,6 +44,10 @@ DECLARE
     v_items_json jsonb := '[]'::jsonb;
     
     v_available_stock integer;
+    v_item_cost_price numeric;
+    v_item_discount_amount numeric;
+    v_item_discount_pct numeric;
+    v_item_approved_by uuid;
 BEGIN
     v_branch_id := COALESCE(payload->>'branch_id', payload->>'branchId')::uuid;
     v_payment_mode := COALESCE(payload->>'payment_mode', payload->>'paymentMode');
@@ -108,59 +112,94 @@ BEGIN
     -- Process items
     FOR item IN SELECT * FROM jsonb_array_elements(payload->'items')
     LOOP
-        v_item_qty := COALESCE(item->>'qty', item->>'quantity')::integer;
-        v_item_price := COALESCE(item->>'unit_price', item->>'unitPrice')::numeric;
-        v_item_product_id := COALESCE(item->>'product_id', item->>'productId')::uuid;
-        
-        -- Get GST rate
-        SELECT COALESCE(gst_rate, 18) INTO v_item_gst_rate 
-        FROM products 
-        WHERE id = v_item_product_id;
-        
-        -- Calculate item totals
-        v_item_cgst := (v_item_qty * v_item_price) * (v_item_gst_rate / 2 / 100);
-        v_item_sgst := (v_item_qty * v_item_price) * (v_item_gst_rate / 2 / 100);
-        
-        v_subtotal := v_subtotal + (v_item_qty * v_item_price);
-        v_cgst := v_cgst + v_item_cgst;
-        v_sgst := v_sgst + v_item_sgst;
-        
-        -- Insert invoice item
-        INSERT INTO invoice_items (invoice_id, product_id, qty, unit_price)
-        VALUES (new_invoice_id, v_item_product_id, v_item_qty, v_item_price);
+      -- 1. Extract fields
+      v_item_qty := COALESCE(
+        item->>'qty', item->>'quantity')::integer;
+      v_item_price := COALESCE(
+        item->>'unit_price', item->>'unitPrice')::numeric;
+      v_item_product_id := COALESCE(
+        item->>'product_id', item->>'productId')::uuid;
 
-        -- Build items JSON for response
-        v_items_json := v_items_json || jsonb_build_object(
-            'productId', v_item_product_id,
-            'qty', v_item_qty,
-            'unitPrice', v_item_price
-        );
+      v_item_discount_amount := COALESCE(
+        (item->>'discount_amount')::numeric, 0);
+      v_item_discount_pct := COALESCE(
+        (item->>'discount_pct')::numeric, 0);
 
-        -- Update inventory to 'Sold'
-        WITH updated_inv AS (
-            SELECT id FROM inventory 
-            WHERE product_id = v_item_product_id 
-              AND branch_id = v_branch_id 
-              AND status = 'Available'
-            LIMIT v_item_qty
-            FOR UPDATE SKIP LOCKED
-        )
-        UPDATE inventory 
-        SET status = 'Sold', 
-            invoice_id = new_invoice_id,
-            updated_at = now() 
-        WHERE id IN (SELECT id FROM updated_inv);
+      IF item->>'approved_by' IS NOT NULL THEN
+        v_item_approved_by := (item->>'approved_by')::uuid;
+      ELSE
+        v_item_approved_by := NULL;
+      END IF;
 
-        -- Insert inventory transactions
-        INSERT INTO inventory_transactions (product_id, branch_id, transaction_type, quantity, reference_id, created_by)
-        VALUES (
-            v_item_product_id,
-            v_branch_id,
-            'SALE',
-            -v_item_qty,
-            new_invoice_id,
-            v_user_id
-        );
+      -- Apply line-item discount to price
+      v_item_price := v_item_price - v_item_discount_amount;
+
+      -- 2. Get GST rate
+      SELECT COALESCE(gst_rate, 18) INTO v_item_gst_rate
+      FROM products WHERE id = v_item_product_id;
+
+      -- 3. Calculate item totals
+      v_item_cgst := (v_item_qty * v_item_price)
+        * (v_item_gst_rate / 2 / 100);
+      v_item_sgst := (v_item_qty * v_item_price)
+        * (v_item_gst_rate / 2 / 100);
+
+      v_subtotal := v_subtotal + (v_item_qty * v_item_price);
+      v_cgst := v_cgst + v_item_cgst;
+      v_sgst := v_sgst + v_item_sgst;
+
+      -- 4. Update inventory to Sold
+      WITH updated_inv AS (
+        SELECT id FROM inventory
+        WHERE product_id = v_item_product_id
+          AND branch_id = v_branch_id
+          AND status = 'Available'
+        LIMIT v_item_qty
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE inventory
+      SET status = 'Sold',
+          invoice_id = new_invoice_id,
+          updated_at = now()
+      WHERE id IN (SELECT id FROM updated_inv);
+
+      -- 5. Calculate cost_price from sold units
+      SELECT COALESCE(AVG(landed_cost::numeric), 0)
+        INTO v_item_cost_price
+      FROM inventory
+      WHERE invoice_id = new_invoice_id
+        AND product_id = v_item_product_id;
+
+      -- 6. Insert invoice item with cost + discount
+      INSERT INTO invoice_items (
+        invoice_id, product_id, qty, unit_price,
+        cost_price, discount_amount, discount_pct,
+        approved_by
+      ) VALUES (
+        new_invoice_id, v_item_product_id, v_item_qty,
+        v_item_price, v_item_cost_price,
+        v_item_discount_amount, v_item_discount_pct,
+        v_item_approved_by
+      );
+
+      -- 7. Build items JSON
+      v_items_json := v_items_json || jsonb_build_object(
+        'productId', v_item_product_id,
+        'qty', v_item_qty,
+        'unitPrice', v_item_price,
+        'costPrice', v_item_cost_price,
+        'discountAmount', v_item_discount_amount,
+        'discountPct', v_item_discount_pct
+      );
+
+      -- 8. Insert inventory transactions
+      INSERT INTO inventory_transactions (
+        product_id, branch_id, transaction_type,
+        quantity, reference_id, created_by
+      ) VALUES (
+        v_item_product_id, v_branch_id, 'SALE',
+        -v_item_qty, new_invoice_id, v_user_id
+      );
     END LOOP;
 
     v_grand_total := v_subtotal + v_cgst + v_sgst + v_igst;

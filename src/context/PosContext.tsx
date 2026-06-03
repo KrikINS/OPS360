@@ -47,6 +47,9 @@ export type CartItem = {
   tracking_type?: string
   selectedUnits?: Record<number, SelectedUnit | null>
   serial_number?: string
+  discountPct?: number
+  discountAmount?: number
+  approvedBy?: string | null
 }
 
 export type Customer = {
@@ -133,8 +136,7 @@ interface PosContextType {
   sessionUser: { name: string, role: string, id: string, pin?: string | null }
   sessionStats: SessionStats
   isCartValid: boolean
-  discount: number
-  setDiscount: (val: number) => void
+  applyItemDiscount: (productId: string, discountPct: number, managerPin?: string) => Promise<{ success: boolean; needsApproval?: boolean; maxAutoApproval?: number; error?: string }>
 
   // --- Actions ---
   setIsLocked: (locked: boolean) => void
@@ -198,7 +200,6 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
   const [isDarkMode, setIsDarkModeState] = useState(false)
   const [sessionUser, setSessionUser] = useState<{name: string, role: string, id: string, pin?: string | null}>({ name: "User", role: "staff", id: "", pin: null })
   const [sessionStats, setSessionStats] = useState<SessionStats>({ count: 0, revenue: 0 })
-  const [discount, setDiscount] = useState<number>(0)
 
   const setIsDarkMode = useCallback((dark: boolean) => {
     setIsDarkModeState(dark)
@@ -371,31 +372,33 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
   }, [walkInCustomer])
 
    const totals = useMemo(() => {
-    const subtotal = cart.reduce((acc, item) => acc + (item.base_price * item.qty), 0)
-    // Taxable value is Subtotal - Discount
-    const taxableValue = Math.max(0, subtotal - discount)
-    
-    // We distribute the discount proportionately to calculate correct GST if needed, 
-    // but for simple global discount we can just use the weighted average or apply it to the final.
-    // Standard rule: GST is on the post-discount price.
-    const totalGst = cart.reduce((acc, item) => {
-      const itemSubtotal = item.base_price * item.qty
-      const itemWeight = subtotal > 0 ? itemSubtotal / subtotal : 0
-      const itemDiscount = discount * itemWeight
-      const itemTaxable = Math.max(0, itemSubtotal - itemDiscount)
-      return acc + (itemTaxable * item.gst_rate / 100)
-    }, 0)
+    let subtotal = 0
+    let totalDiscount = 0
+    let totalGst = 0
+    let taxableValue = 0
+
+    cart.forEach(item => {
+      const lineBase = item.base_price * item.qty
+      const lineDisc = (item.discountAmount || 0) * item.qty
+      const lineTaxable = Math.max(0, lineBase - lineDisc)
+      const lineGst = lineTaxable * (item.gst_rate / 100)
+
+      subtotal += lineBase
+      totalDiscount += lineDisc
+      taxableValue += lineTaxable
+      totalGst += lineGst
+    })
 
     return {
       subtotal,
       taxableValue,
-      discount,
+      discount: totalDiscount,
       totalGst,
       cgst: totalGst / 2,
       sgst: totalGst / 2,
       grandTotal: taxableValue + totalGst
     }
-  }, [cart, discount])
+  }, [cart])
 
   const isCartValid = useMemo(() => {
     return cart.every(item => {
@@ -455,9 +458,45 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
         hsn_code: product.hsn_code,
         tracking_type: product.tracking_type,
         qty: 1,
-        selectedUnits: initialSelectedUnits
+        selectedUnits: initialSelectedUnits,
+        discountPct: 0,
+        discountAmount: 0,
+        approvedBy: null
       }]
     })
+  }, [])
+
+  const applyItemDiscount = useCallback(async (productId: string, discountPct: number, managerPin?: string) => {
+    try {
+      const { validateDiscount } = await import('@/actions/pricing')
+      const result = await validateDiscount({ productId, discountPct, managerPin })
+
+      if (!result.valid && result.needsApproval) {
+        return { success: false, needsApproval: true, maxAutoApproval: result.maxAutoApproval, error: result.error }
+      }
+
+      if (!result.valid) {
+        setToast({ message: result.error || 'Invalid discount', type: 'error' })
+        return { success: false, error: result.error }
+      }
+
+      setCart(prev => prev.map(item => {
+        if (item.id === productId) {
+          return {
+            ...item,
+            discountPct,
+            discountAmount: result.discountAmount,
+            approvedBy: result.approvedBy
+          }
+        }
+        return item
+      }))
+
+      return { success: true }
+    } catch (err: any) {
+      setToast({ message: err.message || 'Error validating discount', type: 'error' })
+      return { success: false, error: err.message }
+    }
   }, [])
 
   const assignSerialToUnit = useCallback((productId: string, slotIndex: number, unit: SelectedUnit | null) => {
@@ -577,23 +616,29 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
           const unitsArray = Object.values(item.selectedUnits || {}) as SelectedUnit[]
           for (const unit of unitsArray) {
             if (unit) {
-              processedItems.push({
-                product_id: item.id,
-                inventory_id: unit.id,
-                qty: 1,
-                unit_price: item.base_price,
-                gst_amount: (item.base_price * (item.gst_rate / 100)),
-                serial_number: unit.serial
-              })
+                processedItems.push({
+                  product_id: item.id,
+                  inventory_id: unit.id,
+                  qty: 1,
+                  unit_price: item.base_price,
+                  gst_amount: (item.base_price * (item.gst_rate / 100)),
+                  serial_number: unit.serial,
+                  discount_amount: item.discountAmount || 0,
+                  discount_pct: item.discountPct || 0,
+                  approved_by: item.approvedBy || null
+                })
+              }
             }
-          }
-        } else {
-          processedItems.push({
-            product_id: item.id,
-            qty: item.qty,
-            unit_price: item.base_price,
-            gst_amount: (item.base_price * (item.gst_rate / 100)) * item.qty
-          })
+          } else {
+            processedItems.push({
+              product_id: item.id,
+              qty: item.qty,
+              unit_price: item.base_price,
+              gst_amount: (item.base_price * (item.gst_rate / 100)) * item.qty,
+              discount_amount: item.discountAmount || 0,
+              discount_pct: item.discountPct || 0,
+              approved_by: item.approvedBy || null
+            })
         }
       }
 
@@ -664,7 +709,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     selectedCustomer, customerResults, searchingCustomer, customerSearchQuery, phoneQuery,
     setCustomerSearchQuery, setPhoneQuery, resetCustomerContext, selectWalkInCustomer,
     toast, invoiceNumber, currentDate, totals,
-    isLocked, isCartValid, discount, setDiscount,
+    isLocked, isCartValid, applyItemDiscount,
     setIsLocked,
     printInvoiceId,
     triggerInvoicePrint,

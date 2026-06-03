@@ -613,3 +613,99 @@ export async function getExpenses(input?: { branchId?: string; status?: string }
     return { success: false as const, error: (error as Error).message }
   }
 }
+
+export async function getMarginReport(input: {
+  branchId?: string
+  fromDate: string
+  toDate: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false as const, error: 'Unauthorized' }
+  }
+
+  // Only managers and admins can see margin data
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager']
+    .includes(role)) {
+    return {
+      success: false as const,
+      error: 'Manager role required for margin reports'
+    }
+  }
+
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        p.id AS product_id,
+        p.model_name,
+        p.brand,
+        p.product_code,
+        p.base_price AS mrp,
+        COUNT(ii.id) AS units_sold,
+        SUM(ii.unit_price * ii.qty) AS total_revenue,
+        SUM(COALESCE(ii.cost_price, 0) * ii.qty) AS total_cogs,
+        SUM(ii.unit_price * ii.qty) -
+          SUM(COALESCE(ii.cost_price, 0) * ii.qty)
+          AS gross_profit,
+        CASE
+          WHEN SUM(ii.unit_price * ii.qty) > 0
+          THEN (
+            (SUM(ii.unit_price * ii.qty) -
+             SUM(COALESCE(ii.cost_price, 0) * ii.qty)) /
+            SUM(ii.unit_price * ii.qty) * 100
+          )
+          ELSE 0
+        END AS margin_pct,
+        SUM(COALESCE(ii.discount_amount, 0)) AS total_discounts,
+        COUNT(CASE WHEN ii.approved_by IS NOT NULL
+          THEN 1 END) AS manager_approved_discounts
+      FROM invoice_items ii
+      JOIN sales_invoices si ON si.id = ii.invoice_id
+      JOIN products p ON p.id = ii.product_id
+      WHERE si.created_at >= ${input.fromDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp
+        ${input.branchId
+          ? sql`AND si.branch_id = ${input.branchId}::uuid`
+          : sql``}
+      GROUP BY p.id, p.model_name, p.brand,
+        p.product_code, p.base_price
+      ORDER BY gross_profit DESC
+    `)
+
+    const data = (result as any).rows ?? result
+
+    // Calculate totals
+    const totalRevenue = data.reduce(
+      (s: number, r: any) => s + Number(r.total_revenue ?? 0), 0
+    )
+    const totalCOGS = data.reduce(
+      (s: number, r: any) => s + Number(r.total_cogs ?? 0), 0
+    )
+    const totalDiscounts = data.reduce(
+      (s: number, r: any) => s + Number(r.total_discounts ?? 0), 0
+    )
+
+    return {
+      success: true as const,
+      products: data,
+      summary: {
+        totalRevenue,
+        totalCOGS,
+        grossProfit: totalRevenue - totalCOGS,
+        overallMarginPct: totalRevenue > 0
+          ? ((totalRevenue - totalCOGS) / totalRevenue * 100)
+          : 0,
+        totalDiscounts,
+        totalUnitsSold: data.reduce(
+          (s: number, r: any) => s + Number(r.units_sold ?? 0), 0
+        ),
+      },
+    }
+  } catch (error) {
+    return {
+      success: false as const,
+      error: (error as Error).message
+    }
+  }
+}

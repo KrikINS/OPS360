@@ -15,6 +15,7 @@ export const profiles = pgTable("profiles", {
   email: text("email"),
   role: text("role"),
   branch_id: uuid("branch_id"),
+  pos_pin: text("pos_pin"),
   force_password_change: boolean("force_password_change").default(false),
   created_at: timestamp("created_at").defaultNow(),
 });
@@ -57,6 +58,9 @@ export const products = pgTable("products", {
   category: text("category"),
   product_code: text("product_code"),
   base_price: numeric("base_price"),
+  dealer_price: numeric("dealer_price", { precision: 12, scale: 2 }),
+  min_sell_price: numeric("min_sell_price", { precision: 12, scale: 2 }),
+  max_discount_pct: numeric("max_discount_pct", { precision: 5, scale: 2 }).default('10'),
   hsn_code: text("hsn_code"),
   min_stock_level: integer("min_stock_level").default(0),
   tracking_type: text("tracking_type"),
@@ -333,6 +337,10 @@ export const invoice_items = pgTable("invoice_items", {
   product_id: uuid("product_id"),
   qty: integer("qty"),
   unit_price: numeric("unit_price"),
+  cost_price: numeric("cost_price", { precision: 12, scale: 2 }),
+  discount_amount: numeric("discount_amount", { precision: 12, scale: 2 }).default('0'),
+  discount_pct: numeric("discount_pct", { precision: 5, scale: 2 }).default('0'),
+  approved_by: uuid("approved_by"),
 });
 
 export const customers = pgTable("customers", {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { usePos, SelectedUnit } from '@/context/PosContext'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ManagerDiscountModal } from "./ManagerDiscountModal"
 
 function SerialSelector({ productId, index, onSelect }: { productId: string, index: number, onSelect: (unit: SelectedUnit | null) => void }) {
   const { fetchAvailableSerials, cart } = usePos()
@@ -88,7 +89,32 @@ function SerialSelector({ productId, index, onSelect }: { productId: string, ind
 }
 
 export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
-  const { cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals, assignSerialToUnit, isCartValid, setDiscount } = usePos()
+  const { cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals, assignSerialToUnit, isCartValid, applyItemDiscount } = usePos()
+
+  const [discountModalOpen, setDiscountModalOpen] = useState(false)
+  const [pendingDiscount, setPendingDiscount] = useState<{ productId: string, productName: string, pct: number, maxPct: number } | null>(null)
+
+  const handleDiscountChange = async (productId: string, productName: string, pctString: string) => {
+    const pct = parseFloat(pctString) || 0
+    const item = cart.find(i => i.id === productId)
+    if (item && item.discountPct === pct) return // no change
+    
+    const res = await applyItemDiscount(productId, pct)
+    if (res?.needsApproval) {
+      setPendingDiscount({ productId, productName, pct, maxPct: res.maxAutoApproval || 10 })
+      setDiscountModalOpen(true)
+    }
+  }
+
+  const handleManagerConfirm = async (pin: string) => {
+    if (!pendingDiscount) return
+    const res = await applyItemDiscount(pendingDiscount.productId, pendingDiscount.pct, pin)
+    if (!res?.success) {
+      throw new Error(res?.error || 'Manager approval failed')
+    }
+    setDiscountModalOpen(false)
+    setPendingDiscount(null)
+  }
 
   return (
     <section className="w-full lg:w-[400px] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/5 h-full transition-colors duration-300">
@@ -124,7 +150,8 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
           <Table>
             <TableBody>
               {cart.map((item) => {
-                const lineTotal = item.base_price * item.qty
+                const unitPriceAfterDisc = Math.max(0, item.base_price - (item.discountAmount || 0))
+                const lineTotal = unitPriceAfterDisc * item.qty
                 const lineGst = (lineTotal * item.gst_rate) / 100
                 const finalAmount = lineTotal + lineGst
 
@@ -154,8 +181,25 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                         <div className="flex flex-col gap-0.5 max-w-[180px]">
                           <span className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight truncate">{item.model_name}</span>
                           <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-bold text-slate-400">₹{item.base_price.toLocaleString()}</span>
+                            {item.discountAmount ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-bold text-slate-400 line-through">₹{item.base_price.toLocaleString()}</span>
+                                <span className="text-[9px] font-bold text-emerald-600">₹{(item.base_price - item.discountAmount).toLocaleString()}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[9px] font-bold text-slate-400">₹{item.base_price.toLocaleString()}</span>
+                            )}
                             <Badge className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] px-1.5 border-none h-4">{Math.round(item.gst_rate)}% GST</Badge>
+                            
+                            <div className="flex items-center ml-auto gap-1">
+                              <span className="text-[8px] font-bold text-slate-400 uppercase">Disc %</span>
+                              <input
+                                type="number"
+                                defaultValue={item.discountPct || ''}
+                                onBlur={(e) => handleDiscountChange(item.id, item.model_name, e.target.value)}
+                                className="w-10 h-5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded px-1 text-right text-[9px] font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </div>
                           </div>
                           
                           {/* Unit Selectors for Serialized Items */}
@@ -199,20 +243,10 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
         <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
           <div className="flex justify-between uppercase"><span>Discount</span><span className="text-rose-500">-₹{totals.discount.toLocaleString()}</span></div>
           <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
-          <div className="flex justify-between items-end">
+          <div className="flex justify-between items-end mt-4">
             <div className="flex flex-col">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
               <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Apply Disc.</span>
-              <input 
-                type="number" 
-                value={totals.discount || ''} 
-                onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                placeholder="0"
-                className="w-16 h-8 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded px-2 text-right text-[10px] font-black focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
             </div>
           </div>
         </div>
@@ -237,6 +271,18 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
           </div>
         </Button>
       </div>
+
+      <ManagerDiscountModal 
+        isOpen={discountModalOpen}
+        onClose={() => {
+          setDiscountModalOpen(false)
+          setPendingDiscount(null)
+        }}
+        onConfirm={handleManagerConfirm}
+        productName={pendingDiscount?.productName || ''}
+        requestedPct={pendingDiscount?.pct || 0}
+        maxAllowedPct={pendingDiscount?.maxPct || 10}
+      />
     </section>
   )
 }
