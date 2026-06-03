@@ -106,7 +106,7 @@ steps:
       - '--platform'
       - 'managed'
       - '--update-env-vars'
-      - 'NEXTAUTH_URL=https://ops360-dev.myappterra.com'
+      - 'NEXTAUTH_URL=https://ops360-dev.myappterra.com,NEXTAUTH_SECRET=ops360_staging_secret_key_123456789'
       - '--quiet'
     waitFor: ['push']
 
