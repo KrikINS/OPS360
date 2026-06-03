@@ -303,6 +303,23 @@ export async function settleVendorPayment(input: {
     return { success: false as const, error: 'PO not found' }
   }
 
+  // Calculate total paid so far
+  const existingPayments = await db
+    .select({ amount: vendor_payments.amount })
+    .from(vendor_payments)
+    .where(eq(vendor_payments.po_id, input.poId))
+    
+  const totalPaid = existingPayments.reduce((sum, p) => sum + Number(p.amount ?? 0), 0)
+  const poTotal = Number(po.total_amount ?? 0)
+  const remainingBalance = Number((poTotal - totalPaid).toFixed(2))
+
+  if (input.amount > remainingBalance + 0.01) { // 1 paisa tolerance
+    return {
+      success: false as const,
+      error: `Payment amount (₹${input.amount}) exceeds remaining balance (₹${remainingBalance})`
+    }
+  }
+
   // Only settled/received POs can be paid
   const payableStatuses = [
     'received', 'partially_received',

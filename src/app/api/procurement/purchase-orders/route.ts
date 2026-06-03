@@ -59,6 +59,25 @@ export async function GET() {
           )) FILTER (WHERE vb.id IS NOT NULL), '[]'
         ) AS vendor_bills,
         (
+          SELECT COALESCE(SUM(amount), 0)
+          FROM vendor_payments vp
+          WHERE vp.po_id = po.id
+        ) AS paid_amount,
+        COALESCE((
+          SELECT json_agg(
+            json_build_object(
+              'id', vp.id,
+              'amount', vp.amount,
+              'payment_method', vp.payment_method,
+              'reference_number', vp.reference_number,
+              'payment_date', vp.payment_date,
+              'notes', vp.notes
+            )
+          )
+          FROM vendor_payments vp
+          WHERE vp.po_id = po.id
+        ), '[]') AS payments,
+        (
           SELECT json_agg(
             json_build_object(
               'id',                gr.id,

@@ -43,6 +43,15 @@ export async function getPosProductsAction(productIds: string[]) {
   }
 }
 
+export async function getAllPosProductsAction() {
+  try {
+    const data = await db.select().from(products)
+    return { data }
+  } catch (error) {
+    return { error: { message: String(error) } }
+  }
+}
+
 export async function searchCustomerByPhoneAction(phone: string) {
   try {
     const res = await db.execute(sql`SELECT * FROM search_customer_by_phone(${phone})`)

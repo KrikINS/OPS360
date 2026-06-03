@@ -262,7 +262,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
             {navigationGroups
               .filter(group => {
                 const normalizedRole = (profile.role || "").toLowerCase().trim();
-                const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner';
+                const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'super_admin';
 
                 // Admins see everything
                 if (isAdmin) return true

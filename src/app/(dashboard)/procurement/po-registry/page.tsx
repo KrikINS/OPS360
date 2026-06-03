@@ -166,6 +166,8 @@ type PurchaseOrder = {
   debit_notes?: { id: string, status: string, amount: number }[]
   discrepancies?: { id: string, status: string }[]
   grns?: { id: string, grn_number: string, grn_items?: { freight_value: number }[] }[]
+  paid_amount?: number
+  payments?: { amount: number, payment_date: string, payment_method: string, reference_number: string, notes: string }[]
   requester_name?: string
   approver_name?: string
   approver_email?: string
@@ -1850,7 +1852,10 @@ Are you sure you want to proceed?`)) return;
                                           <DropdownMenuItem 
                                             onClick={() => {
                                               setPaymentPO(po)
-                                              setPayAmount(String(po.total_amount ?? ''))
+                                              const total = po.total_amount ?? 0
+                                              const paid = po.paid_amount ?? 0
+                                              const bal = Number((total - paid).toFixed(2))
+                                              setPayAmount(String(bal > 0 ? bal : 0))
                                               setPayError('')
                                             }}
                                             className="text-purple-700 focus:text-purple-700 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
@@ -3333,8 +3338,41 @@ Are you sure you want to proceed?`)) return;
               <div className="p-3 bg-slate-50 rounded-lg text-sm space-y-1">
                 <p><span className="font-medium">PO:</span> {paymentPO.po_number}</p>
                 <p><span className="font-medium">Vendor:</span> {paymentPO.vendor?.name ?? '—'}</p>
-                <p><span className="font-medium">PO Total:</span> ₹{Number(paymentPO.total_amount ?? 0).toLocaleString('en-IN')}</p>
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
+                  <div className="text-center">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Total</p>
+                    <p className="font-semibold text-slate-800">₹{Number(paymentPO.total_amount ?? 0).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Paid</p>
+                    <p className="font-semibold text-green-600">₹{Number(paymentPO.paid_amount ?? 0).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Balance</p>
+                    <p className="font-semibold text-red-600">₹{Number((paymentPO.total_amount ?? 0) - (paymentPO.paid_amount ?? 0)).toLocaleString('en-IN')}</p>
+                  </div>
+                </div>
               </div>
+
+              {/* Payment History */}
+              {paymentPO.payments && paymentPO.payments.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                    Payment History
+                  </Label>
+                  <div className="bg-slate-50 border rounded-lg divide-y text-xs max-h-32 overflow-y-auto">
+                    {paymentPO.payments.map((p, i) => (
+                      <div key={i} className="p-2 flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-slate-700">{new Date(p.payment_date).toLocaleDateString()}</p>
+                          <p className="text-slate-500 uppercase text-[10px]">{p.payment_method} {p.reference_number ? `(${p.reference_number})` : ''}</p>
+                        </div>
+                        <p className="font-semibold text-green-600">₹{Number(p.amount).toLocaleString('en-IN')}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Amount */}
               <div className="space-y-1.5">
@@ -3346,6 +3384,7 @@ Are you sure you want to proceed?`)) return;
                   value={payAmount}
                   onChange={e => setPayAmount(e.target.value)}
                   placeholder="0.00"
+                  max={Number((paymentPO.total_amount ?? 0) - (paymentPO.paid_amount ?? 0)).toFixed(2)}
                 />
               </div>
 

@@ -263,18 +263,17 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
 
   // 1. Fetch Products Logic (Reusable)
   const fetchInventory = useCallback(async (branchId: string) => {
-    const { getPosInventoryAction, getPosProductsAction } = await import("@/app/actions/pos")
+    const { getPosInventoryAction, getAllPosProductsAction } = await import("@/app/actions/pos")
 
     const { data: inventoryData, error: invError } = await getPosInventoryAction(branchId)
     if (invError || !inventoryData) return
 
     const stockMap: Record<string, number> = {}
-    ;(inventoryData as unknown as { product_id: string; current_balance: number }[]).forEach(invItem => {
-      stockMap[invItem.product_id] = (stockMap[invItem.product_id] || 0) + (invItem.current_balance || 0)
+    ;(inventoryData as unknown as { product_id: string }[]).forEach(invItem => {
+      stockMap[invItem.product_id] = (stockMap[invItem.product_id] || 0) + 1
     })
 
-    const productIds = Object.keys(stockMap)
-    const { data: productData, error: prodError } = await getPosProductsAction(productIds)
+    const { data: productData, error: prodError } = await getAllPosProductsAction()
 
     if (!prodError && productData) {
       const transformed: Product[] = (productData as unknown as Product[]).map((pItem: Product) => ({

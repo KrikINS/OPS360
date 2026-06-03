@@ -625,7 +625,6 @@ export default function InventoryDashboard() {
                       <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name & Specification</TableHead>
                       <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Network Stock</TableHead>
                       <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-28">Category</TableHead>
-                      <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-32">Distribution</TableHead>
                       <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center w-24">Status</TableHead>
                       <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28">Avg Value (LC)</TableHead>
                       <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] text-right w-24">Max Aging</TableHead>
@@ -720,11 +719,6 @@ export default function InventoryDashboard() {
                             <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
                               <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-semibold text-[9px] px-1.5 py-0">{group.category}</Badge>
                             </TableCell>
-                            <TableCell className="py-3 px-4 border-r border-slate-100/50">
-                              <div className="flex items-center gap-1.5 font-semibold text-slate-600 text-[11px]">
-                                <Badge variant="outline" className="text-[9px] font-bold py-0">{group.branches.length} Branches</Badge>
-                              </div>
-                            </TableCell>
                             <TableCell className="py-3 px-4 text-center border-r border-slate-100/50">
                               <span className={cn(
                                 "inline-flex items-center px-3 py-0.5 rounded-full text-[9px] font-bold tracking-wider",
@@ -756,7 +750,7 @@ export default function InventoryDashboard() {
 
                           {isExpanded && (
                             <TableRow className="bg-slate-50/30 border-b border-slate-100">
-                              <TableCell colSpan={10} className="p-0">
+                              <TableCell colSpan={9} className="p-0">
                                 <div className="px-4 md:px-12 py-3 bg-white/50 animate-in slide-in-from-top-2 duration-300">
                                     <Table className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white">
                                       <TableHeader className="bg-slate-50">
@@ -897,7 +891,8 @@ export default function InventoryDashboard() {
         open={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
         onSuccess={() => {
-          // The real-time channel will handle refresh, but we can also manually trigger if needed
+          setIsImportModalOpen(false)
+          router.refresh()
         }}
       />
     </div>

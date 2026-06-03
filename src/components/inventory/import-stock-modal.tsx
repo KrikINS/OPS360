@@ -1,121 +1,262 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from 'react'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Download, Upload, FileSpreadsheet, CheckCircle2,
+  AlertCircle, Loader2
+} from 'lucide-react'
 
 interface ImportStockModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  onSuccess?: () => void
 }
 
-export function ImportStockModal({ open, onOpenChange, onSuccess }: ImportStockModalProps) {
+export function ImportStockModal({
+  open, onOpenChange, onSuccess
+}: ImportStockModalProps) {
   const [file, setFile] = useState<File | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [result, setResult] = useState<{
+    success: boolean
+    imported?: number
+    errors?: string[]
+    errorCount?: number
+    totalLandedCost?: number
+    error?: string
+  } | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  const parseCSV = (text: string) => {
-    const lines = text.split("\n").filter(line => line.trim())
-    const headers = lines[0].split(",").map(h => h.trim())
-    
-    return lines.slice(1).map(line => {
-      const values = line.split(",").map(v => v.trim())
-      const obj: Record<string, string> = {}
-      headers.forEach((header, i) => {
-        obj[header] = values[i]
-      })
-      return obj
-    })
-  }
-
-  const handleUpload = async () => {
-    if (!file) return
-    setLoading(true)
-    setResult(null)
-
-    try {
-      const text = await file.text()
-      const items = parseCSV(text)
-
-      const res = await fetch("/api/inventory/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
-      })
-
-      const data = await res.json()
-
-      if (res.ok) {
-        setResult({ success: true, message: `Successfully imported ${data.count} items.` })
-        onSuccess()
-      } else {
-        setResult({ success: false, message: data.error || "Failed to import items." })
-      }
-    } catch (error: unknown) {
-      console.error(error)
-      setResult({ success: false, message: "Error parsing or uploading file." })
-    } finally {
-      setLoading(false)
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0]
+    if (selected) {
+      setFile(selected)
+      setResult(null)
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={(val) => {
-      onOpenChange(val)
-      if (!val) {
-        setFile(null)
-        setResult(null)
+  async function handleDownloadTemplate() {
+    const res = await fetch('/api/inventory/template')
+    if (res.ok) {
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'OPS360_Opening_Stock_Template.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+  }
+
+  async function handleUpload() {
+    if (!file) return
+    setIsUploading(true)
+    setResult(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/inventory/import', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await res.json()
+      setResult(data)
+
+      if (data.success && onSuccess) {
+        onSuccess()
       }
-    }}>
-      <DialogContent className="md:max-w-[425px]">
+    } catch {
+      setResult({
+        success: false,
+        error: 'An unexpected error occurred',
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  function handleClose() {
+    setFile(null)
+    setResult(null)
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Import Opening Stock</DialogTitle>
-          <DialogDescription>
-            Upload a CSV file with columns: Brand, Item Name, Serial Number, Branch, Estimated Cost.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="h-5 w-5
+              text-green-600" />
+            Import Opening Stock
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="csv-file">CSV File</Label>
-            <Input
-              id="csv-file"
-              type="file"
-              accept=".csv"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              disabled={loading}
-            />
+        <div className="space-y-5">
+
+          {/* Step 1: Download template */}
+          <div className="p-4 bg-blue-50 border
+            border-blue-200 rounded-xl space-y-2">
+            <p className="text-sm font-semibold
+              text-blue-800">
+              Step 1: Download the template
+            </p>
+            <p className="text-xs text-blue-600">
+              The template includes your current Product
+              Master and Branch list as reference sheets.
+              Fill in one row per inventory unit.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadTemplate}
+              className="gap-2 text-blue-700
+                border-blue-300 hover:bg-blue-100"
+            >
+              <Download className="h-4 w-4" />
+              Download Template
+            </Button>
           </div>
 
+          {/* Step 2: Upload filled template */}
+          <div className="p-4 bg-slate-50 border
+            border-slate-200 rounded-xl space-y-3">
+            <p className="text-sm font-semibold
+              text-slate-800">
+              Step 2: Upload your completed file
+            </p>
+            <p className="text-xs text-slate-500">
+              Accepts .xlsx and .csv files. Each row
+              creates one inventory unit with the
+              specified serial number.
+            </p>
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileRef.current?.click()}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Choose File
+              </Button>
+              {file && (
+                <span className="text-sm text-slate-600">
+                  {file.name}
+                  <Badge variant="outline"
+                    className="ml-2 text-xs">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </Badge>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Upload result */}
           {result && (
-            <div className={`p-3 rounded-lg flex items-start gap-2 text-sm ${
-              result.success ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"
+            <div className={`p-4 rounded-xl border ${
+              result.success
+                ? 'bg-green-50 border-green-200'
+                : 'bg-red-50 border-red-200'
             }`}>
-              {result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5" /> : <AlertCircle className="h-4 w-4 mt-0.5" />}
-              <span>{result.message}</span>
+              {result.success ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2
+                    text-green-800">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="text-sm font-semibold">
+                      Successfully imported{' '}
+                      {result.imported} units
+                    </span>
+                  </div>
+                  {result.totalLandedCost && (
+                    <p className="text-xs text-green-700">
+                      Total inventory value:{' '}
+                      ₹{Number(result.totalLandedCost)
+                        .toLocaleString('en-IN')}
+                    </p>
+                  )}
+                  <p className="text-xs text-green-600">
+                    Opening balance journal entries
+                    have been posted automatically.
+                  </p>
+                  {result.errors && result.errors.length > 0 && (
+                    <div className="mt-2 p-2 bg-yellow-50
+                      border border-yellow-200 rounded
+                      text-xs text-yellow-800">
+                      <p className="font-semibold mb-1">
+                        {result.errorCount} rows skipped:
+                      </p>
+                      <ul className="list-disc pl-4
+                        space-y-0.5 max-h-32 overflow-y-auto">
+                        {result.errors.map((err, i) => (
+                          <li key={i}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2
+                    text-red-800">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm font-semibold">
+                      {result.error ?? 'Import failed'}
+                    </span>
+                  </div>
+                  {result.errors && (
+                    <ul className="list-disc pl-4
+                      text-xs text-red-700 space-y-0.5
+                      max-h-40 overflow-y-auto">
+                      {result.errors.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Cancel
+          <Button variant="outline" onClick={handleClose}>
+            {result?.success ? 'Done' : 'Cancel'}
           </Button>
-          <Button onClick={handleUpload} disabled={!file || loading} className="bg-[#001529]">
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {loading ? "Importing..." : "Start Import"}
-          </Button>
+          {!result?.success && (
+            <Button
+              onClick={handleUpload}
+              disabled={!file || isUploading}
+              className="bg-[#001529] hover:bg-[#002a52]
+                text-white gap-2"
+            >
+              {isUploading
+                ? <><Loader2 className="h-4 w-4
+                    animate-spin" />Importing...</>
+                : <><Upload className="h-4 w-4" />
+                    Import Stock</>
+              }
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

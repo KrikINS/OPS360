@@ -34,9 +34,10 @@ export function mapToCustomer(row: unknown): Customer {
         full_name: asString(r?.full_name || r?.name),
         phone_number: asString(r?.phone_number),
         email: r?.email ? asString(r.email) : undefined,
-        city: r?.city ? asString(r.city) : undefined,
+        city: asString(r?.city || r?.address || ''),
         gstin: r?.gstin ? asString(r.gstin) : undefined,
-    }
+        created_at: asString(r?.created_at || r?.updated_at || new Date().toISOString())
+    } as Customer & { created_at: string }
 }
 
 export function mapToProduct(row: unknown): Product {
