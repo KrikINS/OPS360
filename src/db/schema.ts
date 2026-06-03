@@ -76,6 +76,7 @@ export const inventory = pgTable("inventory", {
   price: numeric("price"),
   landed_cost: numeric("landed_cost"),
   source_po_id: uuid("source_po_id"),
+  invoice_id: uuid("invoice_id"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });

@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
 import {
   accounts, journal_entries, journal_lines,
-  expense_records, branches,
+  expense_records, branches, inventory,
 } from '@/db/schema'
 import { eq, desc, sql } from 'drizzle-orm'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
@@ -125,6 +125,26 @@ export async function postSalesJournal(input: {
   igst: number
   cogs: number
 }) {
+  // If cogs not provided, calculate from inventory
+  let cogsAmount = input.cogs
+
+  if (cogsAmount === 0 && input.invoiceId) {
+    try {
+      const soldUnits = await db
+        .select({ landedCost: inventory.landed_cost })
+        .from(inventory)
+        .where(eq(inventory.invoice_id, input.invoiceId))
+
+      cogsAmount = soldUnits.reduce(
+        (sum, unit) => sum + Number(unit.landedCost ?? 0),
+        0
+      )
+    } catch {
+      // If lookup fails, COGS stays 0 — don't block journal
+      cogsAmount = 0
+    }
+  }
+
   const lines: Array<{ accountCode: string; debit?: number; credit?: number; description?: string }> = [
     { accountCode: '1010', debit: input.saleTotal, description: 'Cash received from POS sale' },
     { accountCode: '4000', credit: input.subtotal, description: 'Sales revenue ex-tax' },
@@ -134,10 +154,10 @@ export async function postSalesJournal(input: {
   if (input.sgst > 0) lines.push({ accountCode: '2030', credit: input.sgst, description: 'SGST collected' })
   if (input.igst > 0) lines.push({ accountCode: '2040', credit: input.igst, description: 'IGST collected' })
 
-  if (input.cogs > 0) {
+  if (cogsAmount > 0) {
     lines.push(
-      { accountCode: '5010', debit: input.cogs,  description: 'Cost of goods sold' },
-      { accountCode: '1040', credit: input.cogs, description: 'Inventory asset reduced' }
+      { accountCode: '5010', debit: cogsAmount,  description: 'Cost of goods sold' },
+      { accountCode: '1040', credit: cogsAmount, description: 'Inventory asset reduced' }
     )
   }
 

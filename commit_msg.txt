@@ -1,12 +1,9 @@
-feat: Finance & Accounts UI
+fix: real GST and COGS in sales journal
 
-- Replace stub accounting page with full implementation
-- Three tabs: Dashboard | Journal Ledger | Expenses
-- Dashboard: P&L summary cards, GST position,
-  revenue/expense breakdown, recent journal entries
-- Journal Ledger: full entry list with source badges,
-  branch, FY, auto/manual indicator
-- Expenses: submission form with category + payment
-  source, approval queue for managers/admins
-- Server component fetches all data in parallel
-- Branch-scoped: admins see all, staff see own branch
+- Extract cgst/sgst/igst/subtotal from SP return value
+  instead of hardcoding 0
+- Add invoice_id to inventory schema for COGS tracing
+- Update process_pos_sale to write invoice_id when
+  marking units as Sold
+- postSalesJournal queries landed_cost from sold units
+  to calculate real COGS

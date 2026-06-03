@@ -58,17 +58,25 @@ export async function createTransaction(input: {
 
   // Post sales journal — fire and forget, don't fail the transaction
   try {
-    const saleTotal = input.items.reduce((s, i) => s + i.qty * i.unitPrice, 0)
+    const spResult = result.data as {
+      id: string
+      subtotal: number
+      cgst: number
+      sgst: number
+      igst: number
+      grandTotal: number
+    }
+
     await postSalesJournal({
-      invoiceId: String((result.data as Record<string, unknown>)?.id ?? ''),
+      invoiceId: String(spResult.id ?? ''),
       branchId: input.branchId,
       createdBy: session.user.id,
-      saleTotal,
-      subtotal: saleTotal,
-      cgst: 0,
-      sgst: 0,
-      igst: 0,
-      cogs: 0,
+      saleTotal: spResult.grandTotal,
+      subtotal: spResult.subtotal,
+      cgst: spResult.cgst ?? 0,
+      sgst: spResult.sgst ?? 0,
+      igst: spResult.igst ?? 0,
+      cogs: 0, // will be fixed in FIX 2
     })
   } catch (journalError) {
     console.error('Sales journal post failed:', journalError)

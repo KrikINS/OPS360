@@ -147,6 +147,7 @@ BEGIN
         )
         UPDATE inventory 
         SET status = 'Sold', 
+            invoice_id = new_invoice_id,
             updated_at = now() 
         WHERE id IN (SELECT id FROM updated_inv);
 
