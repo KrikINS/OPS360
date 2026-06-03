@@ -1,0 +1,12 @@
+feat: Finance & Accounts UI
+
+- Replace stub accounting page with full implementation
+- Three tabs: Dashboard | Journal Ledger | Expenses
+- Dashboard: P&L summary cards, GST position,
+  revenue/expense breakdown, recent journal entries
+- Journal Ledger: full entry list with source badges,
+  branch, FY, auto/manual indicator
+- Expenses: submission form with category + payment
+  source, approval queue for managers/admins
+- Server component fetches all data in parallel
+- Branch-scoped: admins see all, staff see own branch

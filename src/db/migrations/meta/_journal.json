@@ -15,6 +15,13 @@
       "when": 1780080983093,
       "tag": "0001_military_energizer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780411503160,
+      "tag": "0002_pretty_slyde",
+      "breakpoints": true
     }
   ]
 }

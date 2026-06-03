@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn, getSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
@@ -61,6 +61,14 @@ const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex flex-col items-center justify-center bg-[#001529]" />}>
+      <LoginPageContent />
+    </Suspense>
+  )
+}
+
+function LoginPageContent() {
   const searchParams = useSearchParams()
   const passwordChanged = searchParams.get('passwordChanged')
   const [loading, setLoading] = useState(false)

@@ -38,7 +38,8 @@ import {
   ArrowLeft,
   BookOpen,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  LayoutDashboard
 } from "lucide-react"
 import {
   Collapsible,
@@ -115,8 +116,9 @@ const navigationGroups = [
     title: "Finance & Accounts",
     icon: Wallet,
     items: [
-      { title: "Branch-Wise P&L", url: "/accounting", icon: BarChart3 },
-      { title: "Expense Tracker", url: "/accounting", icon: Receipt },
+      { title: "Dashboard",       url: "/accounting",                  icon: LayoutDashboard },
+      { title: "Journal Ledger",  url: "/accounting?tab=journal",      icon: BookOpen },
+      { title: "Expenses",        url: "/accounting?tab=expenses",     icon: Receipt },
     ]
   },
   {

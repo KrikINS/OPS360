@@ -48,17 +48,17 @@ async function seedCoa(d: any) {
 }
 
 describe('getFinancialYear', () => {
-  it('April 2025 → 2025-26', () => {
-    expect(getFinancialYear(new Date('2025-04-01'))).toBe('2025-26')
+  it('April 2025 → 2025-26', async () => {
+    expect(await getFinancialYear(new Date('2025-04-01'))).toBe('2025-26')
   })
-  it('March 2026 → 2025-26', () => {
-    expect(getFinancialYear(new Date('2026-03-31'))).toBe('2025-26')
+  it('March 2026 → 2025-26', async () => {
+    expect(await getFinancialYear(new Date('2026-03-31'))).toBe('2025-26')
   })
-  it('January 2026 → 2025-26', () => {
-    expect(getFinancialYear(new Date('2026-01-15'))).toBe('2025-26')
+  it('January 2026 → 2025-26', async () => {
+    expect(await getFinancialYear(new Date('2026-01-15'))).toBe('2025-26')
   })
-  it('April 2026 → 2026-27', () => {
-    expect(getFinancialYear(new Date('2026-04-01'))).toBe('2026-27')
+  it('April 2026 → 2026-27', async () => {
+    expect(await getFinancialYear(new Date('2026-04-01'))).toBe('2026-27')
   })
 })
 

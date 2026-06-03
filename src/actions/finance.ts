@@ -11,7 +11,7 @@ import { eq, desc, sql } from 'drizzle-orm'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 
 // ── Helper: derive Indian financial year ────────────
-export function getFinancialYear(date: Date): string {
+export async function getFinancialYear(date: Date): Promise<string> {
   const month = date.getMonth() + 1
   const year = date.getFullYear()
   if (month >= 4) return `${year}-${String(year + 1).slice(2)}`
@@ -54,7 +54,7 @@ export async function createJournalEntry(input: {
   }
 
   const date = input.date ?? new Date()
-  const financialYear = getFinancialYear(date)
+  const financialYear = await getFinancialYear(date)
 
   const [entry] = await db
     .insert(journal_entries)
