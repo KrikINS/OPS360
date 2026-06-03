@@ -117,6 +117,7 @@ const navigationGroups = [
     icon: Wallet,
     items: [
       { title: "Dashboard",       url: "/accounting",                  icon: LayoutDashboard },
+      { title: "Balance Sheet",   url: "/accounting?tab=balance-sheet", icon: Scale },
       { title: "Journal Ledger",  url: "/accounting?tab=journal",      icon: BookOpen },
       { title: "Expenses",        url: "/accounting?tab=expenses",     icon: Receipt },
     ]

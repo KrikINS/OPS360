@@ -225,6 +225,8 @@ export default function AccountingClient({
   const tabs = [
     { id: 'dashboard', label: 'Dashboard',
       icon: LayoutDashboard },
+    { id: 'balance-sheet', label: 'Balance Sheet',
+      icon: Scale },
     { id: 'journal',   label: 'Journal Ledger',
       icon: BookOpen },
     { id: 'expenses',  label: 'Expenses',
@@ -603,6 +605,257 @@ export default function AccountingClient({
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════
+          TAB: BALANCE SHEET
+      ══════════════════════════════════════════ */}
+      {tab === 'balance-sheet' && (
+        <div className="space-y-4">
+
+          {/* Accounting equation banner */}
+          <Card className="bg-slate-900 text-white border-0">
+            <CardContent className="pt-6">
+              <div className="flex items-center
+                justify-between text-center">
+                <div>
+                  <p className="text-xs uppercase tracking-widest
+                    text-slate-400 mb-1">Total Assets</p>
+                  <p className="text-2xl font-bold text-white">
+                    {fmtINR(
+                      (bs?.assets ?? []).reduce(
+                        (s, a) => s + Number(a.balance), 0
+                      )
+                    )}
+                  </p>
+                </div>
+                <div className="text-2xl font-light
+                  text-slate-400">=</div>
+                <div>
+                  <p className="text-xs uppercase tracking-widest
+                    text-slate-400 mb-1">Total Liabilities</p>
+                  <p className="text-2xl font-bold
+                    text-red-400">
+                    {fmtINR(
+                      (bs?.liabilities ?? []).reduce(
+                        (s, l) => s + Number(l.balance), 0
+                      )
+                    )}
+                  </p>
+                </div>
+                <div className="text-2xl font-light
+                  text-slate-400">+</div>
+                <div>
+                  <p className="text-xs uppercase tracking-widest
+                    text-slate-400 mb-1">Total Equity</p>
+                  <p className="text-2xl font-bold
+                    text-green-400">
+                    {fmtINR(
+                      (bs?.equity ?? []).reduce(
+                        (s, e) => s + Number(e.balance), 0
+                      )
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Three columns: Assets | Liabilities | Equity */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            {/* Assets */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold
+                  uppercase tracking-widest text-blue-600">
+                  Assets
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(bs?.assets ?? []).length > 0 ? (
+                  <div className="space-y-2">
+                    {(bs?.assets ?? []).map(a => (
+                      <div key={a.code}
+                        className="flex justify-between
+                          items-center py-1.5 border-b
+                          border-slate-100 last:border-0">
+                        <span className="text-sm">
+                          <span className="text-xs
+                            text-muted-foreground mr-2">
+                            {a.code}
+                          </span>
+                          {a.name}
+                        </span>
+                        <span className="text-sm font-semibold
+                          text-blue-700">
+                          {fmtINR(Number(a.balance))}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between
+                      items-center pt-2 border-t-2
+                      border-blue-200">
+                      <span className="text-sm font-bold">
+                        Total
+                      </span>
+                      <span className="text-sm font-bold
+                        text-blue-700">
+                        {fmtINR(
+                          (bs?.assets ?? []).reduce(
+                            (s, a) => s + Number(a.balance), 0
+                          )
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground
+                    text-center py-4">No asset entries</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Liabilities */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold
+                  uppercase tracking-widest text-red-600">
+                  Liabilities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(bs?.liabilities ?? []).length > 0 ? (
+                  <div className="space-y-2">
+                    {(bs?.liabilities ?? []).map(l => (
+                      <div key={l.code}
+                        className="flex justify-between
+                          items-center py-1.5 border-b
+                          border-slate-100 last:border-0">
+                        <span className="text-sm">
+                          <span className="text-xs
+                            text-muted-foreground mr-2">
+                            {l.code}
+                          </span>
+                          {l.name}
+                        </span>
+                        <span className="text-sm font-semibold
+                          text-red-700">
+                          {fmtINR(Number(l.balance))}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between
+                      items-center pt-2 border-t-2
+                      border-red-200">
+                      <span className="text-sm font-bold">
+                        Total
+                      </span>
+                      <span className="text-sm font-bold
+                        text-red-700">
+                        {fmtINR(
+                          (bs?.liabilities ?? []).reduce(
+                            (s, l) => s + Number(l.balance), 0
+                          )
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground
+                    text-center py-4">No liability entries</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Equity */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold
+                  uppercase tracking-widest text-green-600">
+                  Equity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(bs?.equity ?? []).length > 0 ? (
+                  <div className="space-y-2">
+                    {(bs?.equity ?? []).map(e => (
+                      <div key={e.code}
+                        className="flex justify-between
+                          items-center py-1.5 border-b
+                          border-slate-100 last:border-0">
+                        <span className="text-sm">
+                          <span className="text-xs
+                            text-muted-foreground mr-2">
+                            {e.code}
+                          </span>
+                          {e.name}
+                        </span>
+                        <span className="text-sm font-semibold
+                          text-green-700">
+                          {fmtINR(Number(e.balance))}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between
+                      items-center pt-2 border-t-2
+                      border-green-200">
+                      <span className="text-sm font-bold">
+                        Total
+                      </span>
+                      <span className="text-sm font-bold
+                        text-green-700">
+                        {fmtINR(
+                          (bs?.equity ?? []).reduce(
+                            (s, e) => s + Number(e.balance), 0
+                          )
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground
+                    text-center py-4">No equity entries</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Balance check */}
+          {bs && (() => {
+            const totalAssets = bs.assets.reduce(
+              (s, a) => s + Number(a.balance), 0)
+            const totalLiabEquity =
+              bs.liabilities.reduce(
+                (s, l) => s + Number(l.balance), 0) +
+              bs.equity.reduce(
+                (s, e) => s + Number(e.balance), 0)
+            const diff = Math.abs(totalAssets - totalLiabEquity)
+            return diff > 1 ? (
+              <Card className="border-orange-200 bg-orange-50">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-sm text-orange-700
+                    text-center">
+                    ⚠️ Balance sheet is out of balance by
+                    {' '}{fmtINR(diff)}. This may indicate
+                    missing opening balance entries.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-green-200 bg-green-50">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-sm text-green-700
+                    text-center flex items-center
+                    justify-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Balance sheet is balanced ✓
+                  </p>
+                </CardContent>
+              </Card>
+            )
+          })()}
         </div>
       )}
 
