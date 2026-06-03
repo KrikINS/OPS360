@@ -36,6 +36,7 @@ const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
           className={cn(
             "drop-shadow-[0_0_50px_rgba(127,209,227,0.25)] bg-transparent object-contain transition-all duration-1000"
           )}
+          unoptimized
         />
       </div>
       <div className={cn(
@@ -274,7 +275,7 @@ function LoginPageContent() {
       <div className="absolute bottom-6 right-8 text-center pointer-events-none select-none animate-in fade-in slide-in-from-right-4 duration-1000">
         <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-1">Powered By</p>
         <div className="flex items-center justify-center gap-1.5">
-          <Image src="/AppTerra .PNG" alt="AppTerra" width={120} height={40} className="object-contain opacity-60" style={{ mixBlendMode: "screen" }} />
+          <Image src="/AppTerra .PNG" alt="AppTerra" width={120} height={40} className="object-contain opacity-60" style={{ mixBlendMode: "screen" }} unoptimized />
         </div>
       </div>
       <style jsx global>{`
