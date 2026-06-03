@@ -13,27 +13,44 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-import { Loader2, UserPlus, Phone, Mail, MapPin, AlertTriangle } from "lucide-react"
+import { Loader2, UserPlus, Phone, Mail, MapPin, AlertTriangle, Edit } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Customer } from "@/context/PosContext"
 
 interface AddCustomerModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  customer?: Customer
 }
 
-export function AddCustomerModal({ open, onOpenChange, onSuccess }: AddCustomerModalProps) {
+export function AddCustomerModal({ open, onOpenChange, onSuccess, customer }: AddCustomerModalProps) {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    full_name: '',
-    phone_number: '',
-    email: '',
+    full_name: customer?.full_name || '',
+    phone_number: customer?.phone_number || '',
+    email: customer?.email || '',
     address_line_1: '',
     address_line_2: '',
-    city: '',
+    city: customer?.city || '',
     pincode: ''
   })
+
+  React.useEffect(() => {
+    if (open) {
+      setFormData({
+        full_name: customer?.full_name || '',
+        phone_number: customer?.phone_number || '',
+        email: customer?.email || '',
+        address_line_1: '', // Assuming these aren't returned currently, or modify mapper to return them
+        address_line_2: '',
+        city: customer?.city || '',
+        pincode: ''
+      })
+      setErrorMsg(null)
+    }
+  }, [open, customer])
 
   
 
@@ -45,7 +62,14 @@ export function AddCustomerModal({ open, onOpenChange, onSuccess }: AddCustomerM
     }
 
     setLoading(true)
-    const { error } = await import("@/app/actions/customers").then(m => m.createCustomerAction(formData))
+    let error;
+    if (customer?.id) {
+      const res = await import("@/app/actions/customers").then(m => m.updateCustomerAction(customer.id, formData))
+      error = res.error
+    } else {
+      const res = await import("@/app/actions/customers").then(m => m.createCustomerAction(formData))
+      error = res.error
+    }
 
     setLoading(false)
 
@@ -78,11 +102,15 @@ export function AddCustomerModal({ open, onOpenChange, onSuccess }: AddCustomerM
         <DialogHeader className="p-6 bg-[#001529] dark:bg-black text-white">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-blue-500 dark:bg-blue-600 rounded-xl shadow-lg ring-4 ring-blue-500/10">
-              <UserPlus className="h-5 w-5" />
+              {customer ? <Edit className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
             </div>
             <div>
-              <DialogTitle className="text-xl font-black uppercase tracking-tight">Onboard New Customer</DialogTitle>
-              <DialogDescription className="text-blue-200 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest">Create permanent buyer profile</DialogDescription>
+              <DialogTitle className="text-xl font-black uppercase tracking-tight">
+                {customer ? "Update Customer" : "Onboard New Customer"}
+              </DialogTitle>
+              <DialogDescription className="text-blue-200 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest">
+                {customer ? "Modify existing buyer profile" : "Create permanent buyer profile"}
+              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -185,8 +213,8 @@ export function AddCustomerModal({ open, onOpenChange, onSuccess }: AddCustomerM
                 className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/10" 
                 disabled={loading}
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                Add Customer
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : (customer ? <Edit className="h-4 w-4 mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />)}
+                {customer ? "Update Customer" : "Add Customer"}
               </Button>
             </div>
           </DialogFooter>

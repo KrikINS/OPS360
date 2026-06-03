@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 
 import { CustomerRegistryTable } from "@/components/admin/CustomerRegistryTable"
 import { AddCustomerModal } from "@/components/admin/AddCustomerModal"
+import { CustomerHistoryDrawer } from "@/components/admin/CustomerHistoryDrawer"
 import { Users, Loader2 } from "lucide-react"
 import { Customer } from "@/context/PosContext"
 
@@ -15,6 +16,9 @@ export default function CustomerRegistryPage() {
   const [customers, setCustomers] = useState<AdminCustomer[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [customerToEdit, setCustomerToEdit] = useState<Customer | undefined>()
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false)
+  const [customerForHistory, setCustomerForHistory] = useState<Customer | null>(null)
   
   
 
@@ -69,14 +73,39 @@ export default function CustomerRegistryPage() {
       ) : (
         <CustomerRegistryTable 
           customers={customers} 
-          onAddClick={() => setModalOpen(true)} 
+          onAddClick={() => {
+            setCustomerToEdit(undefined)
+            setModalOpen(true)
+          }} 
+          onEditClick={(customer) => {
+            setCustomerToEdit(customer)
+            setModalOpen(true)
+          }}
+          onHistoryClick={(customer) => {
+            setCustomerForHistory(customer)
+            setHistoryDrawerOpen(true)
+          }}
         />
       )}
 
       <AddCustomerModal 
         open={modalOpen} 
-        onOpenChange={setModalOpen} 
+        onOpenChange={(open) => {
+          setModalOpen(open)
+          if (!open) setTimeout(() => setCustomerToEdit(undefined), 200)
+        }} 
         onSuccess={fetchCustomers}
+        customer={customerToEdit}
+      />
+
+      <CustomerHistoryDrawer
+        open={historyDrawerOpen}
+        onClose={() => {
+          setHistoryDrawerOpen(false)
+          setTimeout(() => setCustomerForHistory(null), 200)
+        }}
+        customerId={customerForHistory?.id || null}
+        customerName={customerForHistory?.full_name || null}
       />
     </div>
   )

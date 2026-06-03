@@ -20,6 +20,18 @@ export async function addCustomerAction(formData: Partial<typeof customers.$infe
   }
 }
 
+export async function updateCustomerAction(id: string, formData: Partial<typeof customers.$inferInsert>) {
+  try {
+    const data = await db.update(customers).set({ ...formData, updated_at: new Date() }).where(eq(customers.id, id)).returning()
+    return { data: data[0] }
+  } catch (error) {
+    if ((error as Record<string, unknown>).code === '23505') {
+      return { error: { message: "Customer with this phone number already exists", code: '23505' } }
+    }
+    return { error: { message: (error instanceof Error ? error.message : String(error)) } }
+  }
+}
+
 // Alias for legacy callers
 export const createCustomerAction = addCustomerAction
 
