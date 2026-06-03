@@ -36,11 +36,29 @@ export async function getGRNReceiptsAction(poId: string) {
               'ordered_qty',      gi.ordered_qty,
               'received_qty',     gi.received_qty,
               'landed_unit_cost', gi.landed_unit_cost,
-              'serial_numbers', (
-                SELECT json_agg(inv.serial_number ORDER BY inv.serial_number) FILTER (WHERE inv.serial_number IS NOT NULL)
-                FROM inventory inv
-                WHERE inv.id = ANY(gi.inventory_ids::uuid[])
-              ),
+                'serial_numbers', (
+                  CASE
+                    WHEN gi.inventory_ids IS NOT NULL
+                         AND array_length(gi.inventory_ids, 1) > 0
+                    THEN (
+                      SELECT json_agg(inv.serial_number ORDER BY inv.serial_number)
+                        FILTER (WHERE inv.serial_number IS NOT NULL)
+                      FROM inventory inv
+                      WHERE inv.id = ANY(gi.inventory_ids::uuid[])
+                    )
+                    ELSE (
+                      SELECT json_agg(inv.serial_number ORDER BY inv.serial_number)
+                        FILTER (WHERE inv.serial_number IS NOT NULL)
+                      FROM inventory inv
+                      WHERE inv.source_po_id = gr.po_id
+                        AND inv.product_id = gi.product_id
+                        AND inv.branch_id = gr.branch_id
+                        AND inv.created_at BETWEEN
+                          gr.created_at - interval '1 minute'
+                          AND gr.created_at + interval '5 minutes'
+                    )
+                  END
+                ),
               'product', (
                 SELECT json_build_object(
                   'model_name',   pr.model_name,

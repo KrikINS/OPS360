@@ -398,7 +398,16 @@ export async function createGRN(input: {
       })
 
       // Discrepancy record for any shortfall
-      if (item.shortfall > 0) {
+      // Get cumulative received so far including this GRN
+      const existingReceived = await db.execute(sql`
+        SELECT COALESCE(SUM(received_qty), 0) as total
+        FROM grn_items
+        WHERE po_item_id = ${item.poItemId}
+      `)
+      const cumulativeReceived = Number((existingReceived as any).rows?.[0]?.total ?? (existingReceived as any)?.[0]?.total ?? 0)
+
+      // Only create discrepancy if cumulative is still less than ordered after ALL GRNs
+      if (cumulativeReceived < item.orderedQty) {
         await db.insert(discrepancies).values({
           po_id: input.poId,
           product_id: item.productId,
@@ -406,30 +415,72 @@ export async function createGRN(input: {
           discrepancy_type: 'short_shipment',
           status: 'open',
           ordered_qty: item.orderedQty,
-          received_qty: item.receivedQty,
-          shortfall: item.shortfall,
+          received_qty: cumulativeReceived, // User's requested fix
+          shortfall: item.orderedQty - cumulativeReceived,
         })
       }
 
-      // Update po_items.received_qty
-      await db
-        .update(po_items)
-        .set({ received_qty: sql`received_qty + ${item.receivedQty}` })
+      // Accumulate received qty on po_items
+      await db.execute(sql`
+        UPDATE po_items
+        SET received_qty = COALESCE(received_qty, 0) + ${item.receivedQty}
+        WHERE id = ${item.poItemId}
+      `)
+
+      // Auto-resolve discrepancies for items now fully received
+      const cumulativeResult2 = await db.execute(sql`
+        SELECT COALESCE(SUM(received_qty), 0) as total
+        FROM grn_items
+        WHERE po_item_id = ${item.poItemId}
+      `)
+      const cumulativeReceived2 = Number(
+        (cumulativeResult2 as any).rows?.[0]?.total ??
+        (cumulativeResult2 as any)?.[0]?.total ?? 0
+      )
+
+      const [poItemForResolve] = await db
+        .select({ ordered_qty: po_items.ordered_qty })
+        .from(po_items)
         .where(eq(po_items.id, item.poItemId))
+        .limit(1)
+
+      if (poItemForResolve && cumulativeReceived2 >= poItemForResolve.ordered_qty) {
+        await db.execute(sql`
+          UPDATE discrepancies
+          SET status = 'resolved',
+              admin_comment = 'Auto-resolved: full quantity received across multiple GRNs'
+          WHERE po_item_id = ${item.poItemId}
+            AND status = 'open'
+        `)
+      }
     }
 
-    // Determine if all items are fully received and transition PO status
+    // Check ALL po_items for cumulative received
     const allPoItems = await db
-      .select()
+      .select({
+        id: po_items.id,
+        ordered_qty: po_items.ordered_qty,
+        received_qty: po_items.received_qty,
+      })
       .from(po_items)
       .where(eq(po_items.po_id, input.poId))
 
-    const allFullyReceived = allPoItems.every(poItem => {
-      const grnItem = grnItemsData.find(g => g.poItemId === poItem.id)
-      return grnItem && grnItem.receivedQty >= poItem.ordered_qty
-    })
+    const allFullyReceived = allPoItems.every(
+      pi => (pi.received_qty ?? 0) >= (pi.ordered_qty ?? 0)
+    )
 
-    const newPoStatus = allFullyReceived ? 'received' : 'partially_received'
+    const anyReceived = allPoItems.some(
+      pi => (pi.received_qty ?? 0) > 0
+    )
+
+    let newPoStatus: string
+    if (allFullyReceived) {
+      newPoStatus = 'received'
+    } else if (anyReceived) {
+      newPoStatus = 'partially_received'
+    } else {
+      newPoStatus = 'approved' // shouldn't happen but safe
+    }
 
     await db
       .update(purchase_orders)
