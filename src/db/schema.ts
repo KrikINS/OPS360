@@ -1,5 +1,5 @@
 import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey, serial, date } from "drizzle-orm/pg-core";
-
+import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -413,6 +413,7 @@ export const grn_items = pgTable("grn_items", {
   received_qty: integer("received_qty").notNull(),
   unit_cost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
   landed_unit_cost: numeric("landed_unit_cost", { precision: 12, scale: 2 }).default('0'),
+  inventory_ids: text("inventory_ids").array().default(sql`'{}'::text[]`),
   created_at: timestamp("created_at").defaultNow(),
 })
 

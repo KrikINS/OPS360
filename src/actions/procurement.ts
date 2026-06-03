@@ -358,19 +358,8 @@ export async function createGRN(input: {
 
     // 6. Insert grn_items + inventory rows + discrepancy records
     for (const item of grnItemsData) {
-      // grn_items row
-      await db.insert(grn_items).values({
-        grn_id: grnHeader.id,
-        po_item_id: item.poItemId,
-        product_id: item.productId,
-        ordered_qty: item.orderedQty,
-        received_qty: item.receivedQty,
-        unit_cost: String(item.unitCost),
-        landed_unit_cost: String(item.landedUnitCost),
-      })
-
       // Inventory rows — one row per serial number (or anonymous rows if no SNs)
-      const inventoryRows = item.serialNumbers && item.serialNumbers.length > 0
+      const inventoryRowValues = item.serialNumbers && item.serialNumbers.length > 0
         ? item.serialNumbers.map(sn => ({
             product_id:    item.productId,
             branch_id:     input.branchId,
@@ -390,9 +379,23 @@ export async function createGRN(input: {
             source_po_id:  input.poId,
           }))
 
-      if (inventoryRows.length > 0) {
-        await db.insert(inventory).values(inventoryRows)
+      let inventoryIds: string[] = []
+      if (inventoryRowValues.length > 0) {
+        const inventoryRows = await db.insert(inventory).values(inventoryRowValues).returning({ id: inventory.id })
+        inventoryIds = inventoryRows.map(r => r.id)
       }
+
+      // grn_items row
+      await db.insert(grn_items).values({
+        grn_id: grnHeader.id,
+        po_item_id: item.poItemId,
+        product_id: item.productId,
+        ordered_qty: item.orderedQty,
+        received_qty: item.receivedQty,
+        unit_cost: String(item.unitCost),
+        landed_unit_cost: String(item.landedUnitCost),
+        inventory_ids: inventoryIds,
+      })
 
       // Discrepancy record for any shortfall
       if (item.shortfall > 0) {
@@ -411,7 +414,7 @@ export async function createGRN(input: {
       // Update po_items.received_qty
       await db
         .update(po_items)
-        .set({ received_qty: item.receivedQty })
+        .set({ received_qty: sql`received_qty + ${item.receivedQty}` })
         .where(eq(po_items.id, item.poItemId))
     }
 

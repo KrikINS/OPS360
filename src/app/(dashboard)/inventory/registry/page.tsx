@@ -695,7 +695,7 @@ export default function InventoryDashboard() {
                                 {group.total_network_stock <= (group.product?.low_stock_threshold ?? group.product?.categories?.low_stock_threshold ?? 10) && (
                                   <TooltipProvider>
                                     <Tooltip>
-                                      <TooltipTrigger>
+                                      <TooltipTrigger render={
                                         <Button
                                           variant="ghost"
                                           size="sm"
@@ -707,7 +707,7 @@ export default function InventoryDashboard() {
                                         >
                                           <Send className="h-3 w-3" />
                                         </Button>
-                                      </TooltipTrigger>
+                                      } />
                                       <TooltipContent side="right">
                                         <p>Transfer Stock</p>
                                       </TooltipContent>
@@ -740,13 +740,13 @@ export default function InventoryDashboard() {
                             </TableCell>
                             <TableCell className="py-3 px-4 text-right pr-6">
                               <Tooltip>
-                                <TooltipTrigger>
+                                <TooltipTrigger render={
                                   <div className={cn("flex items-center justify-end gap-1.5 cursor-default", getAgingColor(group.max_network_aging))}>
                                     {group.max_network_aging > 60 && <AlertCircle className="h-3 w-3" />}
                                     <Clock className="h-3 w-3 opacity-50" />
                                     <span className="text-xs">{group.max_network_aging}d</span>
                                   </div>
-                                </TooltipTrigger>
+                                } />
                                 <TooltipContent className="bg-slate-900 text-white border-none font-bold text-[10px]">
                                   {group.max_network_aging > 60 ? "SLOW MOVER PROTOCOL ACTIVE" : "Active Stock Aging Overview"}
                                 </TooltipContent>

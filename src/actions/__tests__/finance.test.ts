@@ -22,7 +22,7 @@ import {
 let db: any
 beforeAll(async () => { db = await setupTestDb() })
 afterEach(async () => { await cleanupTestDb(db) })
-afterAll(async () => { await teardownTestDb(db) })
+afterAll(async () => { await teardownTestDb() })
 
 const ADMIN_ID   = '00000000-0000-0000-0000-000000000001'
 const STAFF_ID   = '00000000-0000-0000-0000-000000000002'

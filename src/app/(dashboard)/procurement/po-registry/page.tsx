@@ -3332,7 +3332,7 @@ Are you sure you want to proceed?`)) return;
               {/* PO info */}
               <div className="p-3 bg-slate-50 rounded-lg text-sm space-y-1">
                 <p><span className="font-medium">PO:</span> {paymentPO.po_number}</p>
-                <p><span className="font-medium">Vendor:</span> {paymentPO.vendor_name ?? '—'}</p>
+                <p><span className="font-medium">Vendor:</span> {paymentPO.vendor?.name ?? '—'}</p>
                 <p><span className="font-medium">PO Total:</span> ₹{Number(paymentPO.total_amount ?? 0).toLocaleString('en-IN')}</p>
               </div>
 
