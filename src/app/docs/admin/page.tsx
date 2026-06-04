@@ -54,12 +54,53 @@ export default function AdminDocs() {
       </section>
 
       <div className="grid gap-6 md:grid-cols-2 mt-8">
-        <div className="bg-white border rounded-xl p-6 shadow-sm">
+        <div className="bg-white border rounded-xl p-6 shadow-sm md:col-span-2">
+          <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
+            <Settings className="h-5 w-5 text-[#7FD1E3]" />
+            Global Masters & Product Catalog Configuration
+          </h3>
+          <p className="text-sm text-slate-600 mb-4">
+            Products and their primary attributes are configured within the Global Masters section. Ensuring accurate baseline pricing here is critical as it dictates POS boundaries and margin thresholds globally across all branches.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-slate-50 border rounded-lg p-4">
+              <h4 className="font-bold text-sm text-[#001529] mb-2">Adding & Editing Products</h4>
+              <p className="text-xs text-slate-600 mb-2">
+                When provisioning a new asset or updating an existing product via the Product Modals, the following base pricing parameters must be carefully established:
+              </p>
+              <ul className="space-y-2 text-xs text-slate-600 list-disc pl-4">
+                <li><strong>MRP (Base Price):</strong> The absolute ceiling price. The system automatically calculates and previews the tax-inclusive MSRP based on the selected GST Rate.</li>
+                <li><strong>Dealer Price:</strong> Input your baseline distributor or wholesale cost.</li>
+                <li><strong>Min Sell Price:</strong> An automatically suggested hard floor (defaults to 1.05× Dealer Price) below which the POS will refuse to process any sale. You can manually override this value.</li>
+                <li><strong>Max Discount %:</strong> Sets the boundary for auto-approved line-item discounts at the POS (defaults to 10%). Any discount requested beyond this tier triggers a Manager PIN override requirement.</li>
+              </ul>
+            </div>
+            <div className="bg-slate-50 border rounded-lg p-4">
+              <h4 className="font-bold text-sm text-[#001529] mb-2">Global Settings Impact</h4>
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li className="flex items-start gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
+                  <span><strong>Tax Slabs:</strong> Edit global HSN mappings and corresponding GST percentages to auto-populate product creation forms.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
+                  <span><strong>T&C Templates:</strong> Manage default terms applied to all outward documents (Invoices/POs).</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
+                  <span><strong>Audit Retention:</strong> Configure how long discrepancy and shift logs are preserved.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border rounded-xl p-6 shadow-sm md:col-span-2">
           <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
             <Users className="h-5 w-5 text-blue-500" />
             Role Hierarchies
           </h3>
-          <div className="space-y-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <div className="p-3 bg-slate-50 border rounded-lg">
               <h4 className="text-xs font-bold text-[#001529] uppercase tracking-wider mb-1">Super Admin / Owner</h4>
               <p className="text-[11px] text-slate-500">Unrestricted access. Can edit system configuration, wipe data, and modify roles.</p>
@@ -73,30 +114,6 @@ export default function AdminDocs() {
               <p className="text-[11px] text-slate-500">Restricted to POS, basic CRM entry, and local inventory viewing.</p>
             </div>
           </div>
-        </div>
-
-        <div className="bg-white border rounded-xl p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
-            <Settings className="h-5 w-5 text-[#7FD1E3]" />
-            Global Settings
-          </h3>
-          <p className="text-sm text-slate-600 mb-4">
-            The Admin Center provides global configuration toggles that affect all branches simultaneously:
-          </p>
-          <ul className="space-y-2 text-[13px] text-slate-600">
-            <li className="flex items-start gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
-              <span><strong>Tax Slabs:</strong> Edit global HSN mappings and corresponding GST percentages.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
-              <span><strong>T&C Templates:</strong> Manage default terms applied to all outward documents (Invoices/POs).</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
-              <span><strong>Audit Retention:</strong> Configure how long discrepancy and shift logs are preserved.</span>
-            </li>
-          </ul>
         </div>
       </div>
     </div>
