@@ -52,6 +52,10 @@ interface Product {
   category: string
   product_code: string
   base_price: number
+  mrp?: number
+  dealer_price?: number
+  min_sell_price?: number
+  max_discount_pct?: number
   hsn_code: string
   min_stock_level: number
   tracking_type: string
@@ -337,10 +341,12 @@ export default function ProductsPage() {
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Model Name</th>
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Brand</th>
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Category</th>
-                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA Code</th>
-                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">HSN Code</th>
+                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA & HSN</th>
                   <th className="text-center py-2.5 px-1 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tax</th>
-                  <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Unit Rate (Excl. Tax)</th>
+                  <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">MRP</th>
+                  <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Dealer Rate</th>
+                  <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Min Rate</th>
+                  <th className="text-center py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Max Disc %</th>
                   <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Min Stock</th>
                   <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tracking</th>
                   <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] w-20">Actions</th>
@@ -373,12 +379,15 @@ export default function ProductsPage() {
                       <td className="py-2 px-4">
                         <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold tracking-tighter">{p.category}</span>
                       </td>
-                      <td className="py-2 px-4">
-                        <code className="text-[10px] font-mono font-semibold text-[#001529] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{p.product_code || "---"}</code>
+                      <td className="py-2 px-4 flex flex-col gap-1">
+                        <code className="text-[10px] font-mono font-semibold text-[#001529] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded w-fit">{p.product_code || "---"}</code>
+                        <span className="text-slate-400 font-semibold text-[10px]">{p.hsn_code || "---"}</span>
                       </td>
-                      <td className="py-2 px-4 text-slate-400 font-semibold">{p.hsn_code || "---"}</td>
                       <td className="py-2 px-1 text-center font-bold text-slate-500 text-[10px]">{p.gst_rate ?? 18}%</td>
-                      <td className="py-2 px-4 font-bold text-right text-[#001529] text-xs">₹{p.base_price.toLocaleString("en-IN")}</td>
+                      <td className="py-2 px-4 font-bold text-right text-[#001529] text-xs">₹{(Number(p.mrp ?? p.base_price) || 0).toLocaleString("en-IN")}</td>
+                      <td className="py-2 px-4 font-bold text-right text-slate-600 text-xs">₹{(Number(p.dealer_price) || 0).toLocaleString("en-IN")}</td>
+                      <td className="py-2 px-4 font-bold text-right text-slate-600 text-xs">₹{(Number(p.min_sell_price) || 0).toLocaleString("en-IN")}</td>
+                      <td className="py-2 px-2 text-center font-bold text-slate-500 text-[10px]">{Number(p.max_discount_pct) || 0}%</td>
                       <td className="py-2 px-4 text-center">
                         <span className="font-semibold text-slate-900 border border-slate-100 px-1.5 py-0.5 rounded bg-slate-50">{p.min_stock_level || 0}</span>
                       </td>

@@ -42,8 +42,7 @@ export function MultiSelect({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div className={cn("relative w-full", className)}>
+      <PopoverTrigger render={<div className={cn("relative w-full", className)} />}>
           <div
             className={cn(
               "flex min-h-[40px] w-full flex-wrap items-center justify-between gap-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer",
@@ -77,7 +76,6 @@ export function MultiSelect({
           )}
           </div>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-        </div>
         </div>
       </PopoverTrigger>
 

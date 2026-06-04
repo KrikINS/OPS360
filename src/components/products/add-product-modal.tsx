@@ -41,6 +41,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     category: "",
     hsn_code: "",
     base_price: "",
+    mrp: "",
     dealer_price: "",
     min_sell_price: "",
     max_discount_pct: "10",
@@ -94,6 +95,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
         body: JSON.stringify({
           ...formData,
           base_price: parseFloat(formData.base_price),
+          mrp: parseFloat(formData.mrp),
           dealer_price: parseFloat(formData.dealer_price || "0"),
           min_sell_price: parseFloat(formData.min_sell_price || "0"),
           max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
@@ -114,6 +116,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
         category: "",
         hsn_code: "",
         base_price: "",
+        mrp: "",
         dealer_price: "",
         min_sell_price: "",
         max_discount_pct: "10",
@@ -206,7 +209,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="base_price">MRP (Base Price) *</Label>
+              <Label htmlFor="base_price">Unit Rate (Excl. Tax) *</Label>
               <Input 
                 id="base_price" 
                 type="number" 
@@ -217,9 +220,23 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
               />
               {formData.base_price && formData.gst_rate && (
                 <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                  Calculated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  Calculated Price (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </p>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="mrp">MRP (Incl. Tax) *</Label>
+              <Input 
+                id="mrp" 
+                type="number" 
+                step="0.01" 
+                required
+                value={formData.mrp}
+                onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+              />
             </div>
           </div>
 

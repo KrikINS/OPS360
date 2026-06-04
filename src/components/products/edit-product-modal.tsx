@@ -111,7 +111,6 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           id: product.id,
           model_name: formData.model_name,
           base_price: parseFloat(formData.base_price),
-          mrp: parseFloat(formData.base_price), // Keep MRP synced with base_price
           dealer_price: parseFloat(formData.dealer_price || "0"),
           min_sell_price: parseFloat(formData.min_sell_price || "0"),
           max_discount_pct: parseFloat(formData.max_discount_pct || "10"),

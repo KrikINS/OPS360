@@ -29,8 +29,8 @@ interface Customer extends PosCustomer {
 interface CustomerRegistryTableProps {
   customers: Customer[]
   onAddClick: () => void
-  onEditClick: (customer: Customer) => void
-  onHistoryClick: (customer: Customer) => void
+  onEditClick?: (customer: Customer) => void
+  onHistoryClick?: (customer: Customer) => void
 }
 
 export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHistoryClick }: CustomerRegistryTableProps) {
@@ -112,10 +112,10 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-blue-500 transition-all" onClick={() => onEditClick(c)}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-blue-500 transition-all" onClick={() => onEditClick?.(c)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-blue-500 transition-all" onClick={() => onHistoryClick(c)}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-blue-500 transition-all" onClick={() => onHistoryClick?.(c)}>
                         <History className="h-4 w-4" />
                       </Button>
                     </div>

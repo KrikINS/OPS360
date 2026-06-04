@@ -58,6 +58,7 @@ export const products = pgTable("products", {
   category: text("category"),
   product_code: text("product_code"),
   base_price: numeric("base_price"),
+  mrp: numeric("mrp", { precision: 12, scale: 2 }),
   dealer_price: numeric("dealer_price", { precision: 12, scale: 2 }),
   min_sell_price: numeric("min_sell_price", { precision: 12, scale: 2 }),
   max_discount_pct: numeric("max_discount_pct", { precision: 5, scale: 2 }).default('10'),
