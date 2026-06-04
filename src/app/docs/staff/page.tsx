@@ -1,12 +1,35 @@
-import { Shield, MapPin, Key, Lock } from "lucide-react"
+import { Shield, MapPin, Key, Lock, Clock } from "lucide-react"
 
 export default function StaffDocs() {
   return (
     <div className="space-y-8 pb-12">
       <div className="border-b pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-[#001529]">Staff & Roles</h1>
-        <p className="text-slate-500 mt-2">Manage staff accounts, hierarchical roles, and multi-branch permissions.</p>
+        <p className="text-slate-500 mt-2">Manage staff accounts, hierarchical roles, shift attendance, and multi-branch permissions.</p>
       </div>
+
+      {/* NEW SECTION: Clock-In/Out Widget */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <Clock className="h-6 w-6 text-emerald-500" />
+          Shift Attendance (Clock-In/Out Widget)
+        </h3>
+        <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-6">
+          <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+            <li><strong>Visibility:</strong> A clock widget is accessible on the Staff page for all users.</li>
+            <li><strong>Three States:</strong>
+              <ul className="list-circle pl-5 mt-1 space-y-1">
+                <li><em>Not Started</em> - User has not clocked in today.</li>
+                <li><em>On Shift</em> - User is currently clocked in.</li>
+                <li><em>Shift Ended</em> - User has clocked out for the day.</li>
+              </ul>
+            </li>
+            <li><strong>Real-time Tracking:</strong> Displays current status, clock-in time, and a live elapsed timer (HH:MM:SS) while on shift.</li>
+            <li><strong>Single Action Button:</strong> Context-aware button switches between "Clock In" and "Clock Out".</li>
+            <li><strong>Daily Persistence:</strong> Loads today's attendance record automatically on mount. After clock-out, the total shift duration is displayed.</li>
+          </ul>
+        </div>
+      </section>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Role Matrix */}

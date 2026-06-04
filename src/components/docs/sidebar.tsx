@@ -16,6 +16,11 @@ import {
   ShieldAlert, 
   ChevronRight,
   ShieldCheck,
+  Building,
+  Activity,
+  IndianRupee,
+  Send,
+  FileText
 } from "lucide-react"
 
 const docsNavigation = [
@@ -26,73 +31,84 @@ const docsNavigation = [
     ],
   },
   {
-    title: "Inventory",
+    title: "Administration",
     items: [
-      { title: "Dashboard Overview", href: "/docs/inventory", icon: Package },
+      { title: "Admin Center", href: "/docs/admin", icon: ShieldAlert },
+    ],
+  },
+  {
+    title: "Branch Management",
+    items: [
+      { title: "Branch Operations", href: "/docs/branch-management", icon: Building },
+    ],
+  },
+  {
+    title: "Staff & HR",
+    items: [
+      { title: "Staff Roles", href: "/docs/staff", icon: Users },
+    ],
+  },
+  {
+    title: "Inventory Management",
+    items: [
+      { title: "Inventory Dashboard", href: "/docs/inventory", icon: Package },
     ],
   },
   {
     title: "Procurement",
     items: [
       { title: "Purchase Orders", href: "/docs/procurement", icon: Truck },
-      { title: "Landed Costs & Performance", href: "/docs/procurement/landed-costs", icon: Calculator },
-      { title: "Discrepancy Handling", href: "/docs/procurement/discrepancies", icon:ShieldAlert },
-      { title: "Document Retention & Returns", href: "/docs/procurement/returns", icon: Truck },
+      { title: "Landed Costs", href: "/docs/procurement/landed-costs", icon: Calculator },
+      { title: "Discrepancies", href: "/docs/procurement/discrepancies", icon: ShieldAlert },
+      { title: "Returns", href: "/docs/procurement/returns", icon: ArrowRightLeft },
     ],
   },
   {
-    title: "Vendors",
+    title: "Point of Sale",
     items: [
-      { title: "Vendor Management", href: "/docs/vendor-management", icon: ShoppingCart },
-      { title: "Compliance Status", href: "/docs/compliance", icon: ShieldCheck },
+      { title: "POS Operations", href: "/docs/pos", icon: ShoppingCart },
     ],
   },
   {
-    title: "POS",
+    title: "Sales & Pricing",
     items: [
-      { title: "Sales & Billing", href: "/docs/pos", icon: ShoppingCart },
+      { title: "Pricing & Margins", href: "/docs/sales", icon: IndianRupee },
     ],
   },
   {
-    title: "Inter-Branch Transfer",
+    title: "Transfer Control Center",
     items: [
-      { title: "Branch Operations", href: "/docs/branch-management", icon: ArrowRightLeft },
+      { title: "Inter-Branch Transfers", href: "/docs/transfers", icon: Send },
     ],
   },
   {
-    title: "Accounting",
-    items: [
-      { title: "Payments & Invoicing", href: "/docs/accounting", icon: Calculator },
-    ],
-  },
-  {
-    title: "Staff",
-    items: [
-      { title: "Staff Roles", href: "/docs/staff", icon: Users },
-    ],
-  },
-  {
-    title: "Service",
+    title: "Service & Maintenance",
     items: [
       { title: "Service Module", href: "/docs/service", icon: Wrench },
     ],
   },
   {
+    title: "Finance & Accounts",
+    items: [
+      { title: "Accounting Overview", href: "/docs/accounting", icon: Calculator },
+    ],
+  },
+  {
+    title: "Compliance",
+    items: [
+      { title: "Audit & Compliance", href: "/docs/compliance", icon: ShieldCheck },
+    ],
+  },
+  {
     title: "Analytics",
     items: [
-      { title: "Reports Overview", href: "/docs/analytics", icon: BarChart3 },
+      { title: "Business Intelligence", href: "/docs/analytics", icon: BarChart3 },
     ],
   },
   {
-    title: "Engineering",
+    title: "Developer Guide",
     items: [
-      { title: "Developer Guide", href: "/docs/developer-guide", icon: BookOpen },
-    ],
-  },
-  {
-    title: "Administration",
-    items: [
-      { title: "Admin Center", href: "/docs/admin", icon: ShieldAlert },
+      { title: "System Architecture", href: "/docs/developer-guide", icon: BookOpen },
     ],
   },
 ]

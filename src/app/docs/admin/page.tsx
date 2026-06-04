@@ -1,152 +1,102 @@
-import { 
-  Building2, 
-  FolderTree, 
-  Users, 
-  ImageIcon, 
-  ShieldCheck, 
-  ChevronRight,
-  Hash
-} from "lucide-react"
+import { Settings, Users, KeyRound, UserCog, ShieldCheck } from "lucide-react"
 
 export default function AdminDocs() {
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-8 pb-12">
       <div className="border-b pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-[#001529]">Administration Center</h1>
-        <p className="text-slate-500 mt-2">Governance, system configuration, and organizational structure management.</p>
+        <p className="text-slate-500 mt-2">Centralized controls for access matrices, user provisioning, and branch scoping.</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Organization Registry */}
-        <div className="bg-white border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
-              <Building2 className="h-5 w-5" />
-            </div>
-            <h3 className="text-lg font-bold text-[#001529]">Organization Registry</h3>
-          </div>
-          <p className="text-sm text-slate-600 mb-4">
-            Manage the geographical and operational structure of the business.
-          </p>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Branches:</strong> Individual retail or service locations.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Distribution Centers:</strong> Central hubs for inventory storage.</span>
-            </li>
+      {/* NEW SECTION: Access Control Matrix */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <ShieldCheck className="h-6 w-6 text-indigo-500" />
+          Access Control Matrix (ACM)
+        </h3>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li><strong>Module Permissions:</strong> Toggle permissions individually per user for POS, Inventory, Procurement, Sales, Finance, Service, Admin, and HR modules.</li>
+          <li><strong>Branch Assignments:</strong> Assign branches per user. The dropdown allows selecting from all available network branches.</li>
+          <li><strong>Save Updates:</strong> Persists role, module permissions, and branch assignments simultaneously in one atomic action.</li>
+          <li><strong>Bypass:</strong> Admin and Owner roles automatically bypass all permission checks globally.</li>
+        </ul>
+      </section>
+
+      {/* NEW SECTION: Password Reset */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <KeyRound className="h-6 w-6 text-red-500" />
+          Password Reset (Danger Zone)
+        </h3>
+        <div className="bg-red-50/50 border border-red-100 rounded-xl p-6">
+          <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+            <li>Admin clicks on a user profile and accesses the <strong>Danger Zone → Reset Password</strong>.</li>
+            <li>Generates a temporary, easy-to-read password (e.g., <code>ETHAN-XXXX</code>), automatically excluding ambiguous characters like 0/O/1/I.</li>
+            <li>Sets the <code>force_password_change = true</code> flag on the user's profile.</li>
+            <li>The user must set a new password on their next login attempt.</li>
+            <li>After setting the new password, the user is signed out and redirected to login with a success banner.</li>
           </ul>
         </div>
+      </section>
 
-        {/* Global Masters */}
-        <div className="bg-white border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-              <FolderTree className="h-5 w-5" />
+      {/* NEW SECTION: User Provisioning */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <UserCog className="h-6 w-6 text-blue-500" />
+          User Provisioning
+        </h3>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>Click the <strong>Provision New User</strong> button in User Management.</li>
+          <li>Configure their email, temporary password, role, and branch assignments.</li>
+          <li><strong>Default security:</strong> All module permissions default to disabled for new users.</li>
+          <li>Admin must explicitly enable module permissions via the Access Control Matrix toggles after creation.</li>
+        </ul>
+      </section>
+
+      <div className="grid gap-6 md:grid-cols-2 mt-8">
+        <div className="bg-white border rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
+            <Users className="h-5 w-5 text-blue-500" />
+            Role Hierarchies
+          </h3>
+          <div className="space-y-4">
+            <div className="p-3 bg-slate-50 border rounded-lg">
+              <h4 className="text-xs font-bold text-[#001529] uppercase tracking-wider mb-1">Super Admin / Owner</h4>
+              <p className="text-[11px] text-slate-500">Unrestricted access. Can edit system configuration, wipe data, and modify roles.</p>
             </div>
-            <h3 className="text-lg font-bold text-[#001529]">Global Masters</h3>
+            <div className="p-3 bg-slate-50 border rounded-lg">
+              <h4 className="text-xs font-bold text-[#001529] uppercase tracking-wider mb-1">Manager</h4>
+              <p className="text-[11px] text-slate-500">Can approve POs, apply heavy discounts at POS, and view branch analytics.</p>
+            </div>
+            <div className="p-3 bg-slate-50 border rounded-lg">
+              <h4 className="text-xs font-bold text-[#001529] uppercase tracking-wider mb-1">Staff / Cashier</h4>
+              <p className="text-[11px] text-slate-500">Restricted to POS, basic CRM entry, and local inventory viewing.</p>
+            </div>
           </div>
+        </div>
+
+        <div className="bg-white border rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
+            <Settings className="h-5 w-5 text-[#7FD1E3]" />
+            Global Settings
+          </h3>
           <p className="text-sm text-slate-600 mb-4">
-            Centralized data repository for system-wide standardization.
+            The Admin Center provides global configuration toggles that affect all branches simultaneously:
           </p>
-          <ul className="space-y-2 text-sm text-slate-600">
+          <ul className="space-y-2 text-[13px] text-slate-600">
             <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Brands:</strong> Master list of authorized appliance brands.</span>
+              <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
+              <span><strong>Tax Slabs:</strong> Edit global HSN mappings and corresponding GST percentages.</span>
             </li>
             <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Categories:</strong> Hierarchical product categorization.</span>
+              <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
+              <span><strong>T&C Templates:</strong> Manage default terms applied to all outward documents (Invoices/POs).</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-[#7FD1E3] mt-1.5" />
+              <span><strong>Audit Retention:</strong> Configure how long discrepancy and shift logs are preserved.</span>
             </li>
           </ul>
-        </div>
-
-        {/* User Management */}
-        <div className="bg-white border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
-              <Users className="h-5 w-5" />
-            </div>
-            <h3 className="text-lg font-bold text-[#001529]">User Management</h3>
-          </div>
-          <p className="text-sm text-slate-600 mb-4">
-            Access control and staff account administration.
-          </p>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Roles:</strong> Admin, Manager, Sales, and Staff permissions.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Security:</strong> Password resets and profile activations.</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Company Branding */}
-        <div className="bg-white border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-orange-50 text-orange-600">
-              <ImageIcon className="h-5 w-5" />
-            </div>
-            <h3 className="text-lg font-bold text-[#001529]">Company Branding</h3>
-          </div>
-          <p className="text-sm text-slate-600 mb-4">
-            Customize the visual appearance of the Ops360 ERP.
-          </p>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Logo:</strong> Dynamic logo updates across all modules.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Identity:</strong> System-wide name and tagline settings.</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {/* ID Standardization */}
-      <div className="bg-[#001529] border rounded-xl p-6 shadow-sm text-white">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-indigo-500/20 text-[#7FD1E3]">
-            <Hash className="h-5 w-5" />
-          </div>
-          <h3 className="text-lg font-bold">Standardized ID Protocols</h3>
-        </div>
-        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-          Ops360 enforces a deterministic numbering strategy across all operational documents to ensure fiscal clarity and auditability.
-        </p>
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#7FD1E3] mb-2">Sequential Logic</h4>
-            <p className="text-xs text-slate-400">Documents follow the <code>PREFIX-YYYY-####</code> format (e.g., ST-2026-0001). This provides an immediate temporal reference for every record.</p>
-          </div>
-          <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#7FD1E3] mb-2">Annual Resets</h4>
-            <p className="text-xs text-slate-400">Counters automatically reset to 0001 at the start of each fiscal year (January 1st), preventing excessively long ID strings over time.</p>
-          </div>
-          <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-[#7FD1E3] mb-2">Coverage</h4>
-            <p className="text-xs text-slate-400">Applies globally to <strong>Purchase Orders (PO)</strong>, <strong>Stock Requests (SR)</strong>, <strong>Stock Transfers (ST)</strong>, and <strong>Debit Notes (DN)</strong>.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Security Notice */}
-      <div className="p-6 rounded-2xl bg-[#001529] text-white flex items-start gap-5">
-        <div className="bg-[#7FD1E3] p-3 rounded-xl">
-          <ShieldCheck className="h-6 w-6 text-white" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold">Administrative Guardrails</h2>
-          <p className="mt-1 text-slate-300 text-sm leading-relaxed">
-            All administrative actions are logged in the system audit trail. Access to the Admin Center is restricted to users with the <span className="text-[#7FD1E3] font-bold">&apos;admin&apos;</span> role.
-          </p>
         </div>
       </div>
     </div>

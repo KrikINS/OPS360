@@ -1,11 +1,11 @@
-import { Keyboard, ShieldCheck, UserPlus, Hash, CreditCard, Clock } from "lucide-react"
+import { Keyboard, ShieldCheck, UserPlus, Hash, CreditCard, Clock, Percent, Unlock, MonitorSmartphone, TrendingDown } from "lucide-react"
 
 export default function POSDocs() {
   return (
     <div className="space-y-8 pb-12">
       <div className="border-b pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-[#001529]">Point of Sale (POS)</h1>
-        <p className="text-slate-500 mt-2">Guides for retail operations, high-speed billing, and sales security.</p>
+        <p className="text-slate-500 mt-2">Guides for retail operations, high-speed billing, discounts, and sales security.</p>
       </div>
 
       {/* Hotkeys Section */}
@@ -30,6 +30,63 @@ export default function POSDocs() {
           </div>
         </div>
         <div className="absolute top-0 right-0 h-full w-1/3 bg-gradient-to-l from-[#7FD1E3]/10 to-transparent" />
+      </section>
+
+      {/* NEW SECTION: POS Terminal in Header */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <MonitorSmartphone className="h-6 w-6 text-blue-500" />
+          POS Terminal Access
+        </h3>
+        <ul className="mt-4 space-y-3 text-sm text-slate-600">
+          <li><strong>POS Terminal button is in the main header</strong> (not the sidebar).</li>
+          <li>Always accessible from any page in the application.</li>
+          <li>Visible only to users with the POS permission enabled.</li>
+          <li>Displays as an icon-only button on mobile devices, and icon + label on desktop.</li>
+        </ul>
+      </section>
+
+      {/* NEW SECTION: Line-Item Discounts */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <Percent className="h-6 w-6 text-emerald-500" />
+          Line-Item Discounts
+        </h3>
+        <ul className="mt-4 space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>Each cart item has a discount % input field.</li>
+          <li>Discounts up to <code>max_discount_pct</code> (default 10%) are auto-approved.</li>
+          <li>Discounts above the threshold require a manager PIN.</li>
+          <li>The manager enters their POS PIN in the approval modal to authorize the discount.</li>
+          <li>Discount cannot push the price below <code>min_sell_price</code> (hard floor protecting margins).</li>
+          <li>Approved discounts store the manager&apos;s ID for audit purposes.</li>
+        </ul>
+      </section>
+
+      {/* NEW SECTION: Manager PIN Approval */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <Unlock className="h-6 w-6 text-orange-500" />
+          Manager PIN Approval
+        </h3>
+        <ul className="mt-4 space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>Managers and admins have a POS PIN set in their profile.</li>
+          <li>When a cashier requests a discount above the auto-approval limit, a PIN modal appears.</li>
+          <li>Manager enters their PIN → system verifies against <code>profiles.pos_pin</code> for manager/admin roles.</li>
+          <li>The approved discount is applied and tracked in the final invoice.</li>
+        </ul>
+      </section>
+
+      {/* NEW SECTION: Cost Tracking */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <TrendingDown className="h-6 w-6 text-indigo-500" />
+          Cost Tracking & Margins
+        </h3>
+        <ul className="mt-4 space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>Each sold unit&apos;s <code>landed_cost</code> is recorded as <code>cost_price</code> on the invoice item.</li>
+          <li>This enables accurate margin reporting in the Finance module.</li>
+          <li>The COGS (Cost of Goods Sold) journal entry uses the real landed cost, not estimates.</li>
+        </ul>
       </section>
 
       <div className="grid gap-6 md:grid-cols-2">

@@ -1,11 +1,72 @@
-import { ChevronRight, Upload, AlertCircle, FileSpreadsheet } from "lucide-react"
+import { ChevronRight, Upload, AlertCircle, FileSpreadsheet, Download, Activity, TrendingDown } from "lucide-react"
 
 export default function InventoryDocs() {
   return (
     <div className="space-y-6">
       <div className="border-b pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-[#001529]">Inventory Management</h1>
-        <p className="text-slate-500 mt-2">Learn how to manage stock, track movements, and optimize inventory levels.</p>
+        <p className="text-slate-500 mt-2">Learn how to manage stock, track movements, import opening balances, and optimize inventory levels.</p>
+      </div>
+
+      {/* NEW SECTION: Opening Stock Import */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-6">
+          <Download className="h-6 w-6 text-[#7FD1E3]" />
+          Opening Stock Import
+        </h3>
+        <div className="space-y-6">
+          <div className="flex gap-4">
+            <div className="bg-slate-50 border rounded-lg p-4 flex-1">
+              <h4 className="font-bold text-sm text-[#001529] mb-2">Step 1: Download Template</h4>
+              <p className="text-xs text-slate-600">
+                Click "Import Opening Stock" in the Registry. Download the branded Excel template containing three sheets: 
+                <strong>Opening Stock</strong> (data entry), <strong>Products Reference</strong>, and <strong>Branches Reference</strong>.
+                Product codes and branch names must match exactly.
+              </p>
+            </div>
+            <div className="bg-slate-50 border rounded-lg p-4 flex-1">
+              <h4 className="font-bold text-sm text-[#001529] mb-2">Step 2: Fill Data</h4>
+              <p className="text-xs text-slate-600">
+                Fill in one row per unit with: Product Code, Product Name, Brand, Serial Number, Branch Name, Landed Cost, Selling Price, and Notes.
+              </p>
+            </div>
+            <div className="bg-slate-50 border rounded-lg p-4 flex-1">
+              <h4 className="font-bold text-sm text-[#001529] mb-2">Step 3: Upload & Validate</h4>
+              <p className="text-xs text-slate-600">
+                The system validates product existence, branch names, duplicate serials, and cost/price formats.
+                Valid rows generate auto-posted opening balance journal entries per branch.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* UPDATED SECTION: Inventory Registry */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <Activity className="h-6 w-6 text-blue-500" />
+          Inventory Registry
+        </h3>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li><strong>Available Inventory:</strong> Shows all active stock grouped by product.</li>
+          <li><strong>Columns:</strong> Brand, EHA Code, Item Name, Network Stock, Category, Distribution, Status, Avg Value (LC).</li>
+          <li><strong>Drill-down:</strong> Expand a row to see branch-level breakdown, and expand further to see individual serial numbers.</li>
+          <li><strong>Transfer Stock:</strong> Click the red arrow button on low-stock items to open the Transfer Control Center pre-filled.</li>
+          <li><strong>Dispositions:</strong> Switch tabs to view historical Sold or Returned serial numbers.</li>
+        </ul>
+      </div>
+
+      {/* UPDATED SECTION: Cost Tracking */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <TrendingDown className="h-6 w-6 text-indigo-500" />
+          Cost Tracking
+        </h3>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>Each unit tracks its specific <code>landed_cost</code> (purchase price + freight) and <code>price</code> (selling price).</li>
+          <li>The <strong>Avg Value (LC)</strong> in the registry is correctly calculated by averaging the numerical landed cost of all available units for that product.</li>
+          <li>Accurate cost tracking enables exact COGS (Cost of Goods Sold) calculations at the time of POS checkout.</li>
+        </ul>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -63,83 +124,10 @@ export default function InventoryDocs() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-white border rounded-xl p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-lg bg-[#7FD1E3]/20 flex items-center justify-center">
-              <span className="text-[#001529]">03</span>
-            </div>
-            Active Stock Grouping & Drill-Down
-          </h3>
-          <p className="text-sm text-slate-600 mb-4">
-            High-density inventory is now grouped by <strong>Model Code</strong> and <strong>Branch</strong> to provide an executive overview of stock levels.
-          </p>
-          <ul className="space-y-3 text-sm text-slate-600">
-            <li className="flex gap-2">
-              <span className="font-bold text-[#001529]">• Grouped Analytics:</span>
-              <span>Total Stock, Average Landed Cost, and Primary Aging (oldest unit) are summarized at the model level.</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="font-bold text-[#001529]">• Interactive Drill-Down:</span>
-              <span>Expand any group to reveal a sub-table of individual serial numbers with their unique registry metadata.</span>
-            </li>
-          </ul>
-        </div>
-
-        <div className="bg-white border rounded-xl p-6 shadow-sm">
-           <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <span className="text-blue-600">04</span>
-            </div>
-            Advanced Search & Sort
-          </h3>
-          <p className="text-sm text-slate-600 mb-4">
-            Powerful filtering tools for multi-dimensional inventory reconciliation:
-          </p>
-          <ul className="space-y-2 text-[13px] text-slate-600">
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Metadata Joining:</strong> View HSN, Model Specifications, and Branch locations in a single unified view.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <ChevronRight className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span><strong>Slow Mover Filters:</strong> Identify groups with units exceeding 60-day aging thresholds for immediate action.</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="bg-white border rounded-xl p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
-          <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-            <span className="text-emerald-600">05</span>
-          </div>
-          Active Stock & Dispositions Hub
-        </h3>
-        <p className="text-sm text-slate-600 mb-4">
-          The Inventory Registry separates active tradable assets from historic dispositions to guarantee precise dashboard metrics.
-        </p>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg">
-            <h4 className="text-[11px] font-black uppercase text-[#001529] tracking-widest mb-2 border-b border-slate-200 pb-2">Active Stock</h4>
-            <p className="text-[13px] text-slate-600 leading-relaxed">
-              Exclusively displays <strong>Available</strong> and <strong>In-Transit</strong> stock. 
-              The global <code>Available Units</code> tracking metric actively runs off this filtered subset, inherently preventing tracking inflation from damaged or reversed serial numbers.
-            </p>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
-             <h4 className="text-[11px] font-black uppercase text-amber-900 tracking-widest mb-2 border-b border-amber-200 pb-2">Historic Dispositions</h4>
-             <p className="text-[13px] text-amber-800 leading-relaxed">
-               A dedicated historic UI timeline housing all <strong>Sold</strong>, <strong>Returned</strong>, or <strong>Damaged</strong> legacy serial numbers required strictly for external auditing and compliance checks.
-             </p>
-          </div>
-        </div>
-      </div>
-
       <div className="bg-white border rounded-xl p-6 shadow-sm">
         <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
           <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-            <span className="text-indigo-600">06</span>
+            <span className="text-indigo-600">03</span>
           </div>
           Enterprise Logistics & Waybills
         </h3>
@@ -212,37 +200,6 @@ export default function InventoryDocs() {
         <div className="absolute top-0 right-0 h-full w-1/3 bg-gradient-to-l from-white/5 to-transparent" />
       </div>
 
-      {/* ── Bulk Data Ingestion (CSV Imports) ── */}
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 space-y-6">
-        <div className="flex items-center gap-3 text-[#7FD1E3]">
-          <Upload className="h-6 w-6" />
-          <h2 className="text-2xl font-bold text-[#001529]">Bulk Data Ingestion (CSV Imports)</h2>
-        </div>
-        
-        <p className="text-slate-600 leading-relaxed">
-          For large-scale system initialization or warehouse stock-takes, Ops360 provides a high-speed <strong>Opening Stock CSV Import</strong> tool.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white border rounded-xl p-6 space-y-3">
-             <div className="flex items-center gap-2 text-[#001529] font-black uppercase tracking-widest text-[10px]">
-               <FileSpreadsheet className="h-4 w-4" /> Required Columns
-             </div>
-             <p className="text-xs text-slate-500 leading-relaxed">
-               The CSV must contain: <strong>Brand</strong>, <strong>Item Name</strong> (Model), <strong>Serial Number</strong>, <strong>Branch Name</strong>, and <strong>Estimated Cost</strong>. 
-               The system automatically maps these strings to existing project IDs.
-             </p>
-          </div>
-          <div className="bg-white border rounded-xl p-6 space-y-3">
-             <div className="flex items-center gap-2 text-amber-600 font-black uppercase tracking-widest text-[10px]">
-               <AlertCircle className="h-4 w-4" /> Validation Rules
-             </div>
-             <p className="text-xs text-slate-500 leading-relaxed">
-               Duplicate serial numbers found in the CSV or existing database will be rejected during the pre-flight scan to ensure <strong>100% data integrity</strong>.
-             </p>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
