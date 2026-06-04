@@ -30,6 +30,10 @@ interface Product {
   min_stock_level: number
   tracking_type: string
   description: string
+  mrp?: number
+  dealer_price?: number
+  min_sell_price?: number
+  max_discount_pct?: number
   gst_rate?: number
   warranty_months?: number
   is_archived?: boolean
@@ -55,6 +59,9 @@ interface FormState {
   min_stock_level: string
   tracking_type: string
   description: string
+  dealer_price: string
+  min_sell_price: string
+  max_discount_pct: string
   gst_rate: string
   warranty_months: string
 }
@@ -65,6 +72,9 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
     model_name: product?.model_name || "",
     base_price: product?.base_price?.toString() || "0",
     hsn_code: product?.hsn_code || "",
+    dealer_price: product?.dealer_price?.toString() || "",
+    min_sell_price: product?.min_sell_price?.toString() || "",
+    max_discount_pct: product?.max_discount_pct?.toString() || "10",
     min_stock_level: product?.min_stock_level?.toString() || "0",
     tracking_type: product?.tracking_type || "Stocked",
     description: product?.description || "",
@@ -78,6 +88,9 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
         model_name: product.model_name || "",
         base_price: product.base_price?.toString() || "0",
         hsn_code: product.hsn_code || "",
+        dealer_price: product.dealer_price?.toString() || "",
+        min_sell_price: product.min_sell_price?.toString() || "",
+        max_discount_pct: product.max_discount_pct?.toString() || "10",
         min_stock_level: product.min_stock_level?.toString() || "0",
         tracking_type: product.tracking_type || "Stocked",
         description: product.description || "",
@@ -98,6 +111,10 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           id: product.id,
           model_name: formData.model_name,
           base_price: parseFloat(formData.base_price),
+          mrp: parseFloat(formData.base_price), // Keep MRP synced with base_price
+          dealer_price: parseFloat(formData.dealer_price || "0"),
+          min_sell_price: parseFloat(formData.min_sell_price || "0"),
+          max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
           hsn_code: formData.hsn_code,
           min_stock_level: parseInt(formData.min_stock_level),
           tracking_type: formData.tracking_type,
@@ -136,7 +153,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-price">Unit Rate (Excl. Tax) *</Label>
+              <Label htmlFor="edit-price">MRP (Base Price) *</Label>
               <Input 
                 id="edit-price" 
                 type="number" 
@@ -147,7 +164,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
               />
               {formData.base_price && formData.gst_rate && (
                 <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                  Estimated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  Calculated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </p>
               )}
             </div>
@@ -157,6 +174,36 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 id="edit-hsn" 
                 value={formData.hsn_code}
                 onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <div className="space-y-2">
+              <Label htmlFor="edit-dealer">Dealer Price</Label>
+              <Input 
+                id="edit-dealer" 
+                type="number" 
+                step="0.01" 
+                value={formData.dealer_price}
+                onChange={(e) => {
+                  const dp = parseFloat(e.target.value) || 0;
+                  setFormData({ 
+                    ...formData, 
+                    dealer_price: e.target.value,
+                    min_sell_price: (dp * 1.05).toFixed(2)
+                  });
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-min-sell">Min Sell Price</Label>
+              <Input 
+                id="edit-min-sell" 
+                type="number" 
+                step="0.01" 
+                value={formData.min_sell_price}
+                onChange={(e) => setFormData({ ...formData, min_sell_price: e.target.value })}
               />
             </div>
           </div>
@@ -207,6 +254,21 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 value={formData.min_stock_level}
                 onChange={(e) => setFormData({ ...formData, min_stock_level: e.target.value })}
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-max-discount">Max Discount %</Label>
+              <Input 
+                id="edit-max-discount" 
+                type="number" 
+                step="0.1" 
+                value={formData.max_discount_pct}
+                onChange={(e) => setFormData({ ...formData, max_discount_pct: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
             </div>
           </div>
 

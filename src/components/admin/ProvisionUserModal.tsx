@@ -165,7 +165,7 @@ export function ProvisionUserModal({
                 </Select>
               </div>
 
-              <div className="grid gap-2 overflow-hidden">
+              <div className="grid gap-2">
                 <Label htmlFor="branch" className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Branches Allotted</Label>
                 <MultiSelect
                   options={branches.map(b => ({ label: b.name, value: b.id }))}

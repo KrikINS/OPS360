@@ -41,6 +41,9 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     category: "",
     hsn_code: "",
     base_price: "",
+    dealer_price: "",
+    min_sell_price: "",
+    max_discount_pct: "10",
     gst_rate: "18",
     warranty_months: "12",
     min_stock_level: "0",
@@ -91,6 +94,9 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
         body: JSON.stringify({
           ...formData,
           base_price: parseFloat(formData.base_price),
+          dealer_price: parseFloat(formData.dealer_price || "0"),
+          min_sell_price: parseFloat(formData.min_sell_price || "0"),
+          max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
           gst_rate: parseFloat(formData.gst_rate),
           warranty_months: parseInt(formData.warranty_months),
           min_stock_level: parseInt(formData.min_stock_level),
@@ -108,6 +114,9 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
         category: "",
         hsn_code: "",
         base_price: "",
+        dealer_price: "",
+        min_sell_price: "",
+        max_discount_pct: "10",
         gst_rate: "18",
         warranty_months: "12",
         min_stock_level: "0",
@@ -197,7 +206,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="base_price">Unit Rate (Excl. Tax) *</Label>
+              <Label htmlFor="base_price">MRP (Base Price) *</Label>
               <Input 
                 id="base_price" 
                 type="number" 
@@ -208,9 +217,39 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
               />
               {formData.base_price && formData.gst_rate && (
                 <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                  Estimated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  Calculated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </p>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <div className="space-y-2">
+              <Label htmlFor="dealer_price">Dealer Price</Label>
+              <Input 
+                id="dealer_price" 
+                type="number" 
+                step="0.01" 
+                value={formData.dealer_price}
+                onChange={(e) => {
+                  const dp = parseFloat(e.target.value) || 0;
+                  setFormData({ 
+                    ...formData, 
+                    dealer_price: e.target.value,
+                    min_sell_price: (dp * 1.05).toFixed(2)
+                  });
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="min_sell_price">Min Sell Price</Label>
+              <Input 
+                id="min_sell_price" 
+                type="number" 
+                step="0.01" 
+                value={formData.min_sell_price}
+                onChange={(e) => setFormData({ ...formData, min_sell_price: e.target.value })}
+              />
             </div>
           </div>
 
@@ -248,7 +287,14 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
               />
             </div>
             <div className="space-y-2">
-              {/* Spacer for layout balance */}
+              <Label htmlFor="max_discount_pct">Max Discount %</Label>
+              <Input 
+                id="max_discount_pct" 
+                type="number" 
+                step="0.1" 
+                value={formData.max_discount_pct}
+                onChange={(e) => setFormData({ ...formData, max_discount_pct: e.target.value })}
+              />
             </div>
           </div>
 

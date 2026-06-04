@@ -23,6 +23,10 @@ export async function POST(request: Request) {
       model_name: body.model_name,
       hsn_code: body.hsn_code,
       base_price: body.base_price?.toString() || body.unit_rate?.toString(),
+      mrp: body.base_price?.toString(), // Sync MRP with base_price initially
+      dealer_price: body.dealer_price?.toString(),
+      min_sell_price: body.min_sell_price?.toString(),
+      max_discount_pct: body.max_discount_pct?.toString() || "10",
       gst_rate: body.gst_rate?.toString() || body.tax_rate?.toString(),
       min_stock_level: body.min_stock_level ? parseInt(body.min_stock_level) : 0,
       warranty_months: body.warranty_months ? parseInt(body.warranty_months) : null,
