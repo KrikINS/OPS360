@@ -24,6 +24,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (body.mrp !== undefined) updateData.mrp = body.mrp?.toString();
     if (body.dealer_price !== undefined) updateData.dealer_price = body.dealer_price?.toString();
     if (body.min_sell_price !== undefined) updateData.min_sell_price = body.min_sell_price?.toString();
+    if (body.margin_pct !== undefined) updateData.margin_pct = body.margin_pct?.toString();
     if (body.max_discount_pct !== undefined) updateData.max_discount_pct = body.max_discount_pct?.toString();
     if (body.gst_rate !== undefined) updateData.gst_rate = body.gst_rate?.toString();
     if (body.min_stock_level !== undefined) updateData.min_stock_level = parseInt(body.min_stock_level);

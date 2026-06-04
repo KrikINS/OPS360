@@ -21,6 +21,7 @@ export async function getProductsAction(showArchived: boolean = false) {
     mrp: products.mrp,
     dealer_price: products.dealer_price,
     min_sell_price: products.min_sell_price,
+    margin_pct: products.margin_pct,
     max_discount_pct: products.max_discount_pct,
     hsn_code: products.hsn_code,
     min_stock_level: products.min_stock_level,

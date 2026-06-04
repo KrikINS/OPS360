@@ -33,6 +33,7 @@ interface Product {
   mrp?: number
   dealer_price?: number
   min_sell_price?: number
+  margin_pct?: number
   max_discount_pct?: number
   gst_rate?: number
   warranty_months?: number
@@ -61,6 +62,7 @@ interface FormState {
   description: string
   dealer_price: string
   min_sell_price: string
+  margin_pct: string
   max_discount_pct: string
   gst_rate: string
   warranty_months: string
@@ -74,6 +76,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
     hsn_code: product?.hsn_code || "",
     dealer_price: product?.dealer_price?.toString() || "",
     min_sell_price: product?.min_sell_price?.toString() || "",
+    margin_pct: product?.margin_pct?.toString() || "5",
     max_discount_pct: product?.max_discount_pct?.toString() || "10",
     min_stock_level: product?.min_stock_level?.toString() || "0",
     tracking_type: product?.tracking_type || "Stocked",
@@ -90,6 +93,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
         hsn_code: product.hsn_code || "",
         dealer_price: product.dealer_price?.toString() || "",
         min_sell_price: product.min_sell_price?.toString() || "",
+        margin_pct: product.margin_pct?.toString() || "5",
         max_discount_pct: product.max_discount_pct?.toString() || "10",
         min_stock_level: product.min_stock_level?.toString() || "0",
         tracking_type: product.tracking_type || "Stocked",
@@ -113,6 +117,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           base_price: parseFloat(formData.base_price),
           dealer_price: parseFloat(formData.dealer_price || "0"),
           min_sell_price: parseFloat(formData.min_sell_price || "0"),
+          margin_pct: parseFloat(formData.margin_pct || "5"),
           max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
           hsn_code: formData.hsn_code,
           min_stock_level: parseInt(formData.min_stock_level),
@@ -177,7 +182,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+          <div className="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
             <div className="space-y-2">
               <Label htmlFor="edit-dealer">Dealer Price</Label>
               <Input 
@@ -187,10 +192,29 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 value={formData.dealer_price}
                 onChange={(e) => {
                   const dp = parseFloat(e.target.value) || 0;
+                  const mp = parseFloat(formData.margin_pct) || 0;
                   setFormData({ 
                     ...formData, 
                     dealer_price: e.target.value,
-                    min_sell_price: (dp * 1.05).toFixed(2)
+                    min_sell_price: (dp * (1 + mp / 100)).toFixed(2)
+                  });
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-margin">Margin %</Label>
+              <Input 
+                id="edit-margin" 
+                type="number" 
+                step="0.1" 
+                value={formData.margin_pct}
+                onChange={(e) => {
+                  const mp = parseFloat(e.target.value) || 0;
+                  const dp = parseFloat(formData.dealer_price) || 0;
+                  setFormData({ 
+                    ...formData, 
+                    margin_pct: e.target.value,
+                    min_sell_price: (dp * (1 + mp / 100)).toFixed(2)
                   });
                 }}
               />

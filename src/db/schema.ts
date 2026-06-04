@@ -72,6 +72,7 @@ export const products = pgTable("products", {
   mrp: numeric("mrp", { precision: 12, scale: 2 }),
   dealer_price: numeric("dealer_price", { precision: 12, scale: 2 }),
   min_sell_price: numeric("min_sell_price", { precision: 12, scale: 2 }),
+  margin_pct: numeric("margin_pct", { precision: 5, scale: 2 }).default('5'),
   max_discount_pct: numeric("max_discount_pct", { precision: 5, scale: 2 }).default('10'),
   hsn_code: text("hsn_code"),
   min_stock_level: integer("min_stock_level").default(0),

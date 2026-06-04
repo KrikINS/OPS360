@@ -44,6 +44,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     mrp: "",
     dealer_price: "",
     min_sell_price: "",
+    margin_pct: "5",
     max_discount_pct: "10",
     gst_rate: "18",
     warranty_months: "12",
@@ -98,6 +99,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
           mrp: parseFloat(formData.mrp),
           dealer_price: parseFloat(formData.dealer_price || "0"),
           min_sell_price: parseFloat(formData.min_sell_price || "0"),
+          margin_pct: parseFloat(formData.margin_pct || "5"),
           max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
           gst_rate: parseFloat(formData.gst_rate),
           warranty_months: parseInt(formData.warranty_months),
@@ -119,6 +121,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
         mrp: "",
         dealer_price: "",
         min_sell_price: "",
+        margin_pct: "5",
         max_discount_pct: "10",
         gst_rate: "18",
         warranty_months: "12",
@@ -240,7 +243,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+          <div className="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
             <div className="space-y-2">
               <Label htmlFor="dealer_price">Dealer Price</Label>
               <Input 
@@ -250,10 +253,29 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 value={formData.dealer_price}
                 onChange={(e) => {
                   const dp = parseFloat(e.target.value) || 0;
+                  const mp = parseFloat(formData.margin_pct) || 0;
                   setFormData({ 
                     ...formData, 
                     dealer_price: e.target.value,
-                    min_sell_price: (dp * 1.05).toFixed(2)
+                    min_sell_price: (dp * (1 + mp / 100)).toFixed(2)
+                  });
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="margin_pct">Margin %</Label>
+              <Input 
+                id="margin_pct" 
+                type="number" 
+                step="0.1" 
+                value={formData.margin_pct}
+                onChange={(e) => {
+                  const mp = parseFloat(e.target.value) || 0;
+                  const dp = parseFloat(formData.dealer_price) || 0;
+                  setFormData({ 
+                    ...formData, 
+                    margin_pct: e.target.value,
+                    min_sell_price: (dp * (1 + mp / 100)).toFixed(2)
                   });
                 }}
               />

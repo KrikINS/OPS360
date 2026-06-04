@@ -55,6 +55,7 @@ interface Product {
   mrp?: number
   dealer_price?: number
   min_sell_price?: number
+  margin_pct?: number
   max_discount_pct?: number
   hsn_code: string
   min_stock_level: number
@@ -179,7 +180,7 @@ export default function ProductsPage() {
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#001529]">Product Master Registry</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-[#001529]">Product Master</h1>
           <p className="text-slate-500 text-xs mt-1">Centralized EHA Protocol & Global Stock Assets</p>
         </div>
         
@@ -346,6 +347,7 @@ export default function ProductsPage() {
                   <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">MRP</th>
                   <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Dealer Rate</th>
                   <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Min Rate</th>
+                  <th className="text-center py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Margin %</th>
                   <th className="text-center py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Max Disc %</th>
                   <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Min Stock</th>
                   <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tracking</th>
@@ -387,6 +389,7 @@ export default function ProductsPage() {
                       <td className="py-2 px-4 font-bold text-right text-[#001529] text-xs">₹{(Number(p.mrp ?? p.base_price) || 0).toLocaleString("en-IN")}</td>
                       <td className="py-2 px-4 font-bold text-right text-slate-600 text-xs">₹{(Number(p.dealer_price) || 0).toLocaleString("en-IN")}</td>
                       <td className="py-2 px-4 font-bold text-right text-slate-600 text-xs">₹{(Number(p.min_sell_price) || 0).toLocaleString("en-IN")}</td>
+                      <td className="py-2 px-2 text-center font-bold text-slate-500 text-[10px]">{Number(p.margin_pct) || 0}%</td>
                       <td className="py-2 px-2 text-center font-bold text-slate-500 text-[10px]">{Number(p.max_discount_pct) || 0}%</td>
                       <td className="py-2 px-4 text-center">
                         <span className="font-semibold text-slate-900 border border-slate-100 px-1.5 py-0.5 rounded bg-slate-50">{p.min_stock_level || 0}</span>
