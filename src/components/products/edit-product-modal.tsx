@@ -111,8 +111,10 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
     try {
       if (!product) throw new Error("No product context provided")
       
-      const { error } = await import("@/app/actions/generics").then(m => m.updateData("products", {
-          id: product.id,
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           model_name: formData.model_name,
           base_price: parseFloat(formData.base_price),
           dealer_price: parseFloat(formData.dealer_price || "0"),
@@ -125,9 +127,13 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           description: formData.description,
           gst_rate: parseFloat(formData.gst_rate),
           warranty_months: parseInt(formData.warranty_months)
-        }))
+        })
+      });
 
-      if (error) throw error
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update product");
+      }
 
       onSuccess()
       onOpenChange(false)

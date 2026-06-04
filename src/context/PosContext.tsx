@@ -23,6 +23,11 @@ export type Product = {
   category: string
   hsn_code: string
   base_price: number
+  mrp?: number
+  dealer_price?: number
+  min_sell_price?: number
+  margin_pct?: number
+  max_discount_pct?: number
   gst_rate: number
   current_balance: number
   product_code: string
