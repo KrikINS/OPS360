@@ -87,37 +87,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Live Revenue & Stock Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          label="Today's Revenue" 
-          value={loading ? <ModernOrbitSpinner size="sm" className="opacity-40" /> : `₹${metrics?.today_revenue.toLocaleString()}`} 
-          icon={TrendingUp} 
-          color="bg-indigo-600" 
-          description="Gross sales from all branches"
-        />
-        <StatCard 
-          label="Today's Invoices" 
-          value={loading ? <ModernOrbitSpinner size="sm" className="opacity-40" /> : metrics?.today_invoices || 0} 
-          icon={ShoppingBag} 
-          color="bg-blue-600"
-          description="Finalized transactions"
-        />
-        <StatCard 
-          label="Inventory Value" 
-          value={loading ? <ModernOrbitSpinner size="sm" className="opacity-40" /> : `₹${metrics?.total_inventory_value.toLocaleString()}`} 
-          icon={Building2} 
-          color="bg-emerald-600"
-          description="Total Stock @ Base Price"
-        />
-        <StatCard 
-          label="Security Status" 
-          value="Healthy" 
-          icon={ShieldCheck} 
-          color="bg-slate-800"
-          description="RLS & JWT Protocols Active"
-        />
-      </div>
+
 
       {/* Module Hub Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
