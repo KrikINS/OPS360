@@ -4,6 +4,7 @@ import { db } from "@/db/client"
 import { customers, products, profiles } from "@/db/schema"
 import { ilike, or, eq } from "drizzle-orm"
 import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 
 export async function searchPosCustomersAction(searchTerm: string) {
   try {
@@ -43,7 +44,7 @@ export async function searchProductsAction(searchTerm: string) {
 }
 
 export async function getUserBranchIdAction() {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { data: null }
 
   const data = await db.select({ branch_id: profiles.branch_id })

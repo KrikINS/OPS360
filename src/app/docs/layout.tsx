@@ -11,7 +11,7 @@ export default async function DocsLayout({
   children: React.ReactNode
 }) {
   
-  const session = await import("next-auth/next").then(m => m.getServerSession()); const user = session?.user;
+  const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction());
   
   if (!user) {
     redirect("/login")

@@ -4,10 +4,11 @@ import { db } from "@/db/client"
 import { products } from "@/db/schema"
 import { eq, asc, desc, like } from "drizzle-orm"
 import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 
 export async function getProductsAction(showArchived: boolean = false) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user) throw new Error("Unauthorized")
 
   return await db.select({
@@ -31,7 +32,7 @@ export async function getProductsAction(showArchived: boolean = false) {
 }
 
 export async function toggleProductArchiveAction(id: string, isArchived: boolean) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user) throw new Error("Unauthorized")
 
   await db.update(products).set({ is_archived: isArchived }).where(eq(products.id, id))
@@ -61,7 +62,7 @@ export async function getNextSequenceAction(category: string, brand: string): Pr
 }
 
 export async function updateProductAction(id: string, updateData: Partial<typeof products.$inferInsert>) {
-  const session = await getServerSession()
+  const session = await getServerSession(authOptions)
   if (!session?.user) throw new Error("Unauthorized")
 
   const data = await db.update(products).set(updateData).where(eq(products.id, id)).returning()
