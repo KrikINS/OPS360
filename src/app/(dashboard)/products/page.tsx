@@ -410,7 +410,7 @@ export default function ProductsPage() {
                           } />
                           <DropdownMenuContent align="end" className="w-44 font-bold text-[10px] uppercase tracking-wider text-[#001529] border-slate-200 shadow-2xl">
                             <DropdownMenuItem onClick={() => setEditingProduct(p)} className="gap-3 cursor-pointer py-2.5 font-bold text-[10px] uppercase tracking-wider">
-                              <Edit2 className="h-3.5 w-3.5 text-blue-500" /> Edit Metadata
+                              <Edit2 className="h-3.5 w-3.5 text-blue-500" /> Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-100" />
                             {p.is_archived ? (
@@ -419,7 +419,7 @@ export default function ProductsPage() {
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem onClick={() => setConfirmingArchive(p.id)} className="gap-3 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer py-2.5 font-bold text-[10px] uppercase tracking-wider">
-                                <Archive className="h-3.5 w-3.5" /> Decommission Asset
+                                <Archive className="h-3.5 w-3.5" /> Decommission
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
