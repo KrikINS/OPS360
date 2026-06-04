@@ -1,18 +1,24 @@
 "use client"
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 import { CustomerRegistryTable } from "@/components/admin/CustomerRegistryTable"
 import { AddCustomerModal } from "@/components/admin/AddCustomerModal"
 import { CustomerHistoryDrawer } from "@/components/admin/CustomerHistoryDrawer"
-import { Users, Loader2 } from "lucide-react"
+import { Users, Loader2, Star, UserSquare } from "lucide-react"
 import { Customer } from "@/context/PosContext"
 
 interface AdminCustomer extends Customer {
   created_at: string
 }
 
-export default function CustomerRegistryPage() {
+export default function CustomerManagementPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const activeTab = searchParams.get("tab") || "registry"
+
   const [customers, setCustomers] = useState<AdminCustomer[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -52,7 +58,7 @@ export default function CustomerRegistryPage() {
             <div className="p-2 bg-blue-600 rounded-lg shadow-lg">
               <Users className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-[#001529] uppercase">Customer Registry</h1>
+            <h1 className="text-3xl font-black tracking-tight text-[#001529] uppercase">Customer Management</h1>
           </div>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Centralized Buyer Database & Engagement Hub</p>
         </div>
@@ -65,48 +71,81 @@ export default function CustomerRegistryPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="h-[400px] flex flex-col items-center justify-center gap-4 text-slate-400">
-          <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
-          <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Synchronizing Customer Data...</p>
-        </div>
-      ) : (
-        <CustomerRegistryTable 
-          customers={customers} 
-          onAddClick={() => {
-            setCustomerToEdit(undefined)
-            setModalOpen(true)
-          }} 
-          onEditClick={(customer) => {
-            setCustomerToEdit(customer)
-            setModalOpen(true)
-          }}
-          onHistoryClick={(customer) => {
-            setCustomerForHistory(customer)
-            setHistoryDrawerOpen(true)
-          }}
-        />
-      )}
+      <Tabs value={activeTab} onValueChange={(v) => router.push(`/sales/customers?tab=${v}`)} className="w-full space-y-6">
+        <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent gap-2">
+          <TabsTrigger 
+            value="registry"
+            className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-t-lg rounded-b-none px-6 py-2.5 text-xs font-bold uppercase tracking-wider gap-2"
+          >
+            <UserSquare className="h-4 w-4" />
+            Customer Registry
+          </TabsTrigger>
+          <TabsTrigger 
+            value="loyalty"
+            className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-t-lg rounded-b-none px-6 py-2.5 text-xs font-bold uppercase tracking-wider gap-2"
+          >
+            <Star className="h-4 w-4" />
+            Loyalty Points
+          </TabsTrigger>
+        </TabsList>
 
-      <AddCustomerModal 
-        open={modalOpen} 
-        onOpenChange={(open) => {
-          setModalOpen(open)
-          if (!open) setTimeout(() => setCustomerToEdit(undefined), 200)
-        }} 
-        onSuccess={fetchCustomers}
-        customer={customerToEdit}
-      />
+        <TabsContent value="registry" className="mt-0 outline-none space-y-4">
+          {loading ? (
+            <div className="h-[400px] flex flex-col items-center justify-center gap-4 text-slate-400">
+              <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+              <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Synchronizing Customer Data...</p>
+            </div>
+          ) : (
+            <CustomerRegistryTable 
+              customers={customers} 
+              onAddClick={() => {
+                setCustomerToEdit(undefined)
+                setModalOpen(true)
+              }} 
+              onEditClick={(customer) => {
+                setCustomerToEdit(customer)
+                setModalOpen(true)
+              }}
+              onHistoryClick={(customer) => {
+                setCustomerForHistory(customer)
+                setHistoryDrawerOpen(true)
+              }}
+            />
+          )}
 
-      <CustomerHistoryDrawer
-        open={historyDrawerOpen}
-        onClose={() => {
-          setHistoryDrawerOpen(false)
-          setTimeout(() => setCustomerForHistory(null), 200)
-        }}
-        customerId={customerForHistory?.id || null}
-        customerName={customerForHistory?.full_name || null}
-      />
+          <AddCustomerModal 
+            open={modalOpen} 
+            onOpenChange={(open) => {
+              setModalOpen(open)
+              if (!open) setTimeout(() => setCustomerToEdit(undefined), 200)
+            }} 
+            onSuccess={fetchCustomers}
+            customer={customerToEdit}
+          />
+
+          <CustomerHistoryDrawer
+            open={historyDrawerOpen}
+            onClose={() => {
+              setHistoryDrawerOpen(false)
+              setTimeout(() => setCustomerForHistory(null), 200)
+            }}
+            customerId={customerForHistory?.id || null}
+            customerName={customerForHistory?.full_name || null}
+          />
+        </TabsContent>
+
+        <TabsContent value="loyalty" className="mt-0 outline-none">
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center border-2 border-dashed border-slate-200 rounded-xl bg-white shadow-sm">
+            <div className="h-16 w-16 bg-amber-100 rounded-full flex items-center justify-center mb-4 shadow-inner">
+              <Star className="h-8 w-8 text-amber-500" />
+            </div>
+            <h3 className="text-xl font-bold text-[#001529] mb-2 uppercase tracking-tight">Loyalty Points System</h3>
+            <p className="text-slate-500 max-w-md mx-auto text-sm">
+              The customer loyalty points management module is being developed. It will allow tracking and managing rewards points across all registered customers.
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

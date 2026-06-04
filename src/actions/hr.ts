@@ -16,6 +16,7 @@ import {
   grn_receipts,
   stock_transfers,
   vendor_audit_log,
+  employees,
 } from '@/db/schema'
 import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm'
 
@@ -59,23 +60,60 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
       if (!effectiveBranchId) {
         return { success: false as const, error: 'No branch assigned to your account' };
       }
-      const rows = await query.where(
-        eq(user_branch_access.branch_id, effectiveBranchId)
-      )
-      return { success: true as const, staff: rows }
+      query.where(eq(user_branch_access.branch_id, effectiveBranchId))
+    } else if (input?.branchId) {
+      query.where(eq(user_branch_access.branch_id, input.branchId))
     }
 
-    if (input?.branchId) {
-      const rows = await query.where(
-        eq(user_branch_access.branch_id, input.branchId)
-      )
-      return { success: true as const, staff: rows }
-    }
+    const rawRows = await query
 
-    const rows = await query
-    return { success: true as const, staff: rows }
+    // Post-query reduction to deduplicate by userId
+    const staffMap = new Map<string, StaffRow>()
+    for (const row of rawRows) {
+      if (!staffMap.has(row.userId)) {
+        staffMap.set(row.userId, row)
+      } else {
+        const existing = staffMap.get(row.userId)!
+        if (row.isPrimary && !existing.isPrimary) {
+          staffMap.set(row.userId, row)
+        }
+      }
+    }
+    
+    return { success: true as const, staff: Array.from(staffMap.values()) }
   } catch (error) {
     console.error('HR error:', error)
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function createNonErpStaffMember(data: { firstName: string, lastName: string, email?: string, phone?: string }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false as const, error: 'Unauthorized' }
+  }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  if (!isAdmin) {
+    return { success: false as const, error: 'Admin role required' }
+  }
+
+  try {
+    const [employee] = await db
+      .insert(employees)
+      .values({
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
+        status: 'active'
+      })
+      .returning()
+      
+    return { success: true as const, employee }
+  } catch (error) {
+    console.error('Create staff error:', error)
     return { success: false as const, error: (error as Error).message }
   }
 }

@@ -9,6 +9,16 @@ export const users = pgTable("users", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+export const employees = pgTable("employees", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  first_name: text("first_name").notNull(),
+  last_name: text("last_name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  status: text("status").default('active').notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().references(() => users.id),
   full_name: text("full_name"),
@@ -17,6 +27,7 @@ export const profiles = pgTable("profiles", {
   branch_id: uuid("branch_id"),
   pos_pin: text("pos_pin"),
   force_password_change: boolean("force_password_change").default(false),
+  employee_id: uuid("employee_id").references(() => employees.id),
   created_at: timestamp("created_at").defaultNow(),
 });
 

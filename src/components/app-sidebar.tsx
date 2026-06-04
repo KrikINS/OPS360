@@ -19,7 +19,6 @@ import {
   LayoutGrid,
   List,
   UserSquare,
-  Star,
   CheckCircle2,
   ShieldCheck,
   RotateCcw,
@@ -117,8 +116,7 @@ const navigationGroups: NavigationGroup[] = [
     items: [
       { title: "Sales Registry", url: "/sales/hub", icon: List },
       { title: "Sales Return", url: "/sales/hub?tab=returns", icon: RotateCcw },
-      { title: "Customer Registry", url: "/sales/customers", icon: UserSquare },
-      { title: "Loyalty Points", url: "/sales/loyalty", icon: Star },
+      { title: "Customer Management", url: "/sales/customers", icon: UserSquare },
     ]
   },
 
@@ -134,10 +132,9 @@ const navigationGroups: NavigationGroup[] = [
   {
     id: "staff",
     title: "Human Resources",
+    url: "/staff",
     icon: Users,
-    items: [
-      { title: "Personnel Registry", url: "/staff", icon: Users },
-    ]
+    items: []
   }
 ]
 

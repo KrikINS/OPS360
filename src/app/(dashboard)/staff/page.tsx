@@ -1,22 +1,43 @@
-
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getStaffDirectory } from '@/actions/hr'
+import { getStaffDirectory, getActivityLog, getAttendanceByBranch, getMyAttendance } from '@/actions/hr'
 import StaffClient from './client'
-import ClockWidget from '@/components/hr/ClockWidget'
 
 export default async function StaffPayrollPage() {
   const session = await getServerSession(authOptions)
   const role = (session?.user?.role ?? '').toLowerCase()
   const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  const isManager = isAdmin || role === 'manager'
 
-  const result = await getStaffDirectory()
-  const staff = result.success ? result.staff : []
+  // Default to last 30 days for attendance
+  const today = new Date()
+  const fromDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const toDate = today.toISOString().split('T')[0]
+
+  const [staffResult, activityResult, attendanceResult] = await Promise.all([
+    getStaffDirectory(),
+    getActivityLog({}),
+    isManager 
+      ? getAttendanceByBranch({ fromDate, toDate })
+      : getMyAttendance({ fromDate, toDate })
+  ])
+
+  const staff = staffResult.success ? staffResult.staff : []
+  const activities = activityResult.success ? activityResult.activities.map(a => ({
+    ...a,
+    timestamp: a.timestamp ?? new Date().toISOString(),
+  })) : []
+  
+  const attendance = attendanceResult.success ? attendanceResult.records : []
 
   return (
-    <div className="space-y-6">
-      <ClockWidget />
-      <StaffClient isAdmin={isAdmin} staff={staff} />
-    </div>
+    <StaffClient 
+      isAdmin={isAdmin} 
+      isManager={isManager}
+      staff={staff} 
+      activities={activities}
+      attendance={attendance}
+      currentUserId={session?.user?.id ?? ''}
+    />
   )
 }
