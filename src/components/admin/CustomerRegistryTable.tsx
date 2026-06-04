@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   Search,
   UserPlus,
@@ -18,7 +19,8 @@ import {
   MapPin,
   Calendar,
   History,
-  Edit
+  Edit,
+  Building2
 } from "lucide-react"
 import { Customer as PosCustomer } from '@/context/PosContext'
 
@@ -35,13 +37,18 @@ interface CustomerRegistryTableProps {
 
 export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHistoryClick }: CustomerRegistryTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
 
-  const filteredCustomers = customers.filter(c => 
-    c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredCustomers = customers.filter(c => {
+    const matchesSearch = c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+    const matchesType = typeFilter === 'all' || c.customer_type === typeFilter;
+    
+    return matchesSearch && matchesType;
+  })
 
   return (
     <div className="space-y-6">
@@ -56,6 +63,15 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
           />
         </div>
 
+        <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full sm:w-auto">
+          <TabsList className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12">
+            <TabsTrigger value="all" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">All</TabsTrigger>
+            <TabsTrigger value="walk_in" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Walk-in</TabsTrigger>
+            <TabsTrigger value="registered" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Registered</TabsTrigger>
+            <TabsTrigger value="business" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Business</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <Button 
           onClick={onAddClick}
           className="bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-[10px] tracking-widest h-12 px-6 rounded-xl shadow-lg shadow-blue-500/20 flex items-center gap-2"
@@ -69,8 +85,10 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
         <Table>
           <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
             <TableRow className="hover:bg-transparent border-b dark:border-white/5">
-              <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Full Name</TableHead>
-              <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Contact Details</TableHead>
+              <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Customer</TableHead>
+              <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Type</TableHead>
+              <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Contact</TableHead>
+              <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Business</TableHead>
               <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Location</TableHead>
               <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Joined</TableHead>
               <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500 text-right">Actions</TableHead>
@@ -82,7 +100,15 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
                 <TableRow key={c.id} className="hover:bg-slate-50/80 dark:hover:bg-white/5 transition-colors border-b dark:border-white/5 group">
                   <TableCell>
                     <div className="font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">{c.full_name}</div>
-                    <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest opacity-70">Verified Customer</div>
+                  </TableCell>
+                  <TableCell>
+                    {c.customer_type === 'business' ? (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-black uppercase rounded-md tracking-widest">Business</span>
+                    ) : c.customer_type === 'registered' ? (
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded-md tracking-widest">Registered</span>
+                    ) : (
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-md tracking-widest">Walk-in</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
@@ -99,9 +125,31 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                      <MapPin className="h-3 w-3 text-slate-400" />
-                      {c.city || 'N/A'}
+                    {c.customer_type === 'business' && c.gstin ? (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                          <Building2 className="h-3 w-3 text-slate-400" />
+                          {c.company_name || 'N/A'}
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">
+                          {c.gstin}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <MapPin className="h-3 w-3 text-slate-400" />
+                        {c.city || 'N/A'}
+                      </div>
+                      {c.state && (
+                        <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                          {c.state}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -124,7 +172,7 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-slate-400">
+                <TableCell colSpan={7} className="h-32 text-center text-slate-400">
                   <div className="flex flex-col items-center gap-2">
                     <Search className="h-8 w-8 opacity-10" />
                     <span className="text-xs font-bold uppercase tracking-widest">No customers found</span>

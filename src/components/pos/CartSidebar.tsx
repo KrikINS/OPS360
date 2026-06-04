@@ -3,7 +3,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Printer, ArrowRight, Scan, CheckCirc
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { usePos, SelectedUnit } from '@/context/PosContext'
+import { usePos, SelectedUnit, SYSTEM_WALKIN_ID } from '@/context/PosContext'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ManagerDiscountModal } from "./ManagerDiscountModal"
 
@@ -89,7 +89,11 @@ function SerialSelector({ productId, index, onSelect }: { productId: string, ind
 }
 
 export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
-  const { cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals, assignSerialToUnit, isCartValid, applyItemDiscount } = usePos()
+  const { 
+    cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals, 
+    assignSerialToUnit, isCartValid, applyItemDiscount,
+    selectedCustomer, loyaltyBalance, loyaltyRedeem, setLoyaltyRedeem
+  } = usePos()
 
   const [discountModalOpen, setDiscountModalOpen] = useState(false)
   const [pendingDiscount, setPendingDiscount] = useState<{ productId: string, productName: string, pct: number, maxPct: number } | null>(null)
@@ -243,10 +247,59 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
         <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
           <div className="flex justify-between uppercase"><span>Discount</span><span className="text-rose-500">-₹{totals.discount.toLocaleString()}</span></div>
           <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
+          
+          {/* Loyalty Points Redemption */}
+          {selectedCustomer &&
+           selectedCustomer.id !== SYSTEM_WALKIN_ID &&
+           loyaltyBalance > 0 && (
+            <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-white/5 border-dashed">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-purple-700 tracking-widest">
+                  Loyalty Points
+                </span>
+                <Badge variant="outline"
+                  className="text-[9px] bg-purple-50 text-purple-700 border-purple-200 uppercase font-black">
+                  {loyaltyBalance} pts = ₹{loyaltyBalance}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={Math.min(loyaltyBalance, Math.floor(totals.grandTotal))}
+                  value={loyaltyRedeem || ''}
+                  onChange={e => {
+                    const val = Math.min(
+                      Number(e.target.value) || 0,
+                      loyaltyBalance,
+                      Math.floor(totals.grandTotal)
+                    )
+                    setLoyaltyRedeem(val)
+                  }}
+                  placeholder="0"
+                  className="w-14 text-right text-xs font-bold border border-purple-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-purple-500 bg-white"
+                />
+                <button
+                  onClick={() => setLoyaltyRedeem(Math.min(loyaltyBalance, Math.floor(totals.grandTotal)))}
+                  className="text-[9px] font-bold text-purple-600 hover:text-purple-800 underline uppercase"
+                >
+                  Use All
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loyaltyRedeem > 0 && (
+            <div className="flex justify-between text-[11px] text-purple-700 font-bold uppercase mt-2">
+              <span>Loyalty Discount</span>
+              <span>-₹{loyaltyRedeem.toLocaleString('en-IN')}</span>
+            </div>
+          )}
+
           <div className="flex justify-between items-end mt-4">
             <div className="flex flex-col">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
+              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">₹{Math.max(0, Math.round(totals.grandTotal) - loyaltyRedeem).toLocaleString()}</span>
             </div>
           </div>
         </div>

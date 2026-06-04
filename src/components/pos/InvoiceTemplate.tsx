@@ -183,7 +183,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               </div>
             </div>
             <div className={cn("text-right space-y-0.5", isThermal && "text-center w-full pt-2 border-t border-slate-100")}>
-              <h2 className="text-sm font-black text-slate-900 uppercase">Tax Invoice</h2>
+              <h2 className="text-sm font-black text-slate-900 uppercase">{customer?.gstin ? 'Tax Invoice' : 'Retail Invoice'}</h2>
               <p className="font-bold text-slate-500">Invoice: <span className="text-slate-900">{invoiceNo}</span></p>
               <p className="font-bold text-slate-500">Date: <span className="text-slate-900">{displayDate}</span></p>
             </div>
@@ -196,9 +196,11 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           )}>
             <div>
               <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Billed To</span>
-              <p className="text-xs font-black text-slate-900">{customer?.full_name || customer?.name || 'Walk-in Customer'}</p>
-              <p className="font-bold text-slate-500">Phone: {customer?.phone_number || 'N/A'}</p>
-              {customer?.gstin && <p className="font-bold text-slate-500">GSTIN: {customer.gstin}</p>}
+              <p className="text-xs font-black text-slate-900">{customer?.company_name || customer?.full_name || customer?.name || 'Walk-in Customer'}</p>
+              {customer?.company_name && <p className="font-bold text-slate-700 text-[10px] mt-0.5">Attn: {customer?.full_name || customer?.name}</p>}
+              <p className="font-bold text-slate-500 mt-1">Phone: {customer?.phone_number || 'N/A'}</p>
+              {customer?.state && <p className="font-bold text-slate-500">State: {customer.state}</p>}
+              {customer?.gstin && <p className="font-bold text-slate-500 mt-0.5">GSTIN: {customer.gstin}</p>}
             </div>
             <div className={cn(isThermal ? "text-left pt-2 border-t border-slate-50" : "text-right")}>
               <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Mode</span>
@@ -334,6 +336,26 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             <div className={cn("mt-6 text-center py-3 bg-slate-900 rounded-lg", isThermal && "mt-4 py-2")}>
               <p className="text-white text-[8px] font-black uppercase tracking-[0.2em]">Thank you for shopping with EHA</p>
             </div>
+
+            {/* Loyalty points earned */}
+            {customer?.id && customer.id !== '00000000-0000-0000-0000-000000000000' && (
+              <div className="text-center text-xs text-slate-500 border-t pt-2 mt-3">
+                <p>
+                  Points earned on this purchase:{' '}
+                  <span className="font-bold text-purple-700">
+                    +{Math.floor(Number(totals.grandTotal ?? 0) * 0.01)} pts
+                  </span>
+                </p>
+                {(customer as any)?.loyalty_balance != null && (
+                  <p>
+                    Your loyalty balance:{' '}
+                    <span className="font-bold">
+                      {(customer as any).loyalty_balance + Math.floor(Number(totals.grandTotal ?? 0) * 0.01)} pts
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}

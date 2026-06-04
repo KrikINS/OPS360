@@ -7,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { CustomerRegistryTable } from "@/components/admin/CustomerRegistryTable"
 import { AddCustomerModal } from "@/components/admin/AddCustomerModal"
 import { CustomerHistoryDrawer } from "@/components/admin/CustomerHistoryDrawer"
+import { LoyaltyRegistryTable } from '@/components/admin/LoyaltyRegistryTable'
+import { LoyaltyAdjustModal } from '@/components/admin/LoyaltyAdjustModal'
 import { Users, Loader2, Star, UserSquare } from "lucide-react"
 import { Customer } from "@/context/PosContext"
 
@@ -25,6 +27,8 @@ export default function CustomerManagementPage() {
   const [customerToEdit, setCustomerToEdit] = useState<Customer | undefined>()
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false)
   const [customerForHistory, setCustomerForHistory] = useState<Customer | null>(null)
+  const [customerToAdjust, setCustomerToAdjust] = useState<Customer | null>(null)
+  const [adjustModalOpen, setAdjustModalOpen] = useState(false)
   
   
 
@@ -135,15 +139,21 @@ export default function CustomerManagementPage() {
         </TabsContent>
 
         <TabsContent value="loyalty" className="mt-0 outline-none">
-          <div className="flex flex-col items-center justify-center py-20 px-4 text-center border-2 border-dashed border-slate-200 rounded-xl bg-white shadow-sm">
-            <div className="h-16 w-16 bg-amber-100 rounded-full flex items-center justify-center mb-4 shadow-inner">
-              <Star className="h-8 w-8 text-amber-500" />
-            </div>
-            <h3 className="text-xl font-bold text-[#001529] mb-2 uppercase tracking-tight">Loyalty Points System</h3>
-            <p className="text-slate-500 max-w-md mx-auto text-sm">
-              The customer loyalty points management module is being developed. It will allow tracking and managing rewards points across all registered customers.
-            </p>
-          </div>
+          <LoyaltyRegistryTable 
+            customers={customers} 
+            onAdjustClick={(c) => { 
+              setCustomerToAdjust(c); 
+              setAdjustModalOpen(true); 
+            }} 
+          />
+          {customerToAdjust && (
+            <LoyaltyAdjustModal
+              open={adjustModalOpen}
+              onOpenChange={setAdjustModalOpen}
+              customer={customerToAdjust}
+              onSuccess={fetchCustomers}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>

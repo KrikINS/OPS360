@@ -72,8 +72,18 @@ export function ProductCatalog() {
                     }}
                   >
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{c.full_name}</span>
-                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">{c.phone_number}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{c.full_name}</span>
+                        {c.customer_type === 'business' && (
+                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[8px] font-black uppercase rounded-sm tracking-wider">Business</span>
+                        )}
+                        {c.customer_type === 'registered' && (
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-black uppercase rounded-sm tracking-wider">Registered</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                        {c.customer_type === 'business' ? `${c.gstin || 'No GSTIN'} • ${c.company_name || 'No Company Name'}` : c.phone_number}
+                      </span>
                     </div>
                     <ArrowRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
                   </button>
@@ -98,10 +108,15 @@ export function ProductCatalog() {
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-lg animate-in zoom-in-95 duration-200">
                   <div className="flex flex-col items-end">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">Returning Customer</span>
+                      <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">
+                        {selectedCustomer.customer_type === 'business' ? 'Business Customer' : 'Returning Customer'}
+                      </span>
                       <CheckCircle2 className="h-2.5 w-2.5 text-blue-500" />
                     </div>
                     <span className="text-xs font-black text-blue-700 dark:text-blue-300 truncate max-w-[120px]">{selectedCustomer.full_name}</span>
+                    {selectedCustomer.customer_type === 'business' && selectedCustomer.gstin && (
+                       <span className="text-[9px] font-bold text-blue-600/70">{selectedCustomer.gstin}</span>
+                    )}
                   </div>
                   <Button 
                      variant="ghost" 

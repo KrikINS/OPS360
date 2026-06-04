@@ -363,10 +363,28 @@ export const customers = pgTable("customers", {
   phone_number: text("phone_number"),
   address: text("address"),
   city: text("city"),
+  state: text("state"),
+  pincode: text("pincode"),
+  gstin: text("gstin"),
+  customer_type: text("customer_type").default('walk_in'),
+  company_name: text("company_name"),
+  notes: text("notes"),
+  loyalty_balance: integer("loyalty_balance").notNull().default(0),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
+export const loyalty_points = pgTable("loyalty_points", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customer_id: uuid("customer_id").notNull(),
+  invoice_id: uuid("invoice_id"),
+  type: text("type").notNull(),
+  points: integer("points").notNull(),
+  balance_after: integer("balance_after").notNull(),
+  description: text("description"),
+  created_by: uuid("created_by"),
+  created_at: timestamp("created_at").defaultNow(),
+});
 
 
 export const sequential_counters = pgTable("sequential_counters", {

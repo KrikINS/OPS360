@@ -13,9 +13,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-import { Loader2, UserPlus, Phone, MapPin, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react"
+import { Loader2, UserPlus, Phone, MapPin, ChevronDown, ChevronUp, AlertTriangle, Building2 } from "lucide-react"
 import { usePos, Customer } from '@/context/PosContext'
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const INDIAN_STATES = [
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam",
+  "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir",
+  "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh",
+  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha",
+  "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+  "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+]
 
 interface PosAddCustomerModalProps {
   open: boolean
@@ -28,12 +39,16 @@ export function PosAddCustomerModal({ open, onOpenChange, initialPhone }: PosAdd
   const [loading, setLoading] = useState(false)
   const [showAddress, setShowAddress] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showBusiness, setShowBusiness] = useState(false)
   const [formData, setFormData] = useState({
     full_name: '',
     phone_number: initialPhone || '',
     address_line_1: '',
     city: '',
-    pincode: ''
+    state: '',
+    pincode: '',
+    gstin: '',
+    company_name: ''
   })
   const nameInputRef = useRef<HTMLInputElement>(null)
 
@@ -62,9 +77,33 @@ export function PosAddCustomerModal({ open, onOpenChange, initialPhone }: PosAdd
       setErrorMsg("Name and Phone are mandatory")
       return
     }
+    if (formData.gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(formData.gstin)) {
+      setErrorMsg("Invalid GSTIN format")
+      return
+    }
 
     setLoading(true)
-    const { data: resData, error } = await import("@/app/actions/generics").then(m => m.insertData("customers", [formData]))
+    
+    let customer_type = 'walk_in'
+    if (formData.gstin) {
+      customer_type = 'business'
+    } else if (formData.phone_number) {
+      customer_type = 'registered'
+    }
+
+    const payload = {
+      full_name: formData.full_name,
+      phone_number: formData.phone_number,
+      city: formData.city || undefined,
+      state: formData.state || undefined,
+      pincode: formData.pincode || undefined,
+      address: formData.address_line_1 || undefined,
+      gstin: formData.gstin || undefined,
+      company_name: formData.company_name || undefined,
+      customer_type: customer_type
+    }
+
+    const { data: resData, error } = await import("@/app/actions/generics").then(m => m.insertData("customers", [payload]))
     const data = resData && Array.isArray(resData) ? resData[0] : resData
 
     setLoading(false)
@@ -77,15 +116,18 @@ export function PosAddCustomerModal({ open, onOpenChange, initialPhone }: PosAdd
     if (data) {
       selectCustomer(data as Customer)
       onOpenChange(false)
-      // Reset
       setFormData({
         full_name: '',
         phone_number: '',
         address_line_1: '',
         city: '',
-        pincode: ''
+        state: '',
+        pincode: '',
+        gstin: '',
+        company_name: ''
       })
       setShowAddress(false)
+      setShowBusiness(false)
     }
   }
 
@@ -174,15 +216,63 @@ export function PosAddCustomerModal({ open, onOpenChange, initialPhone }: PosAdd
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Pincode</Label>
+                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">State</Label>
+                  <Select onValueChange={(v) => setFormData(prev => ({ ...prev, state: v }))} value={formData.state}>
+                    <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5 rounded-xl text-sm font-bold dark:text-slate-200">
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDIAN_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Pincode</Label>
+                <Input 
+                  placeholder="Pincode"
+                  className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5 rounded-xl text-sm font-bold dark:text-slate-200"
+                  value={formData.pincode}
+                  onChange={e => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+
+          <button 
+            type="button"
+            onClick={() => setShowBusiness(!showBusiness)}
+            className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-600 transition-colors pt-1"
+          >
+            {showBusiness ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {showBusiness ? "Hide Business Details" : "Add Business Details (B2B)"}
+          </button>
+
+          {showBusiness && (
+            <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">GSTIN</Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input 
-                    placeholder="Pincode"
-                    className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5 rounded-xl text-sm font-bold dark:text-slate-200"
-                    value={formData.pincode}
-                    onChange={e => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
+                    placeholder="22AAAAA0000A1Z5"
+                    className="pl-10 h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5 rounded-xl text-sm font-bold dark:text-slate-200 uppercase"
+                    value={formData.gstin}
+                    onChange={e => setFormData(prev => ({ ...prev, gstin: e.target.value.toUpperCase() }))}
                   />
                 </div>
               </div>
+              {formData.gstin && (
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Company Name</Label>
+                  <Input 
+                    placeholder="Enter Company Name"
+                    className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5 rounded-xl text-sm font-bold dark:text-slate-200"
+                    value={formData.company_name}
+                    onChange={e => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
+                  />
+                </div>
+              )}
             </div>
           )}
 

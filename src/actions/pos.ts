@@ -57,8 +57,9 @@ export async function createTransaction(input: {
   }
 
   // Post sales journal — fire and forget, don't fail the transaction
+  let spResult: any = null;
   try {
-    const spResult = result.data as {
+    spResult = result.data as {
       id: string
       subtotal: number
       cgst: number
@@ -80,6 +81,23 @@ export async function createTransaction(input: {
     })
   } catch (journalError) {
     console.error('Sales journal post failed:', journalError)
+  }
+
+  // Award loyalty points
+  if (spResult) {
+    try {
+      const { earnPoints } = await import('@/actions/loyalty')
+      await earnPoints({
+        customerId: input.customerId
+          ?? '00000000-0000-0000-0000-000000000000',
+        invoiceId: String(spResult.id ?? ''),
+        saleAmount: spResult.grandTotal ?? 0,
+        createdBy: session.user.id,
+      })
+    } catch (err) {
+      console.error('LOYALTY EARN ERROR:', err)
+      // Don't block sale completion
+    }
   }
 
   return { success: true as const, transaction: result.data as Record<string, unknown> }

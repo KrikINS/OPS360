@@ -64,7 +64,11 @@ export type Customer = {
   phone_number: string
   email?: string
   city?: string
+  state?: string
+  pincode?: string
   gstin?: string
+  company_name?: string
+  customer_type?: string
 }
 
 export type Toast = { message: string, type: 'success' | 'error' } | null
@@ -142,6 +146,10 @@ interface PosContextType {
   sessionStats: SessionStats
   isCartValid: boolean
   applyItemDiscount: (productId: string, discountPct: number, managerPin?: string) => Promise<{ success: boolean; needsApproval?: boolean; maxAutoApproval?: number; error?: string }>
+  loyaltyBalance: number
+  setLoyaltyBalance: (val: number) => void
+  loyaltyRedeem: number
+  setLoyaltyRedeem: (val: number) => void
 
   // --- Actions ---
   setIsLocked: (locked: boolean) => void
@@ -205,6 +213,8 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
   const [isDarkMode, setIsDarkModeState] = useState(false)
   const [sessionUser, setSessionUser] = useState<{name: string, role: string, id: string, pin?: string | null}>({ name: "User", role: "staff", id: "", pin: null })
   const [sessionStats, setSessionStats] = useState<SessionStats>({ count: 0, revenue: 0 })
+  const [loyaltyBalance, setLoyaltyBalance] = useState<number>(0)
+  const [loyaltyRedeem, setLoyaltyRedeem] = useState<number>(0)
 
   const setIsDarkMode = useCallback((dark: boolean) => {
     setIsDarkModeState(dark)
@@ -365,6 +375,8 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     setCustomerResults([])
     setCustomerSearchQuery("")
     setPhoneQuery("")
+    setLoyaltyBalance(0)
+    setLoyaltyRedeem(0)
   }, [])
 
   const selectWalkInCustomer = useCallback(() => {
@@ -605,9 +617,23 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     setSearchingCustomer(false)
   }, [])
 
-  const selectCustomer = useCallback((customer: Customer) => {
+  const selectCustomer = useCallback(async (customer: Customer) => {
     setSelectedCustomer(customer)
     setCustomerResults([])
+
+    if (customer.id !== SYSTEM_WALKIN_ID) {
+      try {
+        const { getCustomerLoyalty } = await import('@/actions/loyalty')
+        const result = await getCustomerLoyalty(customer.id)
+        if (result.success) {
+          setLoyaltyBalance(result.balance)
+        }
+      } catch {
+        setLoyaltyBalance(0)
+      }
+    } else {
+      setLoyaltyBalance(0)
+    }
   }, [])
 
   const executeCheckout = useCallback(async (paymentMethod: string = 'cash') => {
@@ -663,6 +689,23 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       const resData = data as { invoice_number: string } & InvoiceData
       setInvoiceNumber(resData.invoice_number)
       setToast({ message: `Sale completed: ${resData.invoice_number}`, type: 'success' })
+      
+      // Process loyalty redemption
+      if (loyaltyRedeem > 0 && selectedCustomer?.id && selectedCustomer.id !== SYSTEM_WALKIN_ID) {
+        try {
+          const { redeemPoints } = await import('@/actions/loyalty')
+          await redeemPoints({
+            customerId: selectedCustomer.id,
+            pointsToRedeem: loyaltyRedeem,
+            invoiceId: String(resData.id ?? ''),
+          })
+        } catch (err) {
+          console.error('LOYALTY REDEEM ERROR:', err)
+        }
+      }
+
+      setLoyaltyBalance(0)
+      setLoyaltyRedeem(0)
       
       clearCart()
       resetCustomerContext()
