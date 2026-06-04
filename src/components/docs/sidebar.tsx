@@ -17,10 +17,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Building,
-  Activity,
   IndianRupee,
-  Send,
-  FileText
+  Send
 } from "lucide-react"
 
 const docsNavigation = [

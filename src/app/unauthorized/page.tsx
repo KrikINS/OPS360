@@ -8,7 +8,7 @@ export default function UnauthorizedPage() {
       <ShieldAlert className="h-16 w-16 text-red-500" />
       <h1 className="text-2xl font-bold">Unauthorized Access</h1>
       <p className="text-muted-foreground">Your assigned role is not permitted to access this module.</p>
-      <Link href="/">
+      <Link href="/launchpad">
         <Button>Return to Dashboard</Button>
       </Link>
     </div>

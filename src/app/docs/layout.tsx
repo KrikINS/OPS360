@@ -46,7 +46,7 @@ export default async function DocsLayout({
       {/* Docs Header */}
       <header className="h-14 flex items-center justify-between px-5 border-b bg-[#001529] text-white gap-4 shrink-0 z-20">
         <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href="/launchpad" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Home className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-widest opacity-70">Back to App</span>
           </Link>

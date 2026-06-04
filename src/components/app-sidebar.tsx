@@ -20,7 +20,6 @@ import {
   List,
   UserSquare,
   Star,
-  Receipt,
   CheckCircle2,
   ShieldCheck,
   RotateCcw,
@@ -34,14 +33,10 @@ import {
   Users,
   BarChart3,
   Wrench,
-  Wallet,
   ArrowLeft,
   BookOpen,
   ChevronsLeft,
   ChevronsRight,
-  LayoutDashboard,
-  Scale,
-  TrendingUp,
 } from "lucide-react"
 import {
   Collapsible,
@@ -113,18 +108,7 @@ const navigationGroups = [
       { title: "Loyalty Points", url: "/sales/loyalty", icon: Star },
     ]
   },
-  {
-    id: "accounting",
-    title: "Finance & Accounts",
-    icon: Wallet,
-    items: [
-      { title: "Dashboard",       url: "/accounting",                  icon: LayoutDashboard },
-      { title: "Balance Sheet",   url: "/accounting?tab=balance-sheet", icon: Scale },
-      { title: "Journal Ledger",  url: "/accounting?tab=journal",      icon: BookOpen },
-      { title: "Expenses",        url: "/accounting?tab=expenses",     icon: Receipt },
-      { title: "Margin Report",   url: "/accounting?tab=margins",      icon: TrendingUp },
-    ]
-  },
+
   {
     id: "service",
     title: "Service & Support",
@@ -468,9 +452,9 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
       <div className="px-2 pb-2 space-y-1">
         {isAdminMode && (
           <Link
-            href="/"
+            href="/launchpad"
             onClick={() => {
-              setNavigatingTo("/");
+              setNavigatingTo("/launchpad");
               setOpenGroupId(null);
             }}
             className={cn(

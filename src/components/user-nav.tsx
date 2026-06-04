@@ -107,9 +107,9 @@ export function UserNav({ profile }: UserNavProps) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="relative h-10 w-10 flex items-center justify-center rounded-full bg-muted/50 border hover:bg-muted outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+        <DropdownMenuTrigger className="relative h-10 w-10 flex items-center justify-center rounded-full bg-[#7FD1E3] hover:bg-[#6BC1D3] transition-colors outline-none focus:ring-2 focus:ring-[#7FD1E3]/50 focus:ring-offset-0 shadow-sm">
           <Avatar className="h-9 w-9">
-            <AvatarFallback className="bg-primary/10 text-primary font-medium">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-transparent text-[#001529] font-bold">{initials}</AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-64" align="end">

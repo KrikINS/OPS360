@@ -8,9 +8,13 @@ import { UserNav } from "@/components/user-nav"
 import { PosProvider } from "@/context/PosContext"
 import { GlobalProvider } from "@/context/GlobalContext"
 import Link from "next/link"
-import { HelpCircle, Receipt } from "lucide-react"
+import { HelpCircle, Receipt, BookOpen, LayoutDashboard, Scale, Receipt as ReceiptIcon, TrendingUp, ChevronDown, ShoppingCart } from "lucide-react"
 import { NotificationBell } from "@/components/layout/NotificationBell"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -47,43 +51,110 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
       <SidebarProvider defaultOpen={false}>
         <AppSidebar permissions={permissions} profile={profile} />
         <SidebarInset className="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out">
-        <header className="h-14 flex items-center justify-between px-5 border-b bg-white shadow-sm gap-4 shrink-0 z-50">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger className="text-slate-500 hover:text-primary transition-colors" />
-            <div className="h-5 w-[1px] bg-border" />
-            <div className="font-semibold text-sm text-foreground tracking-tight">
-              Ops360 <span className="text-muted-foreground font-normal">- {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} Dashboard</span>
+          <header className="h-14 flex items-center justify-between px-5 border-b border-white/10 bg-[#001529] text-white gap-4 shrink-0 z-50">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger className="text-white/70 hover:text-white transition-colors" />
+              <div className="h-5 w-[1px] bg-white/20" />
+              <div className="font-bold text-sm tracking-tight text-[#7FD1E3]">
+                OPS360 ERP{' '}
+                <span className="text-white/60 font-normal">
+                  - {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} Dashboard
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {(isAdmin || permissions?.pos === true) && (
-              <Link href="/pos">
-                <Button
-                  size="sm"
-                  className="bg-[#001529] hover:bg-[#002a52] text-white gap-2 shadow-sm font-medium"
-                >
-                  <Receipt className="h-4 w-4" />
-                  <span className="hidden sm:inline">POS Terminal</span>
-                </Button>
+            <div className="flex items-center gap-3">
+              {/* Finance & Accounts dropdown */}
+              {(isAdmin || permissions?.finance === true) && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        size="sm"
+                        className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
+                      />
+                    }
+                  >
+                    <Receipt className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      Finance
+                    </span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-52"
+                  >
+                    <DropdownMenuItem
+                      render={
+                        <Link href="/accounting?tab=dashboard" className="flex items-center gap-2 cursor-pointer" />
+                      }
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      render={
+                        <Link href="/accounting?tab=balance-sheet" className="flex items-center gap-2 cursor-pointer" />
+                      }
+                    >
+                      <Scale className="h-4 w-4" />
+                      Balance Sheet
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      render={
+                        <Link href="/accounting?tab=journal" className="flex items-center gap-2 cursor-pointer" />
+                      }
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Journal Ledger
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      render={
+                        <Link href="/accounting?tab=expenses" className="flex items-center gap-2 cursor-pointer" />
+                      }
+                    >
+                      <ReceiptIcon className="h-4 w-4" />
+                      Expenses
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      render={
+                        <Link href="/accounting?tab=margins" className="flex items-center gap-2 cursor-pointer" />
+                      }
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      Margin Report
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {(isAdmin || permissions?.pos === true) && (
+                <Link href="/pos">
+                  <Button
+                    size="sm"
+                    className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-2 shadow-sm font-semibold"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    <span className="hidden sm:inline">POS Terminal</span>
+                  </Button>
+                </Link>
+              )}
+              <NotificationBell />
+              <Link
+                href="/docs"
+                className="p-2 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                title="Help & Documentation"
+              >
+                <HelpCircle className="h-5 w-5" />
               </Link>
-            )}
-            <NotificationBell />
-            <Link
-              href="/docs"
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all"
-              title="Help & Documentation"
-            >
-              <HelpCircle className="h-5 w-5" />
-            </Link>
-            <UserNav profile={profile} />
+              <UserNav profile={profile} />
+            </div>
+          </header>
+          <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+            <main className="flex-1 overflow-y-auto pb-6 scrollbar-thin scrollbar-thumb-slate-200">
+              {children}
+            </main>
           </div>
-        </header>
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-          <main className="flex-1 overflow-y-auto pb-6 scrollbar-thin scrollbar-thumb-slate-200">
-            {children}
-          </main>
-        </div>
-      </SidebarInset>
+        </SidebarInset>
       </SidebarProvider>
     </GlobalProvider>
   )

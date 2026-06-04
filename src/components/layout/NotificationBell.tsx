@@ -32,10 +32,10 @@ export function NotificationBell() {
 
   return (
     <Menu.Root>
-      <Menu.Trigger className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 hover:text-[#001529] transition-all outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+      <Menu.Trigger className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
         <Bell className="h-5 w-5" />
         {approvals.length > 0 && (
-          <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
+          <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-[#001529]">
             {approvals.length}
           </span>
         )}

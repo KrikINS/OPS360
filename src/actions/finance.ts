@@ -673,17 +673,18 @@ export async function getMarginReport(input: {
       ORDER BY gross_profit DESC
     `)
 
-    const data = (result as any).rows ?? result
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: Record<string, unknown>[] = (result as any).rows ?? result
 
     // Calculate totals
     const totalRevenue = data.reduce(
-      (s: number, r: any) => s + Number(r.total_revenue ?? 0), 0
+      (s: number, r: Record<string, unknown>) => s + Number(r.total_revenue ?? 0), 0
     )
     const totalCOGS = data.reduce(
-      (s: number, r: any) => s + Number(r.total_cogs ?? 0), 0
+      (s: number, r: Record<string, unknown>) => s + Number(r.total_cogs ?? 0), 0
     )
     const totalDiscounts = data.reduce(
-      (s: number, r: any) => s + Number(r.total_discounts ?? 0), 0
+      (s: number, r: Record<string, unknown>) => s + Number(r.total_discounts ?? 0), 0
     )
 
     return {
@@ -698,7 +699,7 @@ export async function getMarginReport(input: {
           : 0,
         totalDiscounts,
         totalUnitsSold: data.reduce(
-          (s: number, r: any) => s + Number(r.units_sold ?? 0), 0
+          (s: number, r: Record<string, unknown>) => s + Number(r.units_sold ?? 0), 0
         ),
       },
     }
