@@ -78,6 +78,7 @@ export function MultiSelect({
           </div>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </div>
+        </div>
       </PopoverTrigger>
 
       <PopoverContent 
