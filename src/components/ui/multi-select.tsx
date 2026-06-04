@@ -5,6 +5,7 @@ import { X, Check, ChevronsUpDown, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
 export interface Option {
@@ -39,26 +40,16 @@ export function MultiSelect({
     option.label.toLowerCase().includes(search.toLowerCase())
   )
 
-  // Close when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
   return (
-    <div className={cn("relative w-full", className)} ref={containerRef}>
-      <div
-        className={cn(
-          "flex min-h-[40px] w-full flex-wrap items-center justify-between gap-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer",
-          open && "ring-2 ring-ring ring-offset-2"
-        )}
-        onClick={() => setOpen(!open)}
-      >
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div className={cn("relative w-full", className)}>
+          <div
+            className={cn(
+              "flex min-h-[40px] w-full flex-wrap items-center justify-between gap-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer",
+              open && "ring-2 ring-ring ring-offset-2"
+            )}
+          >
         <div className="flex flex-wrap gap-1">
           {selected.length > 0 ? (
             selected.map((item) => (
@@ -84,12 +75,16 @@ export function MultiSelect({
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
+          </div>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </div>
-        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-      </div>
+      </PopoverTrigger>
 
-      {open && (
-        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+      <PopoverContent 
+        className="w-[--radix-popover-trigger-width] p-1 shadow-md" 
+        align="start"
+      >
+        <div className="max-h-60 w-full overflow-auto">
           <div className="sticky top-0 z-10 bg-popover pb-1">
             <div className="flex items-center border-b px-2">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
@@ -149,7 +144,7 @@ export function MultiSelect({
             </div>
           )}
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   )
 }

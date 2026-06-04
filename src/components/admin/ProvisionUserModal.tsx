@@ -88,7 +88,7 @@ export function ProvisionUserModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] overflow-visible">
         <DialogHeader>
           <DialogTitle className="text-xl font-black uppercase tracking-tight text-[#001529]">
             Provision New Account
