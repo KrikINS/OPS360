@@ -6,7 +6,7 @@ import { db } from '@/db/client'
 import { purchase_orders, po_items, grn_receipts, grn_items, discrepancies, vendors, branches, products, hsn_codes, inventory, inventory_transactions } from '@/db/schema'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import { postGRNJournal } from '@/actions/finance'
+import { postGRNJournal, createJournalEntry } from '@/actions/finance'
 import { getPurchaseOrdersAction } from '@/app/actions/procurement'
 
 export type PurchaseOrderItem = {
@@ -323,6 +323,17 @@ export async function createGRN(input: {
         return { success: false as const, error: `PO item not found: ${item.poItemId}` }
       }
 
+      const [productInfo] = await db
+        .select({
+          gstRate: products.gst_rate,
+          hsnCode: products.hsn_code,
+        })
+        .from(products)
+        .where(eq(products.id, poItem.product_id))
+        .limit(1)
+
+      const itemGstRate = Number(productInfo?.gstRate ?? 18)
+
       const shortfall = poItem.ordered_qty - item.receivedQty
       if (shortfall > 0) hasDiscrepancy = true
 
@@ -339,6 +350,7 @@ export async function createGRN(input: {
         landedUnitCost,
         shortfall,
         serialNumbers: item.serialNumbers ?? [],
+        taxRate: itemGstRate,
       })
     }
 
@@ -489,17 +501,28 @@ export async function createGRN(input: {
 
     // Post journal entry — fire and forget, don't fail the GRN
     try {
-      const gstTotal = grnItemsData.reduce((sum, item) => {
-        const taxable = item.receivedQty * item.unitCost
-        return sum + (taxable * ((item.taxRate ?? 0) / 100))
-      }, 0)
+      let totalCGST = 0
+      let totalSGST = 0
+      let totalIGST = 0
+
+      for (const item of grnItemsData) {
+        const taxableValue = item.receivedQty * item.unitCost
+        const gstRate = item.taxRate ?? 0
+        const gstAmount = taxableValue * (gstRate / 100)
+        // Intra-state assumed — IGST for inter-state can be added when branch state comparison is implemented
+        totalCGST += gstAmount / 2
+        totalSGST += gstAmount / 2
+      }
+
       await postGRNJournal({
         grnId: grnHeader.id,
         poId: input.poId,
         branchId: input.branchId,
         createdBy: session.user.id,
         totalLandedCost: Number(grnHeader.total_landed_cost ?? 0),
-        totalGST: gstTotal,
+        totalCGST,
+        totalSGST,
+        totalIGST,
       })
     } catch (journalError) {
       console.error('GRN journal post failed:', journalError)
@@ -597,3 +620,157 @@ export async function createReturnToVendor(input: {
 }
 
 export { getPurchaseOrdersAction }
+
+export async function shortClosePO(input: {
+  poId: string
+  reason?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false as const, error: 'Unauthorized' }
+  }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
+    return { success: false as const, error: 'Manager role required to short-close' }
+  }
+
+  const [po] = await db
+    .select({
+      id: purchase_orders.id,
+      po_number: purchase_orders.po_number,
+      branch_id: purchase_orders.branch_id,
+      vendor_id: purchase_orders.vendor_id,
+      status: purchase_orders.status,
+    })
+    .from(purchase_orders)
+    .where(eq(purchase_orders.id, input.poId))
+    .limit(1)
+
+  if (!po) {
+    return { success: false as const, error: 'PO not found' }
+  }
+
+  if (!['approved', 'partially_received'].includes(po.status ?? '')) {
+    return {
+      success: false as const,
+      error: `Cannot short-close PO with status: ${po.status}`,
+    }
+  }
+
+  const items = await db
+    .select({
+      id: po_items.id,
+      product_id: po_items.product_id,
+      ordered_qty: po_items.ordered_qty,
+      received_qty: po_items.received_qty,
+      unit_cost: po_items.unit_cost,
+    })
+    .from(po_items)
+    .where(eq(po_items.po_id, input.poId))
+
+  let totalShortfallCost = 0
+  let totalShortfallCGST = 0
+  let totalShortfallSGST = 0
+
+  for (const item of items) {
+    const ordered = Number(item.ordered_qty ?? 0)
+    const received = Number(item.received_qty ?? 0)
+    const shortfall = Math.max(0, ordered - received)
+
+    if (shortfall > 0) {
+      const unitCost = Number(item.unit_cost ?? 0)
+      const shortfallCost = shortfall * unitCost
+
+      const [prod] = await db
+        .select({ gstRate: products.gst_rate })
+        .from(products)
+        .where(eq(products.id, item.product_id!))
+        .limit(1)
+
+      const gstRate = Number(prod?.gstRate ?? 18)
+      const gstOnShortfall = shortfallCost * (gstRate / 100)
+
+      totalShortfallCost += shortfallCost
+      totalShortfallCGST += gstOnShortfall / 2
+      totalShortfallSGST += gstOnShortfall / 2
+    }
+  }
+
+  try {
+    await db
+      .update(purchase_orders)
+      .set({
+        status: 'SHORT_CLOSED',
+        cancellation_reason: input.reason ?? 'Short-closed by manager',
+      })
+      .where(eq(purchase_orders.id, input.poId))
+
+    if (totalShortfallCost > 0) {
+      const totalShortfallGST = totalShortfallCGST + totalShortfallSGST
+      const totalReversal = totalShortfallCost + totalShortfallGST
+
+      const lines: Array<{
+        accountCode: string
+        debit?: number
+        credit?: number
+        description: string
+      }> = []
+
+      lines.push({
+        accountCode: '2010',
+        debit: totalReversal,
+        description: `AP reversal — undelivered items on ${po.po_number}`,
+      })
+
+      lines.push({
+        accountCode: '1040',
+        credit: totalShortfallCost,
+        description: `Inventory reversal — ${po.po_number} short-close`,
+      })
+
+      if (totalShortfallCGST > 0) {
+        lines.push({
+          accountCode: '1050',
+          credit: totalShortfallCGST,
+          description: `CGST ITC reversal — ${po.po_number}`,
+        })
+      }
+
+      if (totalShortfallSGST > 0) {
+        lines.push({
+          accountCode: '1050',
+          credit: totalShortfallSGST,
+          description: `SGST ITC reversal — ${po.po_number}`,
+        })
+      }
+
+      await createJournalEntry({
+        description: `Short-Close: ${po.po_number} — ₹${totalReversal.toLocaleString('en-IN')} reversal`,
+        referenceSource: 'SHORT_CLOSE',
+        referenceId: input.poId,
+        branchId: po.branch_id!,
+        autoGenerated: true,
+        createdBy: session.user.id,
+        lines,
+      })
+    }
+
+    await db.execute(sql`
+      UPDATE discrepancies
+      SET status = 'resolved',
+          admin_comment = 'Auto-resolved: PO short-closed'
+      WHERE po_id = ${input.poId}::uuid
+        AND status = 'open'
+    `)
+
+    return {
+      success: true as const,
+      shortfallCost: totalShortfallCost,
+      reversalAmount: totalShortfallCost + totalShortfallCGST + totalShortfallSGST,
+    }
+  } catch (error) {
+    console.error('SHORT CLOSE ERROR:', error)
+    return { success: false as const, error: (error as Error).message }
+  }
+}

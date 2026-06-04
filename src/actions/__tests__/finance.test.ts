@@ -143,7 +143,9 @@ describe('postGRNJournal', () => {
       branchId: branch.id,
       createdBy: ADMIN_ID,
       totalLandedCost: 50000,
-      totalGST: 9000,
+      totalCGST: 4500,
+      totalSGST: 4500,
+      totalIGST: 0,
     })
 
     const entries = await db

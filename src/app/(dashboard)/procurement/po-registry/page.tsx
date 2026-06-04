@@ -92,7 +92,7 @@ import {
 } from "@/components/ui/popover"
 import { ChevronsUpDown, Check } from "lucide-react"
 import { useSession } from 'next-auth/react'
-import { approvePurchaseOrder, rejectPurchaseOrder } from '@/actions/procurement'
+import { approvePurchaseOrder, rejectPurchaseOrder, shortClosePO } from '@/actions/procurement'
 import { getGRNReceiptsAction } from '@/app/actions/procurement'
 import ProcessReturns from "../return/page"
 import DiscrepancyReportPage from "../../discrepancy-report/page"
@@ -725,24 +725,31 @@ export default function ProcurementGRNPage() {
   const handleShortClosePO = async () => {
     if (!shortClosingPO || !shortCloseReason) return
     setIsShortClosing(true)
-    
+
     try {
-      const result = await import("@/app/actions/generics").then(m => m.updateData('purchase_orders', { 
-        id: shortClosingPO.id, 
-        status: 'SHORT_CLOSED'
-      }))
+      const result = await shortClosePO({
+        poId: shortClosingPO.id,
+        reason: shortCloseReason || 'Short-closed by manager',
+      })
 
-      if (result.error) throw new Error(result.error.message || "Failed to short-close PO")
+      if (result.success) {
+        setShortClosingPO(null)
+        setShortCloseReason("")
+        setShortCloseOtherReason("")
 
-      // Refresh data
-      const poRes = await fetch('/api/procurement/purchase-orders')
-      const pos = await poRes.json()
-      setActivePOs(pos)
-      
-      setShortClosingPO(null)
-      setShortCloseReason("")
-      setShortCloseOtherReason("")
-      alert("Purchase Order short-closed successfully.")
+        const poRes = await fetch('/api/procurement/purchase-orders')
+        setActivePOs(await poRes.json())
+
+        if (result.reversalAmount && result.reversalAmount > 0) {
+          alert(
+            `PO short-closed. Journal reversal of ₹${result.reversalAmount.toLocaleString('en-IN')} posted to ledger.`
+          )
+        } else {
+          alert('PO short-closed successfully.')
+        }
+      } else {
+        alert(result.error ?? 'Failed to short-close')
+      }
     } catch (err: unknown) {
       console.error("Failed to short-close PO:", err)
       alert("Action failed: " + (err instanceof Error ? err.message : "Unknown error"))

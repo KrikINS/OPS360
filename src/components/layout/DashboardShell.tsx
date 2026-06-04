@@ -8,13 +8,9 @@ import { UserNav } from "@/components/user-nav"
 import { PosProvider } from "@/context/PosContext"
 import { GlobalProvider } from "@/context/GlobalContext"
 import Link from "next/link"
-import { HelpCircle, Receipt, BookOpen, LayoutDashboard, Scale, Receipt as ReceiptIcon, TrendingUp, ChevronDown, ShoppingCart } from "lucide-react"
+import { HelpCircle, Receipt, ShoppingCart, ShieldCheck } from "lucide-react"
 import { NotificationBell } from "@/components/layout/NotificationBell"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu, DropdownMenuContent,
-  DropdownMenuItem, DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -63,69 +59,33 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {/* Finance & Accounts dropdown */}
+              {/* System Administration link */}
+              {isAdmin && (
+                <Link href="/admin">
+                  <Button
+                    size="sm"
+                    className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      System Administration
+                    </span>
+                  </Button>
+                </Link>
+              )}
+              {/* Finance Dashboard link */}
               {(isAdmin || permissions?.finance === true) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        size="sm"
-                        className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
-                      />
-                    }
+                <Link href="/accounting?tab=dashboard">
+                  <Button
+                    size="sm"
+                    className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
                   >
                     <Receipt className="h-4 w-4" />
                     <span className="hidden sm:inline">
                       Finance
                     </span>
-                    <ChevronDown className="h-3 w-3 opacity-60" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-52"
-                  >
-                    <DropdownMenuItem
-                      render={
-                        <Link href="/accounting?tab=dashboard" className="flex items-center gap-2 cursor-pointer" />
-                      }
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      render={
-                        <Link href="/accounting?tab=balance-sheet" className="flex items-center gap-2 cursor-pointer" />
-                      }
-                    >
-                      <Scale className="h-4 w-4" />
-                      Balance Sheet
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      render={
-                        <Link href="/accounting?tab=journal" className="flex items-center gap-2 cursor-pointer" />
-                      }
-                    >
-                      <BookOpen className="h-4 w-4" />
-                      Journal Ledger
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      render={
-                        <Link href="/accounting?tab=expenses" className="flex items-center gap-2 cursor-pointer" />
-                      }
-                    >
-                      <ReceiptIcon className="h-4 w-4" />
-                      Expenses
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      render={
-                        <Link href="/accounting?tab=margins" className="flex items-center gap-2 cursor-pointer" />
-                      }
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      Margin Report
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </Button>
+                </Link>
               )}
               {(isAdmin || permissions?.pos === true) && (
                 <Link href="/pos">

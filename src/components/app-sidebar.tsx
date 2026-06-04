@@ -37,6 +37,7 @@ import {
   BookOpen,
   ChevronsLeft,
   ChevronsRight,
+  Receipt,
 } from "lucide-react"
 import {
   Collapsible,
@@ -73,7 +74,19 @@ const ModernOrbitSpinner = ({ size = "sm" }: { size?: "sm" | "md" }) => {
   );
 };
 
-const navigationGroups = [
+type NavigationGroup = {
+  id: string;
+  title: string;
+  url?: string;
+  icon: React.ElementType;
+  items: {
+    title: string;
+    url: string;
+    icon: React.ElementType;
+  }[];
+};
+
+const navigationGroups: NavigationGroup[] = [
   {
     id: "inventory",
     title: "Inventory Management",
@@ -86,14 +99,14 @@ const navigationGroups = [
   },
   {
     id: "procurement",
-    title: "Procurement Portal",
+    title: "Procurement",
     icon: ShoppingCart,
     items: [
       { title: "PO Registry", url: "/procurement/po-registry", icon: FileText },
       { title: "GRN Registry", url: "/procurement/po-registry?tab=pending", icon: CheckCircle2 },
       { title: "3-WAY Match Audit", url: "/procurement/po-registry?tab=audit", icon: ShieldCheck },
-      { title: "Purchase Returns", url: "/procurement/po-registry?tab=returns", icon: RotateCcw },
-      { title: "Discrepancy Report Registry", url: "/procurement/po-registry?tab=discrepancies", icon: AlertCircle },
+      { title: "Invoice & Billing", url: "/procurement/po-registry?tab=invoices", icon: Receipt },
+      { title: "Discrepancy Report", url: "/procurement/po-registry?tab=discrepancies", icon: AlertCircle },
       { title: "Vendor Management", url: "/vendors", icon: Users },
     ]
   },
@@ -117,13 +130,6 @@ const navigationGroups = [
       { title: "Job Card / Work Orders", url: "/service", icon: FileText },
       { title: "Warranty Management", url: "/service/warranty", icon: ShieldCheck },
     ]
-  },
-  {
-    id: "admin",
-    title: "System Administration",
-    url: "/admin",
-    icon: ShieldCheck,
-    items: []
   },
   {
     id: "staff",
@@ -151,24 +157,17 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
   
-  const [openGroupId, setOpenGroupId] = useState<string | null>(() => {
-    const activeGroup = navigationGroups.find(group => 
-      group.items.some(item => 
-        item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
-      )
-    );
-    return activeGroup ? activeGroup.id : null;
+  const [openGroupIds, setOpenGroupIds] = useState<Record<string, boolean>>(() => {
+    const initialState: Record<string, boolean> = {};
+    navigationGroups.forEach(g => {
+      initialState[g.id] = true;
+    });
+    return initialState;
   });
 
   const [lastPathname, setLastPathname] = useState(pathname);
   if (pathname !== lastPathname) {
     setLastPathname(pathname);
-    const activeGroup = navigationGroups.find(group => 
-      group.items.some(item => 
-        item.url === "/" ? pathname === "/" : pathname.startsWith(item.url.split('?')[0])
-      )
-    );
-    setOpenGroupId(activeGroup ? activeGroup.id : null);
   }
 
   if (navigatingTo && currentUrl === navigatingTo) {
@@ -274,7 +273,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                         tooltip={group.title}
                         nativeButton={false}
                         className={cn(
-                          "h-9 w-full transition-all duration-150 relative tracking-tight",
+                          "h-7 w-full transition-all duration-150 relative tracking-tight text-xs",
                           isActive
                             ? "text-white bg-[#7FD1E3]/05"
                             : "text-slate-300 hover:text-white hover:bg-white/5",
@@ -286,7 +285,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                             href={group.url || "#"}
                             onClick={() => {
                               setNavigatingTo(group.url || "#");
-                              setOpenGroupId(null);
+                              
                             }}
                             className={cn(
                               "flex items-center w-full h-full", 
@@ -314,7 +313,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                               isActive={isGroupActive}
                               tooltip={group.title}
                               className={cn(
-                                "h-9 w-full flex items-center justify-center px-0 transition-all duration-150 relative tracking-tight group-data-[state=collapsed]:justify-center",
+                                "h-7 w-full flex items-center justify-center px-0 transition-all duration-150 relative tracking-tight group-data-[state=collapsed]:justify-center text-xs",
                                 isGroupActive ? "text-white bg-[#7FD1E3]/05" : "text-slate-300 hover:text-white hover:bg-white/5",
                                 props.className
                               )}
@@ -344,10 +343,10 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                                       href={item.url}
                                       onClick={() => {
                                         setNavigatingTo(item.url);
-                                        setOpenGroupId(null);
+                                        
                                       }}
                                       className={cn(
-                                        "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150 cursor-pointer outline-none w-full",
+                                        "flex items-center gap-2 px-2 py-1.5 rounded-md text-[9px] uppercase tracking-wider transition-all duration-150 cursor-pointer outline-none w-full",
                                         isActive 
                                           ? "text-white bg-[#7FD1E3]/10 font-bold" 
                                           : "hover:bg-white/5 hover:text-white",
@@ -357,7 +356,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                                       {navigatingTo === item.url ? (
                                         <ModernOrbitSpinner />
                                       ) : (
-                                        <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
+                                        <item.icon className={cn("h-3 w-3 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
                                       )}
                                       <span className="flex-1 truncate">{item.title}</span>
                                     </Link>
@@ -375,8 +374,8 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                 return (
                   <Collapsible
                     key={group.id}
-                    open={openGroupId === group.id}
-                    onOpenChange={(isOpen) => setOpenGroupId(isOpen ? group.id : null)}
+                    open={openGroupIds[group.id] ?? true}
+                    onOpenChange={(isOpen) => setOpenGroupIds(prev => ({ ...prev, [group.id]: isOpen }))}
                     className="group/collapsible"
                   >
                     <SidebarMenuItem>
@@ -385,7 +384,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                         tooltip={group.title}
                         nativeButton={false}
                         className={cn(
-                          "h-9 w-full transition-all duration-150 relative tracking-tight",
+                          "h-7 w-full transition-all duration-150 relative tracking-tight text-xs",
                           isGroupActive 
                             ? "text-white bg-[#7FD1E3]/05" 
                             : "text-slate-300 hover:text-white hover:bg-white/5",
@@ -407,7 +406,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                       />
                       {!isCollapsed && (
                         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-                          <SidebarMenu className="mt-1 ml-4 border-l border-white/5 space-y-1">
+                          <SidebarMenu className="mt-1 ml-4 space-y-1">
                             {group.items.map((item) => {
                               const isActive = currentUrl === item.url || pathname === item.url.split('?')[0];
 
@@ -417,19 +416,19 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                                     href={item.url}
                                     onClick={() => {
                                       setNavigatingTo(item.url);
-                                      setOpenGroupId(null);
+                                      
                                     }}
                                     className={cn(
-                                      "flex items-center gap-3 px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 relative",
+                                      "flex items-center gap-2 px-2 py-1 rounded-md text-[9px] transition-all duration-150 relative uppercase tracking-wider",
                                       isActive
-                                        ? "text-white bg-[#7FD1E3]/05 backdrop-blur-md border border-white/20 shadow-[0_0_15px_rgba(127,209,227,0.1)] font-bold"
+                                        ? "text-white bg-[#7FD1E3]/05 backdrop-blur-md font-bold"
                                         : "text-slate-300 hover:text-slate-100 font-medium"
                                     )}
                                   >
                                     {navigatingTo === item.url ? (
                                       <ModernOrbitSpinner />
                                     ) : (
-                                      <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
+                                      <item.icon className={cn("h-3 w-3 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
                                     )}
                                     <span className={cn(navigatingTo === item.url && "animate-pulse", "tracking-tight")}>{item.title}</span>
                                   </Link>
@@ -449,16 +448,16 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
       </SidebarContent>
 
       {/* ── Context Specific Footer ── */}
-      <div className="px-2 pb-2 space-y-1">
+      <div className="px-1 pb-1 space-y-0.5">
         {isAdminMode && (
           <Link
             href="/launchpad"
             onClick={() => {
               setNavigatingTo("/launchpad");
-              setOpenGroupId(null);
+              
             }}
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-bold transition-all duration-150",
+              "flex items-center gap-2 px-2 h-7 rounded-md text-xs tracking-tight transition-all duration-150",
               "bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border border-emerald-600/20",
               navigatingTo === "/" && "opacity-70",
               isCollapsed && "justify-center px-0"
@@ -478,7 +477,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
           href="/docs"
           onClick={() => setNavigatingTo("/docs")}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
+            "flex items-center gap-2 px-2 h-7 rounded-md text-xs tracking-tight transition-all duration-150",
             "text-slate-300 hover:text-white hover:bg-white/5 border-l-[3px] border-l-transparent",
             navigatingTo === "/docs" && "opacity-70",
             isCollapsed && "justify-center px-0"
@@ -496,7 +495,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
         <a
           href="mailto:ethanops360@gmail.com?subject=OPS360%20Issue%20Report"
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
+            "flex items-center gap-2 px-2 h-7 rounded-md text-xs tracking-tight transition-all duration-150",
             "text-slate-300 hover:text-white hover:bg-white/5 border-l-[3px] border-l-transparent",
             isCollapsed && "justify-center px-0"
           )}
@@ -508,7 +507,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
       </div>
 
       {/* ── Footer branding ── */}
-      <SidebarFooter className={cn("border-t border-white/5 p-2", isCollapsed && "p-0 py-2")}>
+      <SidebarFooter className={cn("border-t border-white/5 p-1", isCollapsed && "p-0 py-1")}>
         <SidebarMenu>
           <SidebarMenuItem className="flex justify-center">
             <SidebarMenuButton
@@ -516,7 +515,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
               tooltip={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
               className={cn(
                 "w-full transition-all duration-200 text-slate-300 hover:text-[#7FD1E3] hover:bg-white/5",
-                isCollapsed ? "h-9 w-9 p-0 justify-center flex" : "h-9 px-2"
+                isCollapsed ? "h-7 w-7 p-0 justify-center flex" : "h-7 px-2"
               )}
             >
               {isCollapsed ? (
@@ -531,7 +530,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <div className={cn("mt-2 text-[10px] text-slate-500 text-center uppercase tracking-tighter px-2 leading-tight flex flex-col gap-1 items-center justify-center", isCollapsed && "sr-only")}>
+        <div className={cn("mt-1 text-[6px] text-slate-500 text-center uppercase tracking-tighter px-1 leading-tight flex flex-col gap-0.5 items-center justify-center", isCollapsed && "sr-only")}>
           <span>{`© ${new Date().getFullYear()} Ethan Home Appliances`}</span>
           <div className="flex items-center gap-1.5 opacity-60">
             <span>System v1.2</span>
