@@ -9,6 +9,10 @@ export function asNumber(val: unknown): number {
     return typeof val === 'number' ? val : Number(val || 0)
 }
 
+export function asOptionalNumber(val: unknown): number | undefined {
+    return val == null ? undefined : (typeof val === 'number' ? val : Number(val))
+}
+
 export function asBoolean(val: unknown): boolean {
     return Boolean(val)
 }
@@ -49,11 +53,11 @@ export function mapToProduct(row: unknown): Product {
         category: asString(r?.category),
         hsn_code: asString(r?.hsn_code),
         base_price: asNumber(r?.base_price),
-        mrp: asNumber(r?.mrp),
-        dealer_price: asNumber(r?.dealer_price),
-        min_sell_price: asNumber(r?.min_sell_price),
-        margin_pct: asNumber(r?.margin_pct),
-        max_discount_pct: asNumber(r?.max_discount_pct),
+        mrp: asOptionalNumber(r?.mrp),
+        dealer_price: asOptionalNumber(r?.dealer_price),
+        min_sell_price: asOptionalNumber(r?.min_sell_price),
+        margin_pct: asOptionalNumber(r?.margin_pct),
+        max_discount_pct: asOptionalNumber(r?.max_discount_pct),
         gst_rate: asNumber(r?.gst_rate),
         current_balance: asNumber(r?.current_balance),
         product_code: asString(r?.product_code),

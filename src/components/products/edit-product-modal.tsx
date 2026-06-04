@@ -55,8 +55,9 @@ const TRACKING_TYPES = [
 
 interface FormState {
   model_name: string
-  base_price: string
   hsn_code: string
+  base_price: string
+  mrp: string
   min_stock_level: string
   tracking_type: string
   description: string
@@ -73,6 +74,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
   const [formData, setFormData] = useState<FormState>({
     model_name: product?.model_name || "",
     base_price: product?.base_price?.toString() || "0",
+    mrp: product?.mrp?.toString() || "",
     hsn_code: product?.hsn_code || "",
     dealer_price: product?.dealer_price?.toString() || "",
     min_sell_price: product?.min_sell_price?.toString() || "",
@@ -90,6 +92,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
       setFormData({
         model_name: product.model_name || "",
         base_price: product.base_price?.toString() || "0",
+        mrp: product.mrp?.toString() || "",
         hsn_code: product.hsn_code || "",
         dealer_price: product.dealer_price?.toString() || "",
         min_sell_price: product.min_sell_price?.toString() || "",
@@ -117,6 +120,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
         body: JSON.stringify({
           model_name: formData.model_name,
           base_price: parseFloat(formData.base_price),
+          mrp: formData.mrp ? parseFloat(formData.mrp) : null,
           dealer_price: parseFloat(formData.dealer_price || "0"),
           min_sell_price: parseFloat(formData.min_sell_price || "0"),
           margin_pct: parseFloat(formData.margin_pct || "5"),
@@ -163,7 +167,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-price">MRP (Base Price) *</Label>
+              <Label htmlFor="edit-price">Unit Rate (Excl. Tax) *</Label>
               <Input 
                 id="edit-price" 
                 type="number" 
@@ -174,9 +178,20 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
               />
               {formData.base_price && formData.gst_rate && (
                 <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                  Calculated MRP (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  Calculated Price (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </p>
               )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-mrp">MRP (Incl. Tax) *</Label>
+              <Input 
+                id="edit-mrp" 
+                type="number" 
+                step="0.01" 
+                value={formData.mrp}
+                onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-hsn">HSN Code</Label>
