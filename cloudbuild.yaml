@@ -157,7 +157,3 @@ availableSecrets:
   secretManager:
     - versionName: projects/ops360-production-491911/secrets/DB_PASSWORD/versions/latest
       env: DB_PASSWORD
-    - versionName: projects/ops360-production-491911/secrets/NEXTAUTH_SECRET/versions/latest
-      env: NEXTAUTH_SECRET
-    - versionName: projects/ops360-production-491911/secrets/DATABASE_URL/versions/latest
-      env: DATABASE_URL
