@@ -2,12 +2,79 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/db/client';
-import { users, profiles, user_branch_access, user_permissions } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, profiles, user_branch_access, user_permissions, branches } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 
 export async function GET() {
-  return NextResponse.json({ data: [] });
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json(
+      { error: 'Unauthorized' }, { status: 401 }
+    )
+  }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner']
+    .includes(role)) {
+    return NextResponse.json(
+      { error: 'Admin role required' }, { status: 403 }
+    )
+  }
+
+  try {
+    // Get all profiles with their primary branch
+    const staff = await db
+      .select({
+        id: profiles.id,
+        fullName: profiles.full_name,
+        email: profiles.email,
+        role: profiles.role,
+        branchId: user_branch_access.branch_id,
+        branchName: branches.name,
+        isPrimary: user_branch_access.is_primary,
+        createdAt: profiles.created_at,
+      })
+      .from(profiles)
+      .leftJoin(
+        user_branch_access,
+        and(
+          eq(user_branch_access.user_id, profiles.id),
+          eq(user_branch_access.is_primary, true)
+        )
+      )
+      .leftJoin(
+        branches,
+        eq(branches.id, user_branch_access.branch_id)
+      )
+      .orderBy(profiles.full_name)
+
+    // Deduplicate by user id
+    const seen = new Set<string>()
+    const deduplicated = staff.filter(s => {
+      if (seen.has(s.id)) return false
+      seen.add(s.id)
+      return true
+    })
+
+    return NextResponse.json({
+      data: deduplicated.map(s => ({
+        id: s.id,
+        full_name: s.fullName,
+        email: s.email,
+        role: s.role,
+        branch_id: s.branchId,
+        branch_name: s.branchName,
+        created_at: s.createdAt,
+      }))
+    })
+  } catch (error) {
+    console.error('STAFF API ERROR:', error)
+    return NextResponse.json(
+      { error: (error as Error).message },
+      { status: 500 }
+    )
+  }
 }
 
 export async function POST(req: NextRequest) {
