@@ -73,7 +73,6 @@ steps:
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'apply-procedures'
     entrypoint: 'bash'
-    secretEnv: ['DB_PASSWORD', 'DB_USER']
     args:
       - '-c'
       - |
@@ -85,7 +84,8 @@ steps:
         # Start proxy in background
         /workspace/cloud-sql-proxy \
           ops360-production-491911:asia-south1:ops360-db \
-          --port=5432 &
+          --port=5432 \
+          --auto-iam-authn &
         PROXY_PID=$$!
         sleep 8
 
@@ -93,10 +93,10 @@ steps:
         apt-get update -qq && apt-get install -y -qq postgresql-client
 
         # Apply procedures
-        PGPASSWORD=$$DB_PASSWORD psql \
-          -h 127.0.0.1 -p 5432 \
-          -U $$DB_USER \
-          -d ops360_staging \
+        PGPASSWORD=$$(gcloud auth print-access-token) psql \
+          "sslmode=disable host=127.0.0.1 port=5432 \
+           dbname=ops360_staging \
+           user=817612258644@cloudbuild" \
           -f src/db/migrations/apply_procedures.sql \
           -v ON_ERROR_STOP=1
 
@@ -176,5 +176,3 @@ availableSecrets:
   secretManager:
     - versionName: projects/ops360-production-491911/secrets/DB_PASSWORD/versions/latest
       env: DB_PASSWORD
-    - versionName: projects/ops360-production-491911/secrets/DB_USER/versions/latest
-      env: DB_USER
