@@ -242,8 +242,8 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     if (!error && data && data.length > 0) {
       const stats = data[0] as { full_name: string, today_sales_count: number, today_revenue: number }
       setSessionStats({
-        count: Number(stats.today_sales_count),
-        revenue: Number(stats.today_revenue)
+        count: Number(stats?.today_sales_count) || 0,
+        revenue: Number(stats?.today_revenue) || 0
       })
       if (stats.full_name) {
         setSessionUser(prev => ({ 

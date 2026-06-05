@@ -3,10 +3,25 @@
 import { db } from "@/db/client"
 import { profiles, branches, customers, inventory, products } from "@/db/schema"
 import { eq, sql, and } from "drizzle-orm"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { cookies } from "next/headers"
 
 export async function getUserPosStatsAction() {
   try {
-    const res = await db.execute(sql`SELECT * FROM get_user_pos_stats()`)
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return { data: [] }
+
+    const branchId = session.user.branchId
+      ?? cookies().get('activeBranchId')?.value
+      ?? null
+
+    const res = await db.execute(
+      sql`SELECT * FROM get_user_pos_stats(
+        ${session.user.id}::uuid,
+        ${branchId}::uuid
+      )`
+    )
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
     const data = Array.isArray(result) ? result : result.rows || []
     return { data }

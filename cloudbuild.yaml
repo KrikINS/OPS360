@@ -69,6 +69,24 @@ steps:
 
   # Build + tag the Docker image only after all tests pass.
   # SHORT_SHA is set by trigger-based builds; falls back to 'manual' for gcloud builds submit.
+  
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'apply-procedures'
+    entrypoint: 'bash'
+    secretEnv: ['DB_PASSWORD']
+    args:
+      - '-c'
+      - |
+        apt-get install -y postgresql-client wget
+        wget -q https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 \
+          -O /cloud_sql_proxy && chmod +x /cloud_sql_proxy
+        /cloud_sql_proxy -instances=ops360-production-491911:asia-south1:ops360-db=tcp:5432 &
+        sleep 5
+        PGPASSWORD=$$DB_PASSWORD psql \
+          -h 127.0.0.1 -U postgres -d ops360_staging \
+          -f src/db/migrations/apply_procedures.sql
+    waitFor: ['test']
+
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build'
     entrypoint: 'bash'
@@ -80,7 +98,7 @@ steps:
           -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:$$_SHA \
           -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest \
           .
-    waitFor: ['test']
+    waitFor: ['apply-procedures']
 
   # tag-latest is now done inline in build; this is a no-op kept for pipeline compatibility.
   - name: 'gcr.io/cloud-builders/docker'
@@ -115,7 +133,8 @@ steps:
       - '--platform'
       - 'managed'
       - '--update-env-vars'
-      - 'NEXTAUTH_URL=https://ops360-dev.myappterra.com,NEXTAUTH_SECRET=ops360_staging_secret_key_123456789,DATABASE_URL=postgresql://postgres:AppTerra360@localhost/ops360_staging?host=/cloudsql/ops360-production-491911:asia-south1:ops360-db'
+      - 'NEXTAUTH_URL=https://ops360-dev.myappterra.com'
+      - '--update-secrets=NEXTAUTH_SECRET=NEXTAUTH_SECRET:latest,DATABASE_URL=DATABASE_URL:latest,DB_PASSWORD=DB_PASSWORD:latest'
       - '--add-cloudsql-instances'
       - 'ops360-production-491911:asia-south1:ops360-db'
       - '--quiet'
@@ -133,3 +152,12 @@ options:
   machineType: 'E2_HIGHCPU_8'
 
 timeout: '1200s'
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/ops360-production-491911/secrets/DB_PASSWORD/versions/latest
+      env: DB_PASSWORD
+    - versionName: projects/ops360-production-491911/secrets/NEXTAUTH_SECRET/versions/latest
+      env: NEXTAUTH_SECRET
+    - versionName: projects/ops360-production-491911/secrets/DATABASE_URL/versions/latest
+      env: DATABASE_URL
