@@ -99,6 +99,8 @@ steps:
     waitFor: ['tag-latest']
 
   # Deploy the freshly-pushed image to Cloud Run staging.
+  # SENTRY_DSN is set directly in Cloud Run env vars
+  # Never commit DSN to source code
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy'
     entrypoint: 'gcloud'

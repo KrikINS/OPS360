@@ -1,4 +1,5 @@
 import { DashboardShell } from "@/components/layout/DashboardShell"
+import * as Sentry from '@sentry/nextjs'
 
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
@@ -15,6 +16,13 @@ export default async function DashboardLayout({
   if (!user) {
     redirect("/login")
   }
+
+  // Tag errors with the current user
+  Sentry.setUser({
+    id: user.id,
+    email: user.email ?? undefined,
+    username: user.name ?? undefined,
+  })
 
   // Fetch Profile & Primary Branch Access
   const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
