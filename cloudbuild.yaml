@@ -73,7 +73,7 @@ steps:
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'apply-procedures'
     entrypoint: 'bash'
-    secretEnv: ['DB_PASSWORD']
+    secretEnv: ['DB_PASSWORD', 'DB_USER']
     args:
       - '-c'
       - |
@@ -95,7 +95,7 @@ steps:
         # Apply procedures
         PGPASSWORD=$$DB_PASSWORD psql \
           -h 127.0.0.1 -p 5432 \
-          -U postgres \
+          -U $$DB_USER \
           -d ops360_staging \
           -f src/db/migrations/apply_procedures.sql \
           -v ON_ERROR_STOP=1
@@ -174,3 +174,5 @@ availableSecrets:
   secretManager:
     - versionName: projects/ops360-production-491911/secrets/DB_PASSWORD/versions/latest
       env: DB_PASSWORD
+    - versionName: projects/ops360-production-491911/secrets/DB_USER/versions/latest
+      env: DB_USER
