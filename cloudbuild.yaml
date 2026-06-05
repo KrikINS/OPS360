@@ -149,6 +149,8 @@ steps:
       - '${_REGION}'
       - '--platform'
       - 'managed'
+      - '--remove-env-vars'
+      - 'NEXTAUTH_SECRET,DATABASE_URL,DB_PASSWORD'
       - '--update-env-vars'
       - 'NEXTAUTH_URL=https://ops360-dev.myappterra.com'
       - '--update-secrets=NEXTAUTH_SECRET=NEXTAUTH_SECRET:latest,DATABASE_URL=DATABASE_URL:latest,DB_PASSWORD=DB_PASSWORD:latest'
