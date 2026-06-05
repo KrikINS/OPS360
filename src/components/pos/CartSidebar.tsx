@@ -95,6 +95,11 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
     selectedCustomer, loyaltyBalance, loyaltyRedeem, setLoyaltyRedeem
   } = usePos()
 
+  const finalTotal = Math.max(
+    0,
+    (Number(totals.grandTotal) || 0) - (Number(loyaltyRedeem) || 0)
+  )
+
   const [discountModalOpen, setDiscountModalOpen] = useState(false)
   const [pendingDiscount, setPendingDiscount] = useState<{ productId: string, productName: string, pct: number, maxPct: number } | null>(null)
 
@@ -245,7 +250,9 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
       {/* Footer - Always Visible */}
       <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-white/5 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors">
         <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-          <div className="flex justify-between uppercase"><span>Discount</span><span className="text-rose-500">-₹{totals.discount.toLocaleString()}</span></div>
+          {(Number(totals.discount) || 0) > 0 && (
+            <div className="flex justify-between uppercase"><span>Discount</span><span className="text-rose-500">-₹{totals.discount.toLocaleString()}</span></div>
+          )}
           <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
           
           {/* Loyalty Points Redemption */}
@@ -266,13 +273,13 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                 <input
                   type="number"
                   min={0}
-                  max={Math.min(loyaltyBalance, Math.floor(totals.grandTotal))}
+                  max={Math.min(loyaltyBalance, Math.floor(Number(totals.grandTotal) || 0))}
                   value={loyaltyRedeem || ''}
                   onChange={e => {
                     const val = Math.min(
                       Number(e.target.value) || 0,
                       loyaltyBalance,
-                      Math.floor(totals.grandTotal)
+                      Math.floor(Number(totals.grandTotal) || 0)
                     )
                     setLoyaltyRedeem(val)
                   }}
@@ -280,7 +287,7 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                   className="w-14 text-right text-xs font-bold border border-purple-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-purple-500 bg-white"
                 />
                 <button
-                  onClick={() => setLoyaltyRedeem(Math.min(loyaltyBalance, Math.floor(totals.grandTotal)))}
+                  onClick={() => setLoyaltyRedeem(Math.min(loyaltyBalance, Math.floor(Number(totals.grandTotal) || 0)))}
                   className="text-[9px] font-bold text-purple-600 hover:text-purple-800 underline uppercase"
                 >
                   Use All
@@ -299,7 +306,7 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
           <div className="flex justify-between items-end mt-4">
             <div className="flex flex-col">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">₹{Math.max(0, Math.round(totals.grandTotal) - loyaltyRedeem).toLocaleString()}</span>
+              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">₹{Math.round(finalTotal).toLocaleString()}</span>
             </div>
           </div>
         </div>

@@ -27,18 +27,31 @@ export function ProductCatalog() {
   
   const customerSearchRef = useRef<HTMLInputElement>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [modalInitialPhone, setModalInitialPhone] = useState('')
   const [verifying, setVerifying] = useState(false)
 
   // Auto-verify phone as user types
   const handlePhoneChange = async (val: string) => {
     setPhoneQuery(val)
-    if (val.length >= 10) {
+
+    if (val.replace(/\D/g, '').length >= 7) {
       setVerifying(true)
-      const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("customers"))
-      if (!error && data && data.length > 0) {
-        selectCustomer(data[0] as Customer)
+      try {
+        const { searchCustomerByPhoneAction } = await import('@/app/actions/pos')
+        const { data, error } = await searchCustomerByPhoneAction(val)
+
+        if (!error && data && data.length > 0) {
+          // Exact match found — auto-select
+          selectCustomer(data[0] as Customer)
+          setPhoneQuery('')
+        }
+        // If no match, fall through to show
+        // Walk-in / Add New buttons
+      } catch {
+        // fail silently
+      } finally {
+        setVerifying(false)
       }
-      setVerifying(false)
     }
   }
 
@@ -88,6 +101,27 @@ export function ProductCatalog() {
                     <ArrowRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
                   </button>
                 ))}
+              </div>
+            )}
+            
+            {customerSearchQuery.length >= 2 &&
+             customerResults.length === 0 &&
+             !searchingCustomer && (
+              <div className="absolute top-12 left-0 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl p-3 flex items-center justify-between z-[60]">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  No customer found for "{customerSearchQuery}"
+                </span>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setModalInitialPhone(customerSearchQuery)
+                    setModalOpen(true)
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs rounded-lg"
+                >
+                  <UserPlus className="h-3 w-3" />
+                  Add Customer
+                </Button>
               </div>
             )}
           </div>
@@ -151,7 +185,7 @@ export function ProductCatalog() {
                      <X className="h-4 w-4" />
                    </Button>
                 </div>
-              ) : phoneQuery.length >= 10 && !verifying ? (
+              ) : phoneQuery.replace(/\D/g, '').length >= 7 && !verifying ? (
                 <div className="flex items-center gap-2">
                   <Button 
                     variant="ghost"
@@ -161,7 +195,10 @@ export function ProductCatalog() {
                     Walk-in
                   </Button>
                   <Button 
-                   onClick={() => setModalOpen(true)}
+                   onClick={() => {
+                     setModalInitialPhone(phoneQuery)
+                     setModalOpen(true)
+                   }}
                    className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase tracking-widest rounded-lg transition-all shadow-lg shadow-emerald-500/10"
                   >
                     <UserPlus className="h-3.5 w-3.5 mr-2" />
@@ -177,8 +214,11 @@ export function ProductCatalog() {
 
       <PosAddCustomerModal 
         open={modalOpen} 
-        onOpenChange={setModalOpen} 
-        initialPhone={phoneQuery} 
+        onOpenChange={(open) => {
+          setModalOpen(open)
+          if (!open) setModalInitialPhone('')
+        }} 
+        initialPhone={modalInitialPhone} 
       />
 
       <div className="flex-1 overflow-hidden">
