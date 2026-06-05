@@ -22,6 +22,7 @@ export function mapToBranch(row: unknown): Branch {
     return {
         id: asString(r?.id),
         name: asString(r?.name),
+        code: r?.code ? asString(r.code) : "",
         full_address: r?.full_address ? asString(r.full_address) : undefined,
         city: r?.city ? asString(r.city) : undefined,
         state: r?.state ? asString(r.state) : undefined,

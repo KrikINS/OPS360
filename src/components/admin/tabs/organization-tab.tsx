@@ -67,8 +67,8 @@ export function OrganizationTab() {
   }
 
   const handleSaveBranch = async () => {
-    if (!formData.name || !formData.code) {
-      alert("Branch Name and Code are required.")
+    if (!formData.name) {
+      alert("Branch Name is required.")
       return
     }
     
@@ -154,8 +154,12 @@ export function OrganizationTab() {
                   <Input placeholder="e.g., Ernakulam Main" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Branch Code*</Label>
-                  <Input placeholder="e.g., BR001" value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} />
+                  <Label>Branch Code</Label>
+                  <Input 
+                    value={editingId ? formData.code : "Auto-generated"} 
+                    disabled 
+                    className="bg-muted text-muted-foreground font-medium"
+                  />
                 </div>
               </div>
               <div className="col-span-2 space-y-2">

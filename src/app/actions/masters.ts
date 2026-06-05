@@ -2,7 +2,7 @@
 
 import { db } from "@/db/client"
 import { brands, categories, po_terms_templates, grn_notes_templates, return_reason_master, branches } from "@/db/schema"
-import { eq, asc } from "drizzle-orm"
+import { eq, asc, sql } from "drizzle-orm"
 import { randomUUID } from "crypto"
 
 export async function getGlobalMastersAction() {
@@ -103,7 +103,28 @@ export async function getBranchesAction() {
 
 export async function addBranchAction(data: Partial<typeof branches.$inferInsert>) {
   try {
-    const res = await db.insert(branches).values({ id: randomUUID(), name: data.name || "", ...data } as typeof branches.$inferInsert).returning()
+    const res = await db.transaction(async (tx) => {
+      const counterRes = await tx.execute(sql`
+        INSERT INTO sequential_counters (prefix, year, current_value)
+        VALUES ('BR', 0, 1)
+        ON CONFLICT (prefix, year) DO UPDATE
+          SET current_value = sequential_counters.current_value + 1
+        RETURNING current_value
+      `)
+      const counterRows = (counterRes as unknown as { rows?: { current_value: number }[] }).rows
+        ?? (counterRes as unknown as { current_value: number }[])
+      const seqVal = counterRows[0]?.current_value || 1
+      const generatedCode = `BR${String(seqVal).padStart(3, '0')}`
+
+      const inserted = await tx.insert(branches).values({ 
+        id: randomUUID(), 
+        name: data.name || "", 
+        ...data,
+        code: generatedCode
+      } as typeof branches.$inferInsert).returning()
+      
+      return inserted
+    })
     return { data: res[0] }
   } catch (error) {
     console.error("Database Error (addBranchAction):", error)

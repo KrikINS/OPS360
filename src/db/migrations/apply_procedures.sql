@@ -1,16 +1,6 @@
 -- Ensure missing columns exist on sales_invoices
-ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS branch_id UUID;
-ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS payment_mode TEXT;
-ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS user_id UUID;
-ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS subtotal NUMERIC;
-ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS cgst NUMERIC;
-ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS sgst NUMERIC;
-ALTER TABLE sales_invoices ADD COLUMN IF NOT EXISTS igst NUMERIC;
 
 -- Ensure missing columns exist on invoice_items
-ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS product_id UUID;
-ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS qty INTEGER;
-ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS unit_price NUMERIC;
 
 CREATE OR REPLACE FUNCTION process_pos_sale(payload jsonb)
 RETURNS jsonb AS $$
@@ -228,10 +218,10 @@ BEGIN
     
     RETURN v_result;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Implementation for process_stock_transfer_send
-CREATE OR REPLACE FUNCTION process_stock_transfer_send(sourceId uuid, destId uuid, inventoryArr uuid[], notes text) RETURNS text LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION process_stock_transfer_send(sourceId uuid, destId uuid, inventoryArr uuid[], notes text) RETURNS text LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_transfer_id uuid := gen_random_uuid();
     v_inv_id uuid;
@@ -257,7 +247,7 @@ END;
 $$;
 
 -- Implementation for process_stock_transfer_receive
-CREATE OR REPLACE FUNCTION process_stock_transfer_receive(transferId uuid, userId uuid, notes text) RETURNS void LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION process_stock_transfer_receive(transferId uuid, userId uuid, notes text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_rec RECORD;
     v_dest_product_id uuid;
@@ -315,25 +305,25 @@ END;
 $$;
 
 -- Stub for fulfill_stock_request
-CREATE OR REPLACE FUNCTION fulfill_stock_request(requestId uuid) RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+CREATE OR REPLACE FUNCTION fulfill_stock_request(requestId uuid) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN END; $$;
 
 -- Stub for get_unique_low_stock_count
-CREATE OR REPLACE FUNCTION get_unique_low_stock_count() RETURNS integer LANGUAGE plpgsql AS $$ BEGIN RETURN 0; END; $$;
+CREATE OR REPLACE FUNCTION get_unique_low_stock_count() RETURNS integer LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN RETURN 0; END; $$;
 
 -- Stub for get_user_pos_stats
-CREATE OR REPLACE FUNCTION get_user_pos_stats() RETURNS TABLE(stat text, value integer) LANGUAGE plpgsql AS $$ BEGIN RETURN QUERY SELECT 'sales'::text, 0; END; $$;
+CREATE OR REPLACE FUNCTION get_user_pos_stats() RETURNS TABLE(stat text, value integer) LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN RETURN QUERY SELECT 'sales'::text, 0; END; $$;
 
 -- Stub for get_admin_dashboard_metrics
-CREATE OR REPLACE FUNCTION get_admin_dashboard_metrics() RETURNS TABLE(metric text, value integer) LANGUAGE plpgsql AS $$ BEGIN RETURN QUERY SELECT 'users'::text, 0; END; $$;
+CREATE OR REPLACE FUNCTION get_admin_dashboard_metrics() RETURNS TABLE(metric text, value integer) LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN RETURN QUERY SELECT 'users'::text, 0; END; $$;
 
 -- Stub for get_vendor_docs
-CREATE OR REPLACE FUNCTION get_vendor_docs(vendor_id uuid) RETURNS TABLE(doc text) LANGUAGE plpgsql AS $$ BEGIN RETURN QUERY SELECT 'doc'::text WHERE false; END; $$;
+CREATE OR REPLACE FUNCTION get_vendor_docs(vendor_id uuid) RETURNS TABLE(doc text) LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN RETURN QUERY SELECT 'doc'::text WHERE false; END; $$;
 
 -- Stub for get_export_data
-CREATE OR REPLACE FUNCTION get_export_data(p_type text) RETURNS TABLE(data text) LANGUAGE plpgsql AS $$ BEGIN RETURN QUERY SELECT 'data'::text WHERE false; END; $$;
+CREATE OR REPLACE FUNCTION get_export_data(p_type text) RETURNS TABLE(data text) LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN RETURN QUERY SELECT 'data'::text WHERE false; END; $$;
 
 -- Stub for get_next_logistics_id
-CREATE OR REPLACE FUNCTION get_next_logistics_id(prefix text) RETURNS text LANGUAGE plpgsql AS $$ BEGIN RETURN prefix || '-1000'; END; $$;
+CREATE OR REPLACE FUNCTION get_next_logistics_id(prefix text) RETURNS text LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN RETURN prefix || '-1000'; END; $$;
 CREATE OR REPLACE FUNCTION public.get_user_pos_stats(
   p_user_id UUID,
   p_branch_id UUID
@@ -343,7 +333,7 @@ RETURNS TABLE(
   today_sales_count BIGINT,
   today_revenue    NUMERIC
 )
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
   RETURN QUERY
   SELECT
