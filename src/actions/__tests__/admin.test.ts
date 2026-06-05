@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest
 import { NextRequest } from 'next/server'
 import { POST as provisionUser } from '@/app/api/admin/staff/route'
 import { POST as resetPassword } from '@/app/api/admin/reset-password/route'
+import { setPosPin } from '@/app/actions/admin'
 import { getAdminUsersDataAction, getBranchesAction, updateUserPermissionsAction } from '@/app/actions/admin-users'
 import {
   setupTestDb, cleanupTestDb, teardownTestDb,
@@ -588,5 +589,76 @@ describe('POST /api/admin/reset-password', () => {
 
     passwords.forEach(p => expect(p).toMatch(/^ETHAN-[A-Z0-9]{4}$/))
     expect(passwords).toHaveLength(2)
+  })
+})
+
+describe('setPosPin', () => {
+  async function seedManager() {
+    await db.insert(schema.users).values({
+      id: MANAGER_ID,
+      email: 'manager_pospin@ops360.com',
+      password_hash: 'hash',
+      role: 'manager'
+    })
+    await db.insert(schema.profiles).values({
+      id: MANAGER_ID,
+      email: 'manager_pospin@ops360.com',
+      full_name: 'Manager POS',
+      role: 'manager'
+    })
+  }
+
+  it('Admin can set a valid 4-digit PIN for a manager', async () => {
+    await seedManager()
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+
+    const result = await setPosPin(MANAGER_ID, '1234')
+    expect(result.success).toBe(true)
+
+    // Verify in db
+    const profiles = await db.select().from(schema.profiles).where(eq(schema.profiles.id, MANAGER_ID)).limit(1)
+    expect(profiles[0].pos_pin).toBe('1234')
+  })
+
+  it('Returns error if PIN is not exactly 4 digits', async () => {
+    await seedManager()
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+
+    const result1 = await setPosPin(MANAGER_ID, '123')
+    expect(result1.success).toBe(false)
+    expect(result1.error).toContain('4 digits')
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+
+    const result2 = await setPosPin(MANAGER_ID, '12345')
+    expect(result2.success).toBe(false)
+    expect(result2.error).toContain('4 digits')
+  })
+
+  it('Admin can revoke PIN by passing null', async () => {
+    await seedManager()
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+
+    // First set it
+    await setPosPin(MANAGER_ID, '9999')
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+
+    const result = await setPosPin(MANAGER_ID, null)
+    expect(result.success).toBe(true)
+
+    // Verify in db
+    const profiles = await db.select().from(schema.profiles).where(eq(schema.profiles.id, MANAGER_ID)).limit(1)
+    expect(profiles[0].pos_pin).toBeNull()
   })
 })

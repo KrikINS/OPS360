@@ -33,3 +33,33 @@ export async function getRecentUsersAction() {
     return { error: { message: (error instanceof Error ? error.message : String(error)) } }
   }
 }
+
+export async function setPosPin(
+  userId: string,
+  pin: string | null
+): Promise<{ success: boolean; error?: string }> {
+  const { getServerSession } = await import('next-auth/next');
+  const { authOptions } = await import('@/lib/auth');
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.user) return { success: false, error: 'Unauthorized' };
+  const role = (session.user.role ?? '').toLowerCase();
+  if (!['super_admin', 'admin/owner', 'admin'].includes(role)) {
+    return { success: false, error: 'Unauthorized role' };
+  }
+
+  if (pin !== null && !/^\d{4}$/.test(pin)) {
+    return { success: false, error: 'PIN must be exactly 4 digits' };
+  }
+
+  try {
+    const { db } = await import('@/db/client');
+    const { profiles } = await import('@/db/schema');
+    const { eq } = await import('drizzle-orm');
+
+    await db.update(profiles).set({ pos_pin: pin }).where(eq(profiles.id, userId));
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Database error' };
+  }
+}

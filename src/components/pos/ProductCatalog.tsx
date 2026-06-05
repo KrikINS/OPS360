@@ -22,7 +22,8 @@ export function ProductCatalog() {
     phoneQuery,
     setPhoneQuery,
     resetCustomerContext,
-    selectWalkInCustomer
+    selectWalkInCustomer,
+    searchingCustomer
   } = usePos()
   
   const customerSearchRef = useRef<HTMLInputElement>(null)

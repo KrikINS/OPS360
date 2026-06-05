@@ -20,9 +20,10 @@ import {
 } from "@/components/ui/accordion"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
-import { Loader2, Shield, User, Lock, AlertTriangle, Copy, Check, Phone } from "lucide-react"
+import { Loader2, Shield, User, Lock, AlertTriangle, Copy, Check, Phone, CheckCircle2, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Profile } from "@/app/admin/users/page"
+import { setPosPin } from "@/app/actions/admin"
 
 interface UserProfileModalProps {
   open: boolean;
@@ -59,10 +60,22 @@ export function UserProfileModal({
   const [tempPassword, setTempPassword] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   
+  const [isChangingPin, setIsChangingPin] = useState(false)
+  const [pinValue, setPinValue] = useState("")
+  const [pinLoading, setPinLoading] = useState(false)
+  const [hasPosPin, setHasPosPin] = useState(false)
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
   const isAdmin = currentUserRole === "Admin/Owner" || currentUserRole === "SUPER_ADMIN"
+  const roleName = (formData?.role || "").toLowerCase()
+  const isManagerRole = ['super_admin', 'admin/owner', 'admin', 'manager', 'branch manager'].includes(roleName)
 
   useEffect(() => {
     if (profile && open) {
+      setHasPosPin(!!profile.has_pos_pin)
+      setIsChangingPin(false)
+      setPinValue("")
       setFormData({
         ...profile,
         register_permissions: profile.register_permissions || {}
@@ -111,6 +124,39 @@ export function UserProfileModal({
     })
   }
 
+  const handleSavePin = async () => {
+    if (!profile.id || pinValue.length !== 4) return
+    setPinLoading(true)
+    const result = await setPosPin(profile.id, pinValue)
+    if (result.success) {
+      setHasPosPin(true)
+      setIsChangingPin(false)
+      setToast({ message: "POS PIN updated", type: 'success' })
+      setTimeout(() => setToast(null), 3000)
+    } else {
+      setToast({ message: result.error || "Failed to update PIN", type: 'error' })
+      setTimeout(() => setToast(null), 3000)
+    }
+    setPinLoading(false)
+  }
+
+  const handleRemovePin = async () => {
+    if (!profile.id) return
+    if (!confirm("Remove this manager's POS PIN? They will not be able to approve discounts.")) return
+    setPinLoading(true)
+    const result = await setPosPin(profile.id, null)
+    if (result.success) {
+      setHasPosPin(false)
+      setIsChangingPin(false)
+      setToast({ message: "POS PIN removed", type: 'success' })
+      setTimeout(() => setToast(null), 3000)
+    } else {
+      setToast({ message: result.error || "Failed to remove PIN", type: 'error' })
+      setTimeout(() => setToast(null), 3000)
+    }
+    setPinLoading(false)
+  }
+
   const handleResetPassword = async () => {
     if (!profile.id) return
     setResetLoading(true)
@@ -125,11 +171,13 @@ export function UserProfileModal({
         setTempPassword(data.temporaryPassword)
         setShowResetConfirm(false)
       } else {
-        alert(data.error || "Failed to reset password")
+        setToast({ message: data.error || "Failed to reset password", type: 'error' })
+        setTimeout(() => setToast(null), 3000)
       }
     } catch (error) {
       console.error("Reset error:", error)
-      alert("An unexpected error occurred.")
+      setToast({ message: "An unexpected error occurred.", type: 'error' })
+      setTimeout(() => setToast(null), 3000)
     } finally {
       setResetLoading(false)
     }
@@ -292,6 +340,51 @@ export function UserProfileModal({
               <AlertTriangle className="h-3 w-3" /> Security & Risk Management
             </h4>
             
+            {isManagerRole && (
+              <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-black text-slate-800 uppercase">POS Approval PIN</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase leading-tight">
+                      Required for discount approvals at POS
+                    </p>
+                  </div>
+                </div>
+
+                {hasPosPin && !isChangingPin ? (
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl tracking-[0.3em] font-black text-slate-700 mt-1">●●●●</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setIsChangingPin(true)} className="h-7 text-[9px] font-bold uppercase">Change PIN</Button>
+                      <Button variant="destructive" size="sm" onClick={handleRemovePin} disabled={pinLoading} className="h-7 text-[9px] font-bold uppercase">Remove PIN</Button>
+                    </div>
+                  </div>
+                ) : (!hasPosPin && !isChangingPin) ? (
+                  <Button variant="outline" size="sm" onClick={() => setIsChangingPin(true)} className="w-full text-[10px] font-bold uppercase border-slate-300 border-dashed">
+                    Set PIN
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="password" 
+                      maxLength={4} 
+                      pattern="\d*"
+                      value={pinValue}
+                      onChange={e => setPinValue(e.target.value.replace(/\D/g, ''))}
+                      className="w-24 text-center tracking-[0.5em] font-black text-lg"
+                      placeholder="XXXX"
+                    />
+                    <Button onClick={handleSavePin} disabled={pinLoading || pinValue.length !== 4} className="h-10 text-[10px] font-bold uppercase">
+                      {pinLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => { setIsChangingPin(false); setPinValue(""); }} className="h-10 text-[10px] font-bold uppercase">Cancel</Button>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="p-4 rounded-xl border border-red-100 bg-red-50/30 space-y-4">
               {!tempPassword ? (
                 <div className="flex items-center justify-between">
@@ -393,6 +486,32 @@ export function UserProfileModal({
             </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* Toast Notification Container */}
+      {toast && (
+        <div className={cn(
+          "fixed bottom-6 right-6 z-50 animate-in slide-in-from-right-10 duration-500 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border backdrop-blur-md transition-all",
+          toast.type === 'success' ? "bg-emerald-500/90 border-emerald-400/50 text-white" : "bg-rose-500/90 border-rose-400/50 text-white"
+        )}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="h-5 w-5 animate-bounce" />
+          ) : (
+            <XCircle className="h-5 w-5 animate-pulse" />
+          )}
+          <div className="flex flex-col">
+            <span className="font-black text-[10px] uppercase tracking-widest opacity-70">
+              {toast.type === 'success' ? "System Success" : "Protocol Deviation"}
+            </span>
+            <span className="font-bold text-sm tracking-tight">{toast.message}</span>
+          </div>
+          <button 
+            className="ml-4 opacity-50 hover:opacity-100 transition-opacity"
+            onClick={() => setToast(null)}
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </Dialog>
   )
 }

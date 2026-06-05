@@ -52,7 +52,8 @@ export async function getAdminUsersDataAction(userId: string | undefined) {
         ...p,
         permissions: permsMap,
         assigned_branch_ids: uBranches,
-        assigned_branch_id: uBranches.length > 0 ? uBranches[0] : null
+        assigned_branch_id: uBranches.length > 0 ? uBranches[0] : null,
+        has_pos_pin: !!p.pos_pin
       }
     })
 

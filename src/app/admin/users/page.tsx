@@ -51,6 +51,7 @@ export interface Profile {
   permissions: Record<string, boolean>
   register_permissions: Record<string, Record<string, 'none' | 'view' | 'edit'>> | null
   is_active: boolean
+  has_pos_pin?: boolean
 }
 
 interface Branch {
