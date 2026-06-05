@@ -111,6 +111,23 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
     e.preventDefault()
     setLoading(true)
 
+    let finalMinSell = parseFloat(formData.min_sell_price || "0")
+    if (finalMinSell > parseFloat(formData.mrp)) {
+      finalMinSell = parseFloat(formData.mrp)
+    }
+
+    if (parseFloat(formData.dealer_price || "0") > parseFloat(formData.mrp)) {
+      alert("Dealer Price cannot exceed MRP")
+      setLoading(false)
+      return
+    }
+
+    if (finalMinSell < parseFloat(formData.dealer_price || "0")) {
+      alert("Min Sell Price cannot be below Dealer Price (would result in a loss)")
+      setLoading(false)
+      return
+    }
+
     try {
       if (!product) throw new Error("No product context provided")
       
@@ -122,7 +139,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           base_price: parseFloat(formData.base_price),
           mrp: formData.mrp ? parseFloat(formData.mrp) : null,
           dealer_price: parseFloat(formData.dealer_price || "0"),
-          min_sell_price: parseFloat(formData.min_sell_price || "0"),
+          min_sell_price: finalMinSell,
           margin_pct: parseFloat(formData.margin_pct || "5"),
           max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
           hsn_code: formData.hsn_code,
@@ -167,33 +184,6 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-price">Unit Rate (Excl. Tax) *</Label>
-              <Input 
-                id="edit-price" 
-                type="number" 
-                step="0.01" 
-                value={formData.base_price}
-                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
-                required
-              />
-              {formData.base_price && formData.gst_rate && (
-                <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                  Calculated Price (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-mrp">MRP (Incl. Tax) *</Label>
-              <Input 
-                id="edit-mrp" 
-                type="number" 
-                step="0.01" 
-                value={formData.mrp}
-                onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="edit-hsn">HSN Code</Label>
               <Input 
                 id="edit-hsn" 
@@ -201,11 +191,63 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-mrp">MRP / Retail Price (₹) *</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Maximum Retail Price incl. GST</p>
+              <Input 
+                id="edit-mrp" 
+                type="number" 
+                step="0.01" 
+                value={formData.mrp}
+                onChange={(e) => {
+                  const mrp = parseFloat(e.target.value) || 0;
+                  const gst = parseFloat(formData.gst_rate) || 0;
+                  const dp = parseFloat(formData.dealer_price) || 0;
+                  
+                  const base_price = mrp > 0 ? (mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
+                  let margin_pct = formData.margin_pct;
+                  if (dp > 0 && mrp > 0) {
+                    margin_pct = (((mrp - dp) / dp) * 100).toFixed(2);
+                  }
+                  
+                  const mp = parseFloat(margin_pct) || 0;
+                  let min_sell = dp * (1 + mp / 100);
+                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  
+                  setFormData({ 
+                    ...formData, 
+                    mrp: e.target.value,
+                    base_price,
+                    margin_pct,
+                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
+                  });
+                }}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-price">Unit Rate (Ex-GST) *</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated from MRP</p>
+              <Input 
+                id="edit-price" 
+                type="number" 
+                step="0.01" 
+                value={formData.base_price}
+                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
+                required
+                readOnly
+                className="bg-slate-50 text-slate-500"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
             <div className="space-y-2">
-              <Label htmlFor="edit-dealer">Dealer Price</Label>
+              <Label htmlFor="edit-dealer">Dealer Cost (₹)</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Price paid to distributor, excl. GST</p>
               <Input 
                 id="edit-dealer" 
                 type="number" 
@@ -213,17 +255,29 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 value={formData.dealer_price}
                 onChange={(e) => {
                   const dp = parseFloat(e.target.value) || 0;
-                  const mp = parseFloat(formData.margin_pct) || 0;
+                  const mrp = parseFloat(formData.mrp) || 0;
+                  
+                  let margin_pct = formData.margin_pct;
+                  if (dp > 0 && mrp > 0) {
+                    margin_pct = (((mrp - dp) / dp) * 100).toFixed(2);
+                  }
+                  
+                  const mp = parseFloat(margin_pct) || 0;
+                  let min_sell = dp * (1 + mp / 100);
+                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  
                   setFormData({ 
                     ...formData, 
                     dealer_price: e.target.value,
-                    min_sell_price: (dp * (1 + mp / 100)).toFixed(2)
+                    margin_pct,
+                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
                   });
                 }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-margin">Margin %</Label>
+              <Label htmlFor="edit-margin">Gross Margin %</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated from MRP vs Dealer Cost</p>
               <Input 
                 id="edit-margin" 
                 type="number" 
@@ -232,25 +286,46 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 onChange={(e) => {
                   const mp = parseFloat(e.target.value) || 0;
                   const dp = parseFloat(formData.dealer_price) || 0;
+                  const mrp = parseFloat(formData.mrp) || 0;
+                  
+                  let min_sell = dp * (1 + mp / 100);
+                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  
                   setFormData({ 
                     ...formData, 
                     margin_pct: e.target.value,
-                    min_sell_price: (dp * (1 + mp / 100)).toFixed(2)
+                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
                   });
                 }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-min-sell">Min Sell Price</Label>
+              <Label htmlFor="edit-min-sell">Min Sell Price (₹)</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated &middot; Cannot exceed MRP</p>
               <Input 
                 id="edit-min-sell" 
                 type="number" 
                 step="0.01" 
+                readOnly
+                className="bg-slate-100 text-slate-500"
                 value={formData.min_sell_price}
                 onChange={(e) => setFormData({ ...formData, min_sell_price: e.target.value })}
               />
             </div>
           </div>
+          
+          {parseFloat(formData.dealer_price || "0") > parseFloat(formData.mrp || "0") && parseFloat(formData.mrp || "0") > 0 && (
+            <div className="text-red-600 text-sm font-semibold p-2 bg-red-50 border border-red-200 rounded">
+              Warning: Dealer Cost cannot exceed MRP.
+            </div>
+          )}
+          {parseFloat(formData.min_sell_price || "0") > 0 && parseFloat(formData.mrp || "0") > 0 && 
+           parseFloat(formData.min_sell_price || "0") <= parseFloat(formData.mrp || "0") && 
+           (parseFloat(formData.mrp || "0") - parseFloat(formData.min_sell_price || "0")) / parseFloat(formData.mrp || "0") < 0.05 && (
+            <div className="text-yellow-600 text-sm font-semibold p-2 bg-yellow-50 border border-yellow-200 rounded">
+              Warning: Min Sell Price is very close to MRP (&lt; 5% headroom).
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -260,7 +335,17 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 type="number" 
                 step="0.1" 
                 value={formData.gst_rate}
-                onChange={(e) => setFormData({ ...formData, gst_rate: e.target.value })}
+                onChange={(e) => {
+                  const gst = parseFloat(e.target.value) || 0;
+                  const mrp = parseFloat(formData.mrp) || 0;
+                  const base_price = mrp > 0 ? (mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
+                  
+                  setFormData({ 
+                    ...formData, 
+                    gst_rate: e.target.value,
+                    base_price
+                  });
+                }}
                 required
               />
             </div>

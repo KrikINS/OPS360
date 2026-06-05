@@ -5,7 +5,7 @@ import { db } from '@/db/client'
 import {
   products, branches, inventory
 } from '@/db/schema'
-import { eq, ilike } from 'drizzle-orm'
+import { eq, ilike, isNull, and } from 'drizzle-orm'
 import * as XLSX from 'xlsx'
 import { createJournalEntry } from '@/actions/finance'
 
@@ -143,6 +143,8 @@ export async function POST(req: NextRequest) {
       serialNumber: string
       landedCost: number
       price: number
+      dealerPrice: number
+      maxDiscountPct: number
       notes: string
     }> = []
 
@@ -159,7 +161,9 @@ export async function POST(req: NextRequest) {
       const branchName = String(row[4] ?? '').trim()
       const landedCost = Number(row[5] ?? 0)
       const price = Number(row[6] ?? 0)
-      const notes = String(row[7] ?? '').trim()
+      const dealerPrice = Number(row[7] ?? 0)
+      const maxDiscountPct = Number(row[8] ?? 10)
+      const notes = String(row[9] ?? '').trim()
 
       // Validate product
       const product = productByCode.get(
@@ -222,6 +226,8 @@ export async function POST(req: NextRequest) {
         serialNumber,
         landedCost,
         price: price > 0 ? price : landedCost,
+        dealerPrice,
+        maxDiscountPct,
         notes,
       })
     }
@@ -259,6 +265,34 @@ export async function POST(req: NextRequest) {
         units: number
         value: number
       }>()
+
+      // Optionally update product pricing if provided
+      for (const row of validRows) {
+        if (row.dealerPrice > 0 && row.productId) {
+          try {
+            await db
+              .update(products)
+              .set({
+                dealer_price: String(row.dealerPrice),
+                max_discount_pct: String(row.maxDiscountPct),
+                // Only update min_sell_price if not already set
+                ...(row.dealerPrice > 0 ? {
+                  min_sell_price: String(
+                    row.dealerPrice * 1.05
+                  )
+                } : {}),
+              })
+              .where(
+                and(
+                  eq(products.id, row.productId),
+                  isNull(products.dealer_price)
+                )
+              )
+          } catch {
+            // Non-blocking — don't fail import if this fails
+          }
+        }
+      }
 
       for (const row of validRows) {
         const existing = branchTotals.get(row.branchId)
@@ -312,6 +346,9 @@ export async function POST(req: NextRequest) {
       totalLandedCost: validRows.reduce(
         (s, r) => s + r.landedCost, 0
       ),
+      // Add info about pricing updates
+      pricingUpdated: validRows.filter(
+        r => r.dealerPrice > 0).length,
     })
 
   } catch (error) {

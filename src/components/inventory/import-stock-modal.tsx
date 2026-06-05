@@ -29,6 +29,7 @@ export function ImportStockModal({
     errors?: string[]
     errorCount?: number
     totalLandedCost?: number
+    pricingUpdated?: number
     error?: string
   } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -198,6 +199,12 @@ export function ImportStockModal({
                     Opening balance journal entries
                     have been posted automatically.
                   </p>
+                  {result.pricingUpdated !== undefined && result.pricingUpdated > 0 && (
+                    <p className="text-xs text-green-600">
+                      {result.pricingUpdated} product(s) had dealer
+                      pricing updated from import data.
+                    </p>
+                  )}
                   {result.errors && result.errors.length > 0 && (
                     <div className="mt-2 p-2 bg-yellow-50
                       border border-yellow-200 rounded

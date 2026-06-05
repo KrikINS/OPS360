@@ -21,6 +21,11 @@ export async function GET() {
       brand: products.brand,
       category: products.category,
       hsn_code: products.hsn_code,
+      base_price: products.base_price,
+      dealer_price: products.dealer_price,
+      min_sell_price: products.min_sell_price,
+      gst_rate: products.gst_rate,
+      max_discount_pct: products.max_discount_pct,
     })
     .from(products)
     .orderBy(products.product_code)
@@ -44,7 +49,9 @@ export async function GET() {
     'Serial Number',
     'Branch Name',
     'Landed Cost (₹)',
-    'Selling Price (₹)',
+    'Selling Price / MRP (₹)',
+    'Dealer Price (₹)',
+    'Max Discount (%)',
     'Condition Notes',
   ]
 
@@ -57,10 +64,12 @@ export async function GET() {
     ['1. Fill in one row per inventory unit (each serial number = one row)'],
     ['2. Product Code must match an existing product in the Product Master'],
     ['3. Branch Name must match an existing branch exactly'],
-    ['4. Serial Number must be unique across the entire inventory'],
-    ['5. Landed Cost is the purchase/valuation cost per unit'],
-    ['6. Selling Price is the retail/MRP per unit'],
-    ['7. Refer to the "Products Reference" and "Branches Reference" sheets for valid values'],
+    ['4. Serial Number must be unique globally'],
+    ['5. Landed Cost = purchase price + freight per unit'],
+    ['6. Selling Price = MRP or intended retail price'],
+    ['7. Dealer Price = distributor cost (used for margin calc)'],
+    ['8. Max Discount % = cashier auto-approval limit (default 10)'],
+    ['9. Condition Notes = optional inspection remarks'],
     [''],
   ]
 
@@ -77,15 +86,17 @@ export async function GET() {
     { wch: 25 },  // Serial Number
     { wch: 25 },  // Branch Name
     { wch: 18 },  // Landed Cost
-    { wch: 18 },  // Selling Price
+    { wch: 20 },  // Selling Price / MRP
+    { wch: 18 },  // Dealer Price
+    { wch: 18 },  // Max Discount %
     { wch: 30 },  // Condition Notes
   ]
 
   // Style the title row (SheetJS CE doesn't support
   // full cell styles, but we can merge cells)
   dataSheet['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }, // title row
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } }, // subtitle
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } }, // title row
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } }, // subtitle
   ]
 
   XLSX.utils.book_append_sheet(wb, dataSheet, 'Opening Stock')
@@ -93,7 +104,8 @@ export async function GET() {
   // ── Sheet 2: Products Reference ──────────────────
   const productHeaders = [
     'Product Code', 'Product Name', 'Brand',
-    'Category', 'HSN Code'
+    'Category', 'HSN Code', 'MRP (₹)', 'Dealer Price (₹)',
+    'Min Sell Price (₹)', 'GST Rate (%)', 'Max Discount (%)'
   ]
   const productData = productList.map(p => [
     p.product_code ?? '',
@@ -101,6 +113,11 @@ export async function GET() {
     p.brand ?? '',
     p.category ?? '',
     p.hsn_code ?? '',
+    p.base_price ?? '',
+    p.dealer_price ?? '',
+    p.min_sell_price ?? '',
+    p.gst_rate ?? '18',
+    p.max_discount_pct ?? '10',
   ])
 
   const productSheet = XLSX.utils.aoa_to_sheet([
@@ -113,12 +130,13 @@ export async function GET() {
 
   productSheet['!cols'] = [
     { wch: 22 }, { wch: 35 }, { wch: 18 },
-    { wch: 20 }, { wch: 15 },
+    { wch: 20 }, { wch: 15 }, { wch: 15 },
+    { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 16 },
   ]
 
   productSheet['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
   ]
 
   XLSX.utils.book_append_sheet(wb, productSheet,

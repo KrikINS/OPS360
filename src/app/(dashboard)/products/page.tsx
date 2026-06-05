@@ -247,7 +247,7 @@ export default function ProductsPage() {
                 <CloudUpload className="h-4 w-4" /> Bulk Add
               </Button>
               <Button onClick={() => setIsAddOpen(true)} className="bg-[#001529] hover:bg-[#002a52] gap-1.5 font-bold shadow-md h-10 px-6 text-xs">
-                <Plus className="h-4 w-4" /> Add New Asset
+                <Plus className="h-4 w-4" /> Add New Product
               </Button>
             </div>
           )}

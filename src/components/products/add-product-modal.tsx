@@ -89,6 +89,23 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     e.preventDefault()
     setLoading(true)
 
+    let finalMinSell = parseFloat(formData.min_sell_price || "0")
+    if (finalMinSell > parseFloat(formData.mrp)) {
+      finalMinSell = parseFloat(formData.mrp)
+    }
+
+    if (parseFloat(formData.dealer_price || "0") > parseFloat(formData.mrp)) {
+      alert("Dealer Price cannot exceed MRP")
+      setLoading(false)
+      return
+    }
+
+    if (finalMinSell < parseFloat(formData.dealer_price || "0")) {
+      alert("Min Sell Price cannot be below Dealer Price (would result in a loss)")
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await fetch("/api/products", {
         method: "POST",
@@ -98,7 +115,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
           base_price: parseFloat(formData.base_price),
           mrp: parseFloat(formData.mrp),
           dealer_price: parseFloat(formData.dealer_price || "0"),
-          min_sell_price: parseFloat(formData.min_sell_price || "0"),
+          min_sell_price: finalMinSell,
           margin_pct: parseFloat(formData.margin_pct || "5"),
           max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
           gst_rate: parseFloat(formData.gst_rate),
@@ -212,40 +229,62 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="base_price">Unit Rate (Excl. Tax) *</Label>
-              <Input 
-                id="base_price" 
-                type="number" 
-                step="0.01" 
-                required
-                value={formData.base_price}
-                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
-              />
-              {formData.base_price && formData.gst_rate && (
-                <p className="text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                  Calculated Price (Incl. Tax): <span className="font-bold text-[#001529]">₹{(parseFloat(formData.base_price) * (1 + parseFloat(formData.gst_rate) / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="mrp">MRP (Incl. Tax) *</Label>
+              <Label htmlFor="mrp">MRP / Retail Price (₹) *</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Maximum Retail Price incl. GST</p>
               <Input 
                 id="mrp" 
                 type="number" 
                 step="0.01" 
                 required
                 value={formData.mrp}
-                onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+                onChange={(e) => {
+                  const mrp = parseFloat(e.target.value) || 0;
+                  const gst = parseFloat(formData.gst_rate) || 0;
+                  const dp = parseFloat(formData.dealer_price) || 0;
+                  
+                  const base_price = mrp > 0 ? (mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
+                  let margin_pct = formData.margin_pct;
+                  if (dp > 0 && mrp > 0) {
+                    margin_pct = (((mrp - dp) / dp) * 100).toFixed(2);
+                  }
+                  
+                  const mp = parseFloat(margin_pct) || 0;
+                  let min_sell = dp * (1 + mp / 100);
+                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  
+                  setFormData({ 
+                    ...formData, 
+                    mrp: e.target.value,
+                    base_price,
+                    margin_pct,
+                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
+                  });
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="base_price">Unit Rate (Ex-GST) *</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated from MRP</p>
+              <Input 
+                id="base_price" 
+                type="number" 
+                step="0.01" 
+                required
+                readOnly
+                className="bg-slate-50 text-slate-500"
+                value={formData.base_price}
+                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
             <div className="space-y-2">
-              <Label htmlFor="dealer_price">Dealer Price</Label>
+              <Label htmlFor="dealer_price">Dealer Cost (₹)</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Price paid to distributor, excl. GST</p>
               <Input 
                 id="dealer_price" 
                 type="number" 
@@ -253,17 +292,29 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 value={formData.dealer_price}
                 onChange={(e) => {
                   const dp = parseFloat(e.target.value) || 0;
-                  const mp = parseFloat(formData.margin_pct) || 0;
+                  const mrp = parseFloat(formData.mrp) || 0;
+                  
+                  let margin_pct = formData.margin_pct;
+                  if (dp > 0 && mrp > 0) {
+                    margin_pct = (((mrp - dp) / dp) * 100).toFixed(2);
+                  }
+                  
+                  const mp = parseFloat(margin_pct) || 0;
+                  let min_sell = dp * (1 + mp / 100);
+                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  
                   setFormData({ 
                     ...formData, 
                     dealer_price: e.target.value,
-                    min_sell_price: (dp * (1 + mp / 100)).toFixed(2)
+                    margin_pct,
+                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
                   });
                 }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="margin_pct">Margin %</Label>
+              <Label htmlFor="margin_pct">Gross Margin %</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated from MRP vs Dealer Cost</p>
               <Input 
                 id="margin_pct" 
                 type="number" 
@@ -272,25 +323,46 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 onChange={(e) => {
                   const mp = parseFloat(e.target.value) || 0;
                   const dp = parseFloat(formData.dealer_price) || 0;
+                  const mrp = parseFloat(formData.mrp) || 0;
+                  
+                  let min_sell = dp * (1 + mp / 100);
+                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  
                   setFormData({ 
                     ...formData, 
                     margin_pct: e.target.value,
-                    min_sell_price: (dp * (1 + mp / 100)).toFixed(2)
+                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
                   });
                 }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="min_sell_price">Min Sell Price</Label>
+              <Label htmlFor="min_sell_price">Min Sell Price (₹)</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated &middot; Cannot exceed MRP</p>
               <Input 
                 id="min_sell_price" 
                 type="number" 
                 step="0.01" 
+                readOnly
+                className="bg-slate-100 text-slate-500"
                 value={formData.min_sell_price}
                 onChange={(e) => setFormData({ ...formData, min_sell_price: e.target.value })}
               />
             </div>
           </div>
+          
+          {parseFloat(formData.dealer_price || "0") > parseFloat(formData.mrp || "0") && parseFloat(formData.mrp || "0") > 0 && (
+            <div className="text-red-600 text-sm font-semibold p-2 bg-red-50 border border-red-200 rounded">
+              Warning: Dealer Cost cannot exceed MRP.
+            </div>
+          )}
+          {parseFloat(formData.min_sell_price || "0") > 0 && parseFloat(formData.mrp || "0") > 0 && 
+           parseFloat(formData.min_sell_price || "0") <= parseFloat(formData.mrp || "0") && 
+           (parseFloat(formData.mrp || "0") - parseFloat(formData.min_sell_price || "0")) / parseFloat(formData.mrp || "0") < 0.05 && (
+            <div className="text-yellow-600 text-sm font-semibold p-2 bg-yellow-50 border border-yellow-200 rounded">
+              Warning: Min Sell Price is very close to MRP (&lt; 5% headroom).
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -301,7 +373,17 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 step="0.1" 
                 required
                 value={formData.gst_rate}
-                onChange={(e) => setFormData({ ...formData, gst_rate: e.target.value })}
+                onChange={(e) => {
+                  const gst = parseFloat(e.target.value) || 0;
+                  const mrp = parseFloat(formData.mrp) || 0;
+                  const base_price = mrp > 0 ? (mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
+                  
+                  setFormData({ 
+                    ...formData, 
+                    gst_rate: e.target.value,
+                    base_price
+                  });
+                }}
               />
             </div>
             <div className="space-y-2">
