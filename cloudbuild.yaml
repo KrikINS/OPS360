@@ -172,7 +172,4 @@ options:
 
 timeout: '1200s'
 
-availableSecrets:
-  secretManager:
-    - versionName: projects/ops360-production-491911/secrets/DB_PASSWORD/versions/latest
-      env: DB_PASSWORD
+
