@@ -20,6 +20,19 @@ export default function AccountingDocsPage() {
         </p>
       </div>
 
+      {/* NEW SECTION: Finance Button in Header */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm mb-6">
+        <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4">
+          <BookOpen className="h-6 w-6 text-blue-500" />
+          Finance Access
+        </h2>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li><strong>Finance & Accounts</strong> accessible from the main header.</li>
+          <li>Click Finance dropdown → select report tab: Dashboard, Balance Sheet, Journal Ledger, Expenses, Margin Report.</li>
+          <li>Visible to users with Finance permission.</li>
+        </ul>
+      </section>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Overview */}
         <section className="space-y-4 p-8 border rounded-2xl bg-white shadow-sm">
@@ -71,9 +84,13 @@ export default function AccountingDocsPage() {
               <h3 className="font-bold mb-2">GRN Posted</h3>
               <ul className="text-sm space-y-1 font-mono text-slate-700">
                 <li>DR 1040 Inventory Asset (landed cost)</li>
-                <li>DR 1050 GST Input Credit (GST paid)</li>
-                <li>CR 2010 Accounts Payable (full invoice amount)</li>
+                <li>DR 1050 GST Input Tax Credit — CGST (9%)</li>
+                <li>DR 1050 GST Input Tax Credit — SGST (9%)</li>
+                <li>CR 2010 Accounts Payable (total incl. GST)</li>
               </ul>
+              <p className="text-xs text-slate-500 mt-2">
+                Note: ITC is posted using accurate tax rate lookup. All new GRNs post real CGST/SGST amounts.
+              </p>
             </div>
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <h3 className="font-bold mb-2">POS Sale Completed</h3>
@@ -99,6 +116,17 @@ export default function AccountingDocsPage() {
                 <li>CR 1010/1020 Cash/Bank (payment out)</li>
               </ul>
             </div>
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <h3 className="font-bold mb-2">Short-Close PO</h3>
+              <ul className="text-sm space-y-1 font-mono text-slate-700">
+                <li>DR 2010 Accounts Payable (reversal for undelivered)</li>
+                <li>CR 1040 Inventory Asset (we never received these)</li>
+                <li>CR 1050 GST Input Tax Credit (reverse unclaimed ITC)</li>
+              </ul>
+              <p className="text-xs text-slate-500 mt-2">
+                Narration: Auto-posted when manager short-closes a PO
+              </p>
+            </div>
           </div>
         </section>
 
@@ -112,7 +140,17 @@ export default function AccountingDocsPage() {
             <ul>
               <li><strong>Dashboard:</strong> P&L summary cards, revenue/expense breakdown, GST position, and recent journal entries.</li>
               <li><strong>Balance Sheet:</strong> Verifies Assets = Liabilities + Equity, includes an accounting equation banner and balance check indicator.</li>
-              <li><strong>Journal Ledger:</strong> View all entries with source badges (GRN/SALES/EXPENSE/PAYMENT/OPENING_BALANCE). Includes branch and FY filters.</li>
+              <li>
+                <strong>Journal Ledger:</strong> View all entries with source badges.
+                <ul className="list-circle pl-5 mt-2 space-y-1">
+                  <li><span className="font-semibold text-blue-500">GRN</span> — blue</li>
+                  <li><span className="font-semibold text-emerald-500">SALES</span> — green</li>
+                  <li><span className="font-semibold text-amber-500">EXPENSE</span> — yellow/amber</li>
+                  <li><span className="font-semibold text-purple-500">PAYMENT</span> — purple</li>
+                  <li><span className="font-semibold text-amber-500">OPENING_BALANCE</span> — amber</li>
+                  <li><span className="font-semibold text-orange-500">SHORT_CLOSE</span> — orange</li>
+                </ul>
+              </li>
               <li><strong>GST Summary:</strong> Tracks CGST/SGST/IGST collected vs ITC paid, with automated GSTR filing notes.</li>
               <li><strong>Margin Report:</strong> Product-level revenue/COGS/gross profit tracking, margin %, discount analysis, and manager approval tracking.</li>
             </ul>

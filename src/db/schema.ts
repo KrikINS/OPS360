@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey, serial, date } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey, serial, date, index } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -96,7 +96,14 @@ export const inventory = pgTable("inventory", {
   invoice_id: uuid("invoice_id"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  fifoIdx: index("inventory_fifo_idx").on(
+    table.product_id,
+    table.branch_id,
+    table.status,
+    table.created_at
+  ),
+}));
 
 export const purchase_orders = pgTable("purchase_orders", {
   id: uuid("id").primaryKey().defaultRandom(),

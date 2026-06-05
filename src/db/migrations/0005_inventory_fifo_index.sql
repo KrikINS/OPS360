@@ -1,0 +1,1 @@
+CREATE INDEX "inventory_fifo_idx" ON "inventory" USING btree ("product_id","branch_id","status","created_at");

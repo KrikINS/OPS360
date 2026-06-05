@@ -5,8 +5,44 @@ export default function AdminDocs() {
     <div className="space-y-8 pb-12">
       <div className="border-b pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-[#001529]">Administration Center</h1>
-        <p className="text-slate-500 mt-2">Centralized controls for access matrices, user provisioning, and branch scoping.</p>
+        <p className="text-slate-500 mt-2">Centralized controls for access matrices, user provisioning, branch registry, and company branding.</p>
       </div>
+
+      {/* NEW SECTION: Navigation */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <Settings className="h-6 w-6 text-slate-500" />
+          Navigation
+        </h3>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>Admin pages now use the standard ERP sidebar and dark header — consistent with all other modules.</li>
+          <li>No dedicated admin sidebar (removed).</li>
+          <li>System Administration button in main header for quick access to admin section.</li>
+        </ul>
+      </section>
+
+      {/* NEW SECTION: Organization */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <MapPin className="h-6 w-6 text-rose-500" />
+          Organization
+        </h3>
+        <p className="text-sm text-slate-600 mb-4">Organization page now has two tabs:</p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-slate-50 border p-4 rounded-xl">
+             <h4 className="text-sm font-bold text-slate-900 mb-2">Branch Registry</h4>
+             <p className="text-xs text-slate-500 leading-relaxed">
+               Manage branches, add/edit locations, GSTIN per branch, full address.
+             </p>
+          </div>
+          <div className="bg-slate-50 border p-4 rounded-xl">
+             <h4 className="text-sm font-bold text-slate-900 mb-2">Company Branding</h4>
+             <p className="text-xs text-slate-500 leading-relaxed">
+               Company name, support email, billing address, logo URL, primary brand color.
+             </p>
+          </div>
+        </div>
+      </section>
 
       {/* NEW SECTION: Access Control Matrix */}
       <section className="bg-white border rounded-2xl p-8 shadow-sm">

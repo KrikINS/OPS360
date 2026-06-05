@@ -8,7 +8,7 @@ export default function DocsPage() {
   const modules = [
     {
       title: "Administration",
-      desc: "System settings, access control matrix, user provisioning, password resets, and branch configurations.",
+      desc: "System settings, ACM, user provisioning, password resets, branch registry, and company branding in one unified admin panel",
       href: "/docs/admin"
     },
     {
@@ -18,27 +18,27 @@ export default function DocsPage() {
     },
     {
       title: "Staff & HR",
-      desc: "Manage employee profiles, shift clock-in/out, and activity logs.",
+      desc: "Tabbed HR dashboard with staff directory, clock in/out attendance, activity log, and offline staff registration",
       href: "/docs/staff"
     },
     {
       title: "Inventory Management",
-      desc: "Opening stock imports, stock aging, real-time registry, and cumulative cost tracking.",
+      desc: "Opening stock import with branded Excel template, real-time registry, cumulative cost tracking, and serial number management",
       href: "/docs/inventory"
     },
     {
       title: "Procurement",
-      desc: "PO lifecycle, GRN processing, partial receipts, auto-resolving discrepancies, and vendor payments.",
+      desc: "Full PO lifecycle, partial GRN processing, auto-resolve discrepancies, vendor payments, and double-entry journal automation",
       href: "/docs/procurement"
     },
     {
       title: "Point of Sale",
-      desc: "Checkout flows, line-item discounts, manager PIN approvals, and cash register sessions.",
+      desc: "Checkout with line-item discounts, manager PIN approvals, loyalty points, B2B/B2C invoicing, and real-time cost capture",
       href: "/docs/pos"
     },
     {
       title: "Sales & Pricing",
-      desc: "Pricing structure (MRP, Dealer, Min Sell), discount flow, and product margin tracking.",
+      desc: "MRP-based pricing, customer registry with GSTIN, purchase history, and loyalty points system",
       href: "/docs/sales"
     },
     {
@@ -53,7 +53,7 @@ export default function DocsPage() {
     },
     {
       title: "Finance & Accounts",
-      desc: "P&L, Balance Sheet, GST Summary, Expenses, Vendor Payments, Margin Reports, and automated journal entries.",
+      desc: "Automated double-entry journals, P&L, Balance Sheet, GST Summary, expenses, vendor payments, and margin reports",
       href: "/docs/accounting"
     },
     {

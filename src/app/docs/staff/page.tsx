@@ -8,25 +8,72 @@ export default function StaffDocs() {
         <p className="text-slate-500 mt-2">Manage staff accounts, hierarchical roles, shift attendance, and multi-branch permissions.</p>
       </div>
 
-      {/* NEW SECTION: Clock-In/Out Widget */}
+      {/* NEW SECTION: HR Dashboard */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <Shield className="h-6 w-6 text-indigo-500" />
+          HR Dashboard
+        </h3>
+        <p className="text-sm text-slate-600 mb-4">The HR module now has three tabs:</p>
+        <ul className="space-y-4 text-sm text-slate-600">
+          <li className="bg-slate-50 p-4 rounded-xl border">
+            <strong className="text-[#001529] block mb-2">Directory Tab:</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>All staff across all branches (deduplicated — each person appears once regardless of branch count).</li>
+              <li>Columns: Name, Role, Email, Branch.</li>
+              <li>"Add Offline Staff" button for employees who don't have an ERP account.</li>
+              <li>Offline staff stored in <code>employees</code> table with first_name, last_name, email, phone, status.</li>
+            </ul>
+          </li>
+          <li className="bg-slate-50 p-4 rounded-xl border">
+            <strong className="text-[#001529] block mb-2">Attendance Tab:</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Clock In/Out widget on the left.</li>
+              <li>Three states: Not Started / On Shift / Shift Ended.</li>
+              <li>Live HH:MM:SS elapsed timer while on shift.</li>
+              <li>Historic attendance log on the right.</li>
+              <li>Admins see all branches; staff see their own records.</li>
+            </ul>
+          </li>
+          <li className="bg-slate-50 p-4 rounded-xl border">
+            <strong className="text-[#001529] block mb-2">Activity Log Tab:</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>System activity log per user.</li>
+              <li>Tracks logins, actions, and key events.</li>
+            </ul>
+          </li>
+        </ul>
+      </section>
+
+      {/* UPDATED SECTION: Clock-In/Out Widget */}
       <section className="bg-white border rounded-2xl p-8 shadow-sm">
         <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
           <Clock className="h-6 w-6 text-emerald-500" />
-          Shift Attendance (Clock-In/Out Widget)
+          Clock In/Out Widget
         </h3>
         <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-6">
           <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
-            <li><strong>Visibility:</strong> A clock widget is accessible on the Staff page for all users.</li>
-            <li><strong>Three States:</strong>
-              <ul className="list-circle pl-5 mt-1 space-y-1">
-                <li><em>Not Started</em> - User has not clocked in today.</li>
-                <li><em>On Shift</em> - User is currently clocked in.</li>
-                <li><em>Shift Ended</em> - User has clocked out for the day.</li>
-              </ul>
-            </li>
-            <li><strong>Real-time Tracking:</strong> Displays current status, clock-in time, and a live elapsed timer (HH:MM:SS) while on shift.</li>
-            <li><strong>Single Action Button:</strong> Context-aware button switches between "Clock In" and "Clock Out".</li>
-            <li><strong>Daily Persistence:</strong> Loads today's attendance record automatically on mount. After clock-out, the total shift duration is displayed.</li>
+            <li><strong>Location:</strong> Located in the Attendance tab (not standalone).</li>
+            <li>Staff can clock in and out once per shift.</li>
+            <li>Attendance is recorded in the database.</li>
+            <li>Clock-out shows total shift duration.</li>
+          </ul>
+        </div>
+      </section>
+
+      {/* NEW SECTION: Non-ERP Staff */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <UserPlus className="h-6 w-6 text-orange-500" />
+          Non-ERP Staff
+        </h3>
+        <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-6">
+          <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+            <li>"Add Offline Staff" button in Directory tab.</li>
+            <li>Records employees without system access.</li>
+            <li>Fields: First Name, Last Name, Email, Phone, Status.</li>
+            <li>Stored in <code>employees</code> table separate from profiles.</li>
+            <li>Useful for warehouse staff, delivery personnel, etc.</li>
           </ul>
         </div>
       </section>

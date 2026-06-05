@@ -154,6 +154,7 @@ BEGIN
         WHERE product_id = v_item_product_id
           AND branch_id = v_branch_id
           AND status = 'Available'
+        ORDER BY created_at ASC  -- FIFO: oldest stock first
         LIMIT v_item_qty
         FOR UPDATE SKIP LOCKED
       )

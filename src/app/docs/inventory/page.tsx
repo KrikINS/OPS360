@@ -27,14 +27,16 @@ export default function InventoryDocs() {
             <div className="bg-slate-50 border rounded-lg p-4 flex-1">
               <h4 className="font-bold text-sm text-[#001529] mb-2">Step 2: Fill Data</h4>
               <p className="text-xs text-slate-600">
-                Fill in one row per unit with: Product Code, Product Name, Brand, Serial Number, Branch Name, Landed Cost, Selling Price, and Notes.
+                Fill in one row per unit with the 10 standard columns: Product Code (EHA), Product Name, Brand, Serial Number, Branch Name, Landed Cost (₹), Selling Price / MRP (₹), Dealer Price (₹), Max Discount (%), and Condition Notes.
               </p>
             </div>
             <div className="bg-slate-50 border rounded-lg p-4 flex-1">
               <h4 className="font-bold text-sm text-[#001529] mb-2">Step 3: Upload & Validate</h4>
+              <p className="text-xs text-slate-600 mb-2">
+                The system validates product existence, branch names, duplicate serials, and cost/price formats. Valid rows generate auto-posted opening balance journal entries per branch.
+              </p>
               <p className="text-xs text-slate-600">
-                The system validates product existence, branch names, duplicate serials, and cost/price formats.
-                Valid rows generate auto-posted opening balance journal entries per branch.
+                <strong>Pricing Sync:</strong> Importing dealer price auto-updates product pricing if the product doesn't have a dealer price set yet. The <strong>Products Reference</strong> sheet now shows full pricing data (MRP, Dealer Price, Min Sell, GST Rate, Max Discount). The success message will indicate how many products had pricing updated.
               </p>
             </div>
           </div>

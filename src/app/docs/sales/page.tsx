@@ -14,10 +14,55 @@ export default function SalesDocs() {
           Pricing Structure
         </h3>
         <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
-          <li><strong>MRP (base_price):</strong> Maximum Retail Price — acts as the ceiling price.</li>
-          <li><strong>Dealer Price:</strong> Typical distributor cost or wholesale benchmark.</li>
-          <li><strong>Min Sell Price:</strong> Absolute floor price (default: <code>dealer_price × 1.05</code>).</li>
-          <li><strong>Max Discount %:</strong> The maximum auto-approval discount limit per product (default: 10%).</li>
+          <li><strong>MRP / Retail Price:</strong> Primary field, the ceiling price printed on the product box (incl. GST).</li>
+          <li><strong>Unit Rate (Ex-GST):</strong> Auto-calculated from MRP ÷ (1 + GST rate). Read-only.</li>
+          <li><strong>Dealer Cost:</strong> What you paid the distributor (excl. GST).</li>
+          <li><strong>Gross Margin %:</strong> Auto-calculated from MRP vs Dealer Cost.</li>
+          <li><strong>Min Sell Price:</strong> Auto-calculated floor: <code>dealer_cost × (1 + margin%)</code> capped at MRP.</li>
+          <li><strong>Max Discount %:</strong> Cashier auto-approval limit (default 10%).</li>
+          <li><strong>Validation:</strong> Dealer price cannot exceed MRP; min sell price cannot go below dealer cost.</li>
+        </ul>
+      </section>
+
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <FileText className="h-6 w-6 text-indigo-500" />
+          Customer Management
+        </h3>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li><strong>Walk-in vs Registered vs Business</strong> customer types.</li>
+          <li>Customer search by name or phone at POS.</li>
+          <li>Inline customer creation from POS terminal.</li>
+          <li>Business customers show GSTIN + Company Name.</li>
+          <li>Invoice shows TAX INVOICE for B2B, RETAIL INVOICE for B2C.</li>
+        </ul>
+      </section>
+
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <FileText className="h-6 w-6 text-emerald-500" />
+          Customer Registry
+        </h3>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>Filter by type: All / Walk-in / Registered / Business.</li>
+          <li>GSTIN and Company Name columns for business customers.</li>
+          <li><strong>Purchase History side panel per customer showing:</strong> total orders, total spent, avg order value, top products, full invoice list.</li>
+        </ul>
+      </section>
+
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <TrendingUp className="h-6 w-6 text-orange-500" />
+          Loyalty Points System
+        </h3>
+        <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>All customers earn points automatically after every sale.</li>
+          <li>₹100 spent = 1 point (no manual setup required).</li>
+          <li>Points visible in cart when customer is selected.</li>
+          <li><strong>Cashier can redeem points at checkout:</strong> enter points amount → deducted from grand total. "Use All" button applies maximum redeemable.</li>
+          <li>Invoice shows points earned at bottom.</li>
+          <li>Admin can manually adjust points per customer via Loyalty tab in Customer Registry.</li>
+          <li>Transaction history tracks: earn / redeem / adjustment.</li>
         </ul>
       </section>
 

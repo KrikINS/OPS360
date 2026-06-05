@@ -46,6 +46,52 @@ export default function POSDocs() {
         </ul>
       </section>
 
+      {/* NEW SECTION: Customer Handling at POS */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <UserPlus className="h-6 w-6 text-indigo-500" />
+          Customer Handling at POS
+        </h3>
+        <ul className="mt-4 space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li><strong>Search bar</strong> accepts name or phone number.</li>
+          <li><strong>Phone number detection:</strong> regex matches numeric input.</li>
+          <li><strong>Walk-in default:</strong> no customer selection needed.</li>
+          <li><strong>Inline add:</strong> cashier can create customer without leaving the POS — Full Name, Phone, Address, City, State, Pincode, GSTIN (optional).</li>
+          <li><strong>Business customers:</strong> GSTIN field enables B2B invoicing.</li>
+          <li>Selected customer shows type badge and GSTIN if business.</li>
+          <li>Customer cleared automatically after checkout.</li>
+        </ul>
+      </section>
+
+      {/* NEW SECTION: Loyalty Points at POS */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <TrendingDown className="h-6 w-6 text-orange-500" />
+          Loyalty Points at POS
+        </h3>
+        <ul className="mt-4 space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li>When customer selected: loyalty balance shows in cart.</li>
+          <li>Purple loyalty widget appears between totals and grand total if customer has points.</li>
+          <li>Enter points to redeem or click "Use All".</li>
+          <li>Redemption value: 1 point = ₹1 discount.</li>
+          <li>Points earned shown on printed invoice.</li>
+          <li>Walk-in customers earn points too (tied to ID).</li>
+        </ul>
+      </section>
+
+      {/* NEW SECTION: Invoice Types */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <FileText className="h-6 w-6 text-emerald-500" />
+          Invoice Types
+        </h3>
+        <ul className="mt-4 space-y-3 text-sm text-slate-600 list-disc pl-5">
+          <li><strong>TAX INVOICE:</strong> printed when customer has GSTIN (B2B transaction, eligible for ITC claim).</li>
+          <li><strong>RETAIL INVOICE:</strong> printed for regular customers.</li>
+          <li>Both include: invoice number, date, branch, items, GST breakdown, payment mode.</li>
+        </ul>
+      </section>
+
       {/* NEW SECTION: Line-Item Discounts */}
       <section className="bg-white border rounded-2xl p-8 shadow-sm">
         <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
