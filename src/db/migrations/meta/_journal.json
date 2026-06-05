@@ -29,6 +29,13 @@
       "when": 1780494870669,
       "tag": "0003_public_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780656977120,
+      "tag": "0004_full_schema_current",
+      "breakpoints": true
     }
   ]
 }

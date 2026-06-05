@@ -45,6 +45,13 @@ steps:
         npm install --no-audit --prefer-offline || npm install --no-audit
 
         # ── Bootstrap test DB schema ────────────────────────────────────
+        # NOTE: Production/staging DB migrations are
+        # applied manually via:
+        #   npm run db:migrate:staging
+        #   npm run db:migrate:production
+        # Never run drizzle-kit migrate automatically
+        # in CI against live databases.
+        #
         # drizzle-kit push requires a TTY; use generate→apply instead.
         TEST_DATABASE_URL=postgresql://testuser:testpass@localhost:5432/ops360_test \
           npx drizzle-kit generate --config=drizzle.test.config.ts --name=init 2>/dev/null || true
