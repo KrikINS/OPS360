@@ -96,7 +96,7 @@ steps:
         PGPASSWORD=$$(gcloud auth print-access-token) psql \
           "sslmode=disable host=127.0.0.1 port=5432 \
            dbname=ops360_staging \
-           user=817612258644@cloudbuild" \
+           user=817612258644-compute@developer" \
           -f src/db/migrations/apply_procedures.sql \
           -v ON_ERROR_STOP=1
 
