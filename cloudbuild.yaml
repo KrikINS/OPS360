@@ -86,7 +86,7 @@ steps:
         /workspace/cloud-sql-proxy \
           ops360-production-491911:asia-south1:ops360-db \
           --port=5432 &
-        PROXY_PID=$!
+        PROXY_PID=$$!
         sleep 8
 
         # Install psql
@@ -101,7 +101,7 @@ steps:
           -v ON_ERROR_STOP=1
 
         # Stop proxy
-        kill $PROXY_PID
+        kill $$PROXY_PID
     waitFor: ['test']
 
   - name: 'gcr.io/cloud-builders/docker'
