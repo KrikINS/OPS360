@@ -87,15 +87,21 @@ export async function createTransaction(input: {
   if (spResult) {
     try {
       const { earnPoints } = await import('@/actions/loyalty')
-      await earnPoints({
-        customerId: input.customerId
-          ?? '00000000-0000-0000-0000-000000000000',
+      const earnRes = await earnPoints({
+        customerId: input.customerId ?? null,
         invoiceId: String(spResult.id ?? ''),
         saleAmount: spResult.grandTotal ?? 0,
         createdBy: session.user.id,
       })
+      if (!earnRes?.success) {
+        console.error('LOYALTY EARN FAILED:', earnRes?.error, {
+          customerId: input.customerId,
+          invoiceId: spResult.id,
+          saleAmount: spResult.grandTotal,
+        })
+      }
     } catch (err) {
-      console.error('LOYALTY EARN ERROR:', err)
+      console.error('LOYALTY EARN THREW:', err)
       // Don't block sale completion
     }
   }

@@ -14,13 +14,13 @@ const RUPEES_PER_POINT = 1     // 1 point = ₹1 redemption
 // Called automatically after every POS sale
 
 export async function earnPoints(input: {
-  customerId: string
+  customerId: string | null
   invoiceId: string
   saleAmount: number
   createdBy: string
 }) {
   // Don't earn points for walk-in placeholder
-  if (input.customerId === '00000000-0000-0000-0000-000000000000') {
+  if (!input.customerId || input.customerId === '00000000-0000-0000-0000-000000000000') {
     return { success: true as const, pointsEarned: 0 }
   }
 
@@ -70,7 +70,7 @@ export async function earnPoints(input: {
       newBalance,
     }
   } catch (error) {
-    console.error('EARN POINTS ERROR:', error)
+    console.error('EARN POINTS ERROR (full):', error)
     return {
       success: false as const,
       error: (error as Error).message,
