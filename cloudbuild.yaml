@@ -70,40 +70,6 @@ steps:
   # Build + tag the Docker image only after all tests pass.
   # SHORT_SHA is set by trigger-based builds; falls back to 'manual' for gcloud builds submit.
   
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'apply-procedures'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        # Download Cloud SQL proxy
-        curl -o /workspace/cloud-sql-proxy \
-          https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.8.1/cloud-sql-proxy.linux.amd64
-        chmod +x /workspace/cloud-sql-proxy
-
-        # Start proxy in background
-        /workspace/cloud-sql-proxy \
-          ops360-production-491911:asia-south1:ops360-db \
-          --port=5432 \
-          --auto-iam-authn &
-        PROXY_PID=$$!
-        sleep 8
-
-        # Install psql
-        apt-get update -qq && apt-get install -y -qq postgresql-client
-
-        # Apply procedures
-        PGPASSWORD=$$(gcloud auth print-access-token) psql \
-          "sslmode=disable host=127.0.0.1 port=5432 \
-           dbname=ops360_staging \
-           user=817612258644-compute@developer" \
-          -f src/db/migrations/apply_procedures.sql \
-          -v ON_ERROR_STOP=1
-
-        # Stop proxy
-        kill $$PROXY_PID
-    waitFor: ['test']
-
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build'
     entrypoint: 'bash'
@@ -115,7 +81,7 @@ steps:
           -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:$$_SHA \
           -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_APP_NAME}:latest \
           .
-    waitFor: ['apply-procedures']
+    waitFor: ['test']
 
   # tag-latest is now done inline in build; this is a no-op kept for pipeline compatibility.
   - name: 'gcr.io/cloud-builders/docker'

@@ -21,13 +21,17 @@ $env:PGPASSWORD="AppTerra360"
   -f src/db/migrations/000X_migration_name.sql
 ```
 
-### 3. Apply Stored Procedures
+## Stored Procedures
+Stored procedures (process_pos_sale, get_user_pos_stats,
+etc.) are NOT applied via the CI pipeline. They are
+applied manually as the postgres owner when changed:
 
-If you modified custom stored procedures (e.g., POS transactions, custom functions), apply them:
+  cd ~/OPS360 && git pull origin staging
+  gcloud sql connect ops360-db --user=postgres \
+    --database=ops360_staging --quiet \
+    < src/db/migrations/apply_procedures.sql
 
-```powershell
-$env:PGPASSWORD="AppTerra360"
-& "C:\Program Files\PostgreSQL\18\bin\psql.exe" `
-  -h 127.0.0.1 -p 5433 -U postgres -d ops360_production `
-  -f src/test/procedures.sql
-```
+Reason: the Cloud Build IAM user lacks CREATE on schema
+public (PG15 default), and granting it caused repeated
+permission failures. Manual apply as postgres is the
+stable approach. Procedures change rarely.
