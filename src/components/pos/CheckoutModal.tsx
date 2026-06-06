@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "../ui/alert"
 import { usePos, type InvoiceData } from '@/context/PosContext'
 import { useReactToPrint } from 'react-to-print'
 import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
+import { fmtINR } from '@/lib/utils'
 
 type CheckoutStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -146,23 +147,23 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
               {paymentMethod === 'cash' && parseFloat(receivedAmount) > 0 && (
                 <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-xl p-4 flex justify-between items-center animate-in zoom-in-95 duration-200">
                   <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Change Due</span>
-                  <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300 tracking-tighter">₹{Math.round(changeDue).toLocaleString()}</span>
+                  <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300 tracking-tighter">{fmtINR(Math.round(changeDue))}</span>
                 </div>
               )}
 
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-white/5 p-4 space-y-3 font-bold text-[11px]">
                  <div className="space-y-2">
-                   <div className="flex justify-between text-slate-500 dark:text-slate-400 font-medium lowercase italic">
+                   <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-widest">
                      <span>Subtotal</span>
-                     <span>₹{Math.round(totals.subtotal).toLocaleString()}</span>
+                     <span>{fmtINR(Math.round(totals.subtotal))}</span>
                    </div>
-                   <div className="flex justify-between text-rose-500 font-bold lowercase italic">
+                   <div className="flex justify-between items-center text-[10px] uppercase font-bold text-rose-500 tracking-widest">
                      <span>Discount</span>
-                     <span>-₹{totals.discount.toLocaleString()}</span>
+                     <span>-{fmtINR(totals.discount)}</span>
                    </div>
-                   <div className="flex justify-between text-slate-700 dark:text-slate-200 font-black lowercase italic py-1 border-t border-slate-100 dark:border-white/5">
+                   <div className="flex justify-between items-center text-xs uppercase font-black text-slate-700 dark:text-slate-200 tracking-widest pt-2 border-t border-slate-100 dark:border-white/5">
                      <span>Taxable Value</span>
-                     <span>₹{Math.round(totals.taxableValue).toLocaleString()}</span>
+                     <span>{fmtINR(Math.round(totals.taxableValue))}</span>
                    </div>
                    
                    {/* Dynamic Tax Slabs with Kerala GST 50/50 Split */}
@@ -175,18 +176,18 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                      }, {} as Record<number, number>)
                    ).map(([rate, tax]) => (
                      <div key={rate} className="py-2 border-y border-slate-100/50 dark:border-white/5 first:border-t-0 last:border-b-0 animate-in fade-in slide-in-from-left-2 duration-300">
-                       <div className="flex justify-between items-center mb-1">
-                         <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-tighter">Total GST ({rate}%)</span>
-                         <span className="text-slate-700 dark:text-slate-200 font-extrabold text-[10px]">₹{Math.round(tax as number).toLocaleString()}</span>
+                       <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-white/5">
+                         <span className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-widest">TOTAL GST ({rate}%)</span>
+                         <span className="text-slate-700 dark:text-slate-200 font-extrabold text-[10px]">{fmtINR(Math.round(tax as number))}</span>
                        </div>
                        <div className="grid grid-cols-2 gap-4 opacity-80 pt-1 border-t border-slate-100 dark:border-white/5">
-                         <div className="flex justify-between items-center text-[9px] pr-2">
-                           <span className="text-slate-400 dark:text-slate-500 uppercase font-bold">CGST ({Number(rate) / 2}%)</span>
-                           <span className="font-bold text-slate-500 dark:text-slate-400">₹{(Math.round(tax as number) / 2).toLocaleString()}</span>
+                         <div className="flex justify-between items-center text-[9px] uppercase tracking-widest px-1">
+                           <span className="font-bold text-slate-400 dark:text-slate-500">CGST (Central)</span>
+                           <span className="font-bold text-slate-500 dark:text-slate-400">{fmtINR(Math.round(tax as number) / 2)}</span>
                          </div>
-                         <div className="flex justify-between items-center text-[9px]">
-                           <span className="text-slate-400 dark:text-slate-500 uppercase font-bold">SGST ({Number(rate) / 2}%)</span>
-                           <span className="font-bold text-slate-500 dark:text-slate-400">₹{(Math.round(tax as number) / 2).toLocaleString()}</span>
+                         <div className="flex justify-between items-center text-[9px] uppercase tracking-widest px-1">
+                           <span className="font-bold text-slate-400 dark:text-slate-500">SGST (State/UT)</span>
+                           <span className="font-bold text-slate-500 dark:text-slate-400">{fmtINR(Math.round(tax as number) / 2)}</span>
                          </div>
                        </div>
                      </div>
@@ -196,20 +197,20 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                  <div className="h-px bg-slate-200 dark:bg-white/5" />
                  
                  <div className="pt-1.5 space-y-1">
-                   <div className="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                   <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-widest">
                      <span>SGST (Kerala)</span>
-                     <span>₹{Math.round(totals.sgst).toLocaleString()}</span>
+                     <span>{fmtINR(Math.round(totals.sgst))}</span>
                    </div>
-                   <div className="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                   <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-widest">
                      <span>CGST (Central)</span>
-                     <span>₹{Math.round(totals.cgst).toLocaleString()}</span>
+                     <span>{fmtINR(Math.round(totals.cgst))}</span>
                    </div>
                  </div>
 
-                 <div className="flex justify-between items-baseline pt-2">
-                    <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Grand Total</span>
-                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter font-mono">₹{Math.round(totals.grandTotal).toLocaleString()}</span>
-                 </div>
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs uppercase font-black text-slate-400 dark:text-slate-500 tracking-widest">Grand Total</span>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter font-mono">{fmtINR(Math.round(totals.grandTotal))}</span>
+                  </div>
               </div>
             </div>
 

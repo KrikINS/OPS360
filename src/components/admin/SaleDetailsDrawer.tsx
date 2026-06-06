@@ -21,15 +21,16 @@ interface SaleDetailsDrawerProps {
 }
 
 interface SaleItem {
-  line_item_id: string
-  model_name: string
-  brand: string
-  category: string
-  hsn_code: string
-  quantity: number
+  id: string
+  invoice_id: string
+  product_id: string
+  qty: number
   unit_price: number
-  gst_amount: number
-  total_line_amount: number
+  discount_amount: number | null
+  discount_pct: number | null
+  name: string
+  hsn_code: string
+  gst_rate: number
   serial_number?: string
 }
 
@@ -76,15 +77,15 @@ export function SaleDetailsDrawer({ saleId, invoiceNumber, open, onClose }: Sale
         ) : (
           <div className="flex-1 overflow-auto p-6 space-y-6">
             {items.map((item) => (
-              <div key={item.line_item_id} className="group flex flex-col gap-3 p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all">
+              <div key={item.id} className="group flex flex-col gap-3 p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
                     <p className="font-bold text-slate-900 group-hover:text-primary transition-colors">
-                      {item.model_name || 'Generic Product'}
+                      {item.name || 'Unknown Product'}
                     </p>
                     <div className="flex gap-2">
                       <Badge variant="outline" className="text-[10px] uppercase font-bold text-slate-500">
-                        {item.brand || 'EHA'}
+                        {item.gst_rate ? `${item.gst_rate}% GST` : 'TAX INCL'}
                       </Badge>
                       <Badge variant="secondary" className="text-[10px] uppercase font-bold">
                         HSN: {item.hsn_code || '8415'}
@@ -98,14 +99,14 @@ export function SaleDetailsDrawer({ saleId, invoiceNumber, open, onClose }: Sale
                 
                 <div className="flex justify-between items-center text-sm">
                   <div className="text-slate-500">
-                    Quantity: <span className="font-bold text-slate-900">{item.quantity}</span>
+                    Quantity: <span className="font-bold text-slate-900">{item.qty}</span>
                   </div>
                   <div className="text-right">
                     {item.serial_number && (
                       <p className="text-[10px] text-blue-600 font-bold font-mono mb-1 underline decoration-dotted">SN: {item.serial_number}</p>
                     )}
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Line Total (incl. Tax)</p>
-                    <p className="font-black text-slate-900">{fmtINR(Number(item.total_line_amount))}</p>
+                    <p className="font-black text-slate-900">{fmtINR(Number(item.qty) * Number(item.unit_price))}</p>
                   </div>
                 </div>
               </div>
