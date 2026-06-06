@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { usePos, Product } from '@/context/PosContext'
-import { cn } from "@/lib/utils"
+import { cn, fmtINR } from "@/lib/utils"
 
 export function ProductGrid() {
   const { products, loading, addToCart } = usePos()
@@ -136,7 +136,7 @@ function ProductCard({ product, onAdd }: { product: Product, onAdd: () => void }
           <div className="flex flex-col">
             <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase leading-none mb-0.5">Price / Unit</span>
             <span className="text-base font-black text-slate-900 dark:text-white tracking-tighter">
-              ₹{product.base_price.toLocaleString('en-IN')}
+              {fmtINR(product.mrp || (product.base_price * (1 + product.gst_rate / 100)))}
             </span>
           </div>
 
