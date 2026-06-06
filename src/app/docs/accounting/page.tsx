@@ -185,7 +185,7 @@ export default function AccountingDocsPage() {
               <li><strong>Payment methods:</strong> Bank Transfer, UPI, Cheque, Cash.</li>
               <li>Reference number tracking (UTR/Cheque/UPI ref).</li>
               <li>Auto-posts journal: DR Accounts Payable, CR Cash/Bank.</li>
-              <li>Easily accessible from the PO Actions dropdown as "Record Payment".</li>
+              <li>Easily accessible from the PO Actions dropdown as &quot;Record Payment&quot;.</li>
             </ul>
           </div>
         </section>

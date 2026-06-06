@@ -1,9 +1,0 @@
-﻿
-C:\Users\Anees Ahad\Desktop\Desktop PVT\OPS360\src\app\api\vendors\route.ts
-  104:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
-
-C:\Users\Anees Ahad\Desktop\Desktop PVT\OPS360\src\app\login\page.tsx
-  96:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
-
-Γ£û 2 problems (2 errors, 0 warnings)
-

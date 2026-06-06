@@ -28,10 +28,7 @@ const ADMIN_ID   = '00000000-0000-0000-0000-000000000001'
 const STAFF_ID   = '00000000-0000-0000-0000-000000000002'
 const MANAGER_ID = '00000000-0000-0000-0000-000000000003'
 
-async function seedAccounts(db: ReturnType<typeof setupTestDb> extends Promise<infer T> ? T : never) {
-  await (db as ReturnType<typeof import('@/test/db').setupTestDb> extends Promise<infer T> ? T : never)
-  // use raw db
-}
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function seedCoa(d: any) {

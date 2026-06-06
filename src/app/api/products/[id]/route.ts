@@ -13,7 +13,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     if (body.hsn_code !== undefined) updateData.hsn_code = body.hsn_code;
     if (body.brand !== undefined) updateData.brand = body.brand;

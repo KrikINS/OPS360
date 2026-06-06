@@ -510,9 +510,10 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       }))
 
       return { success: true }
-    } catch (err: any) {
-      setToast({ message: err.message || 'Error validating discount', type: 'error' })
-      return { success: false, error: err.message }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      setToast({ message: errorMsg || 'Error validating discount', type: 'error' })
+      return { success: false, error: errorMsg }
     }
   }, [])
 
@@ -720,7 +721,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     } finally {
       setLoading(false)
     }
-  }, [cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats, resetCustomerContext])
+  }, [cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats, resetCustomerContext, loyaltyRedeem])
 
   // Helper with retry logic for fetching full invoice state
   const fetchInvoiceById = useCallback(async (id: string, retries = 3): Promise<InvoiceData | null> => {
@@ -758,6 +759,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     setCustomerSearchQuery, setPhoneQuery, resetCustomerContext, selectWalkInCustomer,
     toast, invoiceNumber, currentDate, totals,
     isLocked, isCartValid, applyItemDiscount,
+    loyaltyBalance, setLoyaltyBalance, loyaltyRedeem, setLoyaltyRedeem,
     setIsLocked,
     printInvoiceId,
     triggerInvoicePrint,

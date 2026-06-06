@@ -1,4 +1,4 @@
-import { ChevronRight, Upload, AlertCircle, FileSpreadsheet, Download, Activity, TrendingDown } from "lucide-react"
+import { Download, Activity, TrendingDown } from "lucide-react"
 
 export default function InventoryDocs() {
   return (
@@ -19,7 +19,7 @@ export default function InventoryDocs() {
             <div className="bg-slate-50 border rounded-lg p-4 flex-1">
               <h4 className="font-bold text-sm text-[#001529] mb-2">Step 1: Download Template</h4>
               <p className="text-xs text-slate-600">
-                Click "Import Opening Stock" in the Registry. Download the branded Excel template containing three sheets: 
+                Click &quot;Import Opening Stock&quot; in the Registry. Download the branded Excel template containing three sheets: 
                 <strong>Opening Stock</strong> (data entry), <strong>Products Reference</strong>, and <strong>Branches Reference</strong>.
                 Product codes and branch names must match exactly.
               </p>
@@ -36,7 +36,7 @@ export default function InventoryDocs() {
                 The system validates product existence, branch names, duplicate serials, and cost/price formats. Valid rows generate auto-posted opening balance journal entries per branch.
               </p>
               <p className="text-xs text-slate-600">
-                <strong>Pricing Sync:</strong> Importing dealer price auto-updates product pricing if the product doesn't have a dealer price set yet. The <strong>Products Reference</strong> sheet now shows full pricing data (MRP, Dealer Price, Min Sell, GST Rate, Max Discount). The success message will indicate how many products had pricing updated.
+                <strong>Pricing Sync:</strong> Importing dealer price auto-updates product pricing if the product doesn&apos;t have a dealer price set yet. The <strong>Products Reference</strong> sheet now shows full pricing data (MRP, Dealer Price, Min Sell, GST Rate, Max Discount). The success message will indicate how many products had pricing updated.
               </p>
             </div>
           </div>

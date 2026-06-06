@@ -1,7 +1,0 @@
-feat: migrate from drizzle push to drizzle migrate
-
-- Add 0004_full_schema_current.sql migration
-- Baseline staging DB with __drizzle_migrations
-- Add db:migrate:staging and db:migrate:production scripts
-- Retire push for live databases
-- Add MIGRATIONS.md workflow documentation

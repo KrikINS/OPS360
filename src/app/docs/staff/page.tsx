@@ -1,4 +1,4 @@
-import { Shield, MapPin, Key, Lock, Clock } from "lucide-react"
+import { Shield, MapPin, Key, Lock, Clock, UserPlus } from "lucide-react"
 
 export default function StaffDocs() {
   return (
@@ -21,7 +21,7 @@ export default function StaffDocs() {
             <ul className="list-disc pl-5 space-y-1">
               <li>All staff across all branches (deduplicated — each person appears once regardless of branch count).</li>
               <li>Columns: Name, Role, Email, Branch.</li>
-              <li>"Add Offline Staff" button for employees who don't have an ERP account.</li>
+              <li>&quot;Add Offline Staff&quot; button for employees who don&apos;t have an ERP account.</li>
               <li>Offline staff stored in <code>employees</code> table with first_name, last_name, email, phone, status.</li>
             </ul>
           </li>
@@ -69,7 +69,7 @@ export default function StaffDocs() {
         </h3>
         <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-6">
           <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
-            <li>"Add Offline Staff" button in Directory tab.</li>
+            <li>&quot;Add Offline Staff&quot; button in Directory tab.</li>
             <li>Records employees without system access.</li>
             <li>Fields: First Name, Last Name, Email, Phone, Status.</li>
             <li>Stored in <code>employees</code> table separate from profiles.</li>

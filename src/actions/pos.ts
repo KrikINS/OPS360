@@ -57,7 +57,7 @@ export async function createTransaction(input: {
   }
 
   // Post sales journal — fire and forget, don't fail the transaction
-  let spResult: any = null;
+  let spResult: { id?: string; subtotal: number; cgst?: number; sgst?: number; igst?: number; grandTotal: number } | null = null;
   try {
     spResult = result.data as {
       id: string

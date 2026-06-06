@@ -1,4 +1,4 @@
-import { Truck, ShieldCheck, Calculator, Hash, AlertTriangle, Download, ShieldAlert, History, LayoutGrid, PlusCircle, CreditCard, CheckCircle2 } from "lucide-react"
+import { Truck, ShieldCheck, Calculator, Hash, AlertTriangle, Download, ShieldAlert, PlusCircle, CreditCard, CheckCircle2 } from "lucide-react"
 
 export default function ProcurementDocs() {
   return (
@@ -64,7 +64,7 @@ export default function ProcurementDocs() {
           <ul className="space-y-3 text-sm text-slate-600">
             <li className="flex gap-2">
               <ShieldCheck className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
-              <span>A <strong>"New Product"</strong> button is available next to the "Add Items" label in the PO form.</span>
+              <span>A <strong>&quot;New Product&quot;</strong> button is available next to the &quot;Add Items&quot; label in the PO form.</span>
             </li>
             <li className="flex gap-2">
               <ShieldCheck className="h-4 w-4 text-[#7FD1E3] shrink-0 mt-0.5" />
@@ -86,7 +86,7 @@ export default function ProcurementDocs() {
         </div>
         <div className="bg-white border rounded-2xl p-6 shadow-sm">
           <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
-            <li>Available via <strong>"Record Payment"</strong> in the PO Actions dropdown.</li>
+            <li>Available via <strong>&quot;Record Payment&quot;</strong> in the PO Actions dropdown.</li>
             <li>Only available for POs in <code>received</code> or <code>partially_received</code> status.</li>
             <li><strong>Payment methods:</strong> Bank Transfer, UPI, Cheque, Cash.</li>
             <li>Includes reference number tracking for audit trails (UTR, Cheque No, etc.).</li>
@@ -105,7 +105,7 @@ export default function ProcurementDocs() {
           <ul className="space-y-3 text-sm text-amber-900 list-disc pl-5">
             <li>When a partial GRN is processed, a <code>SHORT_SHIPMENT</code> discrepancy is automatically created for the shortfall.</li>
             <li>When subsequent GRNs bring the total received up to the full ordered quantity, the discrepancy is <strong>automatically resolved</strong>.</li>
-            <li>The system adds an admin comment: <em>"Auto-resolved: full quantity received across multiple GRNs"</em>.</li>
+            <li>The system adds an admin comment: <em>&quot;Auto-resolved: full quantity received across multiple GRNs&quot;</em>.</li>
             <li>The Discrepancy Report clearly shows the PO number, product name, vendor name, and any remaining shortfall quantity.</li>
           </ul>
         </div>
@@ -256,7 +256,7 @@ export default function ProcurementDocs() {
                <ShieldCheck className="h-3 w-3" /> Dynamic Modal Insight
              </h4>
              <p className="text-xs text-slate-500 leading-normal">
-               This tabular breakdown is also visible inside the "View Purchase Order" dashboard modal.
+               This tabular breakdown is also visible inside the &quot;View Purchase Order&quot; dashboard modal.
              </p>
           </div>
         </div>
