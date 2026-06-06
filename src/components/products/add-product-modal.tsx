@@ -117,7 +117,9 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
           mrp: parseFloat(formData.mrp),
           dealer_price: parseFloat(formData.dealer_price || "0"),
           min_sell_price: finalMinSell,
-          margin_pct: parseFloat(formData.margin_pct || "5"),
+          margin_pct: (parseFloat(formData.dealer_price || "0") > 0 && parseFloat(formData.base_price || "0") > 0)
+            ? parseFloat((((parseFloat(formData.base_price) - parseFloat(formData.dealer_price || "0")) / parseFloat(formData.base_price)) * 100).toFixed(2))
+            : 0,
           max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
           gst_rate: parseFloat(formData.gst_rate),
           warranty_months: parseInt(formData.warranty_months),
@@ -241,25 +243,12 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 onChange={(e) => {
                   const mrp = parseFloat(e.target.value) || 0;
                   const gst = parseFloat(formData.gst_rate) || 0;
-                  const dp = parseFloat(formData.dealer_price) || 0;
-                  
                   const base_price = mrp > 0 ? round2(mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
-                  let margin_pct = formData.margin_pct;
-                  const base_val = parseFloat(base_price) || 0;
-                  if (dp > 0 && base_val > 0) {
-                    margin_pct = (((base_val - dp) / base_val) * 100).toFixed(2);
-                  }
-                  
-                  const mp = parseFloat(margin_pct) || 0;
-                  let min_sell = dp * (1 + mp / 100);
-                  if (base_val > 0 && min_sell > base_val) min_sell = base_val;
                   
                   setFormData({ 
                     ...formData, 
                     mrp: e.target.value,
-                    base_price,
-                    margin_pct,
-                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
+                    base_price
                   });
                 }}
               />
@@ -293,65 +282,44 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 step="0.01" 
                 value={formData.dealer_price}
                 onChange={(e) => {
-                  const dp = parseFloat(e.target.value) || 0;
-                  const base_val = parseFloat(formData.base_price) || 0;
+                  const dp = e.target.value;
+                  const dpVal = parseFloat(dp) || 0;
                   
-                  let margin_pct = formData.margin_pct;
-                  if (dp > 0 && base_val > 0) {
-                    margin_pct = (((base_val - dp) / base_val) * 100).toFixed(2);
+                  let nextMinSell = formData.min_sell_price;
+                  if (!nextMinSell || parseFloat(nextMinSell) === parseFloat(formData.dealer_price || "0")) {
+                    nextMinSell = dpVal > 0 ? dpVal.toFixed(2) : "";
                   }
-                  
-                  const mp = parseFloat(margin_pct) || 0;
-                  let min_sell = dp * (1 + mp / 100);
-                  if (base_val > 0 && min_sell > base_val) min_sell = base_val;
                   
                   setFormData({ 
                     ...formData, 
-                    dealer_price: e.target.value,
-                    margin_pct,
-                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
+                    dealer_price: dp,
+                    min_sell_price: nextMinSell
                   });
                 }}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="margin_pct">Gross Margin %</Label>
-              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated from MRP vs Dealer Cost</p>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated from Unit Rate vs Cost</p>
               <Input 
                 id="margin_pct" 
-                type="number" 
-                step="0.1" 
-                value={formData.margin_pct}
-                onChange={(e) => {
-                  const mp = parseFloat(e.target.value) || 0;
-                  let dp = parseFloat(formData.dealer_price) || 0;
-                  const base_val = parseFloat(formData.base_price) || 0;
-                  
-                  if (base_val > 0) {
-                    dp = round2(base_val * (1 - mp / 100));
-                  }
-                  
-                  let min_sell = dp * (1 + mp / 100);
-                  if (base_val > 0 && min_sell > base_val) min_sell = base_val;
-                  
-                  setFormData({ 
-                    ...formData, 
-                    margin_pct: e.target.value,
-                    dealer_price: base_val > 0 ? dp.toFixed(2) : formData.dealer_price,
-                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
-                  });
-                }}
+                type="text" 
+                readOnly
+                className="bg-slate-100 text-slate-500"
+                value={
+                  parseFloat(formData.dealer_price || "0") > 0 && parseFloat(formData.base_price || "0") > 0 
+                    ? (((parseFloat(formData.base_price || "0") - parseFloat(formData.dealer_price || "0")) / parseFloat(formData.base_price || "0")) * 100).toFixed(2) 
+                    : "—"
+                }
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="min_sell_price">Min Sell Price (₹)</Label>
-              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated &middot; Cannot exceed MRP</p>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Suggested: Cost. Override allowed.</p>
               <Input 
                 id="min_sell_price" 
                 type="number" 
                 step="0.01" 
-                readOnly
-                className="bg-slate-100 text-slate-500"
                 value={formData.min_sell_price}
                 onChange={(e) => setFormData({ ...formData, min_sell_price: e.target.value })}
               />
@@ -385,23 +353,10 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                   const mrp = parseFloat(formData.mrp) || 0;
                   const base_price = mrp > 0 ? round2(mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
                   
-                  const dp = parseFloat(formData.dealer_price) || 0;
-                  let margin_pct = formData.margin_pct;
-                  const base_val = parseFloat(base_price) || 0;
-                  if (dp > 0 && base_val > 0) {
-                    margin_pct = (((base_val - dp) / base_val) * 100).toFixed(2);
-                  }
-                  
-                  const mp = parseFloat(margin_pct) || 0;
-                  let min_sell = dp * (1 + mp / 100);
-                  if (base_val > 0 && min_sell > base_val) min_sell = base_val;
-
                   setFormData({ 
                     ...formData, 
                     gst_rate: e.target.value,
-                    base_price,
-                    margin_pct,
-                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
+                    base_price
                   });
                 }}
               />
