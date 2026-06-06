@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react"
 import { generateProductCode } from "@/lib/product-coding"
 import { getNextSequenceAction } from "@/app/actions/products"
 import { getGlobalMastersAction } from "@/app/actions/masters"
+import { round2 } from "@/lib/utils"
 
 interface AddProductModalProps {
   open: boolean
@@ -90,12 +91,12 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     setLoading(true)
 
     let finalMinSell = parseFloat(formData.min_sell_price || "0")
-    if (finalMinSell > parseFloat(formData.mrp)) {
-      finalMinSell = parseFloat(formData.mrp)
+    if (finalMinSell > parseFloat(formData.base_price)) {
+      finalMinSell = parseFloat(formData.base_price)
     }
 
-    if (parseFloat(formData.dealer_price || "0") > parseFloat(formData.mrp)) {
-      alert("Dealer Price cannot exceed MRP")
+    if (parseFloat(formData.dealer_price || "0") > parseFloat(formData.base_price)) {
+      alert("Dealer Price cannot exceed Unit Rate (Ex-GST)")
       setLoading(false)
       return
     }
@@ -242,15 +243,16 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                   const gst = parseFloat(formData.gst_rate) || 0;
                   const dp = parseFloat(formData.dealer_price) || 0;
                   
-                  const base_price = mrp > 0 ? (mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
+                  const base_price = mrp > 0 ? round2(mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
                   let margin_pct = formData.margin_pct;
-                  if (dp > 0 && mrp > 0) {
-                    margin_pct = (((mrp - dp) / dp) * 100).toFixed(2);
+                  const base_val = parseFloat(base_price) || 0;
+                  if (dp > 0 && base_val > 0) {
+                    margin_pct = (((base_val - dp) / base_val) * 100).toFixed(2);
                   }
                   
                   const mp = parseFloat(margin_pct) || 0;
                   let min_sell = dp * (1 + mp / 100);
-                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  if (base_val > 0 && min_sell > base_val) min_sell = base_val;
                   
                   setFormData({ 
                     ...formData, 
@@ -292,16 +294,16 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 value={formData.dealer_price}
                 onChange={(e) => {
                   const dp = parseFloat(e.target.value) || 0;
-                  const mrp = parseFloat(formData.mrp) || 0;
+                  const base_val = parseFloat(formData.base_price) || 0;
                   
                   let margin_pct = formData.margin_pct;
-                  if (dp > 0 && mrp > 0) {
-                    margin_pct = (((mrp - dp) / dp) * 100).toFixed(2);
+                  if (dp > 0 && base_val > 0) {
+                    margin_pct = (((base_val - dp) / base_val) * 100).toFixed(2);
                   }
                   
                   const mp = parseFloat(margin_pct) || 0;
                   let min_sell = dp * (1 + mp / 100);
-                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  if (base_val > 0 && min_sell > base_val) min_sell = base_val;
                   
                   setFormData({ 
                     ...formData, 
@@ -322,15 +324,20 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 value={formData.margin_pct}
                 onChange={(e) => {
                   const mp = parseFloat(e.target.value) || 0;
-                  const dp = parseFloat(formData.dealer_price) || 0;
-                  const mrp = parseFloat(formData.mrp) || 0;
+                  let dp = parseFloat(formData.dealer_price) || 0;
+                  const base_val = parseFloat(formData.base_price) || 0;
+                  
+                  if (base_val > 0) {
+                    dp = round2(base_val * (1 - mp / 100));
+                  }
                   
                   let min_sell = dp * (1 + mp / 100);
-                  if (mrp > 0 && min_sell > mrp) min_sell = mrp;
+                  if (base_val > 0 && min_sell > base_val) min_sell = base_val;
                   
                   setFormData({ 
                     ...formData, 
                     margin_pct: e.target.value,
+                    dealer_price: base_val > 0 ? dp.toFixed(2) : formData.dealer_price,
                     min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
                   });
                 }}
@@ -351,16 +358,16 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
             </div>
           </div>
           
-          {parseFloat(formData.dealer_price || "0") > parseFloat(formData.mrp || "0") && parseFloat(formData.mrp || "0") > 0 && (
+          {parseFloat(formData.dealer_price || "0") > parseFloat(formData.base_price || "0") && parseFloat(formData.base_price || "0") > 0 && (
             <div className="text-red-600 text-sm font-semibold p-2 bg-red-50 border border-red-200 rounded">
-              Warning: Dealer Cost cannot exceed MRP.
+              Warning: Dealer Cost cannot exceed Unit Rate (Ex-GST).
             </div>
           )}
-          {parseFloat(formData.min_sell_price || "0") > 0 && parseFloat(formData.mrp || "0") > 0 && 
-           parseFloat(formData.min_sell_price || "0") <= parseFloat(formData.mrp || "0") && 
-           (parseFloat(formData.mrp || "0") - parseFloat(formData.min_sell_price || "0")) / parseFloat(formData.mrp || "0") < 0.05 && (
+          {parseFloat(formData.min_sell_price || "0") > 0 && parseFloat(formData.base_price || "0") > 0 && 
+           parseFloat(formData.min_sell_price || "0") <= parseFloat(formData.base_price || "0") && 
+           (parseFloat(formData.base_price || "0") - parseFloat(formData.min_sell_price || "0")) / parseFloat(formData.base_price || "0") < 0.05 && (
             <div className="text-yellow-600 text-sm font-semibold p-2 bg-yellow-50 border border-yellow-200 rounded">
-              Warning: Min Sell Price is very close to MRP (&lt; 5% headroom).
+              Warning: Min Sell Price is very close to Unit Rate (&lt; 5% headroom).
             </div>
           )}
 
@@ -376,12 +383,25 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 onChange={(e) => {
                   const gst = parseFloat(e.target.value) || 0;
                   const mrp = parseFloat(formData.mrp) || 0;
-                  const base_price = mrp > 0 ? (mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
+                  const base_price = mrp > 0 ? round2(mrp / (1 + gst / 100)).toFixed(2) : formData.base_price;
                   
+                  const dp = parseFloat(formData.dealer_price) || 0;
+                  let margin_pct = formData.margin_pct;
+                  const base_val = parseFloat(base_price) || 0;
+                  if (dp > 0 && base_val > 0) {
+                    margin_pct = (((base_val - dp) / base_val) * 100).toFixed(2);
+                  }
+                  
+                  const mp = parseFloat(margin_pct) || 0;
+                  let min_sell = dp * (1 + mp / 100);
+                  if (base_val > 0 && min_sell > base_val) min_sell = base_val;
+
                   setFormData({ 
                     ...formData, 
                     gst_rate: e.target.value,
-                    base_price
+                    base_price,
+                    margin_pct,
+                    min_sell_price: min_sell > 0 ? min_sell.toFixed(2) : ""
                   });
                 }}
               />
