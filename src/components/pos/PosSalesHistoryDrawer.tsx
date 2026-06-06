@@ -62,7 +62,7 @@ export function PosSalesHistoryDrawer({ open, onClose }: PosSalesHistoryDrawerPr
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent 
         side="right" 
-        className="w-full sm:!w-[80vw] lg:!w-[50vw] sm:!max-w-none bg-white border-l shadow-2xl flex flex-col p-0 overflow-hidden"
+        className="w-full sm:!w-[80vw] lg:!w-[75vw] sm:!max-w-none bg-white border-l shadow-2xl flex flex-col p-0 overflow-hidden"
       >
         <SheetHeader className="p-8 border-b bg-slate-50/50 shrink-0">
           <div className="flex items-center justify-between">

@@ -24,7 +24,6 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [receivedAmount, setReceivedAmount] = useState<string>("")
   const [isPrinting, setIsPrinting] = useState(false)
   const componentRef = React.useRef<HTMLDivElement>(null)
-  const shouldAutoPrintRef = React.useRef(false)
   const shouldManualPrintRef = React.useRef(false)
   const { fetchInvoiceById } = usePos()
 
@@ -33,10 +32,6 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   })
 
   const handleTemplateReady = React.useCallback(() => {
-    if (shouldAutoPrintRef.current) {
-      shouldAutoPrintRef.current = false
-      handlePrint()
-    }
     if (shouldManualPrintRef.current) {
       shouldManualPrintRef.current = false
       handlePrint()
@@ -54,7 +49,6 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
         setInvoiceNumberDisplay(null)
         setInvoiceFullData(null)
         setReceivedAmount("")
-        shouldAutoPrintRef.current = false
         shouldManualPrintRef.current = false
       }, 300)
     }
@@ -76,8 +70,6 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
       setInvoiceNumberDisplay(result.invoiceData.invoice_number)
       setInvoiceFullData(result.invoiceData)
       setStatus('success')
-      // Mark for auto print, it will trigger when InvoiceTemplate is ready
-      shouldAutoPrintRef.current = true
     }
  else {
       setErrorMsg(result.error || "Transaction failed")

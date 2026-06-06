@@ -80,24 +80,24 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           const branch = invoice.branches
           const customer = invoice.customers
 
-          const mappedCart = items.map((item: { model_name: string; hsn_code: string; quantity: number; unit_price: number; gst_rate: number; gst_amount: number; serial_number?: string }) => ({
-             model_name: item.model_name || 'Unknown Product',
+          const mappedCart = items.map((item: { name?: string; model_name?: string; hsn_code: string; qty?: number; quantity?: number; unit_price: number; gst_rate: number }) => ({
+             model_name: item.name || item.model_name || 'Unknown Product',
              hsn_code: item.hsn_code || '8415',
-             qty: item.quantity,
-             base_price: Number(item.unit_price),
-             gst_rate: Number(item.gst_rate || 18),
-             gst_amount: Number(item.gst_amount),
-             serial_number: item.serial_number
+             qty: Number(item.qty || item.quantity) || 0,
+             base_price: Number(item.unit_price) || 0,
+             gst_rate: Number(item.gst_rate) || 0,
+             gst_amount: (Number(item.unit_price) || 0) * (Number(item.qty || item.quantity) || 0) * ((Number(item.gst_rate) || 0) / 100),
+             serial_number: (item as any).serial_number
           }))
 
           setArchivalData({
             cart: mappedCart,
             totals: {
-              subtotal: Number(invoice.net_amount),
-              totalGst: Number(invoice.tax_amount),
-              cgst: Number(invoice.tax_amount) / 2,
-              sgst: Number(invoice.tax_amount) / 2,
-              grandTotal: Number(invoice.total_amount)
+              subtotal: Number(invoice.subtotal) || 0,
+              totalGst: (Number(invoice.cgst) || 0) + (Number(invoice.sgst) || 0) + (Number(invoice.igst) || 0),
+              cgst: Number(invoice.cgst) || 0,
+              sgst: Number(invoice.sgst) || 0,
+              grandTotal: Number(invoice.total_amount) || 0
             },
             branch: branch,
             customer: customer || { full_name: 'Walk-in Customer', phone_number: '' },
@@ -249,7 +249,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                   <td className="py-2 text-center">{item.qty}</td>
                   <td className="py-2 text-right">₹{item.base_price.toLocaleString()}</td>
                   {!isThermal && <td className="py-2 text-center">{item.gst_rate}%</td>}
-                  <td className="py-2 text-right text-slate-900 font-extrabold">₹{(item.base_price * item.qty).toLocaleString()}</td>
+                  <td className="py-2 text-right text-slate-900 font-extrabold">₹{((item.base_price * item.qty) + (item.gst_amount || 0)).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
