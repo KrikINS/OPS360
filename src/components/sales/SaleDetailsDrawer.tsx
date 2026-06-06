@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Loader2, Package } from "lucide-react"
+import { fmtINR } from '@/lib/utils'
 
 interface SaleDetailsDrawerProps {
   saleId: string | null
@@ -90,7 +91,7 @@ export function SaleDetailsDrawer({ saleId, invoiceNumber, open, onClose }: Sale
                       </Badge>
                     </div>
                   </div>
-                  <p className="font-black text-slate-900">₹{Number(item.unit_price).toLocaleString()}</p>
+                  <p className="font-black text-slate-900">{fmtINR(Number(item.unit_price))}</p>
                 </div>
                 
                 <Separator className="opacity-50" />
@@ -104,7 +105,7 @@ export function SaleDetailsDrawer({ saleId, invoiceNumber, open, onClose }: Sale
                       <p className="text-[10px] text-blue-600 font-bold font-mono mb-1 underline decoration-dotted">SN: {item.serial_number}</p>
                     )}
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Line Total (incl. Tax)</p>
-                    <p className="font-black text-slate-900">₹{Number(item.total_line_amount).toLocaleString()}</p>
+                    <p className="font-black text-slate-900">{fmtINR(Number(item.total_line_amount))}</p>
                   </div>
                 </div>
               </div>

@@ -26,6 +26,7 @@ import {
 import {
   createExpenseRecord, approveExpense, rejectExpense
 } from '@/actions/finance'
+import { fmtINR } from '@/lib/utils'
 
 // ── Types ───────────────────────────────────────────
 
@@ -108,14 +109,6 @@ type Expense = {
 }
 
 // ── Helper formatters ───────────────────────────────
-
-function fmtINR(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2,
-  }).format(amount)
-}
 
 function fmtDate(date: Date | string): string {
   return new Date(date).toLocaleDateString('en-IN', {

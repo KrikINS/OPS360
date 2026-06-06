@@ -21,6 +21,7 @@ import { SaleDetailsDrawer } from './SaleDetailsDrawer'
 import { CustomerHistoryDrawer } from './CustomerHistoryDrawer'
 import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
 import { useReactToPrint } from 'react-to-print'
+import { fmtINR } from '@/lib/utils'
 
 interface Sale {
   sale_id: string;
@@ -159,7 +160,7 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
                   </button>
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="font-black text-slate-900">₹{Number(sale.total_amount).toLocaleString()}</div>
+                  <div className="font-black text-slate-900">{fmtINR(Number(sale.total_amount))}</div>
                   <div className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest">Paid</div>
                 </TableCell>
                 <TableCell>

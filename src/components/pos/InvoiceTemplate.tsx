@@ -5,6 +5,7 @@ import { PosContext } from '@/context/PosContext'
 import { cn } from '@/lib/utils'
 import type { Branch, Customer, InvoiceData, CartItem } from '@/context/PosContext'
 import { numberToWords } from '@/utils/numberToWords'
+import { fmtINR } from '@/lib/utils'
 
 interface InvoiceTemplateProps {
   invoiceId?: string
@@ -55,7 +56,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           month: 'short',
           year: 'numeric'
         }),
-        paymentMethod: initialData.payment_method
+        paymentMethod: initialData.payment_mode
       })
       setLoading(false)
       setIsReady(true)
@@ -107,7 +108,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               month: 'short',
               year: 'numeric'
             }),
-            paymentMethod: invoice.payment_method
+            paymentMethod: invoice.payment_mode
           })
         } catch (err) {
           console.error("Failed to fetch archival invoice:", err)
@@ -138,7 +139,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   const customer = invoiceId ? archivalData?.customer : posContext?.selectedCustomer
   const invoiceNo = invoiceId ? archivalData?.invoiceNumber : posContext?.invoiceNumber
   const displayDate = invoiceId ? archivalData?.date : posContext?.currentDate
-  const paymentMethodRaw = invoiceId ? archivalData?.paymentMethod : posContext?.cart?.length ? 'cash' : undefined // Fallback for context is handled by initialData if available
+  const paymentMethodRaw = invoiceId ? archivalData?.paymentMethod : posContext?.payment_mode // Fallback for context is handled by initialData if available
   
   // Mapping for readable payment method
   const getPaymentMethodDisplay = (method?: string) => {
@@ -147,7 +148,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
       case 'card': return 'Credit/Debit Card'
       case 'upi': return 'UPI / QR Scan'
       case 'transfer': return 'Bank Transfer'
-      default: return method || 'Cash'
+      default: return method || '—'
     }
   }
 
@@ -205,7 +206,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             <div className={cn(isThermal ? "text-left pt-2 border-t border-slate-50" : "text-right")}>
               <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Mode</span>
               <p className="text-xs font-black text-slate-900 uppercase">
-                {getPaymentMethodDisplay(paymentMethodRaw || initialData?.payment_method)}
+                {getPaymentMethodDisplay(paymentMethodRaw || initialData?.payment_mode)}
               </p>
               <p className="font-bold text-slate-500 lowercase opacity-60 text-[9px]">status: settled</p>
             </div>
@@ -247,9 +248,9 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                   </td>
                   {!isThermal && <td className="py-2 text-center text-slate-500">{item.hsn_code || '8415'}</td>}
                   <td className="py-2 text-center">{item.qty}</td>
-                  <td className="py-2 text-right">₹{item.base_price.toLocaleString()}</td>
+                  <td className="py-2 text-right">{fmtINR(item.base_price)}</td>
                   {!isThermal && <td className="py-2 text-center">{item.gst_rate}%</td>}
-                  <td className="py-2 text-right text-slate-900 font-extrabold">₹{((item.base_price * item.qty) + (item.gst_amount || 0)).toLocaleString()}</td>
+                  <td className="py-2 text-right text-slate-900 font-extrabold">{fmtINR((item.base_price * item.qty) + (item.gst_amount || 0))}</td>
                 </tr>
               ))}
             </tbody>
@@ -275,16 +276,16 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                   ).map(([rate, data]) => (
                     <div key={rate} className="border-b border-slate-200/50 last:border-0 pb-1.5 last:pb-0">
                       <div className="flex justify-between items-center text-[8px] mb-1">
-                        <span className="text-slate-400 font-bold uppercase tracking-tighter">GST {rate}% Slab (Taxable: ₹{Math.round(data.taxable).toLocaleString()})</span>
+                        <span className="text-slate-400 font-bold uppercase tracking-tighter">GST {rate}% Slab (Taxable: {fmtINR(data.taxable)})</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="flex justify-between items-center text-[9px]">
                           <span className="text-slate-500 uppercase font-black">CGST ({Number(rate) / 2}%)</span>
-                          <span className="font-black text-slate-900">₹{(data.tax / 2).toLocaleString()}</span>
+                          <span className="font-black text-slate-900">{fmtINR(data.tax / 2)}</span>
                         </div>
                         <div className="flex justify-between items-center text-[9px]">
                           <span className="text-slate-500 uppercase font-black">SGST ({Number(rate) / 2}%)</span>
-                          <span className="font-black text-slate-900">₹{(data.tax / 2).toLocaleString()}</span>
+                          <span className="font-black text-slate-900">{fmtINR(data.tax / 2)}</span>
                         </div>
                       </div>
                     </div>
@@ -300,15 +301,15 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             <div className="space-y-2 pt-2 border-t border-slate-100 border-dashed">
               <div className="flex justify-between font-bold text-[9px]">
                 <span className="text-slate-400">Subtotal</span>
-                <span>₹{totals.subtotal.toLocaleString()}</span>
+                <span>{fmtINR(totals.subtotal)}</span>
               </div>
               <div className="flex justify-between font-bold text-[9px] border-b border-slate-100 pb-2">
                 <span className="text-slate-400">Total Tax</span>
-                <span>₹{totals.totalGst.toLocaleString()}</span>
+                <span>{fmtINR(totals.totalGst)}</span>
               </div>
               <div className="flex justify-between items-center pt-1">
                 <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Net Amount</span>
-                <span className={cn("font-black text-slate-900 tracking-tighter font-mono", isThermal ? "text-xl" : "text-3xl")}>₹{Math.round(totals.grandTotal).toLocaleString()}</span>
+                <span className={cn("font-black text-slate-900 tracking-tighter font-mono", isThermal ? "text-xl" : "text-3xl")}>{fmtINR(totals.grandTotal)}</span>
               </div>
             </div>
           </div>

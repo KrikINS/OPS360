@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { usePos, SelectedUnit, SYSTEM_WALKIN_ID } from '@/context/PosContext'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ManagerDiscountModal } from "./ManagerDiscountModal"
+import { fmtINR } from '@/lib/utils'
 
 function SerialSelector({ productId, index, onSelect }: { productId: string, index: number, onSelect: (unit: SelectedUnit | null) => void }) {
   const { fetchAvailableSerials, cart } = usePos()
@@ -192,11 +193,11 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                           <div className="flex items-center gap-2">
                             {item.discountAmount ? (
                               <div className="flex items-center gap-1">
-                                <span className="text-[9px] font-bold text-slate-400 line-through">₹{item.base_price.toLocaleString()}</span>
-                                <span className="text-[9px] font-bold text-emerald-600">₹{(item.base_price - item.discountAmount).toLocaleString()}</span>
+                                <span className="text-[9px] font-bold text-slate-400 line-through">{fmtINR(item.base_price)}</span>
+                                <span className="text-[9px] font-bold text-emerald-600">{fmtINR(item.base_price - item.discountAmount)}</span>
                               </div>
                             ) : (
-                              <span className="text-[9px] font-bold text-slate-400">₹{item.base_price.toLocaleString()}</span>
+                              <span className="text-[9px] font-bold text-slate-400">{fmtINR(item.base_price)}</span>
                             )}
                             <Badge className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] px-1.5 border-none h-4">{Math.round(item.gst_rate)}% GST</Badge>
                             
@@ -228,7 +229,7 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                       </TableCell>
                       <TableCell className="py-4 text-right pr-0 font-black text-slate-900 tabular-nums shrink-0">
                         <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs font-black">₹{Math.round(finalAmount).toLocaleString()}</span>
+                          <span className="text-xs font-black">{fmtINR(Math.round(finalAmount))}</span>
                           <button 
                             title="Remove item"
                             onClick={() => removeFromCart(item.id)} 
@@ -251,7 +252,7 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
       <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-white/5 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors">
         <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
           {(Number(totals.discount) || 0) > 0 && (
-            <div className="flex justify-between uppercase"><span>Discount</span><span className="text-rose-500">-₹{totals.discount.toLocaleString()}</span></div>
+            <div className="flex justify-between uppercase"><span>Discount</span><span className="text-rose-500">-{fmtINR(totals.discount)}</span></div>
           )}
           <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
           
@@ -266,7 +267,7 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                 </span>
                 <Badge variant="outline"
                   className="text-[9px] bg-purple-50 text-purple-700 border-purple-200 uppercase font-black">
-                  {loyaltyBalance} pts = ₹{loyaltyBalance}
+                  {loyaltyBalance} pts = {fmtINR(loyaltyBalance)}
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
@@ -299,14 +300,14 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
           {loyaltyRedeem > 0 && (
             <div className="flex justify-between text-[11px] text-purple-700 font-bold uppercase mt-2">
               <span>Loyalty Discount</span>
-              <span>-₹{loyaltyRedeem.toLocaleString('en-IN')}</span>
+              <span>-{fmtINR(loyaltyRedeem)}</span>
             </div>
           )}
 
           <div className="flex justify-between items-end mt-4">
             <div className="flex flex-col">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">₹{Math.round(finalTotal).toLocaleString()}</span>
+              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{fmtINR(Math.round(finalTotal))}</span>
             </div>
           </div>
         </div>

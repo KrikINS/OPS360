@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { fmtINR } from '@/lib/utils'
 import { 
   Eye, 
   Printer, 
@@ -174,7 +176,7 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
                     </button>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="font-black text-slate-900">₹{Number(sale.total_amount).toLocaleString()}</div>
+                    <div className="font-black text-slate-900">{fmtINR(Number(sale.total_amount))}</div>
                     <div className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest">Paid</div>
                   </TableCell>
                   <TableCell>

@@ -80,14 +80,6 @@ interface FinancePrintTemplateProps {
 
 // ── Helpers ─────────────────────────────────────────
 
-function fmtINR(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2,
-  }).format(amount)
-}
-
 function fmtDate(date: Date | string): string {
   return new Date(date).toLocaleDateString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',

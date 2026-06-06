@@ -19,14 +19,13 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [invoiceId, setInvoiceId] = useState<string | null>(null)
   const [invoiceNumberDisplay, setInvoiceNumberDisplay] = useState<string | null>(null)
-  const [invoiceFullData, setInvoiceFullData] = useState<InvoiceData | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<string | null>("cash")
   const [receivedAmount, setReceivedAmount] = useState<string>("")
   const [isPrinting, setIsPrinting] = useState(false)
   const [printStatus, setPrintStatus] = useState("")
+  const [isTemplateReady, setIsTemplateReady] = useState(false)
   const componentRef = React.useRef<HTMLDivElement>(null)
   const shouldManualPrintRef = React.useRef(false)
-  const { fetchInvoiceById } = usePos()
+  const [paymentMethod, setPaymentMethod] = useState<string | null>("cash")
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
@@ -37,6 +36,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   })
 
   const handleTemplateReady = React.useCallback(() => {
+    setIsTemplateReady(true)
     if (shouldManualPrintRef.current) {
       shouldManualPrintRef.current = false
       handlePrint()
@@ -53,7 +53,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
         setErrorMsg(null)
         setInvoiceId(null)
         setInvoiceNumberDisplay(null)
-        setInvoiceFullData(null)
+        setIsTemplateReady(false)
         setReceivedAmount("")
         setPrintStatus("")
         shouldManualPrintRef.current = false
@@ -75,7 +75,6 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
     if (result.success && result.invoiceData) {
       setInvoiceId(result.invoiceData.id)
       setInvoiceNumberDisplay(result.invoiceData.invoice_number)
-      setInvoiceFullData(result.invoiceData)
       setStatus('success')
     }
  else {
@@ -249,36 +248,23 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <Button 
                 variant="outline"
                 className="flex-1 h-14 bg-white/10 border-white/20 text-white hover:bg-white/20 text-[11px] font-black uppercase tracking-[0.2em] rounded-xl"
-                onClick={async () => {
+                onClick={() => {
                   setIsPrinting(true)
-                  setPrintStatus('Fetching invoice...')
-                  try {
-                    const latest = await fetchInvoiceById(invoiceId!)
-                    if (latest) {
-                      setInvoiceFullData(latest)
-                      setPrintStatus('Preparing document...')
-                      shouldManualPrintRef.current = true
-                      // fallback: if onReady doesn't fire within 2s, print anyway
-                      setTimeout(() => {
-                        if (shouldManualPrintRef.current) {
-                          shouldManualPrintRef.current = false
-                          handlePrint()
-                          setIsPrinting(false)
-                          setPrintStatus('')
-                        }
-                      }, 2000)
-                    } else {
-                      handlePrint()
-                    }
-                  } catch (e) {
-                    setPrintStatus('Could not prepare invoice for printing')
+                  setPrintStatus('Preparing document...')
+                  
+                  if (isTemplateReady) {
+                    handlePrint()
+                  } else {
+                    shouldManualPrintRef.current = true
+                    // fallback: if onReady doesn't fire within 2s, print anyway
                     setTimeout(() => {
-                      setIsPrinting(false)
-                      setPrintStatus('')
+                      if (shouldManualPrintRef.current) {
+                        shouldManualPrintRef.current = false
+                        handlePrint()
+                        setIsPrinting(false)
+                        setPrintStatus('')
+                      }
                     }, 2000)
-                  } finally {
-                    // Note: if success, onReady clears the state.
-                    // If no-data, handlePrint triggers onAfterPrint which clears the state.
                   }
                 }}
                 disabled={isPrinting}
@@ -303,7 +289,6 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
               <InvoiceTemplate 
                 ref={componentRef} 
                 invoiceId={invoiceId || undefined} 
-                initialData={invoiceFullData} 
                 onReady={handleTemplateReady}
               />
             </div>
