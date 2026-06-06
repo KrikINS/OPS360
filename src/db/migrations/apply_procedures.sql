@@ -13,6 +13,10 @@ DECLARE
     v_igst numeric := 0;
     v_grand_total numeric := 0;
     
+    v_line_inclusive numeric;
+    v_line_taxable numeric;
+    v_line_tax numeric;
+    
     v_item_qty integer;
     v_item_price numeric;
     v_item_gst_rate numeric;
@@ -121,20 +125,18 @@ BEGIN
         v_item_approved_by := NULL;
       END IF;
 
-      -- Apply line-item discount to price
-      v_item_price := v_item_price - v_item_discount_amount;
-
       -- 2. Get GST rate
       SELECT COALESCE(gst_rate, 18) INTO v_item_gst_rate
       FROM products WHERE id = v_item_product_id;
 
-      -- 3. Calculate item totals
-      v_item_cgst := (v_item_qty * v_item_price)
-        * (v_item_gst_rate / 2 / 100);
-      v_item_sgst := (v_item_qty * v_item_price)
-        * (v_item_gst_rate / 2 / 100);
+      -- 3. Calculate item totals (inclusive reconciliation)
+      v_line_inclusive := ROUND((v_item_price * v_item_qty) - (v_item_discount_amount * v_item_qty), 2);
+      v_line_taxable   := ROUND(v_line_inclusive / (1 + v_item_gst_rate/100.0), 2);
+      v_line_tax       := ROUND(v_line_inclusive - v_line_taxable, 2);
+      v_item_cgst      := ROUND(v_line_tax / 2.0, 2);
+      v_item_sgst      := v_line_tax - v_item_cgst;
 
-      v_subtotal := v_subtotal + (v_item_qty * v_item_price);
+      v_subtotal := v_subtotal + v_line_taxable;
       v_cgst := v_cgst + v_item_cgst;
       v_sgst := v_sgst + v_item_sgst;
 

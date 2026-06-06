@@ -71,11 +71,11 @@ describe('createTransaction — happy path', () => {
       console.log('POS ERROR:', result.error)
     }
     expect(result.success).toBe(true)
-    expect(result.transaction!.subtotal).toBe(2000)
-    expect(result.transaction!.cgst).toBe(180)    // 9% × 2000
-    expect(result.transaction!.sgst).toBe(180)    // 9% × 2000
+    expect(result.transaction!.subtotal).toBe(1694.92)
+    expect(result.transaction!.cgst).toBe(152.54)
+    expect(result.transaction!.sgst).toBe(152.54)
     expect(result.transaction!.igst).toBe(0)
-    expect(result.transaction!.grandTotal).toBe(2360)
+    expect(result.transaction!.grandTotal).toBe(2000)
   })
 
   it('assigns a sequential invoice number', async () => {
@@ -148,7 +148,7 @@ describe('createTransaction — happy path', () => {
     })
 
     expect(result.transaction!.items).toHaveLength(2)
-    expect(result.transaction!.subtotal).toBe(1800)
+    expect(result.transaction!.subtotal).toBe(1525.43)
   })
 })
 

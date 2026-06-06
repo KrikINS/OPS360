@@ -662,8 +662,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
                   product_id: item.id,
                   inventory_id: unit.id,
                   qty: 1,
-                  unit_price: item.base_price,
-                  gst_amount: (item.base_price * (item.gst_rate / 100)),
+                  unit_price: item.mrp || 0,
                   serial_number: unit.serial,
                   discount_amount: item.discountAmount || 0,
                   discount_pct: item.discountPct || 0,
@@ -675,8 +674,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
             processedItems.push({
               product_id: item.id,
               qty: item.qty,
-              unit_price: item.base_price,
-              gst_amount: (item.base_price * (item.gst_rate / 100)) * item.qty,
+              unit_price: item.mrp || 0,
               discount_amount: item.discountAmount || 0,
               discount_pct: item.discountPct || 0,
               approved_by: item.approvedBy || null
