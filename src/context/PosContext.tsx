@@ -676,18 +676,28 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
 
       const { processPosSaleAction } = await import("@/app/actions/pos")
       const { data, error } = await processPosSaleAction({
-        p_customer_id: selectedCustomer?.id || SYSTEM_WALKIN_ID,
-        p_branch_id: selectedBranch,
-        p_items: processedItems,
-        p_net_amount: totals.subtotal,
-        p_tax_amount: totals.totalGst,
-        p_total_amount: totals.grandTotal,
-        p_payment_method: paymentMethod
+        customer_id: selectedCustomer?.id || null,
+        branch_id: selectedBranch,
+        user_id: session?.user?.id || '00000000-0000-0000-0000-000000000001',
+        payment_mode: paymentMethod,
+        items: processedItems.map(i => ({
+          product_id: i.product_id,
+          qty: i.qty,
+          unit_price: i.unit_price,
+          discount_amount: i.discount_amount,
+          discount_pct: i.discount_pct,
+          approved_by: i.approved_by,
+        })),
       })
 
       if (error || !data) throw error || new Error("Checkout failed, no data returned")
 
-      const resData = data as { invoice_number: string } & InvoiceData
+      const resData = data as { invoice_number: string, grandTotal: number, items?: unknown[] } & InvoiceData
+      
+      // Guard against phantom 0-value invoices caused by mismatched payload
+      if (!resData.grandTotal || Number(resData.grandTotal) <= 0 || !resData.items || resData.items.length === 0) {
+        throw new Error("Checkout failed, invoice total is 0 or no items were recorded. Check connection.")
+      }
       setInvoiceNumber(resData.invoice_number)
       setToast({ message: `Sale completed: ${resData.invoice_number}`, type: 'success' })
       
