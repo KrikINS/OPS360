@@ -160,10 +160,8 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
           <Table>
             <TableBody>
               {cart.map((item) => {
-                const unitPriceAfterDisc = Math.max(0, item.base_price - (item.discountAmount || 0))
-                const lineTotal = unitPriceAfterDisc * item.qty
-                const lineGst = (lineTotal * item.gst_rate) / 100
-                const finalAmount = lineTotal + lineGst
+                const unitPriceAfterDisc = Math.max(0, (Number(item.mrp) || 0) - (Number(item.discountAmount) || 0))
+                const finalAmount = unitPriceAfterDisc * item.qty
 
                 return (
                   <React.Fragment key={item.id}>
@@ -193,13 +191,13 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
                           <div className="flex items-center gap-2">
                             {item.discountAmount ? (
                               <div className="flex items-center gap-1">
-                                <span className="text-[9px] font-bold text-slate-400 line-through">{fmtINR(item.base_price)}</span>
-                                <span className="text-[9px] font-bold text-emerald-600">{fmtINR(item.base_price - item.discountAmount)}</span>
+                                <span className="text-[9px] font-bold text-slate-400 line-through">{fmtINR(item.mrp)}</span>
+                                <span className="text-[9px] font-bold text-emerald-600">{fmtINR(unitPriceAfterDisc)}</span>
                               </div>
                             ) : (
-                              <span className="text-[9px] font-bold text-slate-400">{fmtINR(item.base_price)}</span>
+                              <span className="text-[9px] font-bold text-slate-400">{fmtINR(item.mrp)}</span>
                             )}
-                            <Badge className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] px-1.5 border-none h-4">{Math.round(item.gst_rate)}% GST</Badge>
+                            <Badge className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] px-1.5 border-none h-4">{Math.round(item.gst_rate)}% GST (Inc)</Badge>
                             
                             <div className="flex items-center ml-auto gap-1">
                               <span className="text-[8px] font-bold text-slate-400 uppercase">Disc %</span>
@@ -251,8 +249,10 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
       {/* Footer - Always Visible */}
       <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-white/5 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors">
         <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex justify-between uppercase"><span>Subtotal (Taxable)</span><span>{fmtINR(totals.taxableValue)}</span></div>
+          <div className="flex justify-between uppercase"><span>GST (Included)</span><span>{fmtINR(totals.totalGst)}</span></div>
           {(Number(totals.discount) || 0) > 0 && (
-            <div className="flex justify-between uppercase"><span>Discount</span><span className="text-rose-500">-{fmtINR(totals.discount)}</span></div>
+            <div className="flex justify-between uppercase text-rose-500"><span>Discount</span><span>-{fmtINR(totals.discount)}</span></div>
           )}
           <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
           

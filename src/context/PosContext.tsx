@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 import { setActiveBranchAction } from '@/app/actions/branch'
+import { round2 } from '@/lib/utils'
 
 
 // --- Types ---
@@ -46,6 +47,7 @@ export type CartItem = {
   id: string
   model_name: string
   qty: number
+  mrp: number
   base_price: number
   gst_rate: number
   hsn_code?: string
@@ -388,22 +390,29 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     }
   }, [walkInCustomer])
 
-   const totals = useMemo(() => {
+  const totals = useMemo(() => {
     let subtotal = 0
     let totalDiscount = 0
     let totalGst = 0
+    let cgst = 0
+    let sgst = 0
     let taxableValue = 0
+    let grandTotal = 0
 
     cart.forEach(item => {
-      const lineBase = item.base_price * item.qty
-      const lineDisc = (item.discountAmount || 0) * item.qty
-      const lineTaxable = Math.max(0, lineBase - lineDisc)
-      const lineGst = lineTaxable * (item.gst_rate / 100)
-
-      subtotal += lineBase
-      totalDiscount += lineDisc
+      const lineInclusive = round2((Number(item.mrp) || 0) * item.qty - (Number(item.discountAmount) || 0) * item.qty)
+      const lineTaxable = round2(lineInclusive / (1 + (item.gst_rate || 0) / 100))
+      const lineTax = round2(lineInclusive - lineTaxable)
+      const lineCgst = round2(lineTax / 2)
+      const lineSgst = round2(lineTax - lineCgst)
+      
+      subtotal += lineTaxable
+      totalDiscount += (Number(item.discountAmount) || 0) * item.qty
       taxableValue += lineTaxable
-      totalGst += lineGst
+      totalGst += lineTax
+      cgst += lineCgst
+      sgst += lineSgst
+      grandTotal += lineInclusive
     })
 
     return {
@@ -411,9 +420,9 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       taxableValue,
       discount: totalDiscount,
       totalGst,
-      cgst: totalGst / 2,
-      sgst: totalGst / 2,
-      grandTotal: taxableValue + totalGst
+      cgst,
+      sgst,
+      grandTotal
     }
   }, [cart])
 
@@ -470,6 +479,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       return [...prev, {
         id: product.id,
         model_name: product.model_name,
+        mrp: product.mrp || 0,
         base_price: product.base_price,
         gst_rate: product.gst_rate,
         hsn_code: product.hsn_code,

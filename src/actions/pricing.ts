@@ -14,7 +14,8 @@ export async function getProductPricing(productId: string) {
     .select({
       id: products.id,
       modelName: products.model_name,
-      basePrice: products.base_price,     // MRP
+      mrp: products.mrp,
+      basePrice: products.base_price,
       dealerPrice: products.dealer_price,
       minSellPrice: products.min_sell_price,
       maxDiscountPct: products.max_discount_pct,
@@ -26,7 +27,8 @@ export async function getProductPricing(productId: string) {
 
   if (!product) return null
 
-  const mrp = Number(product.basePrice ?? 0)
+  const mrp = Number(product.mrp ?? 0)
+  const basePrice = Number(product.basePrice ?? 0)
   const dealerPrice = Number(product.dealerPrice ?? 0)
   const minSellPrice = Number(product.minSellPrice ?? dealerPrice * 1.05)
   const maxDiscountPct = Number(product.maxDiscountPct ?? 10)
@@ -34,12 +36,13 @@ export async function getProductPricing(productId: string) {
   return {
     ...product,
     mrp,
+    basePrice,
     dealerPrice,
     minSellPrice,
     maxDiscountPct,
     maxDiscountAmount: mrp * (maxDiscountPct / 100),
     marginAtMRP: mrp > 0 && dealerPrice > 0
-      ? ((mrp - dealerPrice) / mrp * 100)
+      ? ((basePrice - dealerPrice) / basePrice * 100)
       : null,
   }
 }
@@ -63,14 +66,17 @@ export async function validateDiscount(input: {
   }
 
   const mrp = pricing.mrp
+  const gstRate = Number(pricing.gstRate ?? 18)
   const discountAmount = mrp * (input.discountPct / 100)
-  const finalPrice = mrp - discountAmount
+  const finalInclusivePrice = mrp - discountAmount
+  
+  const finalExclusivePrice = finalInclusivePrice / (1 + gstRate / 100)
 
   // Hard floor — never sell below min_sell_price
-  if (finalPrice < pricing.minSellPrice) {
+  if (finalExclusivePrice < pricing.minSellPrice) {
     return {
       valid: false,
-      error: `Price ₹${finalPrice.toFixed(2)} is below minimum sell price ₹${pricing.minSellPrice.toFixed(2)}`,
+      error: `Price is below minimum sell price (exclusive floor: ₹${pricing.minSellPrice.toFixed(2)})`,
       needsApproval: false,
     }
   }
@@ -80,7 +86,7 @@ export async function validateDiscount(input: {
     return {
       valid: true,
       needsApproval: false,
-      finalPrice,
+      finalPrice: finalInclusivePrice,
       discountAmount,
     }
   }
@@ -111,7 +117,7 @@ export async function validateDiscount(input: {
     valid: true,
     needsApproval: false,
     approvedBy: managerResult.managerId,
-    finalPrice,
+    finalPrice: finalInclusivePrice,
     discountAmount,
   }
 }
