@@ -701,6 +701,24 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       setInvoiceNumber(resData.invoice_number)
       setToast({ message: `Sale completed: ${resData.invoice_number}`, type: 'success' })
       
+      // Award loyalty points (earn) — only for a real customer with a valid invoice UUID
+      if (selectedCustomer?.id && selectedCustomer.id !== SYSTEM_WALKIN_ID && resData.id) {
+        try {
+          const { earnPoints } = await import('@/actions/loyalty')
+          const earnRes = await earnPoints({
+            customerId: selectedCustomer.id,
+            invoiceId: String(resData.id),
+            saleAmount: Number(resData.grandTotal) || 0,
+            createdBy: session?.user?.id || '',
+          })
+          if (!earnRes?.success) {
+            console.error('LOYALTY EARN FAILED:', earnRes?.error)
+          }
+        } catch (err) {
+          console.error('LOYALTY EARN THREW:', err)
+        }
+      }
+
       // Process loyalty redemption
       if (loyaltyRedeem > 0 && selectedCustomer?.id && selectedCustomer.id !== SYSTEM_WALKIN_ID) {
         try {
