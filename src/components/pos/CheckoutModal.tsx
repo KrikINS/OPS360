@@ -23,12 +23,17 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const [paymentMethod, setPaymentMethod] = useState<string | null>("cash")
   const [receivedAmount, setReceivedAmount] = useState<string>("")
   const [isPrinting, setIsPrinting] = useState(false)
+  const [printStatus, setPrintStatus] = useState("")
   const componentRef = React.useRef<HTMLDivElement>(null)
   const shouldManualPrintRef = React.useRef(false)
   const { fetchInvoiceById } = usePos()
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
+    onAfterPrint: () => {
+      setIsPrinting(false)
+      setPrintStatus('')
+    }
   })
 
   const handleTemplateReady = React.useCallback(() => {
@@ -36,6 +41,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
       shouldManualPrintRef.current = false
       handlePrint()
       setIsPrinting(false)
+      setPrintStatus('')
     }
   }, [handlePrint])
 
@@ -49,6 +55,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
         setInvoiceNumberDisplay(null)
         setInvoiceFullData(null)
         setReceivedAmount("")
+        setPrintStatus("")
         shouldManualPrintRef.current = false
       }, 300)
     }
@@ -235,7 +242,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <Printer className="h-4 w-4 text-emerald-200" />
                 <span className="text-white text-lg font-mono font-black">{invoiceNumberDisplay || invoiceId?.slice(0, 12).toUpperCase()}</span>
               </div>
-              <span className="text-emerald-200 text-[8px] font-bold uppercase">Physical Copy Preparing...</span>
+              <span className="text-emerald-200 text-[8px] font-bold uppercase">{printStatus || 'Invoice Ready'}</span>
             </div>
 
             <div className="flex gap-3 w-full mb-4">
@@ -244,14 +251,34 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 className="flex-1 h-14 bg-white/10 border-white/20 text-white hover:bg-white/20 text-[11px] font-black uppercase tracking-[0.2em] rounded-xl"
                 onClick={async () => {
                   setIsPrinting(true)
-                  // Re-fetch latest to ensure zero items issue isn't present
-                  const latest = await fetchInvoiceById(invoiceId!)
-                  if (latest) {
-                    setInvoiceFullData(latest)
-                    shouldManualPrintRef.current = true
-                  } else {
-                    handlePrint()
-                    setIsPrinting(false)
+                  setPrintStatus('Fetching invoice...')
+                  try {
+                    const latest = await fetchInvoiceById(invoiceId!)
+                    if (latest) {
+                      setInvoiceFullData(latest)
+                      setPrintStatus('Preparing document...')
+                      shouldManualPrintRef.current = true
+                      // fallback: if onReady doesn't fire within 2s, print anyway
+                      setTimeout(() => {
+                        if (shouldManualPrintRef.current) {
+                          shouldManualPrintRef.current = false
+                          handlePrint()
+                          setIsPrinting(false)
+                          setPrintStatus('')
+                        }
+                      }, 2000)
+                    } else {
+                      handlePrint()
+                    }
+                  } catch (e) {
+                    setPrintStatus('Could not prepare invoice for printing')
+                    setTimeout(() => {
+                      setIsPrinting(false)
+                      setPrintStatus('')
+                    }, 2000)
+                  } finally {
+                    // Note: if success, onReady clears the state.
+                    // If no-data, handlePrint triggers onAfterPrint which clears the state.
                   }
                 }}
                 disabled={isPrinting}

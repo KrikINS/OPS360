@@ -129,7 +129,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
       const timer = setTimeout(() => onReady?.(), 200)
       return () => clearTimeout(timer)
     }
-  }, [isReady, loading, onReady])
+  }, [isReady, loading, initialData?.id, onReady])
 
   // Use either context or archival data
   const cart = (invoiceId ? archivalData?.cart : posContext?.cart) || []
