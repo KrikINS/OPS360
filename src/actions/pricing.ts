@@ -137,11 +137,13 @@ async function verifyManagerPin(pin: string): Promise<{
     })
     .from(profiles)
     .where(
-      sql`${profiles.role} IN ('admin/owner', 'admin', 'manager', 'super_admin')
+      sql`LOWER(${profiles.role}) IN ('admin/owner', 'admin', 'manager', 'super_admin')
           AND ${profiles.pos_pin} IS NOT NULL`
     )
 
-  const match = managers.find(m => m.posPin === pin)
+  const match = managers.find(
+    m => String(m.posPin).trim() === String(pin).trim()
+  )
 
   if (!match) {
     return { valid: false, managerId: null, managerName: null }

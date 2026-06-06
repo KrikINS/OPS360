@@ -18,6 +18,7 @@ import {
   seedBranch, seedProduct, seedInventoryUnits, seedCounter,
 } from '@/test/db'
 import { createTransaction, voidTransaction, getTransactionById } from '@/actions/pos'
+import { validateDiscount } from '@/actions/pricing'
 import type { TestDb } from '@/test/db'
 
 let db: TestDb
@@ -400,5 +401,48 @@ describe('voidTransaction', () => {
 
     expect(voided.success).toBe(false)
     expect(voided.error).toMatch(/permission|role|manager/i)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// POS Discount Approval (verifyManagerPin)
+// ---------------------------------------------------------------------------
+
+describe('validateDiscount — POS Manager PIN verification', () => {
+  it('matches manager PIN case-insensitively for capitalized roles', async () => {
+    const branch = await seedBranch(db)
+    const product = await seedProduct(db, { branchId: branch.id, price: 1000, maxDiscountPct: 10 })
+    
+    // Create a manager user and profile with a capitalized role
+    const userId = '00000000-0000-0000-0000-000000000009'
+    await db.insert(schema.users).values({ 
+      id: userId, 
+      email: 'manager@test.com', 
+      password_hash: 'hash' 
+    })
+
+    const [manager] = await db.insert(schema.profiles).values({
+      id: '00000000-0000-0000-0000-000000000009',
+      full_name: 'Test Manager',
+      email: 'manager@test.com',
+      role: 'Admin/Owner', // Capitalized role
+      pos_pin: '9449',
+      created_at: new Date()
+    }).returning()
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
+    })
+
+    // Request a 20% discount (exceeds 10% auto-approval limit)
+    const result = await validateDiscount({
+      productId: product.id,
+      discountPct: 20,
+      managerPin: '9449',
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.needsApproval).toBe(false)
+    expect(result.approvedBy).toBe(manager.id)
   })
 })
