@@ -54,10 +54,11 @@ export function LogoUploader({ currentLogoUrl, onSuccess }: LogoUploaderProps) {
 
     try {
       const result = await uploadLogo(formData)
+      if (!result.success) throw new Error(result.error || "Upload failed")
       setSuccess(true)
       setPreview(null)
       setFile(null)
-      onSuccess?.(result.url)
+      onSuccess?.(result.url!)
     } catch (err) {
       setError((err as Error).message)
     } finally {
