@@ -14,6 +14,7 @@ import { Customer } from "@/context/PosContext"
 
 interface AdminCustomer extends Customer {
   created_at: string
+  loyalty_balance?: number
 }
 
 export default function CustomerManagementPage() {
@@ -33,7 +34,8 @@ export default function CustomerManagementPage() {
   
 
   const fetchCustomers = useCallback(async () => {
-    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("customers"))
+    const { getCustomersWithLoyaltyAction } = await import("@/app/actions/customers")
+    const { data, error } = await getCustomersWithLoyaltyAction()
 
     if (!error && data && Array.isArray(data)) {
       const { mapToCustomer } = await import("@/utils/data-mappers")

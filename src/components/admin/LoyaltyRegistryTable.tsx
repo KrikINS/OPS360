@@ -56,10 +56,10 @@ export function LoyaltyRegistryTable({ customers, onAdjustClick }: { customers: 
                     {c.full_name}
                   </TableCell>
                   <TableCell>
-                    {c.customer_type === 'business' ? (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-black uppercase rounded-md tracking-widest">Business</span>
-                    ) : c.customer_type === 'registered' ? (
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded-md tracking-widest">Registered</span>
+                    {c.customer_type === 'distributor' ? (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-black uppercase rounded-md tracking-widest">Distributor</span>
+                    ) : c.customer_type === 'retail' ? (
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded-md tracking-widest">Retail</span>
                     ) : (
                       <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-md tracking-widest">Walk-in</span>
                     )}

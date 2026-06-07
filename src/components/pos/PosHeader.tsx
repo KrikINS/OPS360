@@ -139,7 +139,7 @@ export function PosHeader() {
               onClick={handleExit}
               className="bg-white/5 border-white/10 hover:bg-white/20 text-white gap-2 h-10 px-3 rounded-xl transition-all active:scale-95"
             >
-              <LayoutGrid className="h-4 w-4 text-blue-400" />
+              <LayoutGrid className="h-4 w-4 text-cyan-400" />
               <div className="flex flex-col items-start leading-none">
                 <span className="text-[10px] font-black uppercase tracking-widest">Dashboard</span>
                 <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Exit (ESC)</span>
@@ -158,7 +158,7 @@ export function PosHeader() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="bg-blue-500 p-2 rounded-lg">
+          <div className="bg-cyan-500 p-2 rounded-lg">
             <Zap className="h-5 w-5 text-white fill-white" />
           </div>
           <div>
@@ -171,7 +171,11 @@ export function PosHeader() {
         <BranchSwitcher />
 
         <div className="h-8 w-px bg-white/10 hidden md:block" />
+      </div>
 
+      <div className="flex items-center gap-4">
+        {/* Removed redundant shortcut indicators as they are in Quick Settings */}
+        
         <Button 
           variant="ghost" 
           size="sm" 
@@ -190,16 +194,12 @@ export function PosHeader() {
           variant="ghost" 
           size="icon" 
           onClick={() => setIsLocked(true)}
-          className="text-slate-400 hover:text-white hover:bg-white/10 ml-2"
+          className="text-slate-400 hover:text-white hover:bg-white/10"
           title="Lock Terminal (Ctrl+L)"
         >
           <Lock className="h-4 w-4" />
         </Button>
-      </div>
 
-      <div className="flex items-center gap-4">
-        {/* Removed redundant shortcut indicators as they are in Quick Settings */}
-        
         <Button 
           variant="ghost" 
           size="icon" 
@@ -207,7 +207,7 @@ export function PosHeader() {
           className="text-slate-400 hover:text-white hover:bg-white/10"
           title={isFullscreen ? "Exit Fullscreen (Ctrl+Alt+F)" : "Enter Fullscreen (Ctrl+Alt+F)"}
         >
-          {isFullscreen ? <Minimize className="h-5 w-5 text-blue-400" /> : <Maximize className="h-5 w-5" />}
+          {isFullscreen ? <Minimize className="h-5 w-5 text-cyan-400" /> : <Maximize className="h-5 w-5" />}
         </Button>
 
         <Popover>
@@ -219,7 +219,7 @@ export function PosHeader() {
           </PopoverTrigger>
           <PopoverContent className="w-80 bg-[#001529] border-white/10 text-white p-0 overflow-hidden" align="end">
             <div className="p-4 bg-white/5 border-b border-white/10">
-              <h3 className="text-xs font-black uppercase tracking-widest text-blue-400">Quick Settings</h3>
+              <h3 className="text-xs font-black uppercase tracking-widest text-cyan-400">Quick Settings</h3>
             </div>
             
             <div className="p-4 space-y-6">
@@ -231,7 +231,7 @@ export function PosHeader() {
                     onClick={() => setPrinterType('Thermal')}
                     className={cn(
                       "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all",
-                      printerType === 'Thermal' ? "bg-blue-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                      printerType === 'Thermal' ? "bg-cyan-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
                     )}
                   >
                     <Printer className="h-3.5 w-3.5" />
@@ -241,7 +241,7 @@ export function PosHeader() {
                     onClick={() => setPrinterType('A4')}
                     className={cn(
                       "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all",
-                      printerType === 'A4' ? "bg-blue-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                      printerType === 'A4' ? "bg-cyan-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
                     )}
                   >
                     <Monitor className="h-3.5 w-3.5" />
@@ -264,7 +264,7 @@ export function PosHeader() {
                 >
                   <div className={cn(
                     "h-6 w-6 rounded-full flex items-center justify-center transition-all duration-300",
-                    isDarkMode ? "translate-x-6 bg-blue-500" : "bg-slate-600"
+                    isDarkMode ? "translate-x-6 bg-cyan-500" : "bg-slate-600"
                   )}>
                     {isDarkMode ? <Moon className="h-3 w-3 text-white" /> : <Sun className="h-3 w-3 text-white" />}
                   </div>
@@ -308,19 +308,19 @@ export function PosHeader() {
 
         <DropdownMenu onOpenChange={(open) => open && refreshSessionStats()}>
           <DropdownMenuTrigger 
-            className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center border-2 border-white/20 cursor-pointer shadow-lg hover:scale-105 transition-all active:scale-95 group outline-none overflow-hidden"
+            className="h-10 w-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center border-2 border-white/20 cursor-pointer shadow-lg hover:scale-105 transition-all active:scale-95 group outline-none overflow-hidden"
           >
             <User className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-64 bg-[#001529] border-white/10 text-white p-0 overflow-hidden" align="end">
-            <div className="p-4 bg-gradient-to-br from-blue-600/20 to-indigo-600/20">
+            <div className="p-4 bg-gradient-to-br from-cyan-600/20 to-indigo-600/20">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center font-black text-sm border-2 border-white/20">
+                <div className="h-10 w-10 rounded-full bg-cyan-600 flex items-center justify-center font-black text-sm border-2 border-white/20">
                   {sessionUser.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <p className="text-sm font-black tracking-tight">{sessionUser.name}</p>
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{sessionUser.role}</p>
+                  <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">{sessionUser.role}</p>
                 </div>
               </div>
             </div>
@@ -343,7 +343,7 @@ export function PosHeader() {
                 onClick={() => setPinModalOpen(true)}
                 className="focus:bg-white/10 focus:text-white rounded-lg gap-3 py-2.5"
               >
-                <Key className="h-4 w-4 text-blue-400" />
+                <Key className="h-4 w-4 text-cyan-400" />
                 <span className="text-xs font-bold font-black">Change Security PIN</span>
               </DropdownMenuItem>
               <DropdownMenuItem 

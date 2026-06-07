@@ -67,8 +67,8 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
           <TabsList className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12">
             <TabsTrigger value="all" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">All</TabsTrigger>
             <TabsTrigger value="walk_in" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Walk-in</TabsTrigger>
-            <TabsTrigger value="registered" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Registered</TabsTrigger>
-            <TabsTrigger value="business" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Business</TabsTrigger>
+            <TabsTrigger value="retail" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Retail</TabsTrigger>
+            <TabsTrigger value="distributor" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Distributor</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -102,10 +102,10 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
                     <div className="font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">{c.full_name}</div>
                   </TableCell>
                   <TableCell>
-                    {c.customer_type === 'business' ? (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-black uppercase rounded-md tracking-widest">Business</span>
-                    ) : c.customer_type === 'registered' ? (
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded-md tracking-widest">Registered</span>
+                    {c.customer_type === 'distributor' ? (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-black uppercase rounded-md tracking-widest">Distributor</span>
+                    ) : c.customer_type === 'retail' ? (
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded-md tracking-widest">Retail</span>
                     ) : (
                       <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-black uppercase rounded-md tracking-widest">Walk-in</span>
                     )}
@@ -125,7 +125,7 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
                     </div>
                   </TableCell>
                   <TableCell>
-                    {c.customer_type === 'business' && c.gstin ? (
+                    {c.customer_type === 'distributor' && c.gstin ? (
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
                           <Building2 className="h-3 w-3 text-slate-400" />

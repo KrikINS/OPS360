@@ -28,15 +28,15 @@ export function BranchSwitcher() {
 
   return (
     <div className="flex flex-col">
-      <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wider mb-1 px-1">Select Branch / Outlet</span>
+      <span className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider mb-1 px-1">Select Branch / Outlet</span>
       <Select 
         value={selectedBranch || ""} 
         onValueChange={(val) => changeBranch(val || "")}
         disabled={loading}
       >
-        <SelectTrigger className="w-[220px] h-10 bg-blue-600/20 border-blue-500/30 text-white font-black text-[11px] uppercase tracking-tight focus:ring-2 focus:ring-blue-500 hover:bg-blue-600/30 transition-all rounded-xl shadow-lg shadow-blue-900/20 px-3">
+        <SelectTrigger className="w-[220px] h-10 bg-cyan-600/20 border-cyan-500/30 text-white font-black text-[11px] uppercase tracking-tight focus:ring-2 focus:ring-cyan-500 hover:bg-cyan-600/30 transition-all rounded-xl shadow-lg shadow-cyan-900/20 px-3">
           <div className="flex items-center gap-2.5 overflow-hidden w-full">
-            <div className="bg-blue-500 p-1 rounded-md shrink-0">
+            <div className="bg-cyan-500 p-1 rounded-md shrink-0">
               <Monitor className="h-3.5 w-3.5 text-white shrink-0" />
             </div>
             <SelectValue placeholder="Select Branch">
@@ -49,7 +49,7 @@ export function BranchSwitcher() {
             <SelectItem 
               key={branch.id} 
               value={branch.id}
-              className="text-xs font-bold uppercase tracking-tight focus:bg-blue-600 focus:text-white"
+              className="text-xs font-bold uppercase tracking-tight focus:bg-cyan-600 focus:text-white"
             >
               {branch.name}
             </SelectItem>
