@@ -161,6 +161,7 @@ type SeedProductOpts = {
   sku?: string
   cgstRate?: number
   sgstRate?: number
+  maxDiscountPct?: number
 }
 
 export async function seedProduct(db: TestDb, opts: SeedProductOpts = {}) {
@@ -191,6 +192,7 @@ export async function seedProduct(db: TestDb, opts: SeedProductOpts = {}) {
     tracking_type: opts.serialTracked ? 'Serial' : 'Batch',
     is_archived: false,
     gst_rate: String((opts.cgstRate ?? 9) + (opts.sgstRate ?? 9)),
+    max_discount_pct: opts.maxDiscountPct ? String(opts.maxDiscountPct) : '10',
   }
   const [product] = await db.insert(schema.products).values(productData).returning()
   return { ...product, hsn, sku: productCode }

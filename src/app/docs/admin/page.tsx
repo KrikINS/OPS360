@@ -1,4 +1,4 @@
-import { Settings, Users, KeyRound, UserCog, ShieldCheck } from "lucide-react"
+import { Settings, Users, KeyRound, UserCog, ShieldCheck, MapPin } from "lucide-react"
 
 export default function AdminDocs() {
   return (

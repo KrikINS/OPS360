@@ -217,7 +217,7 @@ export function PosAddCustomerModal({ open, onOpenChange, initialPhone }: PosAdd
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">State</Label>
-                  <Select onValueChange={(v) => setFormData(prev => ({ ...prev, state: v }))} value={formData.state}>
+                  <Select onValueChange={(v) => setFormData(prev => ({ ...prev, state: v || '' }))} value={formData.state}>
                     <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5 rounded-xl text-sm font-bold dark:text-slate-200">
                       <SelectValue placeholder="Select State" />
                     </SelectTrigger>

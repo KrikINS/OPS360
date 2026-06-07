@@ -22,6 +22,7 @@ export async function createTransaction(input: {
   items: TransactionItem[]
   paymentMode: string
   customerId: string | null
+  loyaltyRedeemedAmount?: number
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -78,6 +79,7 @@ export async function createTransaction(input: {
       sgst: spResult.sgst ?? 0,
       igst: spResult.igst ?? 0,
       cogs: 0, // will be fixed in FIX 2
+      loyaltyDiscountAmount: input.loyaltyRedeemedAmount ?? 0,
     })
   } catch (journalError) {
     console.error('Sales journal post failed:', journalError)
@@ -86,7 +88,16 @@ export async function createTransaction(input: {
   // Award loyalty points
   if (spResult) {
     try {
-      const { earnPoints } = await import('@/actions/loyalty')
+      const { earnPoints, redeemPoints } = await import('@/actions/loyalty')
+      
+      if (input.loyaltyRedeemedAmount && input.loyaltyRedeemedAmount > 0 && input.customerId) {
+        await redeemPoints({
+          customerId: input.customerId,
+          pointsToRedeem: input.loyaltyRedeemedAmount,
+          invoiceId: String(spResult.id ?? ''),
+        })
+      }
+      
       const earnRes = await earnPoints({
         customerId: input.customerId ?? null,
         invoiceId: String(spResult.id ?? ''),

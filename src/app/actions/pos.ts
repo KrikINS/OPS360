@@ -12,8 +12,9 @@ export async function getUserPosStatsAction() {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return { data: [] }
 
+    const cookieStore = await cookies()
     const branchId = session.user.branchId
-      ?? cookies().get('activeBranchId')?.value
+      ?? cookieStore.get('activeBranchId')?.value
       ?? null
 
     const res = await db.execute(

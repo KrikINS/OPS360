@@ -57,6 +57,7 @@ export type CartItem = {
   discountPct?: number
   discountAmount?: number
   approvedBy?: string | null
+  gst_amount?: number
 }
 
 export type Customer = {

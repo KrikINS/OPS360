@@ -1,4 +1,4 @@
-import { Keyboard, ShieldCheck, UserPlus, Hash, CreditCard, Clock, Percent, Unlock, MonitorSmartphone, TrendingDown } from "lucide-react"
+import { Keyboard, ShieldCheck, UserPlus, Hash, CreditCard, Clock, Percent, Unlock, MonitorSmartphone, TrendingDown, FileText } from "lucide-react"
 
 export default function POSDocs() {
   return (

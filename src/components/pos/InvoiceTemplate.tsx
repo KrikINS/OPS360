@@ -56,7 +56,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           month: 'short',
           year: 'numeric'
         }),
-        paymentMethod: initialData.payment_mode
+        paymentMethod: initialData.payment_method
       })
       setLoading(false)
       setIsReady(true)
@@ -108,7 +108,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               month: 'short',
               year: 'numeric'
             }),
-            paymentMethod: invoice.payment_mode
+            paymentMethod: invoice.payment_method
           })
         } catch (err) {
           console.error("Failed to fetch archival invoice:", err)
@@ -139,7 +139,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   const customer = invoiceId ? archivalData?.customer : posContext?.selectedCustomer
   const invoiceNo = invoiceId ? archivalData?.invoiceNumber : posContext?.invoiceNumber
   const displayDate = invoiceId ? archivalData?.date : posContext?.currentDate
-  const paymentMethodRaw = invoiceId ? archivalData?.paymentMethod : posContext?.payment_mode // Fallback for context is handled by initialData if available
+  const paymentMethodRaw = invoiceId ? archivalData?.paymentMethod : initialData?.payment_method
   
   // Mapping for readable payment method
   const getPaymentMethodDisplay = (method?: string) => {
@@ -206,7 +206,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             <div className={cn(isThermal ? "text-left pt-2 border-t border-slate-50" : "text-right")}>
               <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Mode</span>
               <p className="text-xs font-black text-slate-900 uppercase">
-                {getPaymentMethodDisplay(paymentMethodRaw || initialData?.payment_mode)}
+                {getPaymentMethodDisplay(paymentMethodRaw || initialData?.payment_method)}
               </p>
               <p className="font-bold text-slate-500 lowercase opacity-60 text-[9px]">status: settled</p>
             </div>

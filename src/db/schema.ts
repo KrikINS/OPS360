@@ -373,7 +373,7 @@ export const customers = pgTable("customers", {
   state: text("state"),
   pincode: text("pincode"),
   gstin: text("gstin"),
-  customer_type: text("customer_type").default('walk_in'),
+  customer_type: text("customer_type", { enum: ['retail', 'distributor', 'walk_in'] }).default('walk_in'),
   company_name: text("company_name"),
   notes: text("notes"),
   loyalty_balance: integer("loyalty_balance").notNull().default(0),

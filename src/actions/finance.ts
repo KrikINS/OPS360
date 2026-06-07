@@ -182,6 +182,7 @@ export async function postSalesJournal(input: {
   sgst: number
   igst: number
   cogs: number
+  loyaltyDiscountAmount?: number
 }) {
   // If cogs not provided, calculate from inventory
   let cogsAmount = input.cogs
@@ -203,10 +204,16 @@ export async function postSalesJournal(input: {
     }
   }
 
+  const netReceived = input.saleTotal - (input.loyaltyDiscountAmount ?? 0)
+
   const lines: Array<{ accountCode: string; debit?: number; credit?: number; description?: string }> = [
-    { accountCode: '1010', debit: input.saleTotal, description: 'Cash received from POS sale' },
+    { accountCode: '1010', debit: netReceived, description: 'Cash received from POS sale' },
     { accountCode: '4000', credit: input.subtotal, description: 'Sales revenue ex-tax' },
   ]
+  
+  if (input.loyaltyDiscountAmount && input.loyaltyDiscountAmount > 0) {
+    lines.push({ accountCode: '5040', debit: input.loyaltyDiscountAmount, description: 'Loyalty points redeemed' })
+  }
 
   if (input.cgst > 0) lines.push({ accountCode: '2020', credit: input.cgst, description: 'CGST collected' })
   if (input.sgst > 0) lines.push({ accountCode: '2030', credit: input.sgst, description: 'SGST collected' })
