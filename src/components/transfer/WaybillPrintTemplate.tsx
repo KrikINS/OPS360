@@ -7,6 +7,7 @@ import {
   User
 } from "lucide-react";
 import Image from "next/image";
+import { useBranding } from "@/providers/GlobalBrandingProvider";
 
 interface WaybillPrintTemplateProps {
   data: {
@@ -38,6 +39,7 @@ interface WaybillPrintTemplateProps {
 export const WaybillPrintTemplate = React.forwardRef<HTMLDivElement, WaybillPrintTemplateProps>(
   ({ data }, ref) => {
     const { transfer_details, source_branch, destination_branch, originator, items } = data;
+    const { companyName, logoUrl } = useBranding();
     
     const systemTimestamp = new Date().toLocaleString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric',
@@ -67,10 +69,10 @@ export const WaybillPrintTemplate = React.forwardRef<HTMLDivElement, WaybillPrin
               <h1 className="text-[14pt] font-black tracking-tighter uppercase m-0 leading-none">Stock Transfer Waybill</h1>
               <div className="flex items-center gap-3 mt-1">
                 <div className="bg-white p-1 rounded border border-slate-200">
-                  <Image src="/ethan-logo.png" alt="Logo" width={32} height={32} className="h-7 w-auto object-contain" />
+                  <Image src={logoUrl || "/ethan-logo-final.png"} alt={`${companyName} Logo`} width={32} height={32} className="h-7 w-auto object-contain" />
                 </div>
                 <div>
-                   <p className="text-[10pt] font-black m-0 uppercase tracking-tight">Ethan Home Appliances</p>
+                   <p className="text-[10pt] font-black m-0 uppercase tracking-tight">{companyName}</p>
                    <p className="text-[7px] uppercase tracking-[0.2em] font-black m-0 text-slate-500">Logistics Hub</p>
                 </div>
               </div>
@@ -198,7 +200,7 @@ export const WaybillPrintTemplate = React.forwardRef<HTMLDivElement, WaybillPrin
           <div className="flex justify-between items-end w-full">
             <div className="space-y-1">
               <p className="m-0 font-black text-[9px]">DOC TYPE: INTERNAL WAREHOUSE WAYBILL</p>
-              <p className="text-[7px] m-0 font-bold uppercase tracking-wider text-slate-500">Subject to standard logistics audit protocols of Ethan Home Appliances</p>
+              <p className="text-[7px] m-0 font-bold uppercase tracking-wider text-slate-500">Subject to standard logistics audit protocols of {companyName}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">

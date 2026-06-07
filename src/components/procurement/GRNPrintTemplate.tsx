@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
+import { useBranding } from "@/providers/GlobalBrandingProvider";
 
 interface Branch {
   id: string;
@@ -39,6 +40,7 @@ interface GRNPrintTemplateProps {
 
 export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplateProps>(
   ({ grn, branch }, ref) => {
+    const { companyName, logoUrl, supportEmail, billingAddress } = useBranding();
     const systemTimestamp = new Date().toLocaleString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -111,11 +113,11 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-[13pt] font-bold text-black m-0 uppercase tracking-tight">Ethan Home Appliances</p>
+                <p className="text-[13pt] font-bold text-black m-0 uppercase tracking-tight">{companyName}</p>
                 <p className="text-[8px] uppercase tracking-[0.3em] font-black m-0 text-slate-500">Inventory Management Hub</p>
               </div>
               <div className="bg-white p-1 rounded border border-slate-200">
-                <Image src="/ethan-logo.png" alt="Ethan Logo" width={32} height={32} className="h-7 w-auto object-contain" />
+                <Image src={logoUrl || "/ethan-logo-final.png"} alt={`${companyName} Logo`} width={32} height={32} className="h-7 w-auto object-contain" />
               </div>
             </div>
           </div>
@@ -137,10 +139,10 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                   {/* HQ Address Section - Matches PO Body First Block */}
                   <div className="py-6 px-10 flex justify-between items-start bg-slate-50 border border-slate-200 rounded-xl">
                     <div className="space-y-0.5 text-[10px] font-bold text-black uppercase tracking-tight">
-                      <p className="m-0">Ethan Home Appliances HQ</p>
+                      <p className="m-0">{billingAddress}</p>
                       <p className="m-0">Minzta Hotel, Vazhappilly Tower, Koratty</p>
                       <p className="m-0">Thrissur, Kerala</p>
-                      <p className="m-0">Contact No: 9747552277 | Email: ethanops360@gmail.com</p>
+                      <p className="m-0">Contact No: 9747552277 | Email: {supportEmail}</p>
                     </div>
                     <div className="text-right text-[10px] font-bold text-black">
                       <p className="m-0 uppercase tracking-widest text-slate-500">Receipt Reference</p>

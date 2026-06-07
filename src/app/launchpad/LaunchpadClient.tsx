@@ -5,14 +5,16 @@ import { LogOut } from "lucide-react"
 import Image from "next/image"
 import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
+import { useBranding } from "@/providers/GlobalBrandingProvider"
 
 const BrandIdentity = () => {
+  const { companyName, logoUrl } = useBranding()
   return (
     <div className="flex flex-col items-center scale-[0.6]">
       <div className="relative">
         <Image 
-          src="/ethan-logo-final.png" 
-          alt="Ethan Logo" 
+          src={logoUrl || "/ethan-logo-final.png"} 
+          alt={`${companyName} Logo`} 
           width={400} 
           height={400} 
           priority 
@@ -22,7 +24,7 @@ const BrandIdentity = () => {
       <div className="text-center space-y-2 mt-2">
         <div className="relative inline-block group">
           <h1 className="font-bold uppercase font-[family-name:var(--font-outfit)] text-xl text-white/40 tracking-[0.2em]">
-            Ops360 ERP
+            {companyName}
           </h1>
         </div>
       </div>

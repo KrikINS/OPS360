@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname, useSearchParams } from "next/navigation"
+import { useBranding } from "@/providers/GlobalBrandingProvider"
 import { useEffect, useState } from "react"
 
 import {
@@ -150,7 +151,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
   const searchParams = useSearchParams()
   const { state, toggleSidebar } = useSidebar()
   const isCollapsed = state === "collapsed"
-  const [logoUrl, setLogoUrl] = useState("/ethan-logo.png")
+  const { logoUrl, companyName, supportEmail } = useBranding()
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
   
@@ -171,15 +172,6 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
     setNavigatingTo(null);
   }
 
-  useEffect(() => {
-    import("@/app/actions/generics").then(m => m.fetchData("app_settings"))
-      .then((res) => {
-        if (res.data && Array.isArray(res.data)) {
-          const logo = (res.data as typeof import("@/db/schema").app_settings.$inferSelect[]).find((s) => s.key === "logo_url")
-          if (logo?.value) setLogoUrl(logo.value)
-        }
-      })
-  }, [])
 
   const isAdminMode = pathname.startsWith("/admin")
 
@@ -194,7 +186,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
           )}>
             <Image
               src={logoUrl || "/ethan-logo-final.png"}
-              alt="Ethan"
+              alt={companyName}
               fill
               priority
               sizes="(max-width: 768px) 64px, 105px"
@@ -490,7 +482,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
         </Link>
         
         <a
-          href="mailto:ethanops360@gmail.com?subject=OPS360%20Issue%20Report"
+          href={`mailto:${supportEmail}?subject=OPS360%20Issue%20Report`}
           className={cn(
             "flex items-center gap-2 px-2 h-7 rounded-md text-xs tracking-tight transition-all duration-150",
             "text-slate-300 hover:text-white hover:bg-white/5 border-l-[3px] border-l-transparent",
@@ -520,7 +512,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
               ) : (
                 <div className="flex items-center gap-3 w-full">
                   <ChevronsLeft className="h-4 w-4 shrink-0" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Minimize Sidebar</span>
+                  <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap">Minimize Sidebar</span>
                 </div>
               )}
             </SidebarMenuButton>
@@ -528,7 +520,6 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
         </SidebarMenu>
 
         <div className={cn("mt-1 text-[6px] text-slate-500 text-center uppercase tracking-tighter px-1 leading-tight flex flex-col gap-0.5 items-center justify-center", isCollapsed && "sr-only")}>
-          <span>{`© ${new Date().getFullYear()} Ethan Home Appliances`}</span>
           <div className="flex items-center gap-1.5 opacity-60">
             <span>System v1.2</span>
             <span>•</span>

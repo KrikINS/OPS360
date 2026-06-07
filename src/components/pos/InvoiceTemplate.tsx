@@ -3,6 +3,7 @@
 import React, { forwardRef, useEffect, useState, useContext } from 'react'
 import { PosContext } from '@/context/PosContext'
 import { cn } from '@/lib/utils'
+import { useBranding } from '@/providers/GlobalBrandingProvider'
 import type { Branch, Customer, InvoiceData, CartItem } from '@/context/PosContext'
 import { numberToWords } from '@/utils/numberToWords'
 import { fmtINR } from '@/lib/utils'
@@ -15,6 +16,7 @@ interface InvoiceTemplateProps {
 
 export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ invoiceId, initialData, onReady }, ref) => {
   const posContext = useContext(PosContext)
+  const { companyName } = useBranding()
   
   // Local state for archival/re-print mode
   const [archivalData, setArchivalData] = useState<{
@@ -175,7 +177,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             <div className={cn("flex items-center gap-4", isThermal && "flex-col")}>
               <div className="h-12 w-12 bg-slate-900 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg">EHA</div>
               <div className={cn("space-y-0.5", isThermal && "text-center")}>
-                <h1 className={cn("text-2xl font-black tracking-tight text-slate-900 uppercase", isThermal && "text-lg")}>Ethan Home Appliances</h1>
+                <h1 className={cn("text-2xl font-black tracking-tight text-slate-900 uppercase", isThermal && "text-lg")}>{companyName}</h1>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
                   {branch?.full_address || 'Main Showroom'}<br />
                   {branch?.city}, {branch?.state}<br />
@@ -326,7 +328,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               <div className="text-[8px] text-slate-400 space-y-1 break-words">
                 <p className="font-black uppercase text-slate-500 mb-1">Terms & Conditions</p>
                 <p>1. No returns/exchange once sold.</p>
-                <p>2. Subject to Ethan Home Appliances local Jurisdiction.</p>
+                <p>2. Subject to {companyName} local Jurisdiction.</p>
                 <p>3. Computer-generated; no signature required.</p>
               </div>
               <div className={cn("flex flex-col", isThermal ? "items-center text-center pt-4 border-t border-slate-50" : "items-end text-right")}>

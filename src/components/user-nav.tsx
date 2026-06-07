@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { setActiveBranchAction } from "@/app/actions/branch"
+import { useBranding } from "@/providers/GlobalBrandingProvider"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,7 @@ export function UserNav({ profile }: UserNavProps) {
   const [switchingBranchId, setSwitchingBranchId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState("")
   const { data: session } = useSession()
+  const { supportEmail } = useBranding()
 
   const displayEmail = session?.user?.email || profile.email
   const displayName = session?.user?.name || profile.full_name || displayEmail.split("@")[0] || "User"
@@ -217,7 +219,7 @@ export function UserNav({ profile }: UserNavProps) {
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Work Email</label>
                 <Input value={profile.email} disabled className="bg-muted" />
-                <p className="text-xs text-muted-foreground">Contact the master administrator (ethanops360@gmail.com) to change your designated email address.</p>
+                <p className="text-xs text-muted-foreground">Contact the master administrator ({supportEmail}) to change your designated email address.</p>
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Full Name</label>

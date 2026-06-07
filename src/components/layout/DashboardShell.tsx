@@ -44,7 +44,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
 
   return (
     <GlobalProvider initialBranch={{ id: profile.branch_id, name: profile.branch_name || "Unknown Branch" }}>
-      <SidebarProvider defaultOpen={false}>
+      <SidebarProvider defaultOpen={true}>
         <AppSidebar permissions={permissions} profile={profile} />
         <SidebarInset className="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out">
           <header className="h-14 flex items-center justify-between px-5 border-b border-white/10 bg-[#001529] text-white gap-4 shrink-0 z-50">

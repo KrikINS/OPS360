@@ -29,11 +29,16 @@ export const metadata: Metadata = {
   description: "Multi-branch ERP for High-Scale Operations",
 };
 
-export default function RootLayout({
+import { GlobalBrandingProvider } from "@/providers/GlobalBrandingProvider";
+import { getGlobalBranding } from "@/actions/branding";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const brandingSettings = await getGlobalBranding();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -41,9 +46,11 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <SessionProvider>
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+          <GlobalBrandingProvider settings={brandingSettings}>
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+          </GlobalBrandingProvider>
         </SessionProvider>
       </body>
     </html>

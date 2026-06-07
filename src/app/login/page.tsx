@@ -10,10 +10,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import { Loader2, Eye, EyeOff, ShieldCheck, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useBranding } from "@/providers/GlobalBrandingProvider"
 
 type AnimationStage = "loading" | "intro" | "form"
 
 const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
+  const { companyName, logoUrl } = useBranding()
   return (
     <div className={cn(
       "flex flex-col items-center transition-all duration-1000 ease-in-out",
@@ -26,8 +28,8 @@ const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
         stage !== "loading" && stage !== "intro" ? "opacity-100" : "animate-in fade-in zoom-in duration-1000"
       )}>
         <Image 
-          src="/ethan-logo-final.png" 
-          alt="Ethan Logo" 
+          src={logoUrl || "/ethan-logo-final.png"} 
+          alt={`${companyName} Logo`} 
           width={320} 
           height={320} 
           priority 
@@ -49,7 +51,7 @@ const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
             stage === "intro" && "text-5xl text-white/60 tracking-normal",
             stage === "form" && "text-3xl text-white tracking-normal"
           )}>
-            Ops360 ERP
+            {companyName}
           </h1>
           <div className={cn(
             "absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#7fd1e3] to-transparent shadow-[0_0_10px_rgba(127,209,227,0.5)] transition-all duration-1000",
@@ -209,7 +211,7 @@ function LoginPageContent() {
                     id="email" 
                     name="email" 
                     type="email" 
-                    placeholder="name@ethan.in" 
+                    placeholder="name@company.com" 
                     autoComplete="off" 
                     required 
                     className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11 px-4 focus:bg-white/10 focus:border-[#7FD1E3]/50 transition-all rounded-xl"

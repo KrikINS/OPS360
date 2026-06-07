@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Upload, CheckCircle2, ImageIcon, X } from "lucide-react"
 import Image from "next/image"
+import { useBranding } from "@/providers/GlobalBrandingProvider"
+import { uploadLogo } from "@/actions/branding"
 
 interface LogoUploaderProps {
   currentLogoUrl?: string
@@ -12,6 +14,7 @@ interface LogoUploaderProps {
 }
 
 export function LogoUploader({ currentLogoUrl, onSuccess }: LogoUploaderProps) {
+  const { companyName, logoUrl } = useBranding()
   const [dragging, setDragging] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -50,13 +53,11 @@ export function LogoUploader({ currentLogoUrl, onSuccess }: LogoUploaderProps) {
     formData.append("logo", file)
 
     try {
-      const res = await fetch("/api/admin/logo", { method: "POST", body: formData })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || "Upload failed")
+      const result = await uploadLogo(formData)
       setSuccess(true)
       setPreview(null)
       setFile(null)
-      onSuccess?.(json.url)
+      onSuccess?.(result.url)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -64,7 +65,7 @@ export function LogoUploader({ currentLogoUrl, onSuccess }: LogoUploaderProps) {
     }
   }
 
-  const displayLogo = preview || currentLogoUrl || "/ethan-logo.png"
+  const displayLogo = preview || currentLogoUrl || logoUrl || "/ethan-logo.png"
 
   return (
     <Card className="card-elevated">
@@ -80,7 +81,10 @@ export function LogoUploader({ currentLogoUrl, onSuccess }: LogoUploaderProps) {
       <CardContent className="space-y-4">
         {/* Current / Preview */}
         <div className="flex items-center gap-4 p-4 bg-[#001529] rounded-lg border border-[#002a52]">
-          <div className="relative h-16 w-16 bg-white rounded-lg flex items-center justify-center shadow-sm overflow-hidden shrink-0">
+          <div 
+            onClick={() => fileRef.current?.click()}
+            className="relative h-16 w-16 bg-white rounded-lg flex items-center justify-center shadow-sm overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-[#7FD1E3] transition-all"
+          >
             <Image
               src={displayLogo}
               alt="Company logo"
@@ -88,9 +92,14 @@ export function LogoUploader({ currentLogoUrl, onSuccess }: LogoUploaderProps) {
               className="object-contain p-1"
               key={displayLogo}
             />
+            {uploading && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              </div>
+            )}
           </div>
           <div>
-            <p className="text-white text-sm font-medium">Ethan Home Appliances</p>
+            <p className="text-white text-sm font-medium">{companyName}</p>
             <p className="text-[#7FD1E3] text-xs font-medium uppercase tracking-widest">Ops360 ERP</p>
             {preview && (
               <span className="text-xs text-amber-400 mt-1 block">Preview — not yet saved</span>

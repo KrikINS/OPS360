@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { fmtINR } from '@/lib/utils'
+import { useBranding } from "@/providers/GlobalBrandingProvider"
 
 // ── Types ───────────────────────────────────────────
 
@@ -119,6 +120,8 @@ export const FinancePrintTemplate =
         marginSummary,
       } = props
 
+      const { companyName, logoUrl, supportEmail, billingAddress } = useBranding()
+
       const systemTimestamp = new Date().toLocaleString('en-IN', {
         day: '2-digit', month: 'short', year: 'numeric',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
@@ -182,7 +185,7 @@ export const FinancePrintTemplate =
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="font-semibold text-sm m-0 uppercase tracking-tight">
-                  Ethan Home Appliances
+                  {companyName}
                 </p>
                 <p className="text-xs m-0" style={{ color: '#94a3b8' }}>
                   OPS360 Enterprise ERP
@@ -191,10 +194,10 @@ export const FinancePrintTemplate =
               <div className="bg-white rounded p-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/ethan-logo.png"
+                  src={logoUrl || "/ethan-logo-final.png"}
                   width={36}
                   height={36}
-                  alt="Ethan Logo"
+                  alt={`${companyName} Logo`}
                   style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
                 />
               </div>
@@ -210,11 +213,11 @@ export const FinancePrintTemplate =
                 Issued By
               </p>
               <p className="font-bold m-0" style={{ color: '#0f172a' }}>
-                Ethan Home Appliances HQ
+                {billingAddress}
               </p>
               <p className="m-0">Minzta Hotel, Vazhappilly Tower, Koratty</p>
               <p className="m-0">Thrissur, Kerala</p>
-              <p className="m-0">Contact: 9747552277 | ethanops360@gmail.com</p>
+              <p className="m-0">Contact: 9747552277 | {supportEmail}</p>
             </div>
             <div className="text-right">
               <p className="font-black uppercase tracking-widest m-0 mb-1"
