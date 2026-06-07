@@ -45,8 +45,7 @@ export async function uploadLogo(formData: FormData): Promise<{ success: boolean
     const fileRef = bucket.file(fileName)
 
     await fileRef.save(buffer, {
-      metadata: { contentType: file.type },
-      public: true
+      metadata: { contentType: file.type }
     })
 
     const publicUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`
