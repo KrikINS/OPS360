@@ -30,10 +30,10 @@ const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
         <Image 
           src={logoUrl || "/ethan-logo-final.png"} 
           alt={`${companyName} Logo`} 
-          width={320} 
-          height={320} 
+          width={192} 
+          height={192} 
           priority 
-          sizes="(max-width: 768px) 100vw, 320px"
+          sizes="(max-width: 768px) 100vw, 192px"
           style={{ width: 'auto', height: 'auto' }}
           className={cn(
             "drop-shadow-[0_0_50px_rgba(127,209,227,0.25)] bg-transparent object-contain transition-all duration-1000"
