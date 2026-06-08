@@ -45,6 +45,7 @@ type BSData = {
   assets: Array<{ code: string; name: string; balance: string }>
   liabilities: Array<{ code: string; name: string; balance: string }>
   equity: Array<{ code: string; name: string; balance: string }>
+  netProfit: number
 } | null
 
 type GSTData = {
@@ -713,7 +714,7 @@ export default function AccountingClient({
                     </p>
                     <p className="text-2xl font-bold
                       text-red-800 mt-1">
-                      {fmtINR(pl?.totalExpenses ?? 0)}
+                      {fmtINR(Math.abs(pl?.totalExpenses ?? 0))}
                     </p>
                     <p className="text-xs text-red-600 mt-1">
                       Current financial year
@@ -905,7 +906,7 @@ export default function AccountingClient({
                         </span>
                         <span className="text-sm font-semibold
                           text-red-700">
-                          {fmtINR(Number(e.net))}
+                          {fmtINR(Math.abs(Number(e.net)))}
                         </span>
                       </div>
                     ))}
@@ -917,7 +918,7 @@ export default function AccountingClient({
                       </span>
                       <span className="text-sm font-bold
                         text-red-700">
-                        {fmtINR(pl.totalExpenses)}
+                        {fmtINR(Math.abs(pl.totalExpenses))}
                       </span>
                     </div>
                   </div>

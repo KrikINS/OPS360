@@ -575,6 +575,7 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
   try {
+    // 1. Fetch all BS accounts (Asset, Liability, Equity, Tax)
     const rows = await db.execute(sql`
       SELECT a.code, a.name, a.type,
         COALESCE(SUM(jl.debit - jl.credit), 0) AS balance
@@ -592,9 +593,46 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: any[] = (rows as any).rows ?? rows
 
-    // Tax accounts are sorted by their natural balance:
-    //   positive (debit-heavy, e.g. ITC)  → current assets
-    //   negative (credit-heavy, e.g. GST payable) → current liabilities
+    // 2. Compute Net Profit from Revenue/Expense accounts for the same period.
+    //    Net Profit = SUM(credit - debit) across Revenue + Expense accounts.
+    //    This gives a positive number when profitable (revenue credits > expense debits).
+    const plRows = await db.execute(sql`
+      SELECT COALESCE(SUM(jl.credit - jl.debit), 0) AS net_profit
+      FROM journal_lines jl
+      JOIN journal_entries je ON je.id = jl.journal_entry_id
+        AND je.status = 'posted'
+        AND je.date <= ${input.asOfDate}::timestamp
+        ${input.branchId ? sql`AND je.branch_id = ${input.branchId}::uuid` : sql``}
+      JOIN accounts a ON a.id = jl.account_id
+      WHERE a.type IN ('Revenue', 'Expense')
+    `)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const plData: any[] = (plRows as any).rows ?? plRows
+    const netProfit = Number(plData[0]?.net_profit ?? 0)
+
+    // 3. Inject Net Profit into Retained Earnings (3010).
+    //    In DR-CR convention, equity is credit-natural so a profit (positive in
+    //    credit-debit) becomes negative in debit-credit. We subtract netProfit
+    //    from the 3010 balance to add the equity.
+    const equity = data.filter(r => r.type === 'Equity').map(r => {
+      if (r.code === '3010') {
+        return { ...r, balance: String(Number(r.balance) - netProfit) }
+      }
+      return r
+    })
+
+    // If 3010 doesn't exist in data (no journal lines yet), inject it
+    if (!equity.find(r => r.code === '3010') && netProfit !== 0) {
+      equity.push({
+        code: '3010',
+        name: 'Retained Earnings',
+        type: 'Equity',
+        balance: String(-netProfit),
+      })
+      equity.sort((a: { code: string }, b: { code: string }) => a.code.localeCompare(b.code))
+    }
+
+    // 4. Tax accounts sorted by balance direction
     const taxRows = data.filter(r => r.type === 'Tax')
     const taxAssets = taxRows.filter(r => Number(r.balance) >= 0)
     const taxLiabilities = taxRows.filter(r => Number(r.balance) < 0)
@@ -603,7 +641,8 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
       success: true as const,
       assets:      [...data.filter(r => r.type === 'Asset'), ...taxAssets],
       liabilities: [...data.filter(r => r.type === 'Liability'), ...taxLiabilities],
-      equity:      data.filter(r => r.type === 'Equity'),
+      equity,
+      netProfit,
     }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
