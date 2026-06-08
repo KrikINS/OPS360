@@ -499,34 +499,70 @@ export async function createGRN(input: {
       .set({ status: newPoStatus })
       .where(eq(purchase_orders.id, input.poId))
 
-    // Post journal entry — fire and forget, don't fail the GRN
-    try {
-      let totalCGST = 0
-      let totalSGST = 0
-      let totalIGST = 0
+    // Post journal entry — strict: if this fails, the entire GRN rolls back
+    // via the outer catch block (B12 fix — no more silent failures)
+    // Determine intra vs inter-state to route ITC correctly (B4 fix)
+    const [vendorState] = await db
+      .select({ stateCode: vendors.state_code })
+      .from(vendors)
+      .where(eq(vendors.id, po.vendor_id!))
+      .limit(1)
 
-      for (const item of grnItemsData) {
-        const taxableValue = item.receivedQty * item.unitCost
-        const gstRate = item.taxRate ?? 0
-        const gstAmount = taxableValue * (gstRate / 100)
-        // Intra-state assumed — IGST for inter-state can be added when branch state comparison is implemented
+    const [branchState] = await db
+      .select({ stateCode: branches.state_code })
+      .from(branches)
+      .where(eq(branches.id, input.branchId))
+      .limit(1)
+
+    // Defensive normalisation: trim whitespace and lower-case both codes before
+    // comparing so "Maharashtra" vs "maharashtra" or " MH " vs "MH" always match.
+    const vendorCode = (vendorState?.stateCode ?? '').toLowerCase().trim()
+    const branchCode = (branchState?.stateCode ?? '').toLowerCase().trim()
+
+    // Inter-state when either code is blank OR the codes differ after normalisation.
+    // Defaulting to inter-state (IGST) is the safe direction — IGST is never
+    // under-collected, while a wrong intra-state split would under-pay the
+    // correct tax head.
+    const isInterState = !vendorCode || !branchCode || vendorCode !== branchCode
+
+    console.log(
+      `[GRN Journal] vendor state="${vendorCode}" branch state="${branchCode}" → ${isInterState ? 'INTER-STATE (IGST → 1053)' : 'INTRA-STATE (CGST → 1051, SGST → 1052)'}`
+    )
+
+    let totalCGST = 0
+    let totalSGST = 0
+    let totalIGST = 0
+
+    for (const item of grnItemsData) {
+      const taxableValue = item.receivedQty * item.unitCost
+      const gstRate = item.taxRate ?? 0
+      const gstAmount = taxableValue * (gstRate / 100)
+
+      if (isInterState) {
+        // Inter-state: entire GST is IGST → routes to account 1053
+        totalIGST += gstAmount
+      } else {
+        // Intra-state: split equally into CGST + SGST → routes to 1051 / 1052
         totalCGST += gstAmount / 2
         totalSGST += gstAmount / 2
       }
-
-      await postGRNJournal({
-        grnId: grnHeader.id,
-        poId: input.poId,
-        branchId: input.branchId,
-        createdBy: session.user.id,
-        totalLandedCost: Number(grnHeader.total_landed_cost ?? 0),
-        totalCGST,
-        totalSGST,
-        totalIGST,
-      })
-    } catch (journalError) {
-      console.error('GRN journal post failed:', journalError)
     }
+
+    // Round to 2 decimal places
+    totalCGST = Math.round(totalCGST * 100) / 100
+    totalSGST = Math.round(totalSGST * 100) / 100
+    totalIGST = Math.round(totalIGST * 100) / 100
+
+    await postGRNJournal({
+      grnId: grnHeader.id,
+      poId: input.poId,
+      branchId: input.branchId,
+      createdBy: session.user.id,
+      totalLandedCost: Number(grnHeader.total_landed_cost ?? 0),
+      totalCGST,
+      totalSGST,
+      totalIGST,
+    })
 
     return {
       success: true as const,
@@ -731,7 +767,7 @@ export async function shortClosePO(input: {
 
       if (totalShortfallCGST > 0) {
         lines.push({
-          accountCode: '1050',
+          accountCode: '1051',
           credit: totalShortfallCGST,
           description: `CGST ITC reversal — ${po.po_number}`,
         })
@@ -739,7 +775,7 @@ export async function shortClosePO(input: {
 
       if (totalShortfallSGST > 0) {
         lines.push({
-          accountCode: '1050',
+          accountCode: '1052',
           credit: totalShortfallSGST,
           description: `SGST ITC reversal — ${po.po_number}`,
         })

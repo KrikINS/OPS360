@@ -71,11 +71,12 @@ describe('createTransaction — happy path', () => {
       console.log('POS ERROR:', result.error)
     }
     expect(result.success).toBe(true)
-    expect(result.transaction!.subtotal).toBe(1694.92)
-    expect(result.transaction!.cgst).toBe(152.54)
-    expect(result.transaction!.sgst).toBe(152.54)
-    expect(result.transaction!.igst).toBe(0)
-    expect(result.transaction!.grandTotal).toBe(2000)
+    if (!result.success) return
+    expect(result.transaction.subtotal).toBe(1694.92)
+    expect(result.transaction.cgst).toBe(152.54)
+    expect(result.transaction.sgst).toBe(152.54)
+    expect(result.transaction.igst).toBe(0)
+    expect(result.transaction.grandTotal).toBe(2000)
   })
 
   it('assigns a sequential invoice number', async () => {
@@ -94,8 +95,9 @@ describe('createTransaction — happy path', () => {
       paymentMode: 'upi',
       customerId: null,
     })
-
-    expect(result.transaction!.invoiceNumber).toMatch(/^INV\/\d{4}-\d{2}\/\d+$/)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.transaction.invoiceNumber).toMatch(/^INV\/\d{4}-\d{2}\/\d+$/)
   })
 
   it('decrements product stock after checkout', async () => {
@@ -146,9 +148,10 @@ describe('createTransaction — happy path', () => {
       paymentMode: 'card',
       customerId: null,
     })
-
-    expect(result.transaction!.items).toHaveLength(2)
-    expect(result.transaction!.subtotal).toBe(1525.43)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.transaction.items).toHaveLength(2)
+    expect(result.transaction.subtotal).toBe(1525.43)
   })
 })
 
@@ -292,7 +295,7 @@ describe('createTransaction — invoice numbering', () => {
 
     const results = await Promise.all(requests)
     const successful = results.filter((r) => r.success)
-    const invoiceNumbers = successful.map((r) => r.transaction!.invoiceNumber)
+    const invoiceNumbers = successful.map((r) => r.success ? (r.transaction as Record<string, unknown>).invoiceNumber : null)
     const unique = new Set(invoiceNumbers)
 
     // All 15 should have succeeded with unique invoice numbers
@@ -316,9 +319,10 @@ describe('createTransaction — invoice numbering', () => {
       paymentMode: 'cash',
       customerId: null,
     })
-
+    expect(result.success).toBe(true)
+    if (!result.success) return
     // Invoice number should reflect counter value 6 (5 + 1)
-    expect(result.transaction!.invoiceNumber).toMatch(/6$/)
+    expect(result.transaction.invoiceNumber).toMatch(/6$/)
   })
 })
 
@@ -344,9 +348,10 @@ describe('voidTransaction', () => {
       customerId: null,
     })
     expect(created.success).toBe(true)
+    if (!created.success) return
 
     const voided = await voidTransaction({
-      transactionId: String(created.transaction!.id),
+      transactionId: String(created.transaction.id),
       reason: 'Customer changed mind',
     })
 
@@ -367,7 +372,7 @@ describe('voidTransaction', () => {
     expect(restoredUnits.length).toBe(10)
 
     // Transaction should be marked voided
-    const tx = await getTransactionById(String(created.transaction!.id))
+    const tx = await getTransactionById(String(created.transaction.id))
     expect(tx?.status).toBe('voided')
   })
 
@@ -390,8 +395,10 @@ describe('voidTransaction', () => {
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: '00000000-0000-0000-0000-000000000002', branchId: branch.id, role: 'staff' }, // staff, not manager
     })
+    expect(created.success).toBe(true)
+    if (!created.success) return
     const voided = await voidTransaction({
-      transactionId: String(created.transaction!.id),
+      transactionId: String(created.transaction.id),
       reason: 'Test',
     })
 
