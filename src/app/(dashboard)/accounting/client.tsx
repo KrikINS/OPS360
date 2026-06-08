@@ -1023,11 +1023,11 @@ export default function AccountingClient({
                     text-slate-400 mb-1">Total Liabilities</p>
                   <p className="text-2xl font-bold
                     text-red-400">
-                    {fmtINR(
+                    {fmtINR(Math.abs(
                       (bs?.liabilities ?? []).reduce(
                         (s, l) => s + Number(l.balance), 0
                       )
-                    )}
+                    ))}
                   </p>
                 </div>
                 <div className="text-2xl font-light
@@ -1037,11 +1037,11 @@ export default function AccountingClient({
                     text-slate-400 mb-1">Total Equity</p>
                   <p className="text-2xl font-bold
                     text-green-400">
-                    {fmtINR(
+                    {fmtINR(Math.abs(
                       (bs?.equity ?? []).reduce(
                         (s, e) => s + Number(e.balance), 0
                       )
-                    )}
+                    ))}
                   </p>
                 </div>
               </div>
@@ -1128,7 +1128,7 @@ export default function AccountingClient({
                         </span>
                         <span className="text-sm font-semibold
                           text-red-700">
-                          {fmtINR(Number(l.balance))}
+                          {fmtINR(Math.abs(Number(l.balance)))}
                         </span>
                       </div>
                     ))}
@@ -1140,11 +1140,11 @@ export default function AccountingClient({
                       </span>
                       <span className="text-sm font-bold
                         text-red-700">
-                        {fmtINR(
+                        {fmtINR(Math.abs(
                           (bs?.liabilities ?? []).reduce(
                             (s, l) => s + Number(l.balance), 0
                           )
-                        )}
+                        ))}
                       </span>
                     </div>
                   </div>
@@ -1180,7 +1180,7 @@ export default function AccountingClient({
                         </span>
                         <span className="text-sm font-semibold
                           text-green-700">
-                          {fmtINR(Number(e.balance))}
+                          {fmtINR(Math.abs(Number(e.balance)))}
                         </span>
                       </div>
                     ))}
@@ -1192,11 +1192,11 @@ export default function AccountingClient({
                       </span>
                       <span className="text-sm font-bold
                         text-green-700">
-                        {fmtINR(
+                        {fmtINR(Math.abs(
                           (bs?.equity ?? []).reduce(
                             (s, e) => s + Number(e.balance), 0
                           )
-                        )}
+                        ))}
                       </span>
                     </div>
                   </div>
@@ -1212,11 +1212,13 @@ export default function AccountingClient({
           {bs && (() => {
             const totalAssets = bs.assets.reduce(
               (s, a) => s + Number(a.balance), 0)
+            // Liabilities and Equity are credit-natural (negative in DR-CR),
+            // so we use Math.abs for the equation check: A = |L| + |E|
             const totalLiabEquity =
-              bs.liabilities.reduce(
-                (s, l) => s + Number(l.balance), 0) +
-              bs.equity.reduce(
-                (s, e) => s + Number(e.balance), 0)
+              Math.abs(bs.liabilities.reduce(
+                (s, l) => s + Number(l.balance), 0)) +
+              Math.abs(bs.equity.reduce(
+                (s, e) => s + Number(e.balance), 0))
             const diff = Math.abs(totalAssets - totalLiabEquity)
             return diff > 1 ? (
               <Card className="border-orange-200 bg-orange-50">

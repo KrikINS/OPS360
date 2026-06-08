@@ -212,7 +212,7 @@ export async function postSalesJournal(input: {
   ]
   
   if (input.loyaltyDiscountAmount && input.loyaltyDiscountAmount > 0) {
-    lines.push({ accountCode: '5040', debit: input.loyaltyDiscountAmount, description: 'Loyalty points redeemed' })
+    lines.push({ accountCode: '5080', debit: input.loyaltyDiscountAmount, description: 'Loyalty points redeemed' })
   }
 
   if (input.cgst > 0) lines.push({ accountCode: '2020', credit: input.cgst, description: 'CGST collected' })
@@ -562,7 +562,8 @@ export async function getProfitAndLoss(input: {
     const expenses = data.filter(r => r.type === 'Expense')
     const totalRevenue  = revenue.reduce((s, r)  => s + Number(r.net), 0)
     const totalExpenses = expenses.reduce((s, r) => s + Number(r.net), 0)
-    return { success: true as const, revenue, expenses, totalRevenue, totalExpenses, netProfit: totalRevenue - totalExpenses }
+    // expenses.net is already negative (credit - debit), so addition is correct
+    return { success: true as const, revenue, expenses, totalRevenue, totalExpenses, netProfit: totalRevenue + totalExpenses }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
   }
@@ -583,16 +584,25 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
         AND je.status = 'posted'
         AND je.date <= ${input.asOfDate}::timestamp
         ${input.branchId ? sql`AND je.branch_id = ${input.branchId}::uuid` : sql``}
-      WHERE a.type IN ('Asset', 'Liability', 'Equity')
+      WHERE a.type IN ('Asset', 'Liability', 'Equity', 'Tax')
+        AND a.is_active = true
       GROUP BY a.code, a.name, a.type
       ORDER BY a.code
     `)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: any[] = (rows as any).rows ?? rows
+
+    // Tax accounts are sorted by their natural balance:
+    //   positive (debit-heavy, e.g. ITC)  → current assets
+    //   negative (credit-heavy, e.g. GST payable) → current liabilities
+    const taxRows = data.filter(r => r.type === 'Tax')
+    const taxAssets = taxRows.filter(r => Number(r.balance) >= 0)
+    const taxLiabilities = taxRows.filter(r => Number(r.balance) < 0)
+
     return {
       success: true as const,
-      assets:      data.filter(r => r.type === 'Asset'),
-      liabilities: data.filter(r => r.type === 'Liability'),
+      assets:      [...data.filter(r => r.type === 'Asset'), ...taxAssets],
+      liabilities: [...data.filter(r => r.type === 'Liability'), ...taxLiabilities],
       equity:      data.filter(r => r.type === 'Equity'),
     }
   } catch (error) {
@@ -921,5 +931,70 @@ export async function getMarginReport(input: {
       success: false as const,
       error: (error as Error).message
     }
+  }
+}
+
+// ── createManualJournal ─────────────────────────────
+// Allows managers/admins to post adjusting entries such as
+// opening balances, corrections, or year-end closings.
+export async function createManualJournal(input: {
+  date: string
+  description: string
+  branchId: string
+  lines: Array<{ accountCode: string; debit?: number; credit?: number; description?: string }>
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
+    return { success: false as const, error: 'Manager role required to post manual journal entries' }
+  }
+
+  if (!input.lines || input.lines.length < 2) {
+    return { success: false as const, error: 'A journal entry must have at least 2 lines' }
+  }
+
+  if (!input.description?.trim()) {
+    return { success: false as const, error: 'Description (narration) is required' }
+  }
+
+  // Strict double-entry validation: total debits must equal total credits
+  const totalDebits  = input.lines.reduce((s, l) => s + (l.debit  ?? 0), 0)
+  const totalCredits = input.lines.reduce((s, l) => s + (l.credit ?? 0), 0)
+
+  if (Math.abs(totalDebits - totalCredits) > 0.01) {
+    return {
+      success: false as const,
+      error: `Debits (₹${totalDebits.toFixed(2)}) must equal Credits (₹${totalCredits.toFixed(2)})`
+    }
+  }
+
+  // Validate that each line has either a debit or credit (not both, not neither)
+  for (const line of input.lines) {
+    const d = line.debit ?? 0
+    const c = line.credit ?? 0
+    if (d === 0 && c === 0) {
+      return { success: false as const, error: `Line for account ${line.accountCode} has neither debit nor credit` }
+    }
+    if (d > 0 && c > 0) {
+      return { success: false as const, error: `Line for account ${line.accountCode} cannot have both debit and credit` }
+    }
+  }
+
+  try {
+    const entry = await createJournalEntry({
+      date: new Date(input.date),
+      description: input.description.trim(),
+      referenceSource: 'MANUAL',
+      branchId: input.branchId,
+      autoGenerated: false,
+      createdBy: session.user.id,
+      lines: input.lines,
+    })
+
+    return { success: true as const, entry }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
   }
 }

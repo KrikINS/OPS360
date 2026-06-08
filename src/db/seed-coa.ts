@@ -35,6 +35,9 @@ const COA = [
   { code: '2020', name: 'GST Payable (CGST)',          type: 'Tax',     is_system: true,  is_active: true  },
   { code: '2030', name: 'GST Payable (SGST)',          type: 'Tax',     is_system: true,  is_active: true  },
   { code: '2040', name: 'GST Payable (IGST)',          type: 'Tax',     is_system: true,  is_active: true  },
+  // ── Equity ─────────────────────────────────────────────────────────
+  { code: '3000', name: 'Owner Capital',               type: 'Equity',  is_system: true,  is_active: true  },
+  { code: '3010', name: 'Retained Earnings',           type: 'Equity',  is_system: true,  is_active: true  },
   // ── Revenue ──────────────────────────────────────────────────────────
   { code: '4000', name: 'Sales Revenue',               type: 'Revenue', is_system: true,  is_active: true  },
   // ── Expenses ─────────────────────────────────────────────────────────

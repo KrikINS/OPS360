@@ -316,6 +316,8 @@ export async function seedCoa(db: TestDb) {
     { code: '2010', name: 'Accounts Payable',         type: 'Liability', is_system: true },
     { code: '2020', name: 'GST Payable CGST',         type: 'Tax',       is_system: true },
     { code: '2030', name: 'GST Payable SGST',         type: 'Tax',       is_system: true },
+    { code: '3000', name: 'Owner Capital',             type: 'Equity',    is_system: true },
+    { code: '3010', name: 'Retained Earnings',         type: 'Equity',    is_system: true },
     { code: '4000', name: 'Sales Revenue',            type: 'Revenue',   is_system: true },
     { code: '5010', name: 'COGS',                     type: 'Expense',   is_system: true },
     { code: '5030', name: 'Utilities',                type: 'Expense',   is_system: true },

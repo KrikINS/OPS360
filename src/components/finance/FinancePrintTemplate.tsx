@@ -384,14 +384,22 @@ export const FinancePrintTemplate =
                             <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '10px' }}>{r.code}</td>
                             <td style={{ padding: '8px 12px' }}>{r.name}</td>
                             <td style={{ padding: '8px 12px', textAlign: 'right', color: section.color, fontWeight: 500 }}>
-                              {fmtINR(Number(r.balance))}
+                              {fmtINR(
+                                section.title === 'Assets'
+                                  ? Number(r.balance)
+                                  : Math.abs(Number(r.balance))
+                              )}
                             </td>
                           </tr>
                         ))}
                         <tr style={{ backgroundColor: section.bg, fontWeight: 700, borderTop: `2px solid ${section.border}` }}>
                           <td colSpan={2} style={{ padding: '8px 12px' }}>Total {section.title}</td>
                           <td style={{ padding: '8px 12px', textAlign: 'right', color: section.color }}>
-                            {fmtINR(section.rows.reduce((s, r) => s + Number(r.balance), 0))}
+                            {fmtINR(
+                              section.title === 'Assets'
+                                ? section.rows.reduce((s, r) => s + Number(r.balance), 0)
+                                : Math.abs(section.rows.reduce((s, r) => s + Number(r.balance), 0))
+                            )}
                           </td>
                         </tr>
                       </tbody>
@@ -410,11 +418,11 @@ export const FinancePrintTemplate =
                   <div style={{ display: 'flex', alignItems: 'center',
                     justifyContent: 'center', gap: '16px', textAlign: 'center' }}>
                     {[
-                      { label: 'Assets',      value: bsAssets.reduce((s, r) => s + Number(r.balance), 0),      color: '#1d4ed8' },
+                      { label: 'Assets',      value: bsAssets.reduce((s, r) => s + Number(r.balance), 0),                color: '#1d4ed8' },
                       { sep: '=' },
-                      { label: 'Liabilities', value: bsLiabilities.reduce((s, r) => s + Number(r.balance), 0), color: '#b91c1c' },
+                      { label: 'Liabilities', value: Math.abs(bsLiabilities.reduce((s, r) => s + Number(r.balance), 0)), color: '#b91c1c' },
                       { sep: '+' },
-                      { label: 'Equity',      value: bsEquity.reduce((s, r) => s + Number(r.balance), 0),      color: '#15803d' },
+                      { label: 'Equity',      value: Math.abs(bsEquity.reduce((s, r) => s + Number(r.balance), 0)),      color: '#15803d' },
                     ].map((item, i) =>
                       'sep' in item ? (
                         <span key={i} style={{ fontSize: '20px', color: '#94a3b8', fontWeight: 300 }}>
