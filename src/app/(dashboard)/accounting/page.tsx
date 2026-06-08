@@ -59,6 +59,8 @@ export default async function AccountingPage({
     }),
     getJournalEntries({
       branchId: isAdmin ? undefined : branchId ?? undefined,
+      fromDate,
+      toDate,
     }),
     getExpenses({
       branchId: isAdmin ? undefined : branchId ?? undefined,

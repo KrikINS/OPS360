@@ -84,20 +84,22 @@ export default function AccountingDocsPage() {
               <h3 className="font-bold mb-2">GRN Posted</h3>
               <ul className="text-sm space-y-1 font-mono text-slate-700">
                 <li>DR 1040 Inventory Asset (landed cost)</li>
-                <li>DR 1050 GST Input Tax Credit — CGST (9%)</li>
-                <li>DR 1050 GST Input Tax Credit — SGST (9%)</li>
+                <li>DR 1051 CGST ITC — intra-state (9%)</li>
+                <li>DR 1052 SGST ITC — intra-state (9%)</li>
+                <li className="text-slate-400">— or DR 1053 IGST ITC for inter-state suppliers —</li>
                 <li>CR 2010 Accounts Payable (total incl. GST)</li>
               </ul>
               <p className="text-xs text-slate-500 mt-2">
-                Note: ITC is posted using accurate tax rate lookup. All new GRNs post real CGST/SGST amounts.
+                Intra vs inter-state is auto-detected by comparing vendor and branch state codes.
               </p>
             </div>
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <h3 className="font-bold mb-2">POS Sale Completed</h3>
               <ul className="text-sm space-y-1 font-mono text-slate-700">
-                <li>DR 1010 Cash (sale amount)</li>
+                <li>DR 1010 Cash (net after loyalty discount)</li>
                 <li>CR 4000 Sales Revenue (subtotal ex-tax)</li>
-                <li>CR 2020/2030 GST Payable CGST/SGST (tax collected)</li>
+                <li>CR 2020/2030/2040 GST Payable (tax collected)</li>
+                <li>DR 5080 Loyalty Discount Expense (if redeemed)</li>
                 <li>DR 5010 COGS (inventory cost)</li>
                 <li>CR 1040 Inventory Asset (reduce stock value)</li>
               </ul>
@@ -121,7 +123,8 @@ export default function AccountingDocsPage() {
               <ul className="text-sm space-y-1 font-mono text-slate-700">
                 <li>DR 2010 Accounts Payable (reversal for undelivered)</li>
                 <li>CR 1040 Inventory Asset (we never received these)</li>
-                <li>CR 1050 GST Input Tax Credit (reverse unclaimed ITC)</li>
+                <li>CR 1051 CGST ITC reversal (intra-state)</li>
+                <li>CR 1052 SGST ITC reversal (intra-state)</li>
               </ul>
               <p className="text-xs text-slate-500 mt-2">
                 Narration: Auto-posted when manager short-closes a PO
