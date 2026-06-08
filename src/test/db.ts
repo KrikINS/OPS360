@@ -301,3 +301,26 @@ export async function seedAttendanceRecord(
 
   return record
 }
+
+// ---------------------------------------------------------------------------
+// Seed the Chart of Accounts required for journal posting
+// ---------------------------------------------------------------------------
+export async function seedCoa(db: TestDb) {
+  await db.insert(schema.accounts).values([
+    { code: '1010', name: 'Cash',                     type: 'Asset',     is_system: true },
+    { code: '1020', name: 'Bank',                     type: 'Asset',     is_system: true },
+    { code: '1040', name: 'Inventory Asset',          type: 'Asset',     is_system: true },
+    { code: '1051', name: 'CGST Input Tax Credit',    type: 'Tax',       is_system: true },
+    { code: '1052', name: 'SGST Input Tax Credit',    type: 'Tax',       is_system: true },
+    { code: '1053', name: 'IGST Input Tax Credit',    type: 'Tax',       is_system: true },
+    { code: '2010', name: 'Accounts Payable',         type: 'Liability', is_system: true },
+    { code: '2020', name: 'GST Payable CGST',         type: 'Tax',       is_system: true },
+    { code: '2030', name: 'GST Payable SGST',         type: 'Tax',       is_system: true },
+    { code: '4000', name: 'Sales Revenue',            type: 'Revenue',   is_system: true },
+    { code: '5010', name: 'COGS',                     type: 'Expense',   is_system: true },
+    { code: '5030', name: 'Utilities',                type: 'Expense',   is_system: true },
+    { code: '5040', name: 'Rent',                     type: 'Expense',   is_system: true },
+    { code: '5080', name: 'Loyalty Discount Expense', type: 'Expense',   is_system: true },
+  ]).onConflictDoNothing()
+}
+

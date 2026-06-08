@@ -16,7 +16,7 @@ import { and, eq } from 'drizzle-orm'
 import * as schema from '@/db/schema'
 import {
   setupTestDb, cleanupTestDb, teardownTestDb,
-  seedBranch, seedVendor, seedProduct, seedCounter, seedHsn,
+  seedBranch, seedVendor, seedProduct, seedCounter, seedHsn, seedCoa,
 } from '@/test/db'
 import {
   createPurchaseOrder,
@@ -343,6 +343,7 @@ describe('createGRN', () => {
     const branch = await seedBranch(db)
     const vendor = await seedVendor(db)
     const product = await seedProduct(db, { branchId: branch.id })
+    await seedCoa(db)
     await seedCounter(db, branch.id, 'PO')
     await seedCounter(db, branch.id, 'GRN')
 
@@ -386,6 +387,7 @@ describe('createGRN', () => {
     const branch = await seedBranch(db)
     const vendor = await seedVendor(db)
     const product = await seedProduct(db, { branchId: branch.id })
+    await seedCoa(db)
     await seedCounter(db, branch.id, 'PO')
     await seedCounter(db, branch.id, 'GRN')
 
@@ -441,6 +443,7 @@ describe('createGRN', () => {
     const branch = await seedBranch(db)
     const vendor = await seedVendor(db)
     const product = await seedProduct(db, { branchId: branch.id })
+    await seedCoa(db)
     await seedCounter(db, branch.id, 'PO')
     await seedCounter(db, branch.id, 'GRN')
 
@@ -522,6 +525,7 @@ describe('createReturnToVendor', () => {
     const branch = await seedBranch(db)
     const vendor = await seedVendor(db)
     const product = await seedProduct(db, { branchId: branch.id })
+    await seedCoa(db)
     await seedCounter(db, branch.id, 'PO')
     await seedCounter(db, branch.id, 'GRN')
 
