@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useCallback } from 'react'
 import { useReactToPrint } from 'react-to-print'
 import { FinancePrintTemplate } from '@/components/finance/FinancePrintTemplate'
+import ManualJournalDrawer from '@/components/accounting/ManualJournalDrawer'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Card, CardContent, CardHeader, CardTitle
@@ -21,7 +22,8 @@ import {
   BookOpen, LayoutDashboard, Plus, CheckCircle2,
   XCircle, Clock, ArrowUpRight, ArrowDownRight,
   Wallet, FileText, IndianRupee, Download, Printer,
-  CalendarRange, ChevronRight, ChevronDown, Loader2
+  CalendarRange, ChevronRight, ChevronDown, Loader2,
+  PenLine
 } from 'lucide-react'
 import {
   createExpenseRecord, approveExpense, rejectExpense,
@@ -199,6 +201,15 @@ export default function AccountingClient({
   const [journalCursor, setJournalCursor] = useState<{ lastDate: string; lastId: string } | undefined>(undefined)
   const [journalHasMore, setJournalHasMore] = useState(journal.length >= 50)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [manualJournalOpen, setManualJournalOpen] = useState(false)
+
+  // Refresh journal after manual entry
+  const handleJournalPosted = useCallback(() => {
+    // Reset pagination and refresh from server
+    router.refresh()
+    setJournalCursor(undefined)
+    setJournalHasMore(true)
+  }, [router])
 
   async function loadMoreJournal() {
     // Determine cursor from last entry in current list
@@ -1253,10 +1264,23 @@ export default function AccountingClient({
       {tab === 'journal' && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-indigo-600" />
-              Journal Ledger
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-indigo-600" />
+                Journal Ledger
+              </CardTitle>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  onClick={() => setManualJournalOpen(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white
+                    text-xs font-semibold gap-1.5 h-8 px-3"
+                >
+                  <PenLine className="h-3.5 w-3.5" />
+                  Post Manual Journal
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {journalEntries.length > 0 ? (
@@ -1745,6 +1769,14 @@ export default function AccountingClient({
           marginSummary={marginData?.summary}
         />
       </div>
+
+      {/* ── Manual Journal Drawer ────────────────── */}
+      <ManualJournalDrawer
+        open={manualJournalOpen}
+        onOpenChange={setManualJournalOpen}
+        branchId={branchId}
+        onSuccess={handleJournalPosted}
+      />
 
     </div>
   )

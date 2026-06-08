@@ -934,6 +934,31 @@ export async function getMarginReport(input: {
   }
 }
 
+// ── getActiveAccounts ───────────────────────────────
+// Returns all active Chart of Accounts entries for the
+// manual journal combobox / account selector.
+export async function getActiveAccounts() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  try {
+    const rows = await db
+      .select({
+        id: accounts.id,
+        code: accounts.code,
+        name: accounts.name,
+        type: accounts.type,
+      })
+      .from(accounts)
+      .where(eq(accounts.is_active, true))
+      .orderBy(accounts.code)
+
+    return { success: true as const, accounts: rows }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
 // ── createManualJournal ─────────────────────────────
 // Allows managers/admins to post adjusting entries such as
 // opening balances, corrections, or year-end closings.
