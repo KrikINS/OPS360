@@ -235,7 +235,15 @@ export async function postSalesJournal(input: {
   ]
   
   if (input.loyaltyDiscountAmount && input.loyaltyDiscountAmount > 0) {
-    lines.push({ accountCode: '5080', debit: input.loyaltyDiscountAmount, description: 'Loyalty points redeemed' })
+    // Loyalty redemption: reduce the Loyalty Liability we owe the customer.
+    // DR 2050 Loyalty Liability  — we owed them this; now it's settled
+    // The cash line already credits only netReceived, so the liability
+    // debit here completes the balance.
+    lines.push({
+      accountCode: '2050',
+      debit: input.loyaltyDiscountAmount,
+      description: 'Loyalty liability settled — points redeemed',
+    })
   }
 
   if (input.cgst > 0) lines.push({ accountCode: '2020', credit: input.cgst, description: 'CGST collected' })

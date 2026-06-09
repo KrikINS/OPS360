@@ -10,6 +10,7 @@
  *   0001  Initial COA (1010, 1020, 1040, 1050, 2010, 2020-2040, 4000, 5010-5070)
  *   0006  Split 1050 → 1051/1052/1053; added 5080 Loyalty Discount Expense
  *   0008  Dynamic per-branch Cash in Hand accounts (1010-XX)
+ *   0009  Added 2050 Loyalty Points Liability; loyalty redemption is a liability settlement
  */
 import * as dotenv from 'dotenv'
 dotenv.config({ path: '.env.local' })
@@ -35,6 +36,7 @@ const COA = [
   { code: '2020', name: 'GST Payable (CGST)',          type: 'Tax',     is_system: true,  is_active: true  },
   { code: '2030', name: 'GST Payable (SGST)',          type: 'Tax',     is_system: true,  is_active: true  },
   { code: '2040', name: 'GST Payable (IGST)',          type: 'Tax',     is_system: true,  is_active: true  },
+  { code: '2050', name: 'Loyalty Points Liability',   type: 'Liability', is_system: true, is_active: true, description: 'Outstanding loyalty points owed to customers' },
   // ── Equity ─────────────────────────────────────────────────────────
   { code: '3000', name: 'Owner Capital',               type: 'Equity',  is_system: true,  is_active: true  },
   { code: '3010', name: 'Retained Earnings',           type: 'Equity',  is_system: true,  is_active: true  },

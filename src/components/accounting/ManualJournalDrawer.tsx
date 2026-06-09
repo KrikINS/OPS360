@@ -88,8 +88,8 @@ function AccountCombobox({
       <button
         type="button"
         onClick={() => { setOpen(!open); setSearch('') }}
-        className="w-full flex items-center justify-between h-8 px-2.5
-          text-xs border rounded-md bg-white hover:bg-slate-50
+        className="w-full flex items-center justify-between h-10 px-3
+          text-sm border rounded-lg bg-white hover:bg-slate-50
           transition-colors text-left"
       >
         {selected
@@ -113,7 +113,7 @@ function AccountCombobox({
               autoFocus
             />
           </div>
-          <div className="max-h-[240px] overflow-y-auto p-1">
+          <div className="max-h-[280px] overflow-y-auto p-1">
             {filtered.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">
                 No account found.
@@ -127,8 +127,8 @@ function AccountCombobox({
                     onSelect(a.code, `${a.code} — ${a.name}`)
                     setOpen(false)
                   }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5
-                    text-xs rounded hover:bg-slate-100 transition-colors
+                  className={`w-full flex items-center gap-2 px-3 py-2
+                    text-sm rounded-lg hover:bg-slate-100 transition-colors
                     text-left ${value === a.code ? 'bg-indigo-50' : ''}`}
                 >
                   <Check className={`h-3 w-3 shrink-0 ${value === a.code ? 'opacity-100 text-indigo-600' : 'opacity-0'
@@ -295,7 +295,7 @@ export default function ManualJournalDrawer({
     }}>
       <SheetContent
         side="right"
-        className="sm:max-w-[800px] w-full flex flex-col p-0"
+        className="!w-[min(960px,95vw)] flex flex-col p-0 overflow-hidden"
         showCloseButton={true}
       >
         {/* ── Header ───────────────────────────────── */}
@@ -331,41 +331,41 @@ export default function ManualJournalDrawer({
           )}
 
           {/* Date + Narration */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-600">
+          <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-slate-600">
                 Date
               </Label>
               <Input
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="h-9 text-xs"
+                className="h-10 text-sm"
               />
             </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-600">
+            <div className="col-span-3 space-y-2">
+              <Label className="text-sm font-semibold text-slate-600">
                 Narration / Description
               </Label>
               <Textarea
                 value={narration}
                 onChange={e => setNarration(e.target.value)}
                 placeholder="e.g. Opening Balance — Cash in Hand"
-                className="text-xs min-h-[36px] max-h-[72px] resize-none"
+                className="text-sm min-h-[40px] max-h-[80px] resize-none"
                 rows={1}
               />
             </div>
           </div>
 
           {/* Column headers */}
-          <div className="grid grid-cols-12 gap-3 px-2">
-            <span className="col-span-5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+          <div className="grid grid-cols-12 gap-3 px-1">
+            <span className="col-span-6 text-xs font-bold text-slate-500 uppercase tracking-widest">
               Account
             </span>
-            <span className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right px-2">
+            <span className="col-span-2 text-xs font-bold text-slate-500 uppercase tracking-widest text-right pr-2">
               Debit (₹)
             </span>
-            <span className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right px-2">
+            <span className="col-span-3 text-xs font-bold text-slate-500 uppercase tracking-widest text-right pr-2">
               Credit (₹)
             </span>
             <span className="col-span-1" />
@@ -382,12 +382,12 @@ export default function ManualJournalDrawer({
               {lines.map((line, idx) => (
                 <div
                   key={line.id}
-                  className="grid grid-cols-12 gap-3 items-start
-                    p-2.5 rounded-lg border border-slate-200 bg-white
+                  className="grid grid-cols-12 gap-4 items-start
+                    px-4 py-3 rounded-xl border border-slate-200 bg-white
                     hover:border-slate-300 transition-colors group"
                 >
                   {/* Account selector */}
-                  <div className="col-span-5 space-y-1">
+                  <div className="col-span-6 space-y-2">
                     <AccountCombobox
                       accounts={accounts || []}
                       value={line.accountCode}
@@ -397,12 +397,12 @@ export default function ManualJournalDrawer({
                       value={line.description}
                       onChange={e => updateLine(line.id, 'description', e.target.value)}
                       placeholder="Line memo (optional)"
-                      className="h-6 text-[10px] border-dashed text-muted-foreground"
+                      className="h-8 text-xs border-dashed text-muted-foreground"
                     />
                   </div>
 
                   {/* Debit */}
-                  <div className="col-span-3">
+                  <div className="col-span-2">
                     <Input
                       type="number"
                       min="0"
@@ -410,7 +410,7 @@ export default function ManualJournalDrawer({
                       value={line.debit}
                       onChange={e => updateLine(line.id, 'debit', e.target.value)}
                       placeholder="0.00"
-                      className={`h-8 text-xs text-right font-mono w-full
+                      className={`h-10 text-sm text-right font-mono w-full
                         ${line.debit ? 'bg-blue-50 border-blue-200 text-blue-800 font-semibold' : ''}`}
                     />
                   </div>
@@ -424,7 +424,7 @@ export default function ManualJournalDrawer({
                       value={line.credit}
                       onChange={e => updateLine(line.id, 'credit', e.target.value)}
                       placeholder="0.00"
-                      className={`h-8 text-xs text-right font-mono w-full
+                      className={`h-10 text-sm text-right font-mono w-full
                         ${line.credit ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : ''}`}
                     />
                   </div>
@@ -463,18 +463,18 @@ export default function ManualJournalDrawer({
         {/* ── Sticky footer ────────────────────────── */}
         <SheetFooter className="border-t bg-slate-50/80 px-6 py-4 space-y-3">
           {/* Totals row */}
-          <div className="grid grid-cols-12 gap-3 items-center">
-            <span className="col-span-5 text-xs font-bold text-slate-700 uppercase tracking-widest">
+          <div className="grid grid-cols-12 gap-4 items-center">
+            <span className="col-span-6 text-sm font-bold text-slate-700 uppercase tracking-widest">
               Totals
             </span>
-            <div className={`col-span-3 text-xs font-bold text-right font-mono px-2 py-1.5 rounded
+            <div className={`col-span-2 text-sm font-bold text-right font-mono px-3 py-2 rounded-lg
               ${isBalanced && hasAmount
                 ? 'bg-green-100 text-green-800'
                 : 'bg-blue-100 text-blue-800'
               }`}>
               {fmtINR(totals.totalDebits)}
             </div>
-            <div className={`col-span-3 text-xs font-bold text-right font-mono px-2 py-1.5 rounded
+            <div className={`col-span-3 text-sm font-bold text-right font-mono px-3 py-2 rounded-lg
               ${isBalanced && hasAmount
                 ? 'bg-green-100 text-green-800'
                 : 'bg-green-50 text-green-700'

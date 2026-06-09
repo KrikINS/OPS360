@@ -709,7 +709,28 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       }
       setInvoiceNumber(resData.invoice_number)
       setToast({ message: `Sale completed: ${resData.invoice_number}`, type: 'success' })
-      
+
+      // --- POST SALES JOURNAL ---
+      try {
+        const { postSalesJournal } = await import('@/actions/finance')
+        await postSalesJournal({
+          invoiceId: String(resData.id ?? ''),
+          branchId: selectedBranch ?? '',
+          createdBy: session?.user?.id ?? '',
+          saleTotal: Number(resData.total_amount ?? resData.grandTotal ?? 0),
+          subtotal: Number(resData.subtotal ?? 0),
+          cgst: Number(resData.cgst ?? (resData.tax_amount != null ? Number(resData.tax_amount ?? 0) / 2 : 0)),
+          sgst: Number(resData.sgst ?? (resData.tax_amount != null ? Number(resData.tax_amount ?? 0) / 2 : 0)),
+          igst: 0,
+          cogs: 0,
+          loyaltyDiscountAmount: loyaltyRedeem > 0 ? loyaltyRedeem : 0,
+        })
+      } catch (journalErr) {
+        console.error('[JOURNAL] Sales journal post FAILED — sale committed, ledger entry missing:', journalErr)
+        // Non-blocking: sale is already committed by DB procedure
+      }
+      // --- END POST SALES JOURNAL ---
+
       // Award loyalty points (earn) — only for a real customer with a valid invoice UUID
       if (selectedCustomer?.id && selectedCustomer.id !== SYSTEM_WALKIN_ID && resData.id) {
         try {
@@ -717,7 +738,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
           const earnRes = await earnPoints({
             customerId: selectedCustomer.id,
             invoiceId: String(resData.id),
-            saleAmount: Number(resData.grandTotal) || 0,
+            saleAmount: Math.max(0, (Number(resData.grandTotal) || 0) - loyaltyRedeem),
             createdBy: session?.user?.id || '',
           })
           if (!earnRes?.success) {
