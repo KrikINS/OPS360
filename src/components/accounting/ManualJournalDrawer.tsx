@@ -165,35 +165,38 @@ export default function ManualJournalDrawer({
   open,
   onOpenChange,
   branchId,
+  isAdmin = false,
+  branches = [],
   onSuccess,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   branchId: string | null
+  isAdmin?: boolean
+  branches?: { id: string; name: string }[]
   onSuccess: () => void
 }) {
   const [accounts, setAccounts] = useState<Account[] | null>(null)
   const loadingAccounts = open && accounts === null
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(branchId)
 
   // Form state
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
   const [narration, setNarration] = useState('')
   const [lines, setLines] = useState<JournalLine[]>([EMPTY_LINE(), EMPTY_LINE()])
 
-  // Fetch accounts when drawer opens
+  // Re-fetch accounts when drawer opens or selected branch changes
   useEffect(() => {
+    if (!open) return
     let active = true
-    if (open && accounts === null) {
-      getActiveAccounts().then(res => {
-        if (active) {
-          setAccounts(res.success ? res.accounts : [])
-        }
-      })
-    }
+    setAccounts(null)
+    getActiveAccounts(selectedBranchId ? { branchId: selectedBranchId } : undefined).then(res => {
+      if (active) setAccounts(res.success ? res.accounts : [])
+    })
     return () => { active = false }
-  }, [open, accounts])
+  }, [open, selectedBranchId])
 
   // Dismiss toast after 4s
   useEffect(() => {
@@ -209,7 +212,8 @@ export default function ManualJournalDrawer({
     setNarration('')
     setLines([EMPTY_LINE(), EMPTY_LINE()])
     setToast(null)
-  }, [])
+    setSelectedBranchId(branchId)
+  }, [branchId])
 
   // Line operations
   const addLine = () => setLines(prev => [...prev, EMPTY_LINE()])
@@ -251,11 +255,11 @@ export default function ManualJournalDrawer({
   const hasAmount = totals.totalDebits > 0
   const hasMinLines = lines.filter(l => l.accountCode).length >= 2
   const hasNarration = narration.trim().length > 0
-  const canSubmit = isBalanced && hasAmount && hasMinLines && hasNarration && !submitting
+  const canSubmit = isBalanced && hasAmount && hasMinLines && hasNarration && !!selectedBranchId && !submitting
 
   // Submit
   const handleSubmit = async () => {
-    if (!canSubmit || !branchId) return
+    if (!canSubmit || !selectedBranchId) return
     setSubmitting(true)
 
     const journalLines = lines
@@ -270,7 +274,7 @@ export default function ManualJournalDrawer({
     const result = await createManualJournal({
       date,
       description: narration,
-      branchId,
+      branchId: selectedBranchId,
       lines: journalLines,
     })
 
@@ -295,7 +299,7 @@ export default function ManualJournalDrawer({
     }}>
       <SheetContent
         side="right"
-        className="w-[min(960px,95vw)] flex flex-col p-0 overflow-hidden"
+        className="w-[min(560px,50vw)] flex flex-col p-0 overflow-hidden"
         showCloseButton={true}
       >
         {/* ── Header ───────────────────────────────── */}
@@ -327,6 +331,25 @@ export default function ManualJournalDrawer({
                 : <AlertTriangle className="h-4 w-4 shrink-0" />
               }
               {toast.message}
+            </div>
+          )}
+
+          {/* Branch selector — admins only */}
+          {isAdmin && branches.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-slate-600">Branch</Label>
+              <select
+                value={selectedBranchId ?? ''}
+                onChange={e => setSelectedBranchId(e.target.value || null)}
+                className="w-full h-10 px-3 text-sm border rounded-lg bg-white
+                  hover:bg-slate-50 transition-colors focus:outline-none
+                  focus:ring-1 focus:ring-indigo-300"
+              >
+                <option value="">Select branch…</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -499,6 +522,11 @@ export default function ManualJournalDrawer({
 
           {/* Validation checklist */}
           <div className="flex items-center gap-3 text-[10px] text-muted-foreground justify-center">
+            {isAdmin && branches.length > 0 && (
+              <span className={selectedBranchId ? 'text-green-600' : ''}>
+                {selectedBranchId ? '✓' : '○'} Branch
+              </span>
+            )}
             <span className={hasNarration ? 'text-green-600' : ''}>
               {hasNarration ? '✓' : '○'} Narration
             </span>

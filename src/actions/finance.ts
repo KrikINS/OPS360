@@ -1028,10 +1028,10 @@ export async function getMarginReport(input: {
 
 // ── getActiveAccounts ───────────────────────────────
 // Returns active Chart of Accounts entries filtered by branch scope.
-// Branch-specific accounts (e.g. Cash in Hand per branch) are filtered
-// so non-admin users only see accounts relevant to their active branch.
+// Pass input.branchId to override the session-derived branch (e.g. admin
+// selecting a specific branch in ManualJournalDrawer).
 // Global accounts (branch_id IS NULL) are always included.
-export async function getActiveAccounts() {
+export async function getActiveAccounts(input?: { branchId?: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
@@ -1039,12 +1039,12 @@ export async function getActiveAccounts() {
   const isSuperAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
 
   try {
-    let branchId: string | undefined
-    if (!isSuperAdmin) {
-      branchId = await getEffectiveBranchId(session) ?? undefined
+    // Explicit branchId overrides session; fall back to session branch for non-admins
+    let filterBranchId: string | undefined = input?.branchId
+    if (!filterBranchId && !isSuperAdmin) {
+      filterBranchId = await getEffectiveBranchId(session) ?? undefined
     }
 
-    // Super admins see everything; branch users see global + their branch accounts
     const rows = await db
       .select({
         id: accounts.id,
@@ -1056,17 +1056,32 @@ export async function getActiveAccounts() {
       .where(
         and(
           eq(accounts.is_active, true),
-          isSuperAdmin
-            ? undefined
-            : or(
-                isNull(accounts.branch_id),
-                branchId ? eq(accounts.branch_id, branchId) : undefined,
-              ),
+          filterBranchId
+            ? or(isNull(accounts.branch_id), eq(accounts.branch_id, filterBranchId))
+            : isSuperAdmin
+            ? undefined   // admin with no branch override: show all accounts
+            : undefined,  // non-admin with no branch: show all (fallback, shouldn't occur)
         )
       )
       .orderBy(accounts.code)
 
     return { success: true as const, accounts: rows }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+// ── getBranches ─────────────────────────────────────
+export async function getBranches() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  try {
+    const rows = await db
+      .select({ id: branches.id, name: branches.name })
+      .from(branches)
+      .orderBy(branches.name)
+    return { success: true as const, branches: rows }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
   }

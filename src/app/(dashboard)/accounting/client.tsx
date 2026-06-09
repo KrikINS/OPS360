@@ -178,6 +178,7 @@ export default function AccountingClient({
   fyStart,
   fyEnd,
   marginData,
+  branchList = [],
 }: {
   activeTab: string
   isAdmin: boolean
@@ -193,6 +194,7 @@ export default function AccountingClient({
   fyStart: string
   fyEnd: string
   marginData: MarginData
+  branchList?: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const [tab, setTab] = useState(activeTab)
@@ -1809,6 +1811,8 @@ export default function AccountingClient({
         open={manualJournalOpen}
         onOpenChange={setManualJournalOpen}
         branchId={branchId}
+        isAdmin={isAdmin}
+        branches={branchList}
         onSuccess={handleJournalPosted}
       />
 
