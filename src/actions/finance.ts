@@ -901,10 +901,22 @@ export async function getExpenses(input?: { branchId?: string; status?: string }
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
   try {
+    const conditions = []
+    if (input?.branchId) {
+      conditions.push(eq(expense_records.branch_id, input.branchId))
+    }
+    if (input?.status) {
+      conditions.push(eq(expense_records.status, input.status))
+    }
+
     const expenses = await db
       .select()
       .from(expense_records)
-      .where(input?.branchId ? eq(expense_records.branch_id, input.branchId) : undefined)
+      .where(conditions.length > 0
+        ? conditions.length === 1
+          ? conditions[0]
+          : and(...conditions)
+        : undefined)
       .orderBy(desc(expense_records.created_at))
 
     return { success: true as const, expenses }
