@@ -338,7 +338,7 @@ export default function ManualJournalDrawer({
     }}>
       <SheetContent
         side="right"
-        className="!w-[480px] !max-w-[480px] flex flex-col p-0 overflow-hidden"
+        className="!w-[50vw] !max-w-[50vw] !min-w-[520px] flex flex-col p-0 overflow-hidden"
         showCloseButton={true}
       >
         {/* ── Header ───────────────────────────────── */}
@@ -434,10 +434,10 @@ export default function ManualJournalDrawer({
 
           {/* Column headers */}
           <div className="grid grid-cols-12 gap-3 px-1">
-            <span className="col-span-6 text-xs font-bold text-slate-500 uppercase tracking-widest">
+            <span className="col-span-5 text-xs font-bold text-slate-500 uppercase tracking-widest">
               Account
             </span>
-            <span className="col-span-2 text-xs font-bold text-slate-500 uppercase tracking-widest text-right pr-2">
+            <span className="col-span-3 text-xs font-bold text-slate-500 uppercase tracking-widest text-right pr-2">
               Debit (₹)
             </span>
             <span className="col-span-3 text-xs font-bold text-slate-500 uppercase tracking-widest text-right pr-2">
@@ -462,7 +462,7 @@ export default function ManualJournalDrawer({
                     hover:border-slate-300 transition-colors group"
                 >
                   {/* Account selector */}
-                  <div className="col-span-6 space-y-2">
+                  <div className="col-span-5 space-y-2">
                     <AccountCombobox
                       accounts={accounts || []}
                       value={line.accountCode}
@@ -477,7 +477,7 @@ export default function ManualJournalDrawer({
                   </div>
 
                   {/* Debit */}
-                  <div className="col-span-2">
+                  <div className="col-span-3">
                     <Input
                       type="number"
                       min="0"
@@ -485,7 +485,7 @@ export default function ManualJournalDrawer({
                       value={line.debit}
                       onChange={e => updateLine(line.id, 'debit', e.target.value)}
                       placeholder="0.00"
-                      className={`h-10 text-sm text-right font-mono w-full
+                      className={`h-10 text-sm text-right font-mono tabular-nums w-full
                         ${line.debit ? 'bg-blue-50 border-blue-200 text-blue-800 font-semibold' : ''}`}
                     />
                   </div>
@@ -499,7 +499,7 @@ export default function ManualJournalDrawer({
                       value={line.credit}
                       onChange={e => updateLine(line.id, 'credit', e.target.value)}
                       placeholder="0.00"
-                      className={`h-10 text-sm text-right font-mono w-full
+                      className={`h-10 text-sm text-right font-mono tabular-nums w-full
                         ${line.credit ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : ''}`}
                     />
                   </div>
@@ -539,10 +539,10 @@ export default function ManualJournalDrawer({
         <SheetFooter className="border-t bg-slate-50/80 px-6 py-4 space-y-3">
           {/* Totals row */}
           <div className="grid grid-cols-12 gap-4 items-center">
-            <span className="col-span-6 text-sm font-bold text-slate-700 uppercase tracking-widest">
+            <span className="col-span-5 text-sm font-bold text-slate-700 uppercase tracking-widest">
               Totals
             </span>
-            <div className={`col-span-2 text-sm font-bold text-right font-mono px-3 py-2 rounded-lg
+            <div className={`col-span-3 text-sm font-bold text-right font-mono px-3 py-2 rounded-lg
               ${isBalanced && hasAmount
                 ? 'bg-green-100 text-green-800'
                 : 'bg-blue-100 text-blue-800'
