@@ -16,6 +16,8 @@ import {
   getProfitAndLoss,
   getFinancialYear,
   settleVendorPayment,
+  getCashAccountCode,
+  getActiveAccounts,
 } from '@/actions/finance'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -431,5 +433,128 @@ describe('Accounts Payable Settlement', () => {
     })
     expect(res2.success).toBe(false)
     expect(res2.error).toMatch(/manager/i)
+  })
+})
+
+describe('getCashAccountCode', () => {
+  it('returns branch-scoped code when a branch account exists', async () => {
+    const branch = await seedBranch(db)
+    await seedCoa(db)
+
+    // Insert a branch-scoped cash account
+    await db.insert(schema.accounts).values({
+      code: `1010-${branch.state_code}`,
+      name: `Cash in Hand (${branch.name})`,
+      type: 'Asset',
+      branch_id: branch.id,
+      is_system: true,
+      is_active: true,
+    })
+
+    const code = await getCashAccountCode(branch.id)
+    expect(code).toBe(`1010-${branch.state_code}`)
+  })
+
+  it('falls back to global 1010 when no branch account exists', async () => {
+    const branch = await seedBranch(db)
+    await seedCoa(db)
+
+    // No branch-scoped cash account inserted — should fall back
+    const code = await getCashAccountCode(branch.id)
+    expect(code).toBe('1010')
+  })
+
+  it('falls back to 1010 when branchId is null/undefined', async () => {
+    expect(await getCashAccountCode(null)).toBe('1010')
+    expect(await getCashAccountCode(undefined)).toBe('1010')
+  })
+})
+
+describe('getActiveAccounts — branch filtering', () => {
+  it('filters branch-scoped accounts for non-admin users', async () => {
+    const branchA = await seedBranch(db, { name: 'Branch A', stateCode: '27' })
+    const branchB = await seedBranch(db, { name: 'Branch B', stateCode: '29' })
+    await seedCoa(db)
+
+    // Insert branch-scoped cash accounts for both branches
+    await db.insert(schema.accounts).values([
+      {
+        code: '1010-27',
+        name: 'Cash in Hand (Branch A)',
+        type: 'Asset',
+        branch_id: branchA.id,
+        is_system: true,
+        is_active: true,
+      },
+      {
+        code: '1010-29',
+        name: 'Cash in Hand (Branch B)',
+        type: 'Asset',
+        branch_id: branchB.id,
+        is_system: true,
+        is_active: true,
+      },
+    ])
+
+    // Staff user at Branch A — should see global accounts + Branch A's cash
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: STAFF_ID, role: 'staff', branchId: branchA.id },
+    })
+    const result = await getActiveAccounts()
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+
+    const codes = result.accounts.map((a: { code: string }) => a.code)
+
+    // Should include the Branch A cash account
+    expect(codes).toContain('1010-27')
+    // Should NOT include Branch B's cash account
+    expect(codes).not.toContain('1010-29')
+    // Should include global accounts (branch_id IS NULL)
+    expect(codes).toContain('1010')
+    expect(codes).toContain('4000')
+  })
+
+  it('shows all accounts for admin users', async () => {
+    const branchA = await seedBranch(db, { name: 'Branch A', stateCode: '27' })
+    const branchB = await seedBranch(db, { name: 'Branch B', stateCode: '29' })
+    await seedCoa(db)
+
+    await db.insert(schema.accounts).values([
+      {
+        code: '1010-27',
+        name: 'Cash in Hand (Branch A)',
+        type: 'Asset',
+        branch_id: branchA.id,
+        is_system: true,
+        is_active: true,
+      },
+      {
+        code: '1010-29',
+        name: 'Cash in Hand (Branch B)',
+        type: 'Asset',
+        branch_id: branchB.id,
+        is_system: true,
+        is_active: true,
+      },
+    ])
+
+    // Admin user — should see all accounts including both branches
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'admin', branchId: null },
+    })
+    const result = await getActiveAccounts()
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+
+    const codes = result.accounts.map((a: { code: string }) => a.code)
+
+    // Should see both branch accounts
+    expect(codes).toContain('1010-27')
+    expect(codes).toContain('1010-29')
+    // Plus all global accounts
+    expect(codes).toContain('1010')
   })
 })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useRef, useCallback } from 'react'
+import { useState, useEffect, useTransition, useRef, useCallback } from 'react'
 import { useReactToPrint } from 'react-to-print'
 import { FinancePrintTemplate } from '@/components/finance/FinancePrintTemplate'
 import ManualJournalDrawer from '@/components/accounting/ManualJournalDrawer'
@@ -27,7 +27,8 @@ import {
 } from 'lucide-react'
 import {
   createExpenseRecord, approveExpense, rejectExpense,
-  getJournalLines, getJournalEntries, exportJournalLedger
+  getJournalLines, getJournalEntries, exportJournalLedger,
+  getActiveAccounts,
 } from '@/actions/finance'
 import { fmtINR } from '@/lib/utils'
 
@@ -153,7 +154,9 @@ const EXPENSE_ACCOUNTS = [
   { code: '5070', name: 'Miscellaneous Expense' },
 ]
 
-const PAYMENT_ACCOUNTS = [
+// Payment accounts are fetched dynamically from the server
+// to reflect branch-scoped cash accounts.
+const STATIC_PAYMENT_FALLBACK = [
   { code: '1010', name: 'Cash & Petty Cash' },
   { code: '1020', name: 'Bank Accounts' },
 ]
@@ -264,14 +267,44 @@ export default function AccountingClient({
     return 'pl' as const // dashboard shows P&L
   })()
 
+  // Dynamic payment accounts from server (branch-scoped)
+  const [paymentAccounts, setPaymentAccounts] = useState(STATIC_PAYMENT_FALLBACK)
+
+  useEffect(() => {
+    getActiveAccounts().then(res => {
+      if (res.success) {
+        // Filter to only show asset-type accounts suitable as payment sources
+        const cashAndBank = res.accounts.filter(
+          (a: { code: string; type: string }) =>
+            a.code.startsWith('1010') || a.code === '1020'
+        )
+        if (cashAndBank.length > 0) {
+          setPaymentAccounts(cashAndBank.map((a: { code: string; name: string }) => ({
+            code: a.code,
+            name: a.name,
+          })))
+        }
+      }
+    })
+  }, [])
+
   // Expense form state
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [expAmount, setExpAmount] = useState('')
   const [expAccount, setExpAccount] = useState('5070')
-  const [expPayment, setExpPayment] = useState('1010')
+  const [expPayment, setExpPayment] = useState('')  // set dynamically below
   const [expDesc, setExpDesc] = useState('')
   const [expError, setExpError] = useState('')
   const [isPending, startTransition] = useTransition()
+
+  // Set default payment account once dynamic accounts load
+  useEffect(() => {
+    if (paymentAccounts.length > 0 && !expPayment) {
+      // Prefer the first cash account (1010-XX or 1010)
+      const firstCash = paymentAccounts.find(a => a.code.startsWith('1010'))
+      setExpPayment(firstCash?.code ?? paymentAccounts[0].code)
+    }
+  }, [paymentAccounts, expPayment])
 
   function switchTab(t: string) {
     setTab(t)
@@ -369,7 +402,7 @@ export default function AccountingClient({
         EXPENSE_ACCOUNTS.find(
           a => a.code === e.expense_account
         )?.name ?? e.expense_account,
-        PAYMENT_ACCOUNTS.find(
+        paymentAccounts.find(
           a => a.code === e.payment_account
         )?.name ?? e.payment_account,
         Number(e.amount).toFixed(2),
@@ -1417,7 +1450,7 @@ export default function AccountingClient({
                       px-3 py-2 bg-white focus:outline-none
                       focus:ring-1 focus:ring-indigo-500"
                   >
-                    {PAYMENT_ACCOUNTS.map(a => (
+                    {paymentAccounts.map(a => (
                       <option key={a.code} value={a.code}>
                         {a.name}
                       </option>

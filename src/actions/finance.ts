@@ -8,7 +8,7 @@ import {
   expense_records, branches, inventory,
   vendor_payments, purchase_orders, vendors, grn_receipts
 } from '@/db/schema'
-import { eq, desc, sql } from 'drizzle-orm'
+import { eq, desc, sql, and, or, isNull } from 'drizzle-orm'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 
 // ── Helper: derive Indian financial year ────────────
@@ -28,6 +28,28 @@ async function getAccountId(code: string, txClient: any = db): Promise<string> {
     .limit(1)
   if (!account) throw new Error(`Account ${code} not found`)
   return account.id
+}
+
+// ── Helper: resolve branch-scoped cash account code ─
+// Looks for a branch-specific cash account (code like '1010-%' with
+// matching branch_id). Falls back to global '1010' for backward
+// compatibility when no branch-scoped account exists.
+export async function getCashAccountCode(branchId?: string | null): Promise<string> {
+  if (!branchId) return '1010'
+
+  const [branchAccount] = await db
+    .select({ code: accounts.code })
+    .from(accounts)
+    .where(
+      and(
+        sql`${accounts.code} LIKE '1010-%'`,
+        eq(accounts.branch_id, branchId),
+        eq(accounts.is_active, true),
+      )
+    )
+    .limit(1)
+
+  return branchAccount?.code ?? '1010'
 }
 
 // ── createJournalEntry ──────────────────────────────
@@ -205,9 +227,10 @@ export async function postSalesJournal(input: {
   }
 
   const netReceived = input.saleTotal - (input.loyaltyDiscountAmount ?? 0)
+  const cashCode = await getCashAccountCode(input.branchId)
 
   const lines: Array<{ accountCode: string; debit?: number; credit?: number; description?: string }> = [
-    { accountCode: '1010', debit: netReceived, description: 'Cash received from POS sale' },
+    { accountCode: cashCode, debit: netReceived, description: 'Cash received from POS sale' },
     { accountCode: '4000', credit: input.subtotal, description: 'Sales revenue ex-tax' },
   ]
   
@@ -253,9 +276,12 @@ export async function createExpenseRecord(input: {
 
   if (input.amount <= 0) return { success: false as const, error: 'Amount must be greater than 0' }
 
+  // Resolve the payment account: use branch-scoped cash if no explicit override
+  const resolvedPaymentAccount = input.paymentAccount ?? await getCashAccountCode(branchId)
+
   try {
     await getAccountId(input.expenseAccount)
-    await getAccountId(input.paymentAccount ?? '1010')
+    await getAccountId(resolvedPaymentAccount)
   } catch (e) {
     return { success: false as const, error: (e as Error).message }
   }
@@ -267,7 +293,7 @@ export async function createExpenseRecord(input: {
       created_by:      session.user.id,
       amount:          String(input.amount),
       expense_account: input.expenseAccount,
-      payment_account: input.paymentAccount ?? '1010',
+      payment_account: resolvedPaymentAccount,
       description:     input.description,
       receipt_url:     input.receiptUrl ?? null,
       status:          'pending',
@@ -298,6 +324,13 @@ export async function approveExpense(input: { expenseId: string }) {
     return { success: false as const, error: `Cannot approve expense with status: ${expense.status}` }
   }
 
+  // If the stored payment_account is the legacy global '1010', resolve it
+  // to the branch-scoped cash account for proper branch-level tracking.
+  let resolvedPaymentAccount = expense.payment_account
+  if (resolvedPaymentAccount === '1010') {
+    resolvedPaymentAccount = await getCashAccountCode(expense.branch_id)
+  }
+
   const entry = await createJournalEntry({
     description: `Expense: ${expense.description}`,
     referenceSource: 'EXPENSE',
@@ -307,7 +340,7 @@ export async function approveExpense(input: { expenseId: string }) {
     createdBy: session.user.id,
     lines: [
       { accountCode: expense.expense_account, debit: Number(expense.amount), description: expense.description },
-      { accountCode: expense.payment_account, credit: Number(expense.amount), description: 'Payment from cash/bank' },
+      { accountCode: resolvedPaymentAccount, credit: Number(expense.amount), description: 'Payment from cash/bank' },
     ],
   })
 
@@ -396,9 +429,9 @@ export async function settleVendorPayment(input: {
     }
   }
 
-  // Determine payment account from method
+  // Determine payment account from method — branch-scoped cash if applicable
   const paymentAccountCode =
-    input.paymentMethod === 'cash' ? '1010' : '1020'
+    input.paymentMethod === 'cash' ? await getCashAccountCode(po.branch_id) : '1020'
 
   // Determine payment description
   const methodLabels: Record<string, string> = {
@@ -974,13 +1007,24 @@ export async function getMarginReport(input: {
 }
 
 // ── getActiveAccounts ───────────────────────────────
-// Returns all active Chart of Accounts entries for the
-// manual journal combobox / account selector.
+// Returns active Chart of Accounts entries filtered by branch scope.
+// Branch-specific accounts (e.g. Cash in Hand per branch) are filtered
+// so non-admin users only see accounts relevant to their active branch.
+// Global accounts (branch_id IS NULL) are always included.
 export async function getActiveAccounts() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  const role = (session.user.role ?? '').toLowerCase()
+  const isSuperAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+
   try {
+    let branchId: string | undefined
+    if (!isSuperAdmin) {
+      branchId = await getEffectiveBranchId(session) ?? undefined
+    }
+
+    // Super admins see everything; branch users see global + their branch accounts
     const rows = await db
       .select({
         id: accounts.id,
@@ -989,7 +1033,17 @@ export async function getActiveAccounts() {
         type: accounts.type,
       })
       .from(accounts)
-      .where(eq(accounts.is_active, true))
+      .where(
+        and(
+          eq(accounts.is_active, true),
+          isSuperAdmin
+            ? undefined
+            : or(
+                isNull(accounts.branch_id),
+                branchId ? eq(accounts.branch_id, branchId) : undefined,
+              ),
+        )
+      )
       .orderBy(accounts.code)
 
     return { success: true as const, accounts: rows }

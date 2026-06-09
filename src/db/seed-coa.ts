@@ -9,13 +9,13 @@
  * Change history:
  *   0001  Initial COA (1010, 1020, 1040, 1050, 2010, 2020-2040, 4000, 5010-5070)
  *   0006  Split 1050 → 1051/1052/1053; added 5080 Loyalty Discount Expense
+ *   0008  Dynamic per-branch Cash in Hand accounts (1010-XX)
  */
 import * as dotenv from 'dotenv'
 dotenv.config({ path: '.env.local' })
 
 import { db } from './client'
-import { accounts } from './schema'
-import { sql } from 'drizzle-orm'
+import { accounts, branches } from './schema'
 
 const COA = [
   // ── Assets ──────────────────────────────────────────────────────────
@@ -54,6 +54,7 @@ const COA = [
 async function seedCoa() {
   console.log('🏦  Seeding Chart of Accounts …')
 
+  // ── Step 1: Seed the static COA ──────────────────
   for (const account of COA) {
     await db
       .insert(accounts)
@@ -70,7 +71,53 @@ async function seedCoa() {
     console.log(`  ✓  ${account.code}  ${account.name}`)
   }
 
-  console.log(`\n✅  Chart of Accounts seeded — ${COA.length} accounts processed.`)
+  console.log(`\n✅  Static Chart of Accounts seeded — ${COA.length} accounts processed.`)
+
+  // ── Step 2: Dynamic per-branch Cash in Hand accounts ─
+  console.log('\n🏪  Generating per-branch Cash in Hand accounts …')
+
+  const allBranches = await db
+    .select({ id: branches.id, name: branches.name, code: branches.code })
+    .from(branches)
+
+  if (allBranches.length === 0) {
+    console.log('  ⚠  No branches found — skipping dynamic cash accounts.')
+  } else {
+    let dynamicCount = 0
+
+    for (let i = 0; i < allBranches.length; i++) {
+      const branch = allBranches[i]
+      // Use branch.code if available, otherwise use a zero-padded index
+      const suffix = branch.code?.trim() || String(i + 1).padStart(2, '0')
+      const accountCode = `1010-${suffix}`
+      const accountName = `Cash in Hand (${branch.name})`
+
+      await db
+        .insert(accounts)
+        .values({
+          code:      accountCode,
+          name:      accountName,
+          type:      'Asset',
+          branch_id: branch.id,
+          is_system: true,
+          is_active: true,
+        })
+        .onConflictDoUpdate({
+          target: accounts.code,
+          set: {
+            name:      accountName,
+            branch_id: branch.id,
+            is_active: true,
+          },
+        })
+
+      console.log(`  ✓  ${accountCode}  ${accountName}`)
+      dynamicCount++
+    }
+
+    console.log(`\n✅  Dynamic cash accounts seeded — ${dynamicCount} branch accounts processed.`)
+  }
+
   process.exit(0)
 }
 

@@ -100,7 +100,7 @@ function AccountCombobox({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-[320px] z-[60]
+        <div className="absolute top-full left-0 mt-1 w-full min-w-[320px] z-[60]
           bg-popover border rounded-lg shadow-xl overflow-hidden">
           <div className="p-2 border-b">
             <input
@@ -294,7 +294,7 @@ export default function ManualJournalDrawer({
     }}>
       <SheetContent
         side="right"
-        className="sm:max-w-[620px] w-full flex flex-col p-0"
+        className="sm:max-w-[1240px] w-full flex flex-col p-0"
         showCloseButton={true}
       >
         {/* ── Header ───────────────────────────────── */}
@@ -357,17 +357,17 @@ export default function ManualJournalDrawer({
           </div>
 
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_90px_90px_32px] gap-2 px-1">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+          <div className="grid grid-cols-12 gap-3 px-2">
+            <span className="col-span-5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
               Account
             </span>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">
+            <span className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right px-2">
               Debit (₹)
             </span>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">
+            <span className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right px-2">
               Credit (₹)
             </span>
-            <span />
+            <span className="col-span-1" />
           </div>
 
           {/* Line items */}
@@ -381,12 +381,12 @@ export default function ManualJournalDrawer({
               {lines.map((line, idx) => (
                 <div
                   key={line.id}
-                  className="grid grid-cols-[1fr_90px_90px_32px] gap-2 items-start
+                  className="grid grid-cols-12 gap-3 items-start
                     p-2.5 rounded-lg border border-slate-200 bg-white
                     hover:border-slate-300 transition-colors group"
                 >
                   {/* Account selector */}
-                  <div className="space-y-1">
+                  <div className="col-span-5 space-y-1">
                     <AccountCombobox
                       accounts={accounts}
                       value={line.accountCode}
@@ -401,40 +401,46 @@ export default function ManualJournalDrawer({
                   </div>
 
                   {/* Debit */}
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.debit}
-                    onChange={e => updateLine(line.id, 'debit', e.target.value)}
-                    placeholder="0.00"
-                    className={`h-8 text-xs text-right font-mono
-                      ${line.debit ? 'bg-blue-50 border-blue-200 text-blue-800 font-semibold' : ''}`}
-                  />
+                  <div className="col-span-3">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.debit}
+                      onChange={e => updateLine(line.id, 'debit', e.target.value)}
+                      placeholder="0.00"
+                      className={`h-8 text-xs text-right font-mono w-full
+                        ${line.debit ? 'bg-blue-50 border-blue-200 text-blue-800 font-semibold' : ''}`}
+                    />
+                  </div>
 
                   {/* Credit */}
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.credit}
-                    onChange={e => updateLine(line.id, 'credit', e.target.value)}
-                    placeholder="0.00"
-                    className={`h-8 text-xs text-right font-mono
-                      ${line.credit ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : ''}`}
-                  />
+                  <div className="col-span-3">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.credit}
+                      onChange={e => updateLine(line.id, 'credit', e.target.value)}
+                      placeholder="0.00"
+                      className={`h-8 text-xs text-right font-mono w-full
+                        ${line.credit ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : ''}`}
+                    />
+                  </div>
 
                   {/* Remove */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity
-                      text-red-400 hover:text-red-600 hover:bg-red-50"
-                    onClick={() => removeLine(line.id)}
-                    disabled={lines.length <= 2}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="col-span-1 flex justify-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity
+                        text-red-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => removeLine(line.id)}
+                      disabled={lines.length <= 2}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -456,25 +462,25 @@ export default function ManualJournalDrawer({
         {/* ── Sticky footer ────────────────────────── */}
         <SheetFooter className="border-t bg-slate-50/80 px-6 py-4 space-y-3">
           {/* Totals row */}
-          <div className="grid grid-cols-[1fr_90px_90px_32px] gap-2 items-center">
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-widest">
+          <div className="grid grid-cols-12 gap-3 items-center">
+            <span className="col-span-5 text-xs font-bold text-slate-700 uppercase tracking-widest">
               Totals
             </span>
-            <div className={`text-xs font-bold text-right font-mono px-2 py-1.5 rounded
+            <div className={`col-span-3 text-xs font-bold text-right font-mono px-2 py-1.5 rounded
               ${isBalanced && hasAmount
                 ? 'bg-green-100 text-green-800'
                 : 'bg-blue-100 text-blue-800'
               }`}>
               {fmtINR(totals.totalDebits)}
             </div>
-            <div className={`text-xs font-bold text-right font-mono px-2 py-1.5 rounded
+            <div className={`col-span-3 text-xs font-bold text-right font-mono px-2 py-1.5 rounded
               ${isBalanced && hasAmount
                 ? 'bg-green-100 text-green-800'
                 : 'bg-green-50 text-green-700'
               }`}>
               {fmtINR(totals.totalCredits)}
             </div>
-            <div className="flex items-center justify-center">
+            <div className="col-span-1 flex items-center justify-center">
               {isBalanced && hasAmount ? (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               ) : hasAmount ? (
