@@ -516,3 +516,34 @@ export const service_job_items = pgTable("service_job_items", {
   unit_cost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
   created_at: timestamp("created_at").defaultNow(),
 })
+
+// ── Sales Returns / Credit Notes ─────────────────────
+export const sales_returns = pgTable('sales_returns', {
+  id:               uuid('id').primaryKey().defaultRandom(),
+  invoice_id:       uuid('invoice_id').notNull()
+                      .references(() => sales_invoices.id),
+  branch_id:        uuid('branch_id').notNull()
+                      .references(() => branches.id),
+  created_by:       uuid('created_by').notNull(),
+  reason:           text('reason').notNull(),
+  refund_method:    text('refund_method').notNull(),
+  refund_amount:    numeric('refund_amount').notNull(),
+  journal_entry_id: uuid('journal_entry_id'),
+  created_at:       timestamp('created_at').defaultNow(),
+})
+
+export const sales_return_items = pgTable('sales_return_items', {
+  id:              uuid('id').primaryKey().defaultRandom(),
+  return_id:       uuid('return_id').notNull()
+                     .references(() => sales_returns.id),
+  invoice_item_id: uuid('invoice_item_id').notNull(),
+  product_id:      uuid('product_id').notNull()
+                     .references(() => products.id),
+  inventory_id:    uuid('inventory_id'),
+  qty:             integer('qty').notNull(),
+  unit_price:      numeric('unit_price').notNull(),
+  cost_price:      numeric('cost_price'),
+  cgst:            numeric('cgst').notNull().default('0'),
+  sgst:            numeric('sgst').notNull().default('0'),
+  igst:            numeric('igst').notNull().default('0'),
+})

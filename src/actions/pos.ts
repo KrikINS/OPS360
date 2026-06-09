@@ -278,6 +278,203 @@ export async function voidTransaction(input: {
   }
 }
 
+export async function processReturn(input: {
+  invoiceId: string
+  reason: string
+  refundMethod: 'cash' | 'bank' | 'loyalty_points'
+  items: Array<{
+    invoiceItemId: string
+    productId: string
+    inventoryId?: string
+    qty: number
+    unitPrice: number
+    costPrice?: number
+    cgst: number
+    sgst: number
+    igst: number
+  }>
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['manager', 'admin', 'super_admin', 'admin/owner'].includes(role)) {
+    return { success: false as const, error: 'Insufficient permission: manager required' }
+  }
+
+  // Fetch original invoice
+  const invRows = await db.execute(
+    sql`SELECT branch_id, customer_id, status, total_amount, subtotal, cgst, sgst, igst
+        FROM sales_invoices WHERE id = ${input.invoiceId}::uuid`
+  )
+  const invData = ((invRows as unknown as { rows?: unknown[] }).rows ?? invRows) as {
+    branch_id: string
+    customer_id: string | null
+    status: string | null
+    total_amount: string
+    subtotal: string
+    cgst: string | null
+    sgst: string | null
+    igst: string | null
+  }[]
+
+  if (!invData.length) return { success: false as const, error: 'Invoice not found' }
+  const invoice = invData[0]
+
+  if (invoice.status === 'returned' || invoice.status === 'voided') {
+    return { success: false as const, error: 'Invoice already reversed' }
+  }
+
+  // Calculate return totals from input items
+  const totalRefund    = input.items.reduce((s, i) => s + i.unitPrice * i.qty, 0)
+  const returnCGST     = input.items.reduce((s, i) => s + i.cgst * i.qty, 0)
+  const returnSGST     = input.items.reduce((s, i) => s + i.sgst * i.qty, 0)
+  const returnIGST     = input.items.reduce((s, i) => s + i.igst * i.qty, 0)
+  const returnSubtotal = totalRefund - returnCGST - returnSGST - returnIGST
+  const returnCOGS     = input.items.reduce((s, i) => s + (i.costPrice ?? 0) * i.qty, 0)
+
+  let returnId = ''
+
+  try {
+    await db.transaction(async (tx) => {
+      // Restore inventory units
+      for (const item of input.items) {
+        if (item.inventoryId) {
+          // Serialised unit — restore directly by ID
+          await tx.execute(sql`
+            UPDATE inventory
+            SET status = 'Available', invoice_id = null, updated_at = now()
+            WHERE id = ${item.inventoryId}::uuid
+          `)
+        } else {
+          // Non-serialised — restore FIFO units matching invoice + product
+          await tx.execute(sql`
+            WITH units AS (
+              SELECT id FROM inventory
+              WHERE product_id = ${item.productId}::uuid
+                AND branch_id  = ${invoice.branch_id}::uuid
+                AND status     = 'Sold'
+                AND invoice_id = ${input.invoiceId}::uuid
+              LIMIT ${item.qty}
+              FOR UPDATE
+            )
+            UPDATE inventory
+            SET status = 'Available', invoice_id = null, updated_at = now()
+            WHERE id IN (SELECT id FROM units)
+          `)
+        }
+      }
+
+      // Insert return header
+      const returnRows = await tx.execute(sql`
+        INSERT INTO sales_returns
+          (invoice_id, branch_id, created_by, reason, refund_method, refund_amount)
+        VALUES (
+          ${input.invoiceId}::uuid,
+          ${invoice.branch_id}::uuid,
+          ${session.user.id}::uuid,
+          ${input.reason},
+          ${input.refundMethod},
+          ${String(totalRefund)}
+        )
+        RETURNING id
+      `)
+      const returnData = ((returnRows as unknown as { rows?: { id: string }[] }).rows ?? returnRows) as { id: string }[]
+      returnId = returnData[0].id
+
+      // Insert return line items
+      for (const item of input.items) {
+        await tx.execute(sql`
+          INSERT INTO sales_return_items
+            (return_id, invoice_item_id, product_id, inventory_id,
+             qty, unit_price, cost_price, cgst, sgst, igst)
+          VALUES (
+            ${returnId}::uuid,
+            ${item.invoiceItemId}::uuid,
+            ${item.productId}::uuid,
+            ${item.inventoryId ? sql`${item.inventoryId}::uuid` : sql`null`},
+            ${item.qty},
+            ${String(item.unitPrice)},
+            ${item.costPrice != null ? String(item.costPrice) : null},
+            ${String(item.cgst)},
+            ${String(item.sgst)},
+            ${String(item.igst)}
+          )
+        `)
+      }
+
+      // Mark invoice as returned
+      await tx.execute(sql`
+        UPDATE sales_invoices SET status = 'returned'
+        WHERE id = ${input.invoiceId}::uuid
+      `)
+    })
+
+    // Reverse journal (non-blocking)
+    try {
+      const { getCashAccountCode, createJournalEntry } = await import('@/actions/finance')
+
+      let refundAccountCode: string
+      if (input.refundMethod === 'cash') {
+        refundAccountCode = await getCashAccountCode(invoice.branch_id)
+      } else if (input.refundMethod === 'bank') {
+        refundAccountCode = '1020'
+      } else {
+        refundAccountCode = '2050' // Loyalty Liability credited = points owed back to customer
+      }
+
+      const reverseLines: Array<{ accountCode: string; debit?: number; credit?: number; description?: string }> = [
+        { accountCode: refundAccountCode, credit: totalRefund, description: 'Refund issued to customer' },
+        { accountCode: '4000', debit: returnSubtotal, description: 'Revenue reversed — return' },
+      ]
+      if (returnCGST > 0) reverseLines.push({ accountCode: '2020', debit: returnCGST, description: 'CGST payable reversed' })
+      if (returnSGST > 0) reverseLines.push({ accountCode: '2030', debit: returnSGST, description: 'SGST payable reversed' })
+      if (returnIGST > 0) reverseLines.push({ accountCode: '2040', debit: returnIGST, description: 'IGST payable reversed' })
+      if (returnCOGS > 0) {
+        reverseLines.push({ accountCode: '5010', credit: returnCOGS, description: 'COGS reversed — goods returned' })
+        reverseLines.push({ accountCode: '1040', debit: returnCOGS, description: 'Inventory asset restored' })
+      }
+
+      const journalEntry = await createJournalEntry({
+        date: new Date(),
+        description: `RETURN: Invoice ${input.invoiceId} — ${input.reason}`,
+        referenceSource: 'RETURN',
+        referenceId: returnId,
+        branchId: invoice.branch_id,
+        autoGenerated: false,
+        createdBy: session.user.id,
+        lines: reverseLines,
+      })
+
+      await db.execute(sql`
+        UPDATE sales_returns SET journal_entry_id = ${journalEntry.id}::uuid
+        WHERE id = ${returnId}::uuid
+      `)
+    } catch (journalErr) {
+      console.error('[RETURN] Reverse journal FAILED — inventory and return records committed, ledger entry missing:', journalErr)
+    }
+
+    // Loyalty points refund (non-blocking) — only if refund method is loyalty_points
+    if (input.refundMethod === 'loyalty_points' && invoice.customer_id) {
+      try {
+        const { earnPoints } = await import('@/actions/loyalty')
+        await earnPoints({
+          customerId: invoice.customer_id,
+          invoiceId: returnId,
+          saleAmount: totalRefund,
+          createdBy: session.user.id,
+        })
+      } catch (loyaltyErr) {
+        console.error('[RETURN] Loyalty point refund FAILED:', loyaltyErr)
+      }
+    }
+
+    return { success: true as const, returnId, refundAmount: totalRefund }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
 export async function getTransactionById(id: string) {
   const result = await getInvoiceHeaderAction(id)
   if (result.error) return null

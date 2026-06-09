@@ -33,6 +33,7 @@ interface Sale {
   customer_id: string;
   customer_name: string;
   branch_name: string;
+  status?: string | null;
   items_sold?: {
     name: string;
     quantity: number;
@@ -55,6 +56,7 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null)
   const [selectedInvoiceNumber, setSelectedInvoiceNumber] = useState<string | null>(null)
+  const [selectedSaleStatus, setSelectedSaleStatus] = useState<string | null>(null)
   
   // Customer History State
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -69,9 +71,10 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
     contentRef: printRef,
   })
 
-  const openDetails = (id: string, invoiceNum?: string) => {
+  const openDetails = (id: string, invoiceNum?: string, status?: string | null) => {
     setSelectedSaleId(id)
     setSelectedInvoiceNumber(invoiceNum || null)
+    setSelectedSaleStatus(status ?? null)
     setDrawerOpen(true)
   }
 
@@ -177,7 +180,16 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="font-black text-slate-900">{fmtINR(Number(sale.total_amount))}</div>
-                    <div className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest">Paid</div>
+                    <div className={`text-[9px] font-bold uppercase tracking-widest
+                      ${sale.status === 'voided'   ? 'text-red-500' :
+                        sale.status === 'returned' ? 'text-orange-500' :
+                        sale.status === 'partially_returned' ? 'text-amber-500' :
+                        'text-emerald-600'}`}>
+                      {sale.status === 'voided'   ? 'Voided' :
+                       sale.status === 'returned' ? 'Returned' :
+                       sale.status === 'partially_returned' ? 'Part. Returned' :
+                       'Paid'}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-0.5 max-w-[180px]">
@@ -225,7 +237,7 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 rounded-xl hover:bg-slate-100 transition-all text-slate-400 hover:text-primary"
-                        onClick={() => openDetails(sale.sale_id, sale.invoice_number)}
+                        onClick={() => openDetails(sale.sale_id, sale.invoice_number, sale.status)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -254,7 +266,9 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
         open={drawerOpen}
         saleId={selectedSaleId}
         invoiceNumber={selectedInvoiceNumber || undefined}
+        invoiceStatus={selectedSaleStatus}
         onClose={() => setDrawerOpen(false)}
+        onSuccess={() => setDrawerOpen(false)}
       />
 
       <CustomerHistoryDrawer
