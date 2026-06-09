@@ -295,7 +295,7 @@ export default function ManualJournalDrawer({
     }}>
       <SheetContent
         side="right"
-        className="!w-[min(960px,95vw)] flex flex-col p-0 overflow-hidden"
+        className="w-[min(960px,95vw)] flex flex-col p-0 overflow-hidden"
         showCloseButton={true}
       >
         {/* ── Header ───────────────────────────────── */}
