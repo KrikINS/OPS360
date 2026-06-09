@@ -295,7 +295,7 @@ export default function ManualJournalDrawer({
     }}>
       <SheetContent
         side="right"
-        className="sm:max-w-[50vw] w-full flex flex-col p-0"
+        className="sm:max-w-[800px] w-full flex flex-col p-0"
         showCloseButton={true}
       >
         {/* ── Header ───────────────────────────────── */}
