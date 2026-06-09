@@ -83,6 +83,37 @@ function AccountCombobox({
     )
   }, [accounts, search])
 
+  const cashAccounts = filtered.filter(a =>
+    a.code === '1010' || a.code.startsWith('1010-')
+  )
+  const otherAccounts = filtered.filter(a =>
+    a.code !== '1010' && !a.code.startsWith('1010-')
+  )
+
+  const accountButton = (a: Account) => (
+    <button
+      key={a.code}
+      type="button"
+      onClick={() => {
+        onSelect(a.code, `${a.code} — ${a.name}`)
+        setOpen(false)
+      }}
+      className={`w-full flex items-center gap-2 px-3 py-2
+        text-sm rounded-lg hover:bg-slate-100 transition-colors
+        text-left ${value === a.code ? 'bg-indigo-50' : ''}`}
+    >
+      <Check className={`h-3 w-3 shrink-0 ${value === a.code ? 'opacity-100 text-indigo-600' : 'opacity-0'}`} />
+      <span className="font-mono text-muted-foreground w-10 shrink-0">
+        {a.code}
+      </span>
+      <span className="flex-1 truncate">{a.name}</span>
+      <Badge variant="outline"
+        className={`text-[10px] py-0 px-1 ${typeBadge(a.type)}`}>
+        {a.type}
+      </Badge>
+    </button>
+  )
+
   return (
     <div className="relative">
       <button
@@ -93,7 +124,12 @@ function AccountCombobox({
           transition-colors text-left"
       >
         {selected
-          ? <span className="truncate">{selected.code} — {selected.name}</span>
+          ? <span
+              className="truncate"
+              title={`${selected.code} — ${selected.name}`}
+            >
+              {selected.code} — {selected.name}
+            </span>
           : <span className="text-muted-foreground">Select account…</span>
         }
         <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
@@ -119,30 +155,33 @@ function AccountCombobox({
                 No account found.
               </p>
             ) : (
-              filtered.map(a => (
-                <button
-                  key={a.code}
-                  type="button"
-                  onClick={() => {
-                    onSelect(a.code, `${a.code} — ${a.name}`)
-                    setOpen(false)
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2
-                    text-sm rounded-lg hover:bg-slate-100 transition-colors
-                    text-left ${value === a.code ? 'bg-indigo-50' : ''}`}
-                >
-                  <Check className={`h-3 w-3 shrink-0 ${value === a.code ? 'opacity-100 text-indigo-600' : 'opacity-0'
-                    }`} />
-                  <span className="font-mono text-muted-foreground w-10 shrink-0">
-                    {a.code}
-                  </span>
-                  <span className="flex-1 truncate">{a.name}</span>
-                  <Badge variant="outline"
-                    className={`text-[10px] py-0 px-1 ${typeBadge(a.type)}`}>
-                    {a.type}
-                  </Badge>
-                </button>
-              ))
+              <>
+                {cashAccounts.length > 0 && (
+                  <>
+                    <div className="px-3 py-1.5 text-[10px] font-bold
+                      text-slate-400 uppercase tracking-widest
+                      border-b border-slate-100 bg-slate-50/60">
+                      Cash in Hand
+                    </div>
+                    {cashAccounts.map(accountButton)}
+                  </>
+                )}
+
+                {cashAccounts.length > 0 && otherAccounts.length > 0 && (
+                  <div className="my-1 border-t border-slate-100" />
+                )}
+
+                {otherAccounts.length > 0 && (
+                  <>
+                    <div className="px-3 py-1.5 text-[10px] font-bold
+                      text-slate-400 uppercase tracking-widest
+                      border-b border-slate-100 bg-slate-50/60">
+                      Chart of Accounts
+                    </div>
+                    {otherAccounts.map(accountButton)}
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -299,7 +338,7 @@ export default function ManualJournalDrawer({
     }}>
       <SheetContent
         side="right"
-        className="w-[min(560px,50vw)] flex flex-col p-0 overflow-hidden"
+        className="!w-[480px] !max-w-[480px] flex flex-col p-0 overflow-hidden"
         showCloseButton={true}
       >
         {/* ── Header ───────────────────────────────── */}
@@ -335,8 +374,8 @@ export default function ManualJournalDrawer({
           )}
 
           {/* Branch selector — admins only */}
-          {isAdmin && branches.length > 0 && (
-            <div className="space-y-2">
+          {isAdmin && branches.length > 0 ? (
+            <div className="space-y-1">
               <Label className="text-sm font-semibold text-slate-600">Branch</Label>
               <select
                 value={selectedBranchId ?? ''}
@@ -350,8 +389,21 @@ export default function ManualJournalDrawer({
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </select>
+              <p className="text-xs text-slate-400 mt-1">
+                This entry will be posted to the selected branch's books. Cash accounts update accordingly.
+              </p>
             </div>
-          )}
+          ) : selectedBranchId ? (
+            <div className="space-y-1">
+              <Label className="text-sm font-semibold text-slate-600">Branch</Label>
+              <div className="h-10 px-3 flex items-center text-sm border rounded-lg bg-slate-50 text-slate-600">
+                {branches.find(b => b.id === selectedBranchId)?.name ?? 'Current branch'}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Journal entry will post to this branch's ledger.
+              </p>
+            </div>
+          ) : null}
 
           {/* Date + Narration */}
           <div className="grid grid-cols-4 gap-4">
@@ -402,7 +454,7 @@ export default function ManualJournalDrawer({
             </div>
           ) : (
             <div className="space-y-2">
-              {lines.map((line, idx) => (
+              {lines.map((line) => (
                 <div
                   key={line.id}
                   className="grid grid-cols-12 gap-4 items-start
