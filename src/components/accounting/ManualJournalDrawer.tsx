@@ -48,12 +48,12 @@ const EMPTY_LINE = (): JournalLine => ({
 
 function typeBadge(type: string) {
   const map: Record<string, string> = {
-    Asset:     'bg-blue-100 text-blue-800',
+    Asset: 'bg-blue-100 text-blue-800',
     Liability: 'bg-red-100 text-red-800',
-    Equity:    'bg-green-100 text-green-800',
-    Revenue:   'bg-emerald-100 text-emerald-800',
-    Expense:   'bg-orange-100 text-orange-800',
-    Tax:       'bg-purple-100 text-purple-800',
+    Equity: 'bg-green-100 text-green-800',
+    Revenue: 'bg-emerald-100 text-emerald-800',
+    Expense: 'bg-orange-100 text-orange-800',
+    Tax: 'bg-purple-100 text-purple-800',
   }
   return map[type] ?? 'bg-slate-100 text-slate-600'
 }
@@ -131,9 +131,8 @@ function AccountCombobox({
                     text-xs rounded hover:bg-slate-100 transition-colors
                     text-left ${value === a.code ? 'bg-indigo-50' : ''}`}
                 >
-                  <Check className={`h-3 w-3 shrink-0 ${
-                    value === a.code ? 'opacity-100 text-indigo-600' : 'opacity-0'
-                  }`} />
+                  <Check className={`h-3 w-3 shrink-0 ${value === a.code ? 'opacity-100 text-indigo-600' : 'opacity-0'
+                    }`} />
                   <span className="font-mono text-muted-foreground w-10 shrink-0">
                     {a.code}
                   </span>
@@ -173,8 +172,8 @@ export default function ManualJournalDrawer({
   branchId: string | null
   onSuccess: () => void
 }) {
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [loadingAccounts, setLoadingAccounts] = useState(false)
+  const [accounts, setAccounts] = useState<Account[] | null>(null)
+  const loadingAccounts = open && accounts === null
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -185,14 +184,16 @@ export default function ManualJournalDrawer({
 
   // Fetch accounts when drawer opens
   useEffect(() => {
-    if (open && accounts.length === 0) {
-      setLoadingAccounts(true)
+    let active = true
+    if (open && accounts === null) {
       getActiveAccounts().then(res => {
-        if (res.success) setAccounts(res.accounts)
-        setLoadingAccounts(false)
+        if (active) {
+          setAccounts(res.success ? res.accounts : [])
+        }
       })
     }
-  }, [open, accounts.length])
+    return () => { active = false }
+  }, [open, accounts])
 
   // Dismiss toast after 4s
   useEffect(() => {
@@ -294,7 +295,7 @@ export default function ManualJournalDrawer({
     }}>
       <SheetContent
         side="right"
-        className="sm:max-w-[1240px] w-full flex flex-col p-0"
+        className="sm:max-w-[50vw] w-full flex flex-col p-0"
         showCloseButton={true}
       >
         {/* ── Header ───────────────────────────────── */}
@@ -388,7 +389,7 @@ export default function ManualJournalDrawer({
                   {/* Account selector */}
                   <div className="col-span-5 space-y-1">
                     <AccountCombobox
-                      accounts={accounts}
+                      accounts={accounts || []}
                       value={line.accountCode}
                       onSelect={(code, label) => setLineAccount(line.id, code, label)}
                     />
