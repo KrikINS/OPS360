@@ -6,7 +6,7 @@ import { db } from '@/db/client'
 import { purchase_orders, po_items, grn_receipts, grn_items, discrepancies, vendors, branches, products, hsn_codes, inventory, inventory_transactions } from '@/db/schema'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import { postGRNJournal, createJournalEntry } from '@/actions/finance'
+import { postGRNJournal, createJournalEntry, postDebitNoteJournal } from '@/actions/finance'
 import { getPurchaseOrdersAction } from '@/app/actions/procurement'
 
 export type PurchaseOrderItem = {
@@ -601,16 +601,40 @@ export async function createReturnToVendor(input: {
     return { success: false as const, error: 'Insufficient permission: manager required' }
   }
 
-  const effectiveBranchId = await getEffectiveBranchId(session);
+  const effectiveBranchId = await getEffectiveBranchId(session)
   if (!effectiveBranchId) {
     return { success: false as const, error: 'No branch assigned to your account' }
   }
   const userBranchId = effectiveBranchId
 
   try {
+    // Fetch PO for state-code lookup
+    const [po] = await db
+      .select({ poNumber: purchase_orders.po_number, vendorId: purchase_orders.vendor_id, branchId: purchase_orders.branch_id })
+      .from(purchase_orders)
+      .where(eq(purchase_orders.id, input.poId))
+      .limit(1)
+
+    const [vendorState] = po?.vendorId
+      ? await db.select({ stateCode: vendors.state_code }).from(vendors).where(eq(vendors.id, po.vendorId)).limit(1)
+      : [null]
+    const [branchState] = po?.branchId
+      ? await db.select({ stateCode: branches.state_code }).from(branches).where(eq(branches.id, po.branchId)).limit(1)
+      : [null]
+
+    const vendorCode = (vendorState?.stateCode ?? '').toLowerCase().trim()
+    const branchCode = (branchState?.stateCode ?? '').toLowerCase().trim()
+    const isInterState = !vendorCode || !branchCode || vendorCode !== branchCode
+
+    let totalLandedCost = 0
+    let totalCGST = 0
+    let totalSGST = 0
+    let totalIGST = 0
+    const returnedIds: string[] = []
+
     for (const item of input.items) {
       const availableRows = await db
-        .select({ id: inventory.id })
+        .select({ id: inventory.id, landedCost: inventory.landed_cost })
         .from(inventory)
         .where(
           and(
@@ -646,9 +670,85 @@ export async function createReturnToVendor(input: {
           inventory_id: id,
         }))
       )
+
+      returnedIds.push(...ids)
+
+      // Accumulate costs for journal
+      const unitLanded = availableRows.reduce((s, r) => s + Number(r.landedCost ?? 0), 0)
+      totalLandedCost += unitLanded
+
+      const [productInfo] = await db
+        .select({ gstRate: products.gst_rate })
+        .from(products)
+        .where(eq(products.id, item.productId))
+        .limit(1)
+
+      const gstRate = Number(productInfo?.gstRate ?? 0)
+      const gstAmount = unitLanded * (gstRate / 100)
+
+      if (isInterState) {
+        totalIGST += gstAmount
+      } else {
+        totalCGST += gstAmount / 2
+        totalSGST += gstAmount / 2
+      }
     }
 
-    return { success: true as const }
+    totalLandedCost = Math.round(totalLandedCost * 100) / 100
+    totalCGST      = Math.round(totalCGST      * 100) / 100
+    totalSGST      = Math.round(totalSGST      * 100) / 100
+    totalIGST      = Math.round(totalIGST      * 100) / 100
+
+    // Non-blocking: debit note + journal. Failures must never abort the committed
+    // inventory change (units are already marked Returned above).
+    let debitNoteId = 'unknown'
+    let dnNumber = ''
+    try {
+      const year = new Date().getFullYear()
+      const dnCounterRes = await db.execute(sql`
+        INSERT INTO sequential_counters (prefix, year, current_value)
+        VALUES ('DN', ${year}, 1)
+        ON CONFLICT (prefix, year) DO UPDATE
+          SET current_value = sequential_counters.current_value + 1
+        RETURNING current_value
+      `)
+      const dnCounterRows = (dnCounterRes as unknown as { rows?: { current_value: number }[] }).rows
+        ?? (dnCounterRes as unknown as { current_value: number }[])
+      dnNumber = `DN/${year}/${dnCounterRows[0]?.current_value}`
+
+      const reasonText = input.items[0]?.reason ?? 'Purchase return'
+      const dnInsert = await db.execute(sql`
+        INSERT INTO debit_notes (debit_note_number, po_id, branch_id, reason, amount, status)
+        VALUES (
+          ${dnNumber},
+          ${input.poId}::uuid,
+          ${userBranchId}::uuid,
+          ${reasonText},
+          ${totalLandedCost + totalCGST + totalSGST + totalIGST},
+          'Pending'
+        )
+        RETURNING id
+      `)
+      const dnRows = (dnInsert as unknown as { rows?: { id: string }[] }).rows
+        ?? (dnInsert as unknown as { id: string }[])
+      debitNoteId = dnRows[0]?.id ?? 'unknown'
+
+      await postDebitNoteJournal({
+        debitNoteId,
+        debitNoteNumber: dnNumber,
+        poId: input.poId,
+        branchId: userBranchId,
+        createdBy: session.user.id,
+        totalLandedCost,
+        totalCGST,
+        totalSGST,
+        totalIGST,
+      })
+    } catch (dnErr) {
+      console.error('[createReturnToVendor] debit note / journal failed (non-blocking):', dnErr)
+    }
+
+    return { success: true as const, debitNoteId, debitNoteNumber: dnNumber }
   } catch (error) {
     console.error('PROCUREMENT ERROR:', error)
     return { success: false as const, error: (error as Error).message }
