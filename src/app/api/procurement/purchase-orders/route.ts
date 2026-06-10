@@ -10,6 +10,7 @@ type POItemPayload = {
   product_id: string
   quantity: number
   unit_price: number
+  tax_rate?: number
 }
 
 type SqlRows = { rows?: Record<string, unknown>[] }
@@ -180,11 +181,21 @@ export async function POST(request: NextRequest) {
     const poCounterValue = poCounterRows[0]?.current_value;
     const poNumber = `PO/${year}/${poCounterValue}`;
 
-    // Calculate totals
-    const totalAmount = items.reduce(
-      (sum: number, item: POItemPayload) => sum + item.quantity * item.unit_price,
+    // Calculate totals — total_amount stored inc-GST (vendor-payable amount)
+    const subtotalAmount = items.reduce(
+      (sum: number, item: POItemPayload) =>
+        sum + item.quantity * item.unit_price,
       0
     );
+    const totalAmount = items.reduce(
+      (sum: number, item: POItemPayload) => {
+        const base = item.quantity * item.unit_price
+        const gst  = base * ((item.tax_rate ?? 0) / 100)
+        return sum + base + gst
+      },
+      0
+    );
+    const totalGSTAmount = totalAmount - subtotalAmount;
 
     // Insert PO
     const inserted = await db

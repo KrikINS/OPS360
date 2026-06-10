@@ -1401,6 +1401,30 @@ Are you sure you want to proceed?`)) return;
                   </div>
                 )}
 
+                {poItems.length > 0 && (() => {
+                  const poSubtotal = poItems.reduce((s, i) => s + (i.unit_price ?? 0) * (i.quantity ?? 0), 0)
+                  const poTotalGST = poItems.reduce((s, i) => s + (i.unit_price ?? 0) * (i.quantity ?? 0) * ((i.tax_rate ?? 0) / 100), 0)
+                  const poGrandTotal = poSubtotal + poTotalGST
+                  return (
+                    <div className="flex justify-end mt-4">
+                      <div className="w-72 space-y-2 text-sm">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Subtotal (ex-GST)</span>
+                          <span>₹{poSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Total GST</span>
+                          <span>₹{poTotalGST.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold text-slate-900 border-t pt-2">
+                          <span>Grand Total (inc-GST)</span>
+                          <span>₹{poGrandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 <div className="space-y-4 pt-6">
                   <div className="flex items-center justify-between">
                     <Label className="flex items-center gap-2">
