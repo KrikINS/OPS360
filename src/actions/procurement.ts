@@ -553,12 +553,21 @@ export async function createGRN(input: {
     totalSGST = Math.round(totalSGST * 100) / 100
     totalIGST = Math.round(totalIGST * 100) / 100
 
+    // Total dealer cost = sum of (landedUnitCost × receivedQty)
+    // This is the correct DR 1040 value — what we paid
+    // for the stock including any freight spread
+    const totalInventoryValue = grnItemsData.reduce(
+      (sum, item) => sum + (item.landedUnitCost * item.receivedQty),
+      0
+    )
+    const totalInventoryValueRounded = Math.round(totalInventoryValue * 100) / 100
+
     await postGRNJournal({
       grnId: grnHeader.id,
       poId: input.poId,
       branchId: input.branchId,
       createdBy: session.user.id,
-      totalLandedCost: Number(grnHeader.total_landed_cost ?? 0),
+      totalLandedCost: totalInventoryValueRounded,
       totalCGST,
       totalSGST,
       totalIGST,
