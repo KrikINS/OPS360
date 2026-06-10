@@ -27,6 +27,7 @@ const PRIORITY_LABEL: Record<Notification['priority'], string> = {
 
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [viewedInfoIds, setViewedInfoIds] = useState<string[]>([])
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -41,6 +42,13 @@ export function NotificationBell() {
     window.addEventListener('notifications-updated', handleUpdate)
     window.addEventListener('vendor-updated', handleUpdate)
 
+    const stored = localStorage.getItem('viewedInfoIds')
+    if (stored) {
+      try {
+        setViewedInfoIds(JSON.parse(stored))
+      } catch (e) {}
+    }
+
     return () => {
       clearInterval(interval)
       window.removeEventListener('notifications-updated', handleUpdate)
@@ -48,18 +56,27 @@ export function NotificationBell() {
     }
   }, [])
 
+  const markAsViewed = (id: string) => {
+    if (!viewedInfoIds.includes(id)) {
+      const newViewed = [...viewedInfoIds, id]
+      setViewedInfoIds(newViewed)
+      localStorage.setItem('viewedInfoIds', JSON.stringify(newViewed))
+    }
+  }
+
   const highCount = notifications.filter(n => n.priority === 'high').length
+  const activeCount = notifications.filter(n => n.priority !== 'low' || !viewedInfoIds.includes(n.id)).length
 
   return (
     <Menu.Root>
       <Menu.Trigger className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
         <Bell className="h-5 w-5" />
-        {notifications.length > 0 && (
+        {activeCount > 0 && (
           <span className={cn(
             "absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ring-2 ring-[#001529]",
             highCount > 0 ? "bg-rose-500" : "bg-amber-500"
           )}>
-            {notifications.length > 9 ? '9+' : notifications.length}
+            {activeCount > 9 ? '9+' : activeCount}
           </span>
         )}
       </Menu.Trigger>
@@ -75,9 +92,9 @@ export function NotificationBell() {
           )}>
             <div className="font-bold flex items-center justify-between px-3 py-2 text-sm border-b border-slate-100">
               <span>Notifications</span>
-              {notifications.length > 0 && (
+              {activeCount > 0 && (
                 <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-                  {notifications.length} pending
+                  {activeCount} pending
                 </span>
               )}
             </div>
@@ -91,8 +108,11 @@ export function NotificationBell() {
                 notifications.map(n => (
                   <Menu.Item
                     key={n.id}
-                    render={<Link href={n.href} />}
-                    className="flex flex-col gap-1 w-full p-3 outline-none cursor-pointer hover:bg-slate-50 focus:bg-slate-50 border-b border-slate-100 last:border-0 select-none data-disabled:pointer-events-none data-disabled:opacity-50"
+                    render={<Link href={n.href} onClick={() => n.priority === 'low' && markAsViewed(n.id)} />}
+                    className={cn(
+                      "flex flex-col gap-1 w-full p-3 outline-none cursor-pointer hover:bg-slate-50 focus:bg-slate-50 border-b border-slate-100 last:border-0 select-none data-disabled:pointer-events-none data-disabled:opacity-50",
+                      n.priority === 'low' && viewedInfoIds.includes(n.id) ? "opacity-60 bg-slate-50/50" : ""
+                    )}
                   >
                     <div className="flex items-center gap-2">
                       <span className={cn("h-2 w-2 rounded-full flex-shrink-0", PRIORITY_DOT[n.priority])} />
@@ -114,3 +134,4 @@ export function NotificationBell() {
     </Menu.Root>
   )
 }
+
