@@ -141,9 +141,7 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
           mrp: formData.mrp ? parseFloat(formData.mrp) : null,
           dealer_price: parseFloat(formData.dealer_price || "0"),
           min_sell_price: finalMinSell,
-          margin_pct: (parseFloat(formData.dealer_price || "0") > 0 && parseFloat(formData.base_price || "0") > 0)
-            ? parseFloat((((parseFloat(formData.base_price) - parseFloat(formData.dealer_price || "0")) / parseFloat(formData.base_price)) * 100).toFixed(2))
-            : 0,
+          margin_pct: parseFloat(formData.margin_pct || "5"),
           max_discount_pct: parseFloat(formData.max_discount_pct || "10"),
           hsn_code: formData.hsn_code,
           min_stock_level: parseInt(formData.min_stock_level),
@@ -247,42 +245,41 @@ export function EditProductModal({ open, onOpenChange, onSuccess, product }: Edi
                 onChange={(e) => {
                   const dp = e.target.value;
                   const dpVal = parseFloat(dp) || 0;
-                  
-                  let nextMinSell = formData.min_sell_price;
-                  if (!nextMinSell || parseFloat(nextMinSell) === parseFloat(formData.dealer_price || "0")) {
-                    nextMinSell = dpVal > 0 ? dpVal.toFixed(2) : "";
-                  }
-                  
-                  setFormData({ 
-                    ...formData, 
-                    dealer_price: dp,
-                    min_sell_price: nextMinSell
-                  });
+                  const marginPct = parseFloat(formData.margin_pct || "0");
+                  const nextMinSell = dpVal > 0 && marginPct > 0 && marginPct < 100
+                    ? (dpVal / (1 - marginPct / 100)).toFixed(2)
+                    : dpVal > 0 ? dpVal.toFixed(2) : "";
+                  setFormData({ ...formData, dealer_price: dp, min_sell_price: nextMinSell });
                 }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-margin">Gross Margin %</Label>
-              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-calculated from Unit Rate vs Cost</p>
-              <Input 
-                id="edit-margin" 
-                type="text" 
-                readOnly
-                className="bg-slate-100 text-slate-500"
-                value={
-                  parseFloat(formData.dealer_price || "0") > 0 && parseFloat(formData.base_price || "0") > 0 
-                    ? (((parseFloat(formData.base_price || "0") - parseFloat(formData.dealer_price || "0")) / parseFloat(formData.base_price || "0")) * 100).toFixed(2) 
-                    : "—"
-                }
+              <Label htmlFor="edit-margin">Min Margin %</Label>
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Required gross margin — drives Min Sell Price</p>
+              <Input
+                id="edit-margin"
+                type="number"
+                step="0.01"
+                className="border-slate-200"
+                value={formData.margin_pct}
+                onChange={(e) => {
+                  const m = e.target.value;
+                  const mVal = parseFloat(m) || 0;
+                  const dpVal = parseFloat(formData.dealer_price || "0");
+                  const nextMinSell = dpVal > 0 && mVal > 0 && mVal < 100
+                    ? (dpVal / (1 - mVal / 100)).toFixed(2)
+                    : formData.min_sell_price;
+                  setFormData({ ...formData, margin_pct: m, min_sell_price: nextMinSell });
+                }}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-min-sell">Min Sell Price (₹)</Label>
-              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Suggested: Cost. Override allowed.</p>
-              <Input 
-                id="edit-min-sell" 
-                type="number" 
-                step="0.01" 
+              <p className="text-[10px] text-slate-500 -mt-1 mb-1">Auto-derived from dealer cost ÷ (1 − margin). Override allowed.</p>
+              <Input
+                id="edit-min-sell"
+                type="number"
+                step="0.01"
                 value={formData.min_sell_price}
                 onChange={(e) => setFormData({ ...formData, min_sell_price: e.target.value })}
               />

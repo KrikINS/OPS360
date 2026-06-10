@@ -114,6 +114,7 @@ type Product = {
   brand: string
   hsn_code: string
   base_price: number | null
+  dealer_price: number | null
   product_code: string
 }
 
@@ -573,7 +574,7 @@ export default function ProcurementGRNPage() {
     if (product && !poItems.find(i => i.product_id === productId)) {
       // Calculate tax and total using compliance utility, passing vendor state
       const costDetails = calculateLandedCost(
-        product.base_price ?? 0,
+        product.dealer_price ?? product.base_price ?? 0,
         0,
         product.hsn_code,
         selectedVendor?.state // Uses Kerala default if vendor state is missing
@@ -583,7 +584,7 @@ export default function ProcurementGRNPage() {
         id: `draft-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         product_id: product.id,
         quantity: 1,
-        unit_price: product.base_price ?? 0,
+        unit_price: product.dealer_price ?? 0,
         received_quantity: 0,
         tax_rate: costDetails.gstRate,
         total_item_cost: costDetails.totalBatchCost,
@@ -1281,8 +1282,8 @@ Are you sure you want to proceed?`)) return;
                                   type="number"
                                   className={cn(
                                     "w-36 pl-5 h-8 text-xs font-bold transition-all",
-                                    (products.find(p => p.id === item.product_id)?.base_price && (
-                                      Math.abs((item.unit_price - (products.find(p => p.id === item.product_id)?.base_price ?? 0)) / (products.find(p => p.id === item.product_id)?.base_price ?? 1)) > 0.1
+                                    (products.find(p => p.id === item.product_id)?.dealer_price && (
+                                      Math.abs((item.unit_price - (products.find(p => p.id === item.product_id)?.dealer_price ?? 0)) / (products.find(p => p.id === item.product_id)?.dealer_price ?? 1)) > 0.1
                                     ))
                                       ? "border-amber-400 bg-amber-50 focus:ring-amber-500 pr-8 shadow-[0_0_0_1px_rgba(251,191,36,0.3)] animate-pulse"
                                       : "border-slate-200"
@@ -1313,8 +1314,8 @@ Are you sure you want to proceed?`)) return;
                                     }
                                   }}
                                 />
-                                {(products.find(p => p.id === item.product_id)?.base_price &&
-                                  Math.abs((item.unit_price - (products.find(p => p.id === item.product_id)?.base_price ?? 0)) / (products.find(p => p.id === item.product_id)?.base_price ?? 1)) > 0.1
+                                {(products.find(p => p.id === item.product_id)?.dealer_price &&
+                                  Math.abs((item.unit_price - (products.find(p => p.id === item.product_id)?.dealer_price ?? 0)) / (products.find(p => p.id === item.product_id)?.dealer_price ?? 1)) > 0.1
                                 ) && (
                                   <TooltipProvider>
                                     <Tooltip>
@@ -1327,8 +1328,8 @@ Are you sure you want to proceed?`)) return;
                                         <div className="space-y-1 text-[11px]">
                                           <p className="flex items-center gap-1.5"><ShieldAlert className="h-3 w-3" /> Price Deviation Detected</p>
                                           <p className="opacity-90 font-medium">Entered: ₹{item.unit_price.toLocaleString()}</p>
-                                          <p className="opacity-90 font-medium text-amber-100">Master: ₹{products.find(p => p.id === item.product_id)?.base_price?.toLocaleString() ?? '0'}</p>
-                                          <p className="pt-1 mt-1 border-t border-white/20">The price deviates by more than 10% from the Product Master Registry.</p>
+                                          <p className="opacity-90 font-medium text-amber-100">Dealer Cost: ₹{products.find(p => p.id === item.product_id)?.dealer_price?.toLocaleString() ?? '0'}</p>
+                                          <p className="pt-1 mt-1 border-t border-white/20">The price deviates by more than 10% from the dealer cost in Master Registry.</p>
                                         </div>
                                       </TooltipContent>
                                     </Tooltip>
