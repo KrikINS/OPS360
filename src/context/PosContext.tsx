@@ -648,11 +648,22 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     }
   }, [])
 
+  type ProcessedItem = {
+    product_id: string
+    qty: number
+    unit_price: number
+    discount_amount: number
+    discount_pct: number
+    approved_by: string | null
+    inventory_id?: string
+    serial_number?: string
+  }
+
   const executeCheckout = useCallback(async (paymentMethod: string = 'cash') => {
     if (cart.length === 0) return { success: false, error: 'Cart is empty' }
     setLoading(true)
     try {
-      const processedItems = []
+      const processedItems: ProcessedItem[] = []
       for (const item of cart) {
         if (item.tracking_type === 'Serial') {
           // Flatten into one entry per unit for serialized items
@@ -696,6 +707,8 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
           discount_amount: i.discount_amount,
           discount_pct: i.discount_pct,
           approved_by: i.approved_by,
+          inventory_id: i.inventory_id ?? null,
+          serial_number: i.serial_number ?? null,
         })),
       })
 

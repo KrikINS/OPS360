@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { ShoppingCart, Plus, Minus, Trash2, Printer, ArrowRight, Scan, CheckCircle2, AlertCircle } from 'lucide-react'
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { usePos, SelectedUnit, SYSTEM_WALKIN_ID } from '@/context/PosContext'
@@ -20,61 +19,56 @@ function SerialSelector({ productId, index, onSelect }: { productId: string, ind
     async function load() {
       setLoading(true)
       const data = await fetchAvailableSerials(productId)
-      // Filter out serials already selected in other slots of THIS item
       const alreadySelected = Object.values(currentItem?.selectedUnits || {})
         .filter((u, i) => u !== null && i !== index)
         .map(u => u?.id)
-      
       const available = data.filter(s => !alreadySelected.includes(s.id))
       setSerials(available)
-      
-      // Auto-populate if only one serial is available and nothing is selected yet
       if (available.length === 1 && !currentUnit) {
         onSelect({ id: available[0].id, serial: available[0].serial_number })
       }
-      
       setLoading(false)
     }
     load()
   }, [productId, fetchAvailableSerials, currentItem?.selectedUnits, index, currentUnit, onSelect])
 
   return (
-    <div className="flex flex-col gap-1 mt-2">
-      <div className="flex items-center gap-2">
-        <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Unit #{index + 1}</span>
-        {currentUnit ? (
-          <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] h-4 px-1 gap-1">
-            <CheckCircle2 className="h-2 w-2" /> Linked
-          </Badge>
-        ) : (
-          <Badge className="bg-amber-50 text-amber-600 border-amber-100 text-[8px] h-4 px-1 gap-1">
-            <AlertCircle className="h-2 w-2" /> Select Serial
-          </Badge>
-        )}
-      </div>
-      <Select 
-        value={currentUnit ? `${currentUnit.id}|${currentUnit.serial}` : "none"} 
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wide whitespace-nowrap">
+        Unit #{index + 1}
+      </span>
+      {currentUnit ? (
+        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[9px] h-4 px-1.5 gap-0.5 shrink-0">
+          <CheckCircle2 className="h-2.5 w-2.5" /> Linked
+        </Badge>
+      ) : (
+        <Badge className="bg-amber-50 text-amber-700 border-amber-100 text-[9px] h-4 px-1.5 gap-0.5 shrink-0">
+          <AlertCircle className="h-2.5 w-2.5" /> Pending
+        </Badge>
+      )}
+      <Select
+        value={currentUnit ? `${currentUnit.id}|${currentUnit.serial}` : "none"}
         onValueChange={(val) => {
           if (!val || val === "none") {
             onSelect(null)
           } else {
             const [id, ...serialParts] = val.split('|')
-            const serial = serialParts.join('|') // Handle serials that might contain pipes
+            const serial = serialParts.join('|')
             onSelect({ id, serial })
           }
         }}
       >
-        <SelectTrigger className="h-8 text-[10px] bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10">
-          <SelectValue placeholder={loading ? "Loading..." : "Assign Serial..."}>
+        <SelectTrigger className="h-7 text-[10px] font-mono bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 flex-1 min-w-0">
+          <SelectValue placeholder={loading ? "Loading..." : "Assign serial no..."}>
             {currentUnit?.serial}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none" className="text-[10px]">-- Deselect --</SelectItem>
+          <SelectItem value="none" className="text-[10px]">— Deselect —</SelectItem>
           {serials.map((s, idx) => (
-            <SelectItem 
-              key={`${s.id}-${s.serial_number}-${idx}`} 
-              value={`${s.id}|${s.serial_number}`} 
+            <SelectItem
+              key={`${s.id}-${s.serial_number}-${idx}`}
+              value={`${s.id}|${s.serial_number}`}
               className="text-[10px] font-mono"
             >
               {s.serial_number}
@@ -90,8 +84,8 @@ function SerialSelector({ productId, index, onSelect }: { productId: string, ind
 }
 
 export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
-  const { 
-    cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals, 
+  const {
+    cart, updateQty, removeFromCart, clearCart, invoiceNumber, currentDate, loading, totals,
     assignSerialToUnit, isCartValid, applyItemDiscount,
     selectedCustomer, loyaltyBalance, loyaltyRedeem, setLoyaltyRedeem
   } = usePos()
@@ -107,8 +101,7 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
   const handleDiscountChange = async (productId: string, productName: string, pctString: string) => {
     const pct = parseFloat(pctString) || 0
     const item = cart.find(i => i.id === productId)
-    if (item && item.discountPct === pct) return // no change
-    
+    if (item && item.discountPct === pct) return
     const res = await applyItemDiscount(productId, pct)
     if (res?.needsApproval) {
       setPendingDiscount({ productId, productName, pct, maxPct: res.maxAutoApproval || 10 })
@@ -128,212 +121,234 @@ export function CartSidebar({ onCheckout }: { onCheckout: () => void }) {
 
   return (
     <section className="w-full lg:w-[400px] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/5 h-full transition-colors duration-300">
-      <div className="p-4 bg-slate-900 flex items-center justify-between shrink-0">
-        <div>
-          <h2 className="text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+
+      {/* Header */}
+      <div className="px-4 py-3.5 bg-slate-900 flex items-center justify-between shrink-0">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-white text-[10px] font-medium uppercase tracking-widest flex items-center gap-2">
             <ShoppingCart className="h-3 w-3 text-blue-400" />
             Active Register
           </h2>
-          <div className="flex items-center gap-1 mt-0.5">
-            <span className="text-[9px] text-slate-500 font-bold uppercase">{invoiceNumber}</span>
-            <span className="text-[9px] text-slate-400 font-medium opacity-50">•</span>
-            <span className="text-[9px] text-slate-500 font-bold uppercase">{currentDate}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wide">{invoiceNumber}</span>
+            <span className="text-slate-700">·</span>
+            <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wide">{currentDate}</span>
           </div>
         </div>
-        <button 
-          className="text-[9px] font-black text-rose-400 p-0 h-auto uppercase hover:text-rose-300 transition-colors" 
-          onClick={clearCart} 
+        <button
+          className="text-[9px] font-medium text-rose-400 uppercase tracking-wide hover:text-rose-300 transition-colors disabled:opacity-30"
+          onClick={clearCart}
           disabled={cart.length === 0}
         >
           Flush
         </button>
       </div>
 
-      {/* Item List - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
+      {/* Item List */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
         {cart.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-300 opacity-50">
+          <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-300 opacity-40">
             <ShoppingCart className="h-10 w-10" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-center">Register Empty<br/><span className="text-[8px] font-medium italic">Scanning or searching for products...</span></p>
+            <p className="text-[10px] font-medium uppercase tracking-widest text-center">
+              Register empty<br />
+              <span className="text-[9px] normal-case font-normal opacity-70">Scan or search for products</span>
+            </p>
           </div>
         ) : (
-          <Table>
-            <TableBody>
-              {cart.map((item) => {
-                const unitPriceAfterDisc = Math.max(0, (Number(item.mrp) || 0) - (Number(item.discountAmount) || 0))
-                const finalAmount = unitPriceAfterDisc * item.qty
+          cart.map((item) => {
+            const unitPriceAfterDisc = Math.max(0, (Number(item.mrp) || 0) - (Number(item.discountAmount) || 0))
+            const finalAmount = unitPriceAfterDisc * item.qty
+            const isSerial = item.tracking_type?.toLowerCase() === 'serial'
 
-                return (
-                  <React.Fragment key={item.id}>
-                    <TableRow className="border-b border-slate-50 dark:border-white/5 group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                      <TableCell className="w-8 py-4 pl-0 shrink-0">
-                        <div className="flex flex-col items-center gap-1">
-                          <button 
-                            title="Increase Quantity"
-                            onClick={() => updateQty(item.id, 1)} 
-                            className="bg-slate-100 dark:bg-white/5 p-1 rounded hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-colors"
-                          >
-                            <Plus className="h-2.5 w-2.5" />
-                          </button>
-                          <span className="text-[10px] font-black tabular-nums">{item.qty}</span>
-                          <button 
-                            title="Decrease Quantity"
-                            onClick={() => updateQty(item.id, -1)} 
-                            className="bg-slate-100 dark:bg-white/5 p-1 rounded hover:bg-rose-600 dark:hover:bg-rose-600 hover:text-white transition-colors"
-                          >
-                            <Minus className="h-2.5 w-2.5" />
-                          </button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4 px-2">
-                        <div className="flex flex-col gap-0.5 max-w-[180px]">
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight truncate">{item.model_name}</span>
-                          <div className="flex items-center gap-2">
-                            {item.discountAmount ? (
-                              <div className="flex items-center gap-1">
-                                <span className="text-[9px] font-bold text-slate-400 line-through">{fmtINR(item.mrp)}</span>
-                                <span className="text-[9px] font-bold text-emerald-600">{fmtINR(unitPriceAfterDisc)}</span>
-                              </div>
-                            ) : (
-                              <span className="text-[9px] font-bold text-slate-400">{fmtINR(item.mrp)}</span>
-                            )}
-                            <Badge className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] px-1.5 border-none h-4">{Math.round(item.gst_rate)}% GST (Inc)</Badge>
-                            
-                            <div className="flex items-center ml-auto gap-1">
-                              <span className="text-[8px] font-bold text-slate-400 uppercase">Disc %</span>
-                              <input
-                                type="number"
-                                defaultValue={item.discountPct || ''}
-                                onBlur={(e) => handleDiscountChange(item.id, item.model_name, e.target.value)}
-                                className="w-10 h-5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded px-1 text-right text-[9px] font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              />
-                            </div>
-                          </div>
-                          
-                          {/* Unit Selectors for Serialized Items */}
-                          {item.tracking_type?.toLowerCase() === 'serial' && (
-                            <div className="space-y-3 mt-1 border-l-2 border-slate-100 dark:border-white/5 pl-2">
-                              {Array.from({ length: item.qty }).map((_, idx) => (
-                                <SerialSelector 
-                                  key={idx} 
-                                  productId={item.id} 
-                                  index={idx} 
-                                  onSelect={(unit) => assignSerialToUnit(item.id, idx, unit)} 
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4 text-right pr-0 font-black text-slate-900 tabular-nums shrink-0">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs font-black">{fmtINR(Math.round(finalAmount))}</span>
-                          <button 
-                            title="Remove item"
-                            onClick={() => removeFromCart(item.id)} 
-                            className="text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                )
-              })}
-            </TableBody>
-          </Table>
+            return (
+              <div
+                key={item.id}
+                className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col gap-0"
+              >
+                {/* Row 1: Name + Amount */}
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="text-[12px] font-medium text-slate-800 dark:text-slate-200 leading-snug">
+                    {item.model_name}
+                  </span>
+                  <span className="text-[13px] font-medium text-slate-900 dark:text-white whitespace-nowrap tabular-nums shrink-0">
+                    {fmtINR(Math.round(finalAmount))}
+                  </span>
+                </div>
+
+                {/* Row 2: Badges */}
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Badge className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-none text-[9px] h-4 px-1.5 font-medium">
+                    {Math.round(item.gst_rate)}% GST incl.
+                  </Badge>
+                  {item.discountAmount ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-slate-400 line-through tabular-nums">{fmtINR(item.mrp)}</span>
+                      <span className="text-[9px] font-medium text-emerald-600 tabular-nums">{fmtINR(unitPriceAfterDisc)}</span>
+                    </div>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 tabular-nums">{fmtINR(item.mrp)}</span>
+                  )}
+                </div>
+
+                {/* Row 3: Controls */}
+                <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 dark:border-white/5">
+                  {/* Qty stepper */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      title="Decrease quantity"
+                      onClick={() => updateQty(item.id, -1)}
+                      className="w-6 h-6 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-colors"
+                    >
+                      <Minus className="h-2.5 w-2.5" />
+                    </button>
+                    <span className="text-[12px] font-medium text-slate-900 dark:text-white tabular-nums w-4 text-center">{item.qty}</span>
+                    <button
+                      title="Increase quantity"
+                      onClick={() => updateQty(item.id, 1)}
+                      className="w-6 h-6 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-colors"
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+
+                  {/* Discount input */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wide">Disc</span>
+                    <input
+                      type="number"
+                      defaultValue={item.discountPct || ''}
+                      onBlur={(e) => handleDiscountChange(item.id, item.model_name, e.target.value)}
+                      placeholder="0"
+                      className="w-10 h-6 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md px-1.5 text-right text-[10px] font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <span className="text-[9px] text-slate-400">%</span>
+                  </div>
+
+                  {/* Remove */}
+                  <button
+                    title="Remove item"
+                    onClick={() => removeFromCart(item.id)}
+                    className="text-slate-300 hover:text-rose-400 transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                {/* Serial selectors */}
+                {isSerial && (
+                  <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-white/5 flex flex-col gap-2">
+                    {Array.from({ length: item.qty }).map((_, idx) => (
+                      <SerialSelector
+                        key={idx}
+                        productId={item.id}
+                        index={idx}
+                        onSelect={(unit) => assignSerialToUnit(item.id, idx, unit)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })
         )}
       </div>
 
-      {/* Footer - Always Visible */}
-      <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-white/5 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] transition-colors">
-        <div className="space-y-2 mb-6 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-          <div className="flex justify-between uppercase"><span>Subtotal (Taxable)</span><span>{fmtINR(totals.taxableValue)}</span></div>
-          <div className="flex justify-between uppercase"><span>GST (Included)</span><span>{fmtINR(totals.totalGst)}</span></div>
-          {(Number(totals.discount) || 0) > 0 && (
-            <div className="flex justify-between uppercase text-rose-500"><span>Discount</span><span>-{fmtINR(totals.discount)}</span></div>
-          )}
-          <div className="h-px bg-slate-200 dark:bg-white/5 my-2" />
-          
-          {/* Loyalty Points Redemption */}
-          {selectedCustomer &&
-           selectedCustomer.id !== SYSTEM_WALKIN_ID &&
-           loyaltyBalance > 0 && (
-            <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-white/5 border-dashed">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-purple-700 tracking-widest">
-                  Loyalty Points
-                </span>
-                <Badge variant="outline"
-                  className="text-[9px] bg-purple-50 text-purple-700 border-purple-200 uppercase font-black">
-                  {loyaltyBalance} pts = {fmtINR(loyaltyBalance)}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={Math.min(loyaltyBalance, Math.floor(Number(totals.grandTotal) || 0))}
-                  value={loyaltyRedeem || ''}
-                  onChange={e => {
-                    const val = Math.min(
-                      Number(e.target.value) || 0,
-                      loyaltyBalance,
-                      Math.floor(Number(totals.grandTotal) || 0)
-                    )
-                    setLoyaltyRedeem(val)
-                  }}
-                  placeholder="0"
-                  className="w-14 text-right text-xs font-bold border border-purple-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-purple-500 bg-white"
-                />
-                <button
-                  onClick={() => setLoyaltyRedeem(Math.min(loyaltyBalance, Math.floor(Number(totals.grandTotal) || 0)))}
-                  className="text-[9px] font-bold text-purple-600 hover:text-purple-800 underline uppercase"
-                >
-                  Use All
-                </button>
-              </div>
-            </div>
-          )}
-
-          {loyaltyRedeem > 0 && (
-            <div className="flex justify-between text-[11px] text-purple-700 font-bold uppercase mt-2">
-              <span>Loyalty Discount</span>
-              <span>-{fmtINR(loyaltyRedeem)}</span>
-            </div>
-          )}
-
-          <div className="flex justify-between items-end mt-4">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{fmtINR(Math.round(finalTotal))}</span>
-            </div>
+      {/* Footer */}
+      <div className="px-4 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-white/5 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.04)]">
+        <div className="space-y-1.5 mb-4">
+          <div className="flex justify-between text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+            <span>Subtotal (taxable)</span>
+            <span className="tabular-nums">{fmtINR(totals.taxableValue)}</span>
           </div>
+          <div className="flex justify-between text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+            <span>GST included</span>
+            <span className="tabular-nums">{fmtINR(totals.totalGst)}</span>
+          </div>
+          {(Number(totals.discount) || 0) > 0 && (
+            <div className="flex justify-between text-[11px] font-medium text-rose-400 uppercase tracking-wide">
+              <span>Discount</span>
+              <span className="tabular-nums">−{fmtINR(totals.discount)}</span>
+            </div>
+          )}
         </div>
 
-        <Button 
-          className={`w-full h-14 rounded-xl shadow-lg group transition-all active:scale-[0.98] ring-offset-2 focus:ring-2 ${
+        {/* Loyalty */}
+        {selectedCustomer &&
+          selectedCustomer.id !== SYSTEM_WALKIN_ID &&
+          loyaltyBalance > 0 && (
+          <div className="flex items-center justify-between py-2.5 mb-3 border-y border-dashed border-slate-200 dark:border-white/5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-purple-700 dark:text-purple-400">
+                Loyalty
+              </span>
+              <Badge variant="outline" className="text-[9px] bg-purple-50 text-purple-700 border-purple-200 font-medium">
+                {loyaltyBalance} pts = {fmtINR(loyaltyBalance)}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={Math.min(loyaltyBalance, Math.floor(Number(totals.grandTotal) || 0))}
+                value={loyaltyRedeem || ''}
+                onChange={e => {
+                  const val = Math.min(
+                    Number(e.target.value) || 0,
+                    loyaltyBalance,
+                    Math.floor(Number(totals.grandTotal) || 0)
+                  )
+                  setLoyaltyRedeem(val)
+                }}
+                placeholder="0"
+                className="w-14 h-6 text-right text-[10px] font-medium border border-purple-200 rounded-md px-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400 bg-white dark:bg-white/5"
+              />
+              <button
+                onClick={() => setLoyaltyRedeem(Math.min(loyaltyBalance, Math.floor(Number(totals.grandTotal) || 0)))}
+                className="text-[9px] font-medium text-purple-600 hover:text-purple-800 underline uppercase"
+              >
+                Use all
+              </button>
+            </div>
+          </div>
+        )}
+
+        {loyaltyRedeem > 0 && (
+          <div className="flex justify-between text-[11px] text-purple-600 font-medium uppercase tracking-wide mb-3">
+            <span>Loyalty discount</span>
+            <span className="tabular-nums">−{fmtINR(loyaltyRedeem)}</span>
+          </div>
+        )}
+
+        {/* Grand total */}
+        <div className="flex items-end justify-between pt-3 border-t border-slate-200 dark:border-white/5 mb-4">
+          <span className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">Grand total</span>
+          <span className="text-2xl font-medium text-slate-900 dark:text-white tracking-tight leading-none tabular-nums">
+            {fmtINR(Math.round(finalTotal))}
+          </span>
+        </div>
+
+        <Button
+          className={`w-full h-12 rounded-xl shadow-sm group transition-all active:scale-[0.98] ${
             isCartValid && cart.length > 0
-              ? "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500" 
-              : "bg-slate-200 dark:bg-white/10 text-slate-400 cursor-not-allowed"
-          }`} 
-          disabled={!isCartValid || cart.length === 0 || loading} 
+              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              : "bg-slate-100 dark:bg-white/5 text-slate-400 cursor-not-allowed"
+          }`}
+          disabled={!isCartValid || cart.length === 0 || loading}
           onClick={onCheckout}
         >
-          <div className="flex items-center justify-between w-full px-2">
-            <div className="flex items-center gap-3">
-              {isCartValid ? <Printer className="h-5 w-5" /> : <Scan className="h-5 w-5" />}
-              <span className="text-sm font-black uppercase tracking-widest">
-                {!isCartValid ? "Assign Serials" : "CHECKOUT"}
+          <div className="flex items-center justify-between w-full px-1">
+            <div className="flex items-center gap-2.5">
+              {isCartValid ? <Printer className="h-4 w-4" /> : <Scan className="h-4 w-4" />}
+              <span className="text-[12px] font-medium uppercase tracking-widest">
+                {!isCartValid ? "Assign serials" : "Checkout"}
               </span>
             </div>
-            {isCartValid && <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />}
+            {isCartValid && <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />}
           </div>
         </Button>
       </div>
 
-      <ManagerDiscountModal 
+      <ManagerDiscountModal
         isOpen={discountModalOpen}
         onClose={() => {
           setDiscountModalOpen(false)

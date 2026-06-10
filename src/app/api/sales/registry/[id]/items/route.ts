@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
-import { invoice_items, products, serialNumbers } from '@/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { invoice_items, products, inventory } from '@/db/schema'
+import { eq, and, sql } from 'drizzle-orm'
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -26,16 +26,20 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         name: products.model_name,
         hsn_code: products.hsn_code,
         gst_rate: products.gst_rate,
-        serial_number: sql`string_agg(${serialNumbers.serialNumber}, ', ')`.as('serial_number')
+        serial_number: sql<string>`string_agg(${inventory.serial_number}, ', ' ORDER BY ${inventory.created_at} ASC)`.as('serial_number'),
       })
       .from(invoice_items)
       .leftJoin(products, eq(invoice_items.product_id, products.id))
-      .leftJoin(serialNumbers, eq(invoice_items.id, serialNumbers.transactionId))
-      .where(eq(invoice_items.invoice_id, id))
-      .groupBy(
-        invoice_items.id,
-        products.id
+      .leftJoin(
+        inventory,
+        and(
+          eq(inventory.invoice_id, invoice_items.invoice_id),
+          eq(inventory.product_id, invoice_items.product_id),
+          eq(inventory.status, 'Sold')
+        )
       )
+      .where(eq(invoice_items.invoice_id, id))
+      .groupBy(invoice_items.id, products.id)
       .orderBy(invoice_items.id)
 
     return NextResponse.json(items)
