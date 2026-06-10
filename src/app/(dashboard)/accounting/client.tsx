@@ -2223,155 +2223,229 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
       )}
 
       {/* Edit Modal */}
-      <Sheet open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <SheetContent side="right" className="!w-[50vw] !min-w-[520px] flex flex-col p-0 overflow-hidden">
+      {/* Edit Journal Entry — Sheet Drawer */}
+      <Sheet open={editModalOpen}
+        onOpenChange={setEditModalOpen}>
+        <SheetContent side="right"
+          className="!w-[50vw] !min-w-[520px]
+            flex flex-col p-0 overflow-hidden">
+
           {/* Header */}
-          <SheetHeader className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex-shrink-0">
-            <SheetTitle className="flex items-center gap-2 text-base font-semibold">
-              <Pencil className="h-4 w-4 text-indigo-500" />
+          <SheetHeader className="px-6 py-4 border-b
+            border-slate-100 bg-slate-50/60 flex-shrink-0">
+            <SheetTitle className="flex items-center
+              gap-2 text-base font-semibold">
               Edit Journal Entry
             </SheetTitle>
-            <SheetDescription className="text-xs text-slate-500 mt-0.5">
-              Correct this entry. All edits require a reason for audit trail. Debits must equal credits.
+            <SheetDescription className="text-xs
+              text-slate-500 mt-0.5">
+              Correct this entry. A reason is required
+              for audit trail. Debits must equal credits.
             </SheetDescription>
           </SheetHeader>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-            {/* Description field */}
+          <div className="flex-1 overflow-y-auto
+            px-6 py-5 space-y-5">
+
+            {/* Description */}
             <div className="space-y-2">
-              <Label>Description</Label>
-              <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} />
-            </div>
-            
-            {/* Correction reason field */}
-            <div className="space-y-2">
-              <Label className="text-rose-600 font-semibold">Correction Reason (Required for Audit)</Label>
-              <Textarea 
-                value={editReason} 
-                onChange={e => setEditReason(e.target.value)}
-                placeholder="State clearly why this entry is being edited..."
-                className="resize-none"
+              <Label className="text-sm font-semibold
+                text-slate-600">Description</Label>
+              <Input
+                value={editDescription}
+                onChange={e =>
+                  setEditDescription(e.target.value)}
+                className="h-10 text-sm"
               />
             </div>
 
-            {/* Journal lines */}
-            <div className="space-y-2">
-              <Label>Journal Lines</Label>
-              
-              <div className="grid grid-cols-12 gap-3 px-1 mb-2">
-                <span className="col-span-6 text-xs font-bold text-slate-500 uppercase tracking-widest">
-                  Account
-                </span>
-                <span className="col-span-2 text-xs font-bold text-slate-500 uppercase tracking-widest text-right pr-2">
-                  Debit (₹)
-                </span>
-                <span className="col-span-3 text-xs font-bold text-slate-500 uppercase tracking-widest text-right pr-2">
-                  Credit (₹)
-                </span>
+            {/* Journal Lines */}
+            <div className="space-y-3">
+              {/* Column headers */}
+              <div className="grid grid-cols-12 gap-3 px-1">
+                <span className="col-span-6 text-xs
+                  font-bold text-slate-500 uppercase
+                  tracking-widest">Account</span>
+                <span className="col-span-2 text-xs
+                  font-bold text-slate-500 uppercase
+                  tracking-widest text-right pr-2">
+                  Debit (₹)</span>
+                <span className="col-span-3 text-xs
+                  font-bold text-slate-500 uppercase
+                  tracking-widest text-right pr-2">
+                  Credit (₹)</span>
                 <span className="col-span-1" />
               </div>
 
-              <div className="space-y-3">
-                {editLines.map((line, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-4 items-start px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors">
-                    {/* Account — col-span-6 */}
-                    <div className="col-span-6">
-                      <AccountCombobox
-                        accounts={editAccounts}
-                        value={line.accountCode}
-                        onChange={(code) => {
-                          const newLines = [...editLines]
-                          newLines[i] = { ...newLines[i], accountCode: code }
-                          setEditLines(newLines)
-                        }}
-                      />
-                    </div>
+              {/* Line cards */}
+              {editLines.map((line, i) => (
+                <div key={i}
+                  className="grid grid-cols-12 gap-4
+                    items-start px-4 py-3 rounded-xl
+                    border border-slate-200 bg-white
+                    hover:border-slate-300 transition-colors">
 
-                    {/* Debit — col-span-2 */}
-                    <div className="col-span-2">
-                      <Input type="number" min="0" step="0.01"
-                        value={line.debit}
-                        onChange={e => {
-                          const newLines = [...editLines]
-                          newLines[i].debit = Number(e.target.value)||0
-                          setEditLines(newLines)
-                        }}
-                        className="h-10 text-sm text-right font-mono tabular-nums w-full"
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    {/* Credit — col-span-3 */}
-                    <div className="col-span-3">
-                      <Input type="number" min="0" step="0.01"
-                        value={line.credit}
-                        onChange={e => {
-                          const newLines = [...editLines]
-                          newLines[i].credit = Number(e.target.value)||0
-                          setEditLines(newLines)
-                        }}
-                        className="h-10 text-sm text-right font-mono tabular-nums w-full"
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    {/* Delete — col-span-1 */}
-                    <div className="col-span-1 flex justify-center pt-2">
-                      <button onClick={() => setEditLines(editLines.filter((_, j) => j !== i))}
-                        className="text-slate-300 hover:text-red-400 transition-colors">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                  {/* Account */}
+                  <div className="col-span-6 space-y-2">
+                    <AccountCombobox
+                      accounts={editAccounts}
+                      value={line.accountCode}
+                      onChange={(code) => {
+                        const nl = [...editLines]
+                        nl[i] = { ...nl[i],
+                          accountCode: code }
+                        setEditLines(nl)
+                      }}
+                    />
                   </div>
-                ))}
-              </div>
 
+                  {/* Debit */}
+                  <div className="col-span-2">
+                    <Input
+                      type="number" min="0" step="0.01"
+                      value={line.debit}
+                      onChange={e => {
+                        const nl = [...editLines]
+                        nl[i].debit =
+                          parseFloat(e.target.value) || 0
+                        setEditLines(nl)
+                      }}
+                      placeholder="0.00"
+                      className="h-10 text-sm text-right
+                        font-mono tabular-nums w-full"
+                    />
+                  </div>
+
+                  {/* Credit */}
+                  <div className="col-span-3">
+                    <Input
+                      type="number" min="0" step="0.01"
+                      value={line.credit}
+                      onChange={e => {
+                        const nl = [...editLines]
+                        nl[i].credit =
+                          parseFloat(e.target.value) || 0
+                        setEditLines(nl)
+                      }}
+                      placeholder="0.00"
+                      className="h-10 text-sm text-right
+                        font-mono tabular-nums w-full"
+                    />
+                  </div>
+
+                  {/* Delete */}
+                  <div className="col-span-1 flex
+                    justify-center pt-2.5">
+                    <button
+                      onClick={() => setEditLines(
+                        editLines.filter((_, j) =>
+                          j !== i))}
+                      className="text-slate-300
+                        hover:text-red-400 transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Add Line button */}
               <button
-                onClick={() => setEditLines([...editLines,
-                  { id: crypto.randomUUID(), accountCode: '',
-                    accountName: '', accountType: '',
-                    debit: 0, credit: 0, description: '' }])}
-                className="flex items-center gap-2 text-xs text-indigo-600 hover:text-indigo-800 font-medium py-2 px-1 transition-colors mt-2">
+                onClick={() => setEditLines([
+                  ...editLines,
+                  {
+                    id: crypto.randomUUID(),
+                    accountCode: '',
+                    accountName: '',
+                    accountType: '',
+                    debit: 0,
+                    credit: 0,
+                    description: '',
+                  }
+                ])}
+                className="flex items-center gap-2
+                  text-xs text-indigo-600
+                  hover:text-indigo-800 font-medium
+                  py-2 px-1 transition-colors">
                 <Plus className="h-3.5 w-3.5" />
                 Add Line
               </button>
             </div>
 
-            {/* Error message */}
+            {/* Correction Reason */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold
+                text-rose-600">
+                Correction Reason
+                <span className="text-xs font-normal
+                  text-slate-400 ml-1">
+                  (required for audit)
+                </span>
+              </Label>
+              <Textarea
+                value={editReason}
+                onChange={e =>
+                  setEditReason(e.target.value)}
+                placeholder="State clearly why this
+                  entry is being edited..."
+                className="resize-none text-sm
+                  min-h-[80px]"
+              />
+            </div>
+
+            {/* Error */}
             {editError && (
-              <p className="text-sm text-red-500 font-medium">{editError}</p>
+              <p className="text-sm text-red-500
+                font-medium">{editError}</p>
             )}
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/40 flex items-center justify-between">
-            {/* Totals row — debit total and credit total */}
-            <div className="flex items-center gap-4 text-sm font-mono">
-              <span className="text-slate-500">
-                DR: <span className="font-semibold text-blue-700">
-                  {fmtINR(editLines.reduce((s,l) => s + (Number(l.debit)||0), 0))}
+          <div className="flex-shrink-0 px-6 py-4
+            border-t border-slate-100 bg-slate-50/40
+            flex items-center justify-between">
+
+            {/* Live totals */}
+            <div className="flex items-center gap-3
+              text-sm font-mono">
+              <span className="text-slate-500">DR:
+                <span className="font-semibold
+                  text-blue-700 ml-1">
+                  {fmtINR(editLines.reduce(
+                    (s,l) => s + (Number(l.debit)||0), 0))}
                 </span>
               </span>
-              <span className="text-slate-400">=</span>
-              <span className="text-slate-500">
-                CR: <span className="font-semibold text-green-700">
-                  {fmtINR(editLines.reduce((s,l) => s + (Number(l.credit)||0), 0))}
+              <span className="text-slate-300">=</span>
+              <span className="text-slate-500">CR:
+                <span className="font-semibold
+                  text-green-700 ml-1">
+                  {fmtINR(editLines.reduce(
+                    (s,l) => s + (Number(l.credit)||0), 0))}
                 </span>
               </span>
             </div>
 
+            {/* Actions */}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setEditModalOpen(false)} disabled={editing}>
+              <Button variant="outline"
+                onClick={() => setEditModalOpen(false)}
+                disabled={editing}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveEdit} disabled={editing || !editReason.trim()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
-                {editing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                {editing ? 'Saving...' : 'Save Changes'}
+              <Button
+                onClick={handleSaveEdit}
+                disabled={editing || !editReason.trim()}
+                className="bg-indigo-600
+                  hover:bg-indigo-700 text-white
+                  min-w-[120px]">
+                {editing
+                  ? <Loader2 className="h-4 w-4
+                      animate-spin" />
+                  : 'Save Changes'}
               </Button>
             </div>
           </div>
+
         </SheetContent>
       </Sheet>
     </>
