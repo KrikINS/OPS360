@@ -547,3 +547,33 @@ export const sales_return_items = pgTable('sales_return_items', {
   sgst:            numeric('sgst').notNull().default('0'),
   igst:            numeric('igst').notNull().default('0'),
 })
+
+// ── Payroll ──────────────────────────────────────────
+export const payroll_runs = pgTable('payroll_runs', {
+  id:               uuid('id').primaryKey().defaultRandom(),
+  branch_id:        uuid('branch_id').notNull()
+                      .references(() => branches.id),
+  pay_period:       text('pay_period').notNull(),
+  payment_date:     date('payment_date').notNull(),
+  payment_method:   text('payment_method').notNull(),
+  gross_total:      numeric('gross_total').notNull(),
+  tds_total:        numeric('tds_total').notNull().default('0'),
+  net_total:        numeric('net_total').notNull(),
+  notes:            text('notes'),
+  journal_entry_id: uuid('journal_entry_id'),
+  created_by:       uuid('created_by').notNull(),
+  created_at:       timestamp('created_at').defaultNow(),
+  status:           text('status').notNull().default('draft'),
+})
+
+export const payslips = pgTable('payslips', {
+  id:             uuid('id').primaryKey().defaultRandom(),
+  payroll_run_id: uuid('payroll_run_id').notNull()
+                    .references(() => payroll_runs.id),
+  staff_name:     text('staff_name').notNull(),
+  staff_id:       uuid('staff_id'),
+  gross:          numeric('gross').notNull(),
+  tds:            numeric('tds').notNull().default('0'),
+  net:            numeric('net').notNull(),
+  notes:          text('notes'),
+})

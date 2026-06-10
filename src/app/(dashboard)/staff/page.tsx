@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getStaffDirectory, getActivityLog, getAttendanceByBranch, getMyAttendance } from '@/actions/hr'
+import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import StaffClient from './client'
 
 export default async function StaffPayrollPage() {
@@ -8,6 +9,8 @@ export default async function StaffPayrollPage() {
   const role = (session?.user?.role ?? '').toLowerCase()
   const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
   const isManager = isAdmin || role === 'manager'
+
+  const branchId = session ? (await getEffectiveBranchId(session)) ?? undefined : undefined
 
   // Default to last 30 days for attendance
   const today = new Date()
@@ -17,7 +20,7 @@ export default async function StaffPayrollPage() {
   const [staffResult, activityResult, attendanceResult] = await Promise.all([
     getStaffDirectory(),
     getActivityLog({}),
-    isManager 
+    isManager
       ? getAttendanceByBranch({ fromDate, toDate })
       : getMyAttendance({ fromDate, toDate })
   ])
@@ -27,17 +30,18 @@ export default async function StaffPayrollPage() {
     ...a,
     timestamp: a.timestamp ?? new Date().toISOString(),
   })) : []
-  
+
   const attendance = attendanceResult.success ? attendanceResult.records : []
 
   return (
-    <StaffClient 
-      isAdmin={isAdmin} 
+    <StaffClient
+      isAdmin={isAdmin}
       isManager={isManager}
-      staff={staff} 
+      staff={staff}
       activities={activities}
       attendance={attendance}
       currentUserId={session?.user?.id ?? ''}
+      branchId={branchId}
     />
   )
 }

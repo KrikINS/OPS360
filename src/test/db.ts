@@ -323,6 +323,7 @@ export async function seedCoa(db: TestDb) {
     { code: '5030', name: 'Utilities',                type: 'Expense',   is_system: true },
     { code: '5040', name: 'Rent',                     type: 'Expense',   is_system: true },
     { code: '5080', name: 'Loyalty Discount Expense', type: 'Expense',   is_system: true },
+    { code: '2060', name: 'TDS Payable',               type: 'Liability', is_system: true },
   ]).onConflictDoNothing()
 }
 

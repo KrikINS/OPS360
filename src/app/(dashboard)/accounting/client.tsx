@@ -130,6 +130,7 @@ function sourceColor(source: string): string {
     SHORT_CLOSE: 'bg-orange-100 text-orange-800 border-orange-200',
     DEBIT_NOTE:  'bg-red-100 text-red-800 border-red-200',
     RETURN:      'bg-orange-100 text-orange-800 border-orange-200',
+    PAYROLL:     'bg-blue-100 text-blue-800 border-blue-200',
     MANUAL:      'bg-slate-100 text-slate-600 border-slate-200',
   }
   return map[source] ?? map['MANUAL']
