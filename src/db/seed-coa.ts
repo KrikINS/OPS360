@@ -52,6 +52,7 @@ const COA = [
   { code: '5060', name: 'Marketing & Advertising',     type: 'Expense', is_system: true,  is_active: true  },
   { code: '5070', name: 'Miscellaneous Expense',       type: 'Expense', is_system: true,  is_active: true  },
   { code: '5080', name: 'Loyalty Discount Expense',    type: 'Expense', is_system: true,  is_active: true  },
+  { code: '5090', name: 'Inventory Loss / Write-off',  type: 'Expense', is_system: true,  is_active: true  },
 ]
 
 async function seedCoa() {
