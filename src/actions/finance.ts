@@ -20,8 +20,9 @@ export async function getFinancialYear(date: Date): Promise<string> {
 }
 
 // ── Helper: resolve account code → id ───────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getAccountId(code: string, txClient: any = db): Promise<string> {
-  const [account] = await db
+  const [account] = await txClient
     .select({ id: accounts.id })
     .from(accounts)
     .where(eq(accounts.code, code))
@@ -521,6 +522,7 @@ export async function settleVendorPayment(input: {
       AND a.code = '2010'
   `)
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const apRows = (apBalanceResult as any).rows ?? apBalanceResult
   const totalCR = Number(apRows[0]?.total_cr ?? 0)
   const totalDR = Number(apRows[0]?.total_dr ?? 0)
@@ -1486,6 +1488,7 @@ export async function getAPAgeing(input?: {
       ORDER BY pa.grn_date ASC
     `)
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawRows = (result as any).rows ?? result
 
     const rows: APAgeingRow[] = rawRows.map((r: any) => {

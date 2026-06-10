@@ -10,7 +10,7 @@ import {
 import { fetchInventoryDataAction } from '@/app/actions/inventory'
 import { db } from '@/db/client'
 import * as schema from '@/db/schema'
-import { eq, and, sql, inArray } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import crypto from 'crypto'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 export async function requestStockTransfer(input: {
@@ -232,8 +232,10 @@ export async function adjustStock(input: {
       ORDER BY created_at ASC
       LIMIT ${Math.abs(adjustmentQty)}
     `)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const writeOffRows = (unitsToWriteOff as any).rows ?? unitsToWriteOff
     const totalWriteOffCost = writeOffRows.reduce(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (sum: number, r: any) => sum + Number(r.landed_cost ?? 0), 0
     )
 

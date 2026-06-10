@@ -5,7 +5,7 @@ import { useReactToPrint } from 'react-to-print'
 import { FinancePrintTemplate } from '@/components/finance/FinancePrintTemplate'
 import ManualJournalDrawer from '@/components/accounting/ManualJournalDrawer'
 import { AccountCombobox } from '@/components/accounting/AccountCombobox'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import {
   Card, CardContent, CardHeader, CardTitle
 } from '@/components/ui/card'
@@ -20,13 +20,13 @@ import {
 } from '@/components/ui/table'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogFooter, DialogTrigger
+  DialogFooter
 } from '@/components/ui/dialog'
 import {
   TrendingUp, TrendingDown, Scale, Receipt,
   BookOpen, LayoutDashboard, Plus, CheckCircle2,
-  XCircle, Clock, ArrowUpRight, ArrowDownRight,
-  Wallet, FileText, IndianRupee, Download, Printer,
+  XCircle, Clock,
+  Wallet, Download, Printer,
   CalendarRange, ChevronRight, ChevronDown, Loader2,
   PenLine
 } from 'lucide-react'
@@ -189,7 +189,6 @@ export default function AccountingClient({
   gst,
   journal,
   expenses: initialExpenses,
-  userId,
   branchId,
   fromDate,
   toDate,
@@ -206,7 +205,7 @@ export default function AccountingClient({
   gst: GSTData
   journal: JournalEntry[]
   expenses: Expense[]
-  userId: string
+  userId?: string
   branchId: string | null
   fromDate: string
   toDate: string
@@ -525,7 +524,7 @@ export default function AccountingClient({
         description: expDesc.trim(),
       })
       if (result.success) {
-        setExpenses(prev => [result.record as any, ...prev])
+        setExpenses(prev => [result.record as unknown as Expense, ...prev])
         setShowExpenseForm(false)
         setExpAmount('')
         setExpDesc('')
@@ -1691,12 +1690,12 @@ export default function AccountingClient({
                         </TableCell>
                         <TableCell className="text-xs">
                           {EXPENSE_ACCOUNTS.find(
-                            (a: any) => a.code === exp.expense_account
+                            (a: { code: string; name: string }) => a.code === exp.expense_account
                           )?.name ?? exp.expense_account}
                         </TableCell>
                         <TableCell className="text-xs">
                           {paymentAccounts.find(
-                            (a: any) => a.code === exp.payment_account
+                            (a: { code: string; name: string }) => a.code === exp.payment_account
                           )?.name ?? exp.payment_account}
                         </TableCell>
                         <TableCell className="text-right
@@ -2064,8 +2063,8 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
       } else {
         setEditError('error' in res ? res.error : 'Failed to edit entry')
       }
-    } catch (e: any) {
-      setEditError(e.message)
+    } catch (e) {
+      setEditError((e as Error).message)
     } finally {
       setEditing(false)
     }
@@ -2242,7 +2241,7 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
                       <AccountCombobox
                         accounts={editAccounts}
                         value={line.accountCode}
-                        onChange={(code, name) => {
+                        onChange={(code) => {
                           const newLines = [...editLines]
                           newLines[i] = { ...newLines[i], accountCode: code }
                           setEditLines(newLines)
