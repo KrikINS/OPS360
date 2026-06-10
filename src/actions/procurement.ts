@@ -805,9 +805,27 @@ export async function shortClosePO(input: {
     .from(po_items)
     .where(eq(po_items.po_id, input.poId))
 
+  // Fetch vendor and branch state codes — same pattern as createGRN for consistent ITC routing
+  const [vendorStateRow] = await db
+    .select({ stateCode: vendors.state_code })
+    .from(vendors)
+    .where(eq(vendors.id, po.vendor_id!))
+    .limit(1)
+
+  const [branchStateRow] = await db
+    .select({ stateCode: branches.state_code })
+    .from(branches)
+    .where(eq(branches.id, po.branch_id!))
+    .limit(1)
+
+  const vendorCode = (vendorStateRow?.stateCode ?? '').toLowerCase().trim()
+  const branchCode = (branchStateRow?.stateCode ?? '').toLowerCase().trim()
+  const isInterState = !vendorCode || !branchCode || vendorCode !== branchCode
+
   let totalShortfallCost = 0
   let totalShortfallCGST = 0
   let totalShortfallSGST = 0
+  let totalShortfallIGST = 0
 
   for (const item of items) {
     const ordered = Number(item.ordered_qty ?? 0)
@@ -828,8 +846,12 @@ export async function shortClosePO(input: {
       const gstOnShortfall = shortfallCost * (gstRate / 100)
 
       totalShortfallCost += shortfallCost
-      totalShortfallCGST += gstOnShortfall / 2
-      totalShortfallSGST += gstOnShortfall / 2
+      if (isInterState) {
+        totalShortfallIGST += gstOnShortfall
+      } else {
+        totalShortfallCGST += gstOnShortfall / 2
+        totalShortfallSGST += gstOnShortfall / 2
+      }
     }
   }
 
@@ -843,7 +865,7 @@ export async function shortClosePO(input: {
       .where(eq(purchase_orders.id, input.poId))
 
     if (totalShortfallCost > 0) {
-      const totalShortfallGST = totalShortfallCGST + totalShortfallSGST
+      const totalShortfallGST = totalShortfallCGST + totalShortfallSGST + totalShortfallIGST
       const totalReversal = totalShortfallCost + totalShortfallGST
 
       const lines: Array<{
@@ -881,6 +903,14 @@ export async function shortClosePO(input: {
         })
       }
 
+      if (totalShortfallIGST > 0) {
+        lines.push({
+          accountCode: '1053',
+          credit: totalShortfallIGST,
+          description: `IGST ITC reversal — ${po.po_number}`,
+        })
+      }
+
       await createJournalEntry({
         description: `Short-Close: ${po.po_number} — ₹${totalReversal.toLocaleString('en-IN')} reversal`,
         referenceSource: 'SHORT_CLOSE',
@@ -903,7 +933,7 @@ export async function shortClosePO(input: {
     return {
       success: true as const,
       shortfallCost: totalShortfallCost,
-      reversalAmount: totalShortfallCost + totalShortfallCGST + totalShortfallSGST,
+      reversalAmount: totalShortfallCost + totalShortfallCGST + totalShortfallSGST + totalShortfallIGST,
     }
   } catch (error) {
     console.error('SHORT CLOSE ERROR:', error)
