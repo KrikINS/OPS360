@@ -18,6 +18,7 @@ import {
   settleVendorPayment,
   getCashAccountCode,
   getActiveAccounts,
+  editJournalEntry,
 } from '@/actions/finance'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -576,5 +577,113 @@ describe('getActiveAccounts — branch filtering', () => {
     expect(codes).toContain('1010-29')
     // Plus all global accounts
     expect(codes).toContain('1010')
+  })
+})
+
+describe('editJournalEntry Audit Compliance', () => {
+  it('Test Case 1 (RBAC Rejection): Rejects Warehouse Staff', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: STAFF_ID, role: 'Warehouse Staff' },
+    })
+
+    const res = await editJournalEntry({
+      id: 'some-id',
+      description: 'Hacked description',
+      editReason: 'Trying to sneak one in',
+      lines: []
+    })
+
+    expect(res.success).toBe(false)
+    if ('error' in res) {
+      expect(res.error).toMatch(/Unauthorized/)
+    }
+  })
+
+  it('Test Case 2 (Auto-Gen Protection): Rejects auto_generated entries', async () => {
+    const branch = await seedBranch(db)
+    await seedCoa(db)
+
+    // Seed an auto-generated entry directly to bypass normal controls
+    const [entry] = await db.insert(schema.journal_entries).values({
+      date: new Date(),
+      description: 'Auto POS Sale',
+      reference_source: 'POS',
+      branch_id: branch.id,
+      financial_year: '2026-27',
+      status: 'posted',
+      auto_generated: true,
+      created_by: ADMIN_ID,
+    }).returning()
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'Admin' },
+    })
+
+    const res = await editJournalEntry({
+      id: entry.id,
+      description: 'Changing auto entry',
+      editReason: 'Should fail',
+      lines: []
+    })
+
+    expect(res.success).toBe(false)
+    if ('error' in res) {
+      expect(res.error).toMatch(/Cannot edit auto-generated journal entries directly/)
+    }
+  })
+
+  it('Test Case 3 (Snapshot Integrity): Saves data and original_data properly', async () => {
+    const branch = await seedBranch(db)
+    await seedCoa(db)
+
+    // 1. Create a manual entry
+    const entry = await createJournalEntry({
+      description: 'Original Manual Entry',
+      referenceSource: 'MANUAL',
+      branchId: branch.id,
+      createdBy: ADMIN_ID,
+      lines: [
+        { accountCode: '1040', debit: 500 },
+        { accountCode: '2010', credit: 500 },
+      ],
+    })
+
+    // 2. Perform Edit
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: ADMIN_ID, role: 'Admin' },
+    })
+
+    const res = await editJournalEntry({
+      id: entry.id,
+      description: 'Updated Manual Entry',
+      editReason: 'Correction for audit test',
+      lines: [
+        { accountCode: '1040', debit: 750 },
+        { accountCode: '2010', credit: 750 },
+      ]
+    })
+
+    expect(res.success).toBe(true)
+
+    // 3. Verify DB changes
+    const [updatedEntry] = await db.select().from(schema.journal_entries).where(eq(schema.journal_entries.id, entry.id))
+    
+    expect(updatedEntry.description).toBe('Updated Manual Entry')
+    expect(updatedEntry.edit_reason).toBe('Correction for audit test')
+    expect(updatedEntry.edited_by).toBe(ADMIN_ID)
+    expect(updatedEntry.edited_at).toBeDefined()
+    
+    // original_data should have the old state
+    expect(updatedEntry.original_data).toBeDefined()
+    expect((updatedEntry.original_data as any).entry.description).toBe('Original Manual Entry')
+    
+    const oldTotalDebit = (updatedEntry.original_data as any).lines.reduce((s: number, l: { debit: string | number }) => s + Number(l.debit), 0)
+    expect(oldTotalDebit).toBe(500)
+
+    // 4. Verify new lines are inserted correctly
+    const newLines = await db.select().from(schema.journal_lines).where(eq(schema.journal_lines.journal_entry_id, entry.id))
+    expect(newLines).toHaveLength(2)
+    const newTotalDebit = newLines.reduce((s: number, l: { debit: string | number | null }) => s + Number(l.debit || 0), 0)
+    expect(newTotalDebit).toBe(750)
   })
 })

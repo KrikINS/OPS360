@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation"
 import { useBranding } from "@/providers/GlobalBrandingProvider"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import {
   Sidebar,
@@ -48,7 +48,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import {
@@ -197,16 +196,14 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
       <SidebarHeader className={cn("px-4 pt-4 pb-2 border-b border-white/5 transition-all duration-300 flex flex-col items-center", isCollapsed && "px-0 pt-4 pb-2")}>
         <div className="flex justify-center w-full">
           <div className={cn(
-            "relative shrink-0 overflow-hidden transition-all duration-300",
-            isCollapsed ? "h-16 w-16 rounded-xl shadow-[0_0_15px_rgba(127,209,227,0.2)] border border-white/10" : "h-[105px] w-[105px]"
+            "relative shrink-0 transition-all duration-300 flex items-center justify-center",
+            isCollapsed ? "h-16 w-16 rounded-xl shadow-[0_0_15px_rgba(127,209,227,0.2)] border border-white/10 overflow-hidden" : "w-full px-2"
           )}>
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={logoUrl || "/ethan-logo-final.png"}
               alt={companyName}
-              fill
-              priority
-              sizes="(max-width: 768px) 64px, 105px"
-              className={cn("object-contain transition-transform duration-300", isCollapsed ? "scale-110 p-1" : "scale-100")}
+              className={cn("object-contain transition-transform duration-300", isCollapsed ? "scale-110 p-1 w-full h-full" : "max-h-[80px] w-auto max-w-full")}
             />
           </div>
         </div>

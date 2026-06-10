@@ -416,7 +416,8 @@ export async function createGRN(input: {
         FROM grn_items
         WHERE po_item_id = ${item.poItemId}
       `)
-      const cumulativeReceived = Number((existingReceived as any).rows?.[0]?.total ?? (existingReceived as any)?.[0]?.total ?? 0)
+      interface DbResult { rows?: Array<{ total: number | string }>; [key: number]: { total: number | string } }
+      const cumulativeReceived = Number((existingReceived as unknown as DbResult).rows?.[0]?.total ?? (existingReceived as unknown as DbResult)?.[0]?.total ?? 0)
 
       // Only create discrepancy if cumulative is still less than ordered after ALL GRNs
       if (cumulativeReceived < item.orderedQty) {
@@ -446,8 +447,8 @@ export async function createGRN(input: {
         WHERE po_item_id = ${item.poItemId}
       `)
       const cumulativeReceived2 = Number(
-        (cumulativeResult2 as any).rows?.[0]?.total ??
-        (cumulativeResult2 as any)?.[0]?.total ?? 0
+        (cumulativeResult2 as unknown as DbResult).rows?.[0]?.total ??
+        (cumulativeResult2 as unknown as DbResult)?.[0]?.total ?? 0
       )
 
       const [poItemForResolve] = await db

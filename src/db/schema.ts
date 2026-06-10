@@ -294,6 +294,10 @@ export const journal_entries = pgTable("journal_entries", {
   auto_generated:   boolean("auto_generated").default(false),
   created_by:       uuid("created_by").notNull(),
   created_at:       timestamp("created_at").defaultNow(),
+  edited_at:        timestamp("edited_at"),
+  edited_by:        uuid("edited_by"),
+  edit_reason:      text("edit_reason"),
+  original_data:    jsonb("original_data"),
 })
 
 export const journal_lines = pgTable("journal_lines", {
