@@ -252,32 +252,31 @@ export async function getPendingApprovalsAction(): Promise<Notification[]> {
       )
     }
 
-    // DISABLED: debit_notes table not yet migrated
-    // Re-enable after running 0012_debit_notes.sql
-    // if (isAdminOrManager) {
-    //   queries.push(
-    //     (async () => {
-    //       try {
-    //         const result = await db.execute(sql`
-    //           SELECT id, debit_note_number, amount FROM debit_notes WHERE status = 'Pending' LIMIT 20
-    //         `)
-    //         const rows = result.rows as Array<{ id: string; debit_note_number: string; amount: string }>
-    //         for (const row of rows) {
-    //           notifications.push({
-    //             id: `dn-${row.id}`,
-    //             type: 'PENDING_DEBIT_NOTE',
-    //             title: 'Debit Note Pending',
-    //             message: `${row.debit_note_number} — ₹${Number(row.amount).toLocaleString('en-IN')} awaiting approval`,
-    //             href: '/procurement/po-registry',
-    //             priority: 'low',
-    //           })
-    //         }
-    //       } catch (e) {
-    //         console.warn('[NOTIFICATIONS] PENDING_DEBIT_NOTE query failed:', e)
-    //       }
-    //     })()
-    //   )
-    // }
+    // 8. PENDING_DEBIT_NOTE — admins/managers
+    if (isAdminOrManager) {
+      queries.push(
+        (async () => {
+          try {
+            const result = await db.execute(sql`
+              SELECT id, debit_note_number, amount FROM debit_notes WHERE status = 'Pending' LIMIT 20
+            `)
+            const rows = result.rows as Array<{ id: string; debit_note_number: string; amount: string }>
+            for (const row of rows) {
+              notifications.push({
+                id: `dn-${row.id}`,
+                type: 'PENDING_DEBIT_NOTE',
+                title: 'Debit Note Pending',
+                message: `${row.debit_note_number} — ₹${Number(row.amount).toLocaleString('en-IN')} awaiting approval`,
+                href: '/procurement/po-registry',
+                priority: 'low',
+              })
+            }
+          } catch (e) {
+            console.warn('[NOTIFICATIONS] PENDING_DEBIT_NOTE query failed:', e)
+          }
+        })()
+      )
+    }
 
     await Promise.all(queries)
 
