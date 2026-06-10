@@ -520,6 +520,7 @@ export default function AccountingClient({
         setShowExpenseForm(false)
         setExpAmount('')
         setExpDesc('')
+        window.dispatchEvent(new Event('notifications-updated'))
       } else {
         setExpError(result.error ?? 'Failed to submit')
       }

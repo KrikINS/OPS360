@@ -645,6 +645,7 @@ export default function ProcurementGRNPage() {
 
       if (res.ok) {
         resetForm()
+        window.dispatchEvent(new Event('notifications-updated'))
         // Refresh POs
         const poRes = await fetch('/api/procurement/purchase-orders')
         if (poRes.ok) {
