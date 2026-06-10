@@ -488,24 +488,7 @@ export async function settleVendorPayment(input: {
     return { success: false as const, error: 'PO not found' }
   }
 
-  // Calculate total paid so far
-  const existingPayments = await db
-    .select({ amount: vendor_payments.amount })
-    .from(vendor_payments)
-    .where(eq(vendor_payments.po_id, input.poId))
-    
-  const totalPaid = existingPayments.reduce((sum, p) => sum + Number(p.amount ?? 0), 0)
-  const poTotal = Number(po.total_amount ?? 0)
-  const remainingBalance = Number((poTotal - totalPaid).toFixed(2))
-
-  if (input.amount > remainingBalance + 0.01) { // 1 paisa tolerance
-    return {
-      success: false as const,
-      error: `Payment amount (₹${input.amount}) exceeds remaining balance (₹${remainingBalance})`
-    }
-  }
-
-  // Only settled/received POs can be paid
+  // Only settled/received POs can be paid — check before AP query
   const payableStatuses = [
     'received', 'partially_received',
     'approved', 'PARTIALLY_RETURNED', 'RETURNED'
@@ -514,6 +497,46 @@ export async function settleVendorPayment(input: {
     return {
       success: false as const,
       error: `Cannot record payment for PO with status: ${po.status}`
+    }
+  }
+
+  // Derive outstanding AP from journal lines on account 2010 for this PO.
+  // Net AP = SUM(credit) - SUM(debit) across all posted journal entries
+  // referencing this PO. This correctly reflects:
+  //   + GRN journals      (CR 2010 = amount owed)
+  //   - Debit notes       (DR 2010 = AP reduced)
+  //   - Short-close reversals (DR 2010 = AP reduced)
+  //   - Prior vendor payments (DR 2010 = AP settled)
+  const apBalanceResult = await db.execute(sql`
+    SELECT
+      COALESCE(SUM(jl.credit), 0) AS total_cr,
+      COALESCE(SUM(jl.debit),  0) AS total_dr
+    FROM journal_lines jl
+    JOIN journal_entries je
+      ON je.id = jl.journal_entry_id
+    JOIN accounts a
+      ON a.id = jl.account_id
+    WHERE je.reference_id = ${input.poId}
+      AND je.status = 'posted'
+      AND a.code = '2010'
+  `)
+
+  const apRows = (apBalanceResult as any).rows ?? apBalanceResult
+  const totalCR = Number(apRows[0]?.total_cr ?? 0)
+  const totalDR = Number(apRows[0]?.total_dr ?? 0)
+  const remainingBalance = Number((totalCR - totalDR).toFixed(2))
+
+  if (remainingBalance <= 0) {
+    return {
+      success: false as const,
+      error: `No outstanding AP balance for this PO — already fully settled or reversed`,
+    }
+  }
+
+  if (input.amount > remainingBalance + 0.01) {
+    return {
+      success: false as const,
+      error: `Payment ₹${input.amount.toLocaleString('en-IN')} exceeds outstanding AP balance ₹${remainingBalance.toLocaleString('en-IN')}`,
     }
   }
 
@@ -1229,5 +1252,67 @@ export async function createManualJournal(input: {
     return { success: true as const, entry }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
+  }
+}
+
+// ── getAPBalanceForPO ───────────────────────────────
+export async function getAPBalanceForPO(input: {
+  poId: string
+}): Promise<{
+  success: boolean
+  outstandingBalance?: number
+  totalCharged?: number
+  totalReversed?: number
+  totalPaid?: number
+  error?: string
+}> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        COALESCE(SUM(jl.credit), 0) AS total_cr,
+        COALESCE(SUM(jl.debit),  0) AS total_dr,
+        COALESCE(SUM(
+          CASE WHEN je.reference_source = 'GRN'
+          THEN jl.credit ELSE 0 END
+        ), 0) AS total_charged,
+        COALESCE(SUM(
+          CASE WHEN je.reference_source IN ('DEBIT_NOTE', 'SHORT_CLOSE')
+          THEN jl.debit ELSE 0 END
+        ), 0) AS total_reversed,
+        COALESCE(SUM(
+          CASE WHEN je.reference_source = 'PAYMENT'
+          THEN jl.debit ELSE 0 END
+        ), 0) AS total_paid
+      FROM journal_lines jl
+      JOIN journal_entries je
+        ON je.id = jl.journal_entry_id
+      JOIN accounts a
+        ON a.id = jl.account_id
+      WHERE je.reference_id = ${input.poId}
+        AND je.status = 'posted'
+        AND a.code = '2010'
+    `)
+
+    const rows = (result as any).rows ?? result
+    const totalCR       = Number(rows[0]?.total_cr      ?? 0)
+    const totalDR       = Number(rows[0]?.total_dr      ?? 0)
+    const totalCharged  = Number(rows[0]?.total_charged  ?? 0)
+    const totalReversed = Number(rows[0]?.total_reversed ?? 0)
+    const totalPaid     = Number(rows[0]?.total_paid     ?? 0)
+
+    return {
+      success: true,
+      outstandingBalance: Number((totalCR - totalDR).toFixed(2)),
+      totalCharged,
+      totalReversed,
+      totalPaid,
+    }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
   }
 }

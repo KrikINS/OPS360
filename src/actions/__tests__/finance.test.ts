@@ -351,6 +351,26 @@ describe('Accounts Payable Settlement', () => {
       created_by: ADMIN_ID
     }).returning()
 
+    // Seed a GRN journal entry with CR 2010 = 5000 so AP balance exists
+    const [apAccount] = await db.select().from(schema.accounts)
+      .where(eq(schema.accounts.code, '2010')).limit(1)
+    const [bankAccount] = await db.select().from(schema.accounts)
+      .where(eq(schema.accounts.code, '1020')).limit(1)
+    const [grnEntry] = await db.insert(schema.journal_entries).values({
+      description: 'GRN journal for PO-TEST-100',
+      reference_source: 'GRN',
+      reference_id: po.id,
+      branch_id: branch.id,
+      financial_year: '2025-26',
+      status: 'posted',
+      auto_generated: true,
+      created_by: ADMIN_ID,
+    }).returning()
+    await db.insert(schema.journal_lines).values([
+      { journal_entry_id: grnEntry.id, account_id: bankAccount.id, debit: '5000', credit: '0', description: 'Inventory' },
+      { journal_entry_id: grnEntry.id, account_id: apAccount.id,   debit: '0',    credit: '5000', description: 'AP' },
+    ])
+
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: ADMIN_ID, role: 'admin', branchId: null },
     })
