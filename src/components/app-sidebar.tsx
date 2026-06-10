@@ -38,11 +38,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Receipt,
-  Wallet,
-  LayoutDashboard,
-  Scale,
-  TrendingUp,
-  Clock,
 } from "lucide-react"
 import {
   Collapsible,
@@ -125,19 +120,7 @@ const navigationGroups: NavigationGroup[] = [
     ]
   },
 
-  {
-    id: "accounting",
-    title: "Finance & Accounts",
-    icon: Wallet,
-    items: [
-      { title: "Dashboard",      url: "/accounting",                    icon: LayoutDashboard },
-      { title: "Balance Sheet",  url: "/accounting?tab=balance-sheet",  icon: Scale           },
-      { title: "AP Ageing",      url: "/accounting?tab=ap-ageing",      icon: Clock           },
-      { title: "Journal Ledger", url: "/accounting?tab=journal",        icon: BookOpen        },
-      { title: "Expenses",       url: "/accounting?tab=expenses",       icon: Receipt         },
-      { title: "Margin Report",  url: "/accounting?tab=margin",         icon: TrendingUp      },
-    ]
-  },
+
   {
     id: "service",
     title: "Service & Support",
