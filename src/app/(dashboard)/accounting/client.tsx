@@ -35,6 +35,7 @@ import {
   getJournalLines, getJournalEntries, exportJournalLedger,
   getActiveAccounts, editJournalEntry
 } from '@/actions/finance'
+import type { APAgeingRow, APAgeingTotals } from '@/actions/finance'
 import { fmtINR } from '@/lib/utils'
 
 // ── Types ───────────────────────────────────────────
@@ -102,6 +103,11 @@ type MarginData = {
     totalDiscounts: number
     totalUnitsSold: number
   }
+} | null
+
+type APAgeingData = {
+  rows: APAgeingRow[]
+  totals: APAgeingTotals
 } | null
 
 type Expense = {
@@ -191,6 +197,7 @@ export default function AccountingClient({
   fyEnd,
   marginData,
   branchList = [],
+  apAgeing,
 }: {
   activeTab: string
   isAdmin: boolean
@@ -207,6 +214,7 @@ export default function AccountingClient({
   fyEnd: string
   marginData: MarginData
   branchList?: { id: string; name: string }[]
+  apAgeing?: APAgeingData
 }) {
   const router = useRouter()
   const [tab, setTab] = useState(activeTab)
@@ -557,6 +565,8 @@ export default function AccountingClient({
       icon: LayoutDashboard },
     { id: 'balance-sheet', label: 'Balance Sheet',
       icon: Scale },
+    { id: 'ap-ageing', label: 'AP Ageing',
+      icon: Clock },
     { id: 'journal',   label: 'Journal Ledger',
       icon: BookOpen },
     { id: 'expenses',  label: 'Expenses',
@@ -1304,6 +1314,134 @@ export default function AccountingClient({
               </Card>
             )
           })()}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════
+          TAB: AP AGEING
+      ══════════════════════════════════════════ */}
+      {tab === 'ap-ageing' && (
+        <div className="space-y-6">
+
+          {/* Bucket summary cards */}
+          {apAgeing && apAgeing.totals ? (() => {
+            const t = apAgeing.totals
+            const rows = apAgeing.rows ?? []
+            const bucketCards = [
+              { label: '0-30 Days',  amount: t.bucket0,  count: rows.filter(r => r.bucket === '0-30').length,
+                cardClass: 'border-green-200 bg-green-50/30', titleClass: 'text-green-600', amtClass: 'text-green-800', subClass: 'text-green-500' },
+              { label: '31-60 Days', amount: t.bucket31, count: rows.filter(r => r.bucket === '31-60').length,
+                cardClass: 'border-amber-200 bg-amber-50/30', titleClass: 'text-amber-600', amtClass: 'text-amber-800', subClass: 'text-amber-500' },
+              { label: '61-90 Days', amount: t.bucket61, count: rows.filter(r => r.bucket === '61-90').length,
+                cardClass: 'border-orange-200 bg-orange-50/30', titleClass: 'text-orange-600', amtClass: 'text-orange-800', subClass: 'text-orange-500' },
+              { label: '90+ Days',   amount: t.bucket90, count: rows.filter(r => r.bucket === '90+').length,
+                cardClass: 'border-red-200 bg-red-50/30', titleClass: 'text-red-600', amtClass: 'text-red-800', subClass: 'text-red-500' },
+            ]
+            return (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {bucketCards.map(b => (
+                    <Card key={b.label} className={b.cardClass}>
+                      <CardContent className="pt-5 pb-4">
+                        <p className={`text-[10px] font-semibold uppercase tracking-widest ${b.titleClass} mb-1`}>{b.label}</p>
+                        <p className={`text-xl font-bold ${b.amtClass}`}>{fmtINR(b.amount)}</p>
+                        <p className={`text-xs ${b.subClass} mt-1`}>{b.count} PO{b.count !== 1 ? 's' : ''}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Outstanding total banner */}
+                <Card className="bg-slate-900 text-white border-0">
+                  <CardContent className="pt-6 pb-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">Outstanding AP Total</p>
+                        <p className="text-3xl font-bold text-white">{fmtINR(t.total)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">As of</p>
+                        <p className="text-lg font-semibold text-slate-200">{toDate}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )
+          })() : (
+            <Card className="bg-slate-900 text-white border-0">
+              <CardContent className="pt-6 pb-5 text-center">
+                <p className="text-xs uppercase tracking-widest text-slate-400">Outstanding AP Total</p>
+                <p className="text-3xl font-bold text-white mt-1">{fmtINR(0)}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Detail table */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-indigo-600" />
+                AP Ageing Detail
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(apAgeing?.rows ?? []).length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50">
+                        <TableHead className="text-xs font-semibold">Vendor</TableHead>
+                        <TableHead className="text-xs font-semibold">PO Number</TableHead>
+                        <TableHead className="text-xs font-semibold">GRN Date</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Total Charged</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Paid</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Reversed</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Outstanding</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Days</TableHead>
+                        <TableHead className="text-xs font-semibold text-center">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(apAgeing?.rows ?? []).map((row, idx) => {
+                        const statusMap: Record<string, { label: string; classes: string }> = {
+                          '0-30':  { label: 'Current',  classes: 'bg-green-100 text-green-800 border-green-200' },
+                          '31-60': { label: 'Due Soon', classes: 'bg-amber-100 text-amber-800 border-amber-200' },
+                          '61-90': { label: 'Overdue',  classes: 'bg-orange-100 text-orange-800 border-orange-200' },
+                          '90+':   { label: 'Critical', classes: 'bg-red-100 text-red-800 border-red-200' },
+                        }
+                        const st = statusMap[row.bucket] ?? statusMap['0-30']
+                        return (
+                          <TableRow key={`${row.poId}-${idx}`} className={idx % 2 === 1 ? 'bg-slate-50/50' : ''}>
+                            <TableCell className="text-sm font-medium">{row.vendorName}</TableCell>
+                            <TableCell className="text-sm font-mono text-indigo-600">{row.poNumber}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(row.grnDate)}</TableCell>
+                            <TableCell className="text-sm text-right tabular-nums">{fmtINR(row.totalCharged)}</TableCell>
+                            <TableCell className="text-sm text-right tabular-nums text-green-700">{fmtINR(row.totalPaid)}</TableCell>
+                            <TableCell className="text-sm text-right tabular-nums text-orange-700">{fmtINR(row.totalReversed)}</TableCell>
+                            <TableCell className="text-sm text-right tabular-nums font-semibold">{fmtINR(row.outstanding)}</TableCell>
+                            <TableCell className="text-sm text-right tabular-nums font-medium">{row.daysOutstanding}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className={`text-xs font-semibold ${st.classes}`}>
+                                {st.label}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-12 space-y-2">
+                  <CheckCircle2 className="h-8 w-8 mx-auto text-green-500" />
+                  <p className="text-sm text-green-700 font-medium">
+                    No outstanding AP balances. All vendor invoices are fully settled. ✓
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 

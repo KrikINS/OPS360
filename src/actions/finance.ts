@@ -1381,6 +1381,158 @@ export async function getAPBalanceForPO(input: {
   }
 }
 
+// ── AP Ageing types ─────────────────────────────────
+export interface APAgeingRow {
+  vendorId:        string
+  vendorName:      string
+  poId:            string
+  poNumber:        string
+  grnDate:         string       // earliest GRN date for this PO
+  totalCharged:    number       // total GRN CR 2010
+  totalPaid:       number       // total PAYMENT DR 2010
+  totalReversed:   number       // debit note + short-close DR 2010
+  outstanding:     number       // totalCharged - totalPaid - totalReversed
+  daysOutstanding: number       // days from grnDate to asOfDate
+  bucket:          '0-30' | '31-60' | '61-90' | '90+'
+}
+
+export interface APAgeingTotals {
+  total:    number
+  bucket0:  number   // 0-30 days
+  bucket31: number   // 31-60 days
+  bucket61: number   // 61-90 days
+  bucket90: number   // 90+ days
+}
+
+// ── getAPAgeing ─────────────────────────────────────
+export async function getAPAgeing(input?: {
+  branchId?: string
+  asOfDate?: string
+}): Promise<{
+  success: boolean
+  rows?: APAgeingRow[]
+  totals?: APAgeingTotals
+  error?: string
+}> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+
+  // Determine branch filter
+  let effectiveBranchId = input?.branchId
+  if (!isAdmin && !effectiveBranchId) {
+    effectiveBranchId = (await getEffectiveBranchId(session)) ?? undefined
+  }
+
+  const asOfDate = input?.asOfDate ?? new Date().toISOString().split('T')[0]
+
+  try {
+    const branchCondition = effectiveBranchId
+      ? sql`AND po.branch_id = ${effectiveBranchId}::uuid`
+      : sql``
+
+    const result = await db.execute(sql`
+      WITH po_ap AS (
+        SELECT
+          je.reference_id                    AS po_id,
+          MIN(je.date)                       AS grn_date,
+          COALESCE(SUM(
+            CASE WHEN je.reference_source = 'GRN'
+            THEN jl.credit ELSE 0 END
+          ), 0)                              AS total_charged,
+          COALESCE(SUM(
+            CASE WHEN je.reference_source = 'PAYMENT'
+            THEN jl.debit ELSE 0 END
+          ), 0)                              AS total_paid,
+          COALESCE(SUM(
+            CASE WHEN je.reference_source
+              IN ('DEBIT_NOTE', 'SHORT_CLOSE')
+            THEN jl.debit ELSE 0 END
+          ), 0)                              AS total_reversed
+        FROM journal_lines jl
+        JOIN journal_entries je
+          ON je.id = jl.journal_entry_id
+        JOIN accounts a
+          ON a.id = jl.account_id
+        WHERE a.code = '2010'
+          AND je.status = 'posted'
+        GROUP BY je.reference_id
+      )
+      SELECT
+        po.id          AS po_id,
+        po.po_number,
+        v.id           AS vendor_id,
+        v.name         AS vendor_name,
+        pa.grn_date,
+        pa.total_charged,
+        pa.total_paid,
+        pa.total_reversed,
+        (pa.total_charged - pa.total_paid
+          - pa.total_reversed)               AS outstanding,
+        (${asOfDate}::date - pa.grn_date::date)
+                                             AS days_outstanding
+      FROM po_ap pa
+      JOIN purchase_orders po
+        ON po.id = pa.po_id::uuid
+      JOIN vendors v
+        ON v.id = po.vendor_id
+      WHERE (pa.total_charged - pa.total_paid
+        - pa.total_reversed) > 0.01
+      ${branchCondition}
+      ORDER BY pa.grn_date ASC
+    `)
+
+    const rawRows = (result as any).rows ?? result
+
+    const rows: APAgeingRow[] = rawRows.map((r: any) => {
+      const days = Number(r.days_outstanding ?? 0)
+      let bucket: APAgeingRow['bucket']
+      if (days <= 30) bucket = '0-30'
+      else if (days <= 60) bucket = '31-60'
+      else if (days <= 90) bucket = '61-90'
+      else bucket = '90+'
+
+      return {
+        vendorId:        r.vendor_id,
+        vendorName:      r.vendor_name,
+        poId:            r.po_id,
+        poNumber:        r.po_number,
+        grnDate:         new Date(r.grn_date).toISOString().split('T')[0],
+        totalCharged:    Number(r.total_charged),
+        totalPaid:       Number(r.total_paid),
+        totalReversed:   Number(r.total_reversed),
+        outstanding:     Number(Number(r.outstanding).toFixed(2)),
+        daysOutstanding: days,
+        bucket,
+      }
+    })
+
+    // Compute totals
+    const totals: APAgeingTotals = {
+      total:    0,
+      bucket0:  0,
+      bucket31: 0,
+      bucket61: 0,
+      bucket90: 0,
+    }
+    for (const row of rows) {
+      totals.total += row.outstanding
+      if (row.bucket === '0-30')  totals.bucket0  += row.outstanding
+      if (row.bucket === '31-60') totals.bucket31 += row.outstanding
+      if (row.bucket === '61-90') totals.bucket61 += row.outstanding
+      if (row.bucket === '90+')   totals.bucket90 += row.outstanding
+    }
+
+    return { success: true, rows, totals }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+}
+
 // ── editJournalEntry (Secure Audit Edit) ────────────
 export async function editJournalEntry(input: {
   id: string

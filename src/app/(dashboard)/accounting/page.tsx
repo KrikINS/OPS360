@@ -9,6 +9,7 @@ import {
   getExpenses,
   getMarginReport,
   getBranches,
+  getAPAgeing,
 } from '@/actions/finance'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import AccountingClient from './client'
@@ -43,7 +44,8 @@ export default async function AccountingPage({
 
   // Fetch all data in parallel
   const [plResult, bsResult, gstResult,
-         journalResult, expenseResult, marginResult, branchesResult] = await Promise.all([
+         journalResult, expenseResult, marginResult, branchesResult,
+         apAgeingResult] = await Promise.all([
     getProfitAndLoss({
       branchId: isAdmin ? undefined : branchId ?? undefined,
       fromDate,
@@ -72,6 +74,10 @@ export default async function AccountingPage({
       toDate,
     }),
     getBranches(),
+    getAPAgeing({
+      branchId: isAdmin ? undefined : branchId ?? undefined,
+      asOfDate: toDate,
+    }),
   ])
 
   return (
@@ -93,6 +99,7 @@ export default async function AccountingPage({
       fyEnd={fyEnd}
       marginData={marginResult.success ? marginResult : null}
       branchList={branchesResult.success ? branchesResult.branches : []}
+      apAgeing={apAgeingResult.success ? apAgeingResult : null}
     />
   )
 }
