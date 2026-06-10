@@ -129,11 +129,12 @@ function fmtDate(date: Date | string): string {
 
 function sourceColor(source: string): string {
   const map: Record<string, string> = {
-    GRN:     'bg-blue-100 text-blue-800 border-blue-200',
-    SALES:   'bg-green-100 text-green-800 border-green-200',
-    EXPENSE: 'bg-orange-100 text-orange-800 border-orange-200',
+    GRN:         'bg-blue-100 text-blue-800 border-blue-200',
+    SALES:       'bg-green-100 text-green-800 border-green-200',
+    EXPENSE:     'bg-orange-100 text-orange-800 border-orange-200',
     PAYMENT:     'bg-purple-100 text-purple-800 border-purple-200',
     SHORT_CLOSE: 'bg-orange-100 text-orange-800 border-orange-200',
+    TRANSFER:    'bg-violet-100 text-violet-800 border-violet-200',
     DEBIT_NOTE:  'bg-red-100 text-red-800 border-red-200',
     RETURN:      'bg-orange-100 text-orange-800 border-orange-200',
     PAYROLL:     'bg-blue-100 text-blue-800 border-blue-200',
@@ -1351,7 +1352,7 @@ export default function AccountingClient({
                         key={entry.id}
                         entry={entry}
                         isAdmin={isAdmin}
-                        onSuccess={fetchData}
+                        onSuccess={handleJournalPosted}
                       />
                     ))}
                   </TableBody>
@@ -1550,12 +1551,12 @@ export default function AccountingClient({
                         </TableCell>
                         <TableCell className="text-xs">
                           {EXPENSE_ACCOUNTS.find(
-                            a => a.code === exp.expense_account
+                            (a: any) => a.code === exp.expense_account
                           )?.name ?? exp.expense_account}
                         </TableCell>
                         <TableCell className="text-xs">
-                          {PAYMENT_ACCOUNTS.find(
-                            a => a.code === exp.payment_account
+                          {paymentAccounts.find(
+                            (a: any) => a.code === exp.payment_account
                           )?.name ?? exp.payment_account}
                         </TableCell>
                         <TableCell className="text-right
@@ -1899,7 +1900,7 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
         setIsOpen(false) // collapse to force reload
         onSuccess()
       } else {
-        setEditError(res.error || 'Failed to edit entry')
+        setEditError('error' in res ? res.error : 'Failed to edit entry')
       }
     } catch (e: any) {
       setEditError(e.message)
@@ -2050,6 +2051,7 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
                     </tr>
                   </tbody>
                 </table>
+              </div>
               )}
             </div>
           </TableCell>

@@ -98,6 +98,57 @@ export async function completeStockTransfer(input: { transferId: string }) {
     return { success: false as const, error: result.error.message }
   }
 
+  // Post transfer journal non-blocking
+  try {
+    // Fetch transfer details needed for the journal
+    const transferRes = await db.execute(sql`
+      SELECT
+        st.source_branch_id,
+        st.destination_branch_id,
+        st.transfer_number,
+        COUNT(sti.id)  AS item_count,
+        COALESCE(SUM(i.landed_cost), 0) AS total_landed_cost
+      FROM stock_transfers st
+      JOIN stock_transfer_items sti
+        ON sti.transfer_id = st.id
+      JOIN inventory i
+        ON i.id = sti.inventory_id
+      WHERE st.id = ${input.transferId}::uuid
+      GROUP BY st.source_branch_id,
+               st.destination_branch_id,
+               st.transfer_number
+    `)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = (transferRes as any).rows ?? transferRes
+    const t = rows[0]
+
+    if (t && Number(t.total_landed_cost) > 0) {
+      const { postTransferJournal } =
+        await import('@/actions/finance')
+      await postTransferJournal({
+        transferId:      input.transferId,
+        sourceBranchId:  String(t.source_branch_id),
+        destBranchId:    String(t.destination_branch_id),
+        createdBy:       session.user.id,
+        totalLandedCost: Number(t.total_landed_cost),
+        itemCount:       Number(t.item_count),
+        transferNumber:  String(t.transfer_number ?? input.transferId),
+      })
+    } else {
+      console.warn(
+        '[TRANSFER] Journal skipped — total_landed_cost is 0 ' +
+        'or transfer not found for id:', input.transferId
+      )
+    }
+  } catch (journalErr) {
+    console.error(
+      '[TRANSFER] Journal FAILED — transfer already ' +
+      'confirmed, ledger entry missing:', journalErr
+    )
+    // Non-blocking — transfer already committed
+  }
+
   return { success: true as const }
 }
 

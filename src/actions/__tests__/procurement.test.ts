@@ -366,7 +366,7 @@ describe('createGRN', () => {
       landedCosts: {},
     }) as any
 
-    expect(grn.success).toBe(true)
+    if (!grn.success) console.log('GRN ERROR: ', grn.error); expect(grn.success).toBe(true)
     expect(grn.grn.hasDiscrepancy).toBe(false)
     expect(grn.grn.discrepancyItems).toHaveLength(0)
 
@@ -410,7 +410,7 @@ describe('createGRN', () => {
       landedCosts: {},
     }) as any
 
-    expect(grn.success).toBe(true)
+    if (!grn.success) console.log('GRN ERROR: ', grn.error); expect(grn.success).toBe(true)
     expect(grn.grn.hasDiscrepancy).toBe(true)
     expect(grn.grn.discrepancyItems).toHaveLength(1)
     expect(grn.grn.discrepancyItems[0].shortfall).toBe(3)
@@ -466,7 +466,7 @@ describe('createGRN', () => {
       landedCosts: { freight: 400 }, // ₹400 / 4 units = ₹100 per unit
     }) as any
 
-    expect(grn.success).toBe(true)
+    if (!grn.success) console.log('GRN ERROR: ', grn.error); expect(grn.success).toBe(true)
 
     // Each inventory row should have landed_cost = unit_cost + landed_cost_per_unit
     // = 1000 + 100 = 1100

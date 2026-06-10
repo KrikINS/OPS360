@@ -30,6 +30,7 @@ const COA = [
   { code: '1051', name: 'CGST Input Tax Credit',       type: 'Tax',     is_system: true,  is_active: true  },
   { code: '1052', name: 'SGST Input Tax Credit',       type: 'Tax',     is_system: true,  is_active: true  },
   { code: '1053', name: 'IGST Input Tax Credit',       type: 'Tax',     is_system: true,  is_active: true  },
+  { code: '1060', name: 'Inter-Branch Transfer Clearing', type: 'Asset', is_system: true,  is_active: true  },
   // ── Liabilities ──────────────────────────────────────────────────────
   { code: '2010', name: 'Accounts Payable',            type: 'Liability', is_system: true, is_active: true },
   // ── Tax — Output (Payable) ───────────────────────────────────────────
