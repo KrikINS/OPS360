@@ -36,6 +36,17 @@ export function AccountCombobox({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
 
+  const filtered = useMemo(() => {
+    if (!accounts) return []
+    if (!search.trim()) return accounts
+    const q = search.toLowerCase()
+    return accounts.filter(a =>
+      a.code.toLowerCase().includes(q) ||
+      a.name.toLowerCase().includes(q) ||
+      a.type.toLowerCase().includes(q)
+    )
+  }, [accounts, search])
+
   if (!accounts) {
     // Loading state
     return (
@@ -47,16 +58,6 @@ export function AccountCombobox({
   }
 
   const selected = accounts.find(a => a.code === value)
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return accounts
-    const q = search.toLowerCase()
-    return accounts.filter(a =>
-      a.code.toLowerCase().includes(q) ||
-      a.name.toLowerCase().includes(q) ||
-      a.type.toLowerCase().includes(q)
-    )
-  }, [accounts, search])
 
   const cashAccounts = filtered.filter(a =>
     a.code === '1010' || a.code.startsWith('1010-')

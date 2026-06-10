@@ -2002,12 +2002,29 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
   const [editAccounts, setEditAccounts] = useState<Array<{code: string; name: string; type: string}> | null>(null)
 
   async function handleOpenEdit() {
-    setEditLines(lines.map(l => ({ ...l })))
     setEditDescription(entry.description)
     setEditReason('')
     setEditError('')
     setEditModalOpen(true)
-    
+
+    // Fetch lines if not already loaded
+    // (user may not have expanded the row first)
+    let linesToEdit = lines
+    if (linesToEdit.length === 0) {
+      try {
+        const res = await getJournalLines(
+          { journalEntryId: entry.id })
+        if (res.success) {
+          setLines(res.lines)   // also update the expand view
+          linesToEdit = res.lines
+        }
+      } catch {
+        // leave empty — dialog will show no lines
+      }
+    }
+    setEditLines(linesToEdit.map(l => ({ ...l })))
+
+    // Fetch accounts in parallel (non-blocking)
     getActiveAccounts().then(res => {
       setEditAccounts(res.success ? res.accounts : [])
     })
