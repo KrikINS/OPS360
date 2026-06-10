@@ -1249,7 +1249,8 @@ Are you sure you want to proceed?`)) return;
                           <TableHead>Quantity</TableHead>
                           <TableHead>Unit Price</TableHead>
                           <TableHead>Tax %</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="text-right">GST Amt (₹)</TableHead>
+                          <TableHead className="text-right">Total (inc-GST)</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1376,7 +1377,20 @@ Are you sure you want to proceed?`)) return;
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">₹{((item.unit_price ?? 0) * (item.quantity ?? 0)).toLocaleString()}</TableCell>
+                            <TableCell className="text-right text-slate-600">
+                              ₹{(
+                                (item.unit_price ?? 0) *
+                                (item.quantity ?? 0) *
+                                ((item.tax_rate ?? 0) / 100)
+                              ).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {(() => {
+                                const base = (item.unit_price ?? 0) * (item.quantity ?? 0)
+                                const gst = base * ((item.tax_rate ?? 0) / 100)
+                                return `₹${(base + gst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              })()}
+                            </TableCell>
                             <TableCell>
                               <Button variant="ghost" size="sm" onClick={() => setPoItems(poItems.filter((_, i: number) => i !== idx))}>Remove</Button>
                             </TableCell>
