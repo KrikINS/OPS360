@@ -1,8 +1,8 @@
 "use server"
 
 import { db } from "@/db/client"
-import { vendors, purchase_orders, expense_records, stock_transfers, stock_requests, products, inventory } from "@/db/schema"
-import { and, eq, inArray, sql, lt } from "drizzle-orm"
+import { vendors, purchase_orders, expense_records, stock_transfers, stock_requests } from "@/db/schema"
+import { and, eq, inArray, sql } from "drizzle-orm"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { getEffectiveBranchId } from "@/app/actions/_utils/branch"
@@ -39,65 +39,81 @@ export async function getPendingApprovalsAction(): Promise<Notification[]> {
     const branchId = await getEffectiveBranchId(session)
 
     const notifications: Notification[] = []
-
     const queries: Promise<void>[] = []
 
     // 1. PENDING_PO_APPROVAL — admins/managers see all POs pending approval
     if (isAdminOrManager) {
       queries.push(
-        db.select({ id: purchase_orders.id, po_number: purchase_orders.po_number })
-          .from(purchase_orders)
-          .where(eq(purchase_orders.status, 'pending_approval'))
-          .then(rows => {
+        (async () => {
+          try {
+            const rows = await db.select({
+              id: purchase_orders.id,
+              po_number: purchase_orders.po_number,
+              total_amount: purchase_orders.total_amount,
+            })
+              .from(purchase_orders)
+              .where(eq(purchase_orders.status, 'pending_approval'))
             for (const po of rows) {
               notifications.push({
                 id: `poa-${po.id}`,
                 type: 'PENDING_PO_APPROVAL',
                 title: 'PO Approval Required',
-                message: `PO/${po.po_number} is awaiting approval`,
+                message: `${po.po_number} — ₹${Number(po.total_amount ?? 0).toLocaleString('en-IN')} awaiting approval`,
                 href: '/procurement/po-registry',
                 priority: 'high',
               })
             }
-          })
+          } catch (e) {
+            console.warn('[NOTIFICATIONS] PENDING_PO_APPROVAL query failed:', e)
+          }
+        })()
       )
     }
 
     // 2. PO_NEEDS_REVISION — only the PO creator sees their own revision requests
     if (userId) {
       queries.push(
-        db.select({
-          id: purchase_orders.id,
-          po_number: purchase_orders.po_number,
-          revision_notes: purchase_orders.revision_notes,
-        })
-          .from(purchase_orders)
-          .where(and(
-            eq(purchase_orders.status, 'needs_revision'),
-            eq(purchase_orders.created_by, userId)
-          ))
-          .then(rows => {
+        (async () => {
+          try {
+            const rows = await db.select({
+              id: purchase_orders.id,
+              po_number: purchase_orders.po_number,
+              revision_notes: purchase_orders.revision_notes,
+            })
+              .from(purchase_orders)
+              .where(and(
+                eq(purchase_orders.status, 'needs_revision'),
+                eq(purchase_orders.created_by, userId)
+              ))
             for (const po of rows) {
               notifications.push({
                 id: `por-${po.id}`,
                 type: 'PO_NEEDS_REVISION',
                 title: 'PO Revision Required',
-                message: `PO/${po.po_number} returned for revision — ${po.revision_notes ?? 'see notes'}`,
+                message: `${po.po_number} returned for revision — ${po.revision_notes ?? 'see notes'}`,
                 href: '/procurement/po-registry',
                 priority: 'high',
               })
             }
-          })
+          } catch (e) {
+            console.warn('[NOTIFICATIONS] PO_NEEDS_REVISION query failed:', e)
+          }
+        })()
       )
     }
 
     // 3. PENDING_EXPENSE_APPROVAL — admins/managers
     if (isAdminOrManager) {
       queries.push(
-        db.select({ id: expense_records.id, description: expense_records.description, amount: expense_records.amount })
-          .from(expense_records)
-          .where(eq(expense_records.status, 'pending'))
-          .then(rows => {
+        (async () => {
+          try {
+            const rows = await db.select({
+              id: expense_records.id,
+              description: expense_records.description,
+              amount: expense_records.amount,
+            })
+              .from(expense_records)
+              .where(eq(expense_records.status, 'pending'))
             for (const exp of rows) {
               notifications.push({
                 id: `exp-${exp.id}`,
@@ -108,17 +124,21 @@ export async function getPendingApprovalsAction(): Promise<Notification[]> {
                 priority: 'high',
               })
             }
-          })
+          } catch (e) {
+            console.warn('[NOTIFICATIONS] PENDING_EXPENSE_APPROVAL query failed:', e)
+          }
+        })()
       )
     }
 
     // 4. PENDING_VENDOR_APPROVAL — admins/managers
     if (isAdminOrManager) {
       queries.push(
-        db.select({ id: vendors.id, name: vendors.name })
-          .from(vendors)
-          .where(inArray(vendors.status, ['Pending', 'awaiting_approval']))
-          .then(rows => {
+        (async () => {
+          try {
+            const rows = await db.select({ id: vendors.id, name: vendors.name })
+              .from(vendors)
+              .where(inArray(vendors.status, ['Pending', 'awaiting_approval']))
             for (const v of rows) {
               notifications.push({
                 id: `ven-${v.id}`,
@@ -129,20 +149,27 @@ export async function getPendingApprovalsAction(): Promise<Notification[]> {
                 priority: 'medium',
               })
             }
-          })
+          } catch (e) {
+            console.warn('[NOTIFICATIONS] PENDING_VENDOR_APPROVAL query failed:', e)
+          }
+        })()
       )
     }
 
     // 5. PENDING_STOCK_TRANSFER — transfers in-transit to this branch (destination branch)
     if (branchId) {
       queries.push(
-        db.select({ id: stock_transfers.id, transfer_number: stock_transfers.transfer_number })
-          .from(stock_transfers)
-          .where(and(
-            eq(stock_transfers.status, 'In-Transit'),
-            eq(stock_transfers.destination_branch_id, branchId)
-          ))
-          .then(rows => {
+        (async () => {
+          try {
+            const rows = await db.select({
+              id: stock_transfers.id,
+              transfer_number: stock_transfers.transfer_number,
+            })
+              .from(stock_transfers)
+              .where(and(
+                eq(stock_transfers.status, 'In-Transit'),
+                eq(stock_transfers.destination_branch_id, branchId)
+              ))
             for (const t of rows) {
               notifications.push({
                 id: `stt-${t.id}`,
@@ -153,20 +180,27 @@ export async function getPendingApprovalsAction(): Promise<Notification[]> {
                 priority: 'medium',
               })
             }
-          })
+          } catch (e) {
+            console.warn('[NOTIFICATIONS] PENDING_STOCK_TRANSFER query failed:', e)
+          }
+        })()
       )
     }
 
     // 6. PENDING_STOCK_REQUEST — requests pending fulfillment from this branch (source branch)
     if (branchId) {
       queries.push(
-        db.select({ id: stock_requests.id, request_number: stock_requests.request_number })
-          .from(stock_requests)
-          .where(and(
-            eq(stock_requests.status, 'Pending'),
-            eq(stock_requests.source_branch_id, branchId)
-          ))
-          .then(rows => {
+        (async () => {
+          try {
+            const rows = await db.select({
+              id: stock_requests.id,
+              request_number: stock_requests.request_number,
+            })
+              .from(stock_requests)
+              .where(and(
+                eq(stock_requests.status, 'Pending'),
+                eq(stock_requests.source_branch_id, branchId)
+              ))
             for (const r of rows) {
               notifications.push({
                 id: `str-${r.id}`,
@@ -177,59 +211,73 @@ export async function getPendingApprovalsAction(): Promise<Notification[]> {
                 priority: 'medium',
               })
             }
-          })
+          } catch (e) {
+            console.warn('[NOTIFICATIONS] PENDING_STOCK_REQUEST query failed:', e)
+          }
+        })()
       )
     }
 
     // 7. LOW_STOCK_ALERT — products below min_stock_level in this branch (admins/managers)
     if (isAdminOrManager && branchId) {
       queries.push(
-        db.execute(sql`
-          SELECT p.id, p.model_name, p.min_stock_level,
-                 COUNT(i.id) FILTER (WHERE i.status = 'Available') AS available_count
-          FROM products p
-          LEFT JOIN inventory i ON i.product_id = p.id AND i.branch_id = ${branchId}::uuid
-          WHERE p.min_stock_level > 0
-            AND p.tracking_type != 'Legacy'
-          GROUP BY p.id, p.model_name, p.min_stock_level
-          HAVING COUNT(i.id) FILTER (WHERE i.status = 'Available') < p.min_stock_level
-          LIMIT 10
-        `).then(result => {
-          const rows = result.rows as Array<{ id: string; model_name: string; min_stock_level: number; available_count: number }>
-          for (const row of rows) {
-            notifications.push({
-              id: `ls-${row.id}`,
-              type: 'LOW_STOCK_ALERT',
-              title: 'Low Stock Alert',
-              message: `${row.model_name} — ${row.available_count} units (min: ${row.min_stock_level})`,
-              href: '/products',
-              priority: 'low',
-            })
+        (async () => {
+          try {
+            const result = await db.execute(sql`
+              SELECT p.id, p.model_name, p.min_stock_level,
+                     COUNT(i.id) FILTER (WHERE i.status = 'Available') AS available_count
+              FROM products p
+              LEFT JOIN inventory i ON i.product_id = p.id AND i.branch_id = ${branchId}::uuid
+              WHERE p.min_stock_level > 0
+                AND p.tracking_type != 'Legacy'
+              GROUP BY p.id, p.model_name, p.min_stock_level
+              HAVING COUNT(i.id) FILTER (WHERE i.status = 'Available') < p.min_stock_level
+              LIMIT 10
+            `)
+            const rows = result.rows as Array<{ id: string; model_name: string; min_stock_level: number; available_count: number }>
+            for (const row of rows) {
+              notifications.push({
+                id: `ls-${row.id}`,
+                type: 'LOW_STOCK_ALERT',
+                title: 'Low Stock Alert',
+                message: `${row.model_name} — ${row.available_count} units (min: ${row.min_stock_level})`,
+                href: '/products',
+                priority: 'low',
+              })
+            }
+          } catch (e) {
+            console.warn('[NOTIFICATIONS] LOW_STOCK_ALERT query failed:', e)
           }
-        })
+        })()
       )
     }
 
-    // 8. PENDING_DEBIT_NOTE — admins/managers
-    if (isAdminOrManager) {
-      queries.push(
-        db.execute(sql`
-          SELECT id, debit_note_number, amount FROM debit_notes WHERE status = 'Pending' LIMIT 20
-        `).then(result => {
-          const rows = result.rows as Array<{ id: string; debit_note_number: string; amount: string }>
-          for (const row of rows) {
-            notifications.push({
-              id: `dn-${row.id}`,
-              type: 'PENDING_DEBIT_NOTE',
-              title: 'Debit Note Pending',
-              message: `${row.debit_note_number} — ₹${Number(row.amount).toLocaleString('en-IN')} awaiting approval`,
-              href: '/procurement/po-registry',
-              priority: 'low',
-            })
-          }
-        })
-      )
-    }
+    // DISABLED: debit_notes table not yet migrated
+    // Re-enable after running 0012_debit_notes.sql
+    // if (isAdminOrManager) {
+    //   queries.push(
+    //     (async () => {
+    //       try {
+    //         const result = await db.execute(sql`
+    //           SELECT id, debit_note_number, amount FROM debit_notes WHERE status = 'Pending' LIMIT 20
+    //         `)
+    //         const rows = result.rows as Array<{ id: string; debit_note_number: string; amount: string }>
+    //         for (const row of rows) {
+    //           notifications.push({
+    //             id: `dn-${row.id}`,
+    //             type: 'PENDING_DEBIT_NOTE',
+    //             title: 'Debit Note Pending',
+    //             message: `${row.debit_note_number} — ₹${Number(row.amount).toLocaleString('en-IN')} awaiting approval`,
+    //             href: '/procurement/po-registry',
+    //             priority: 'low',
+    //           })
+    //         }
+    //       } catch (e) {
+    //         console.warn('[NOTIFICATIONS] PENDING_DEBIT_NOTE query failed:', e)
+    //       }
+    //     })()
+    //   )
+    // }
 
     await Promise.all(queries)
 
