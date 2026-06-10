@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition, useRef, useCallback } from 'react'
 import { useReactToPrint } from 'react-to-print'
 import { FinancePrintTemplate } from '@/components/finance/FinancePrintTemplate'
 import ManualJournalDrawer from '@/components/accounting/ManualJournalDrawer'
+import { AccountCombobox } from '@/components/accounting/AccountCombobox'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Card, CardContent, CardHeader, CardTitle
@@ -1860,6 +1861,7 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
   const [editLines, setEditLines] = useState<JournalLine[]>([])
   const [editing, setEditing] = useState(false)
   const [editError, setEditError] = useState('')
+  const [editAccounts, setEditAccounts] = useState<Array<{code: string; name: string; type: string}> | null>(null)
 
   async function handleOpenEdit() {
     setEditLines(lines.map(l => ({ ...l })))
@@ -1867,6 +1869,10 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
     setEditReason('')
     setEditError('')
     setEditModalOpen(true)
+    
+    getActiveAccounts().then(res => {
+      setEditAccounts(res.success ? res.accounts : [])
+    })
   }
 
   async function handleSaveEdit() {
@@ -2077,12 +2083,16 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
                 {editLines.map((line, i) => (
                   <div key={i} className="p-3 grid grid-cols-12 gap-2 items-center bg-slate-50/50">
                     <div className="col-span-4 space-y-1">
-                      <Label className="text-[10px] text-slate-500">Account Code</Label>
-                      <Input className="h-8 text-xs font-mono" value={line.accountCode} onChange={e => {
-                        const newLines = [...editLines]
-                        newLines[i].accountCode = e.target.value
-                        setEditLines(newLines)
-                      }} />
+                      <Label className="text-[10px] text-slate-500">Account</Label>
+                      <AccountCombobox
+                        accounts={editAccounts}
+                        value={line.accountCode}
+                        onChange={(code, name) => {
+                          const newLines = [...editLines]
+                          newLines[i] = { ...newLines[i], accountCode: code }
+                          setEditLines(newLines)
+                        }}
+                      />
                     </div>
                     <div className="col-span-4 space-y-1">
                       <Label className="text-[10px] text-slate-500">Debit (₹)</Label>
