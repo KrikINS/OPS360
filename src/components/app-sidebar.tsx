@@ -115,7 +115,6 @@ const navigationGroups: NavigationGroup[] = [
     icon: BarChart3,
     items: [
       { title: "Sales Registry", url: "/sales/hub", icon: List },
-      { title: "Sales Return", url: "/sales/hub?tab=returns", icon: RotateCcw },
       { title: "Customer Management", url: "/sales/customers", icon: UserSquare },
     ]
   },
