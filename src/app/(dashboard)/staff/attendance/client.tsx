@@ -143,7 +143,7 @@ export default function AttendanceClient({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Present Today',     value: presentToday,   icon: <Users className="h-4 w-4" />,         color: 'text-green-600' },
           { label: 'Hours This Week',   value: `${totalHours}h`, icon: <Clock className="h-4 w-4" />,       color: 'text-blue-600' },

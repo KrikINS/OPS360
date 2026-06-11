@@ -735,7 +735,7 @@ export default function AccountingClient({
         <div className="space-y-6">
 
           {/* P&L summary cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="border-green-200 bg-green-50/30">
               <CardContent className="pt-6">
                 <div className="flex items-center
@@ -889,7 +889,7 @@ export default function AccountingClient({
           )}
 
           {/* P&L breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {/* Revenue breakdown */}
             <Card>
@@ -1121,7 +1121,7 @@ export default function AccountingClient({
           </Card>
 
           {/* Three columns: Assets | Liabilities | Equity */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
             {/* Assets */}
             <Card>
@@ -1341,7 +1341,7 @@ export default function AccountingClient({
             ]
             return (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {bucketCards.map(b => (
                     <Card key={b.label} className={b.cardClass}>
                       <CardContent className="pt-5 pb-4">
@@ -1780,7 +1780,7 @@ export default function AccountingClient({
         <div className="space-y-6">
 
           {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="border-blue-200 bg-blue-50/30">
               <CardContent className="pt-5 pb-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-600 mb-1">Total Revenue</p>
@@ -1911,7 +1911,7 @@ export default function AccountingClient({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="p-4 bg-purple-50 rounded-xl text-center">
                     <p className="text-xs uppercase tracking-widest text-purple-500 mb-1">Total Discounts Given</p>
                     <p className="text-xl font-bold text-purple-800">{fmtINR(marginData.summary.totalDiscounts)}</p>

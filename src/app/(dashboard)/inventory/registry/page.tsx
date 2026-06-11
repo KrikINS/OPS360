@@ -354,7 +354,7 @@ export default function InventoryDashboard() {
             <Upload className="h-4 w-4" /> Import Opening Stock
           </Button>
         </div>
-      </div>      <div className="grid gap-4 md:grid-cols-3">
+      </div>      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {/* Card 1: Inventory Cost (Valuation) */}
         <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-[#001529]/20 transition-all">
           <div className="h-1 bg-[#001529]/10 w-full" />
@@ -616,7 +616,8 @@ export default function InventoryDashboard() {
               </div>
             ) : (
               <>
-                <Table>
+                <div className="overflow-x-auto custom-scrollbar">
+                <Table className="min-w-[860px]">
                   <TableHeader className="bg-slate-50 border-b">
                     <TableRow>
                       <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-10"></TableHead>
@@ -880,6 +881,7 @@ export default function InventoryDashboard() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </>
             )}
           </TooltipProvider>
