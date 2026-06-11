@@ -451,7 +451,13 @@ export async function processReturn(input: {
         WHERE id = ${returnId}::uuid
       `)
     } catch (journalErr) {
-      console.error('[RETURN] Reverse journal FAILED — inventory and return records committed, ledger entry missing:', journalErr)
+      console.error('[RETURN] Reverse journal FAILED after return committed:', journalErr)
+      return {
+        success: false as const,
+        error: 'Return processed and inventory restored, but the reversal journal failed — the accounting entry was not created. Contact finance before issuing further returns on this invoice.',
+        returnId,
+        journalFailed: true as const,
+      }
     }
 
     // Loyalty points refund (non-blocking) — only if refund method is loyalty_points
