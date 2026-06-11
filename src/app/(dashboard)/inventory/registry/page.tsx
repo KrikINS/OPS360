@@ -35,6 +35,7 @@ import {
 import { Upload } from "lucide-react"
 import { ImportStockModal } from "@/components/inventory/import-stock-modal"
 import { cn } from "@/lib/utils"
+import { ScrollableTable } from "@/components/ui/scrollable-table"
 import { formatCurrency } from "@/utils/format"
 import { useIsSmallMobile } from "@/hooks/use-mobile"
 
@@ -616,8 +617,8 @@ export default function InventoryDashboard() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto custom-scrollbar">
-                <Table className="min-w-[860px]">
+                <ScrollableTable minWidth="860px">
+                <Table>
                   <TableHeader className="bg-slate-50 border-b">
                     <TableRow>
                       <TableHead className="py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-10"></TableHead>
@@ -881,7 +882,7 @@ export default function InventoryDashboard() {
                     })}
                   </TableBody>
                 </Table>
-                </div>
+                </ScrollableTable>
               </>
             )}
           </TooltipProvider>

@@ -1435,14 +1435,18 @@ Are you sure you want to proceed?`)) return;
                     
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Template:</span>
-                      <Select onValueChange={(val) => {
-                        const template = availableTemplates.find(t => t.id === val);
-                        if (template) setCreationTerms(template.content);
-                      }}>
-                        <SelectTrigger className="h-7 w-[180px] text-[10px] font-bold bg-slate-50 border-slate-200">
+                      <Select 
+                        value={availableTemplates.find(t => t.content === creationTerms)?.id || "custom"}
+                        onValueChange={(val) => {
+                          const template = availableTemplates.find(t => t.id === val);
+                          if (template) setCreationTerms(template.content);
+                        }}
+                      >
+                        <SelectTrigger className="h-7 w-[220px] text-[10px] font-bold bg-slate-50 border-slate-200">
                           <SelectValue placeholder="Apply Template..." />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="custom" className="hidden text-slate-500 italic">Custom / Modified</SelectItem>
                           {availableTemplates.map(t => (
                             <SelectItem key={t.id} value={t.id} className="text-[10px] font-medium">
                               {t.name} {t.is_default ? '(Default)' : ''}
@@ -1648,8 +1652,8 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200">
-                    <Table>
+                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200 fancy-scroll-x">
+                    <Table className="min-w-[900px]">
                       <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm">
                         <TableRow>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
@@ -2008,8 +2012,8 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200">
-                    <Table>
+                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200 fancy-scroll-x">
+                    <Table className="min-w-[900px]">
                     <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                       <TableRow>
                         <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
@@ -2242,8 +2246,8 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200">
-                    <Table>
+                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200 fancy-scroll-x">
+                    <Table className="min-w-[900px]">
                     <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                         <TableRow>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>

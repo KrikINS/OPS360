@@ -244,6 +244,35 @@
     background: #cbd5e1;
   }
 
+  .group\/scroll .overflow-x-auto::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fancy-scroll-x::-webkit-scrollbar {
+    height: 4px;
+    width: 8px;
+    transition: height 0.2s;
+  }
+  .fancy-scroll-x:hover::-webkit-scrollbar {
+    height: 10px;
+  }
+  .fancy-scroll-x::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .fancy-scroll-x::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+  .fancy-scroll-x:hover::-webkit-scrollbar-thumb {
+    background: #64748b;
+  }
+  .dark .fancy-scroll-x::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+  .dark .fancy-scroll-x:hover::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+  }
+
   @keyframes collapsible-down {
     from { height: 0; opacity: 0; }
     to { height: var(--base-ui-collapsible-panel-height); opacity: 1; }

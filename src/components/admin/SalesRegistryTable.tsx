@@ -22,6 +22,7 @@ import { CustomerHistoryDrawer } from './CustomerHistoryDrawer'
 import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
 import { useReactToPrint } from 'react-to-print'
 import { fmtINR } from '@/lib/utils'
+import { ScrollableTable } from '@/components/ui/scrollable-table'
 
 interface Sale {
   sale_id: string;
@@ -115,8 +116,8 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
-        <Table className="min-w-[900px]">
+        <ScrollableTable minWidth="900px">
+        <Table>
           <TableHeader className="bg-slate-50/50">
             <TableRow className="hover:bg-transparent">
               <TableHead className="font-bold w-[130px]">Invoice ID</TableHead>
@@ -233,7 +234,7 @@ export function SalesRegistryTable({ sales, onPrint }: SaleRegistryTableProps) {
             ))}
           </TableBody>
         </Table>
-        </div>
+        </ScrollableTable>
       </div>
 
       <SaleDetailsDrawer
