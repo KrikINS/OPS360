@@ -94,6 +94,7 @@ export const inventory = pgTable("inventory", {
   landed_cost: numeric("landed_cost"),
   source_po_id: uuid("source_po_id"),
   invoice_id: uuid("invoice_id"),
+  invoice_item_id: uuid("invoice_item_id").references(() => invoice_items.id),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -550,6 +551,7 @@ export const sales_return_items = pgTable('sales_return_items', {
   cgst:            numeric('cgst').notNull().default('0'),
   sgst:            numeric('sgst').notNull().default('0'),
   igst:            numeric('igst').notNull().default('0'),
+  disposition:     text('disposition').notNull().default('resellable'),
 })
 
 // ── Payroll ──────────────────────────────────────────
