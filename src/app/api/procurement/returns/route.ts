@@ -91,117 +91,135 @@ export async function POST(req: NextRequest) {
 
     const ids = inventoryRows.map(r => r.id)
 
-    // 3. Mark inventory as Returned
-    await db
-      .update(inventory)
-      .set({ status: 'Returned', updated_at: new Date() })
-      .where(inArray(inventory.id, ids))
+    const { debitNoteId, dnNumber, totalLandedCost, totalCGST, totalSGST, totalIGST, totalAmount } = await db.transaction(async (tx) => {
+      // 3. Mark inventory as Returned
+      await tx
+        .update(inventory)
+        .set({ status: 'Returned', updated_at: new Date() })
+        .where(inArray(inventory.id, ids))
 
-    // 4. Insert inventory_transactions — one per serial
-    if (ids.length > 0) {
-      await db.insert(inventory_transactions).values(
-        inventoryRows.map(row => ({
-          product_id:       row.productId!,
-          branch_id:        po.branchId!,
-          transaction_type: 'return_to_vendor',
-          quantity:         -1,
-          reference_id:     poId,
-          created_by:       session.user.id,
-          inventory_id:     row.id,
-        }))
-      )
-    }
-
-    // 5. Compute costs per product
-    const productIds = [...new Set(inventoryRows.map(r => r.productId).filter(Boolean) as string[])]
-    const productRows = await db
-      .select({ id: products.id, gstRate: products.gst_rate, modelName: products.model_name })
-      .from(products)
-      .where(sql`${products.id} = ANY(${productIds})`)
-
-    const productMap = new Map(productRows.map(p => [p.id, p]))
-
-    let totalLandedCost = 0
-    let totalCGST = 0
-    let totalSGST = 0
-    let totalIGST = 0
-    const itemNames: string[] = []
-
-    for (const row of inventoryRows) {
-      const lc = Number(row.landedCost ?? 0)
-      totalLandedCost += lc
-
-      const prod = row.productId ? productMap.get(row.productId) : null
-      if (prod && !itemNames.includes(prod.modelName ?? '')) {
-        itemNames.push(prod.modelName ?? '')
+      // 4. Insert inventory_transactions — one per serial
+      if (ids.length > 0) {
+        await tx.insert(inventory_transactions).values(
+          inventoryRows.map(row => ({
+            product_id:       row.productId!,
+            branch_id:        po.branchId!,
+            transaction_type: 'return_to_vendor',
+            quantity:         -1,
+            reference_id:     poId,
+            created_by:       session.user.id,
+            inventory_id:     row.id,
+          }))
+        )
       }
-      const gstRate = Number(prod?.gstRate ?? 0)
-      const gstAmount = lc * (gstRate / 100)
-      if (isInterState) {
-        totalIGST += gstAmount
-      } else {
-        totalCGST += gstAmount / 2
-        totalSGST += gstAmount / 2
+
+      // 5. Compute costs per product
+      const productIds = [...new Set(inventoryRows.map(r => r.productId).filter(Boolean) as string[])]
+      const productRows = await tx
+        .select({ id: products.id, gstRate: products.gst_rate, modelName: products.model_name })
+        .from(products)
+        .where(sql`${products.id} = ANY(${productIds})`)
+
+      const productMap = new Map(productRows.map(p => [p.id, p]))
+
+      let totalLandedCost = 0
+      let totalCGST = 0
+      let totalSGST = 0
+      let totalIGST = 0
+      const itemNames: string[] = []
+
+      for (const row of inventoryRows) {
+        const lc = Number(row.landedCost ?? 0)
+        totalLandedCost += lc
+
+        const prod = row.productId ? productMap.get(row.productId) : null
+        if (prod && !itemNames.includes(prod.modelName ?? '')) {
+          itemNames.push(prod.modelName ?? '')
+        }
+        const gstRate = Number(prod?.gstRate ?? 0)
+        const gstAmount = lc * (gstRate / 100)
+        if (isInterState) {
+          totalIGST += gstAmount
+        } else {
+          totalCGST += gstAmount / 2
+          totalSGST += gstAmount / 2
+        }
       }
-    }
 
-    totalLandedCost = Math.round(totalLandedCost * 100) / 100
-    totalCGST       = Math.round(totalCGST       * 100) / 100
-    totalSGST       = Math.round(totalSGST       * 100) / 100
-    totalIGST       = Math.round(totalIGST       * 100) / 100
-    const totalAmount = totalLandedCost + totalCGST + totalSGST + totalIGST
+      totalLandedCost = Math.round(totalLandedCost * 100) / 100
+      totalCGST       = Math.round(totalCGST       * 100) / 100
+      totalSGST       = Math.round(totalSGST       * 100) / 100
+      totalIGST       = Math.round(totalIGST       * 100) / 100
+      const totalAmount = totalLandedCost + totalCGST + totalSGST + totalIGST
 
-    // 6. Generate debit note number
-    const year = new Date().getFullYear()
-    const dnCounterRes = await db.execute(sql`
-      INSERT INTO sequential_counters (prefix, year, current_value)
-      VALUES ('DN', ${year}, 1)
-      ON CONFLICT (prefix, year) DO UPDATE
-        SET current_value = sequential_counters.current_value + 1
-      RETURNING current_value
-    `)
-    const dnCounterRows = (dnCounterRes as unknown as { rows?: { current_value: number }[] }).rows
-      ?? (dnCounterRes as unknown as { current_value: number }[])
-    const dnNumber = `DN/${year}/${dnCounterRows[0]?.current_value}`
+      // 6. Generate debit note number
+      const year = new Date().getFullYear()
+      const dnCounterRes = await tx.execute(sql`
+        INSERT INTO sequential_counters (prefix, year, current_value)
+        VALUES ('DN', ${year}, 1)
+        ON CONFLICT (prefix, year) DO UPDATE
+          SET current_value = sequential_counters.current_value + 1
+        RETURNING current_value
+      `)
+      const dnCounterRows = (dnCounterRes as unknown as { rows?: { current_value: number }[] }).rows
+        ?? (dnCounterRes as unknown as { current_value: number }[])
+      const dnNumber = `DN/${year}/${dnCounterRows[0]?.current_value}`
 
-    // 7. Insert debit note record
-    const dnInsert = await db.execute(sql`
-      INSERT INTO debit_notes (
-        debit_note_number, po_id, branch_id, vendor_id, reason,
-        amount, status, serial_numbers, item_names,
-        metadata, created_by
-      ) VALUES (
-        ${dnNumber},
-        ${poId}::uuid,
-        ${po.branchId ?? null}::uuid,
-        ${po.vendorId ?? null}::uuid,
-        ${reason},
-        ${totalAmount},
-        'Pending',
-        ${serialNumbers}::text[],
-        ${itemNames}::text[],
-        ${JSON.stringify({ serial_numbers: serialNumbers, item_names: itemNames })}::jsonb,
-        ${session.user.id}::uuid
-      )
-      RETURNING id
-    `)
-    const dnRows = (dnInsert as unknown as { rows?: { id: string }[] }).rows
-      ?? (dnInsert as unknown as { id: string }[])
-    const debitNoteId = dnRows[0]?.id ?? 'unknown'
+      // 7. Insert debit note record
+      const dnInsert = await tx.execute(sql`
+        INSERT INTO debit_notes (
+          debit_note_number, po_id, branch_id, vendor_id, reason,
+          amount, status, serial_numbers, item_names,
+          metadata, created_by
+        ) VALUES (
+          ${dnNumber},
+          ${poId}::uuid,
+          ${po.branchId ?? null}::uuid,
+          ${po.vendorId ?? null}::uuid,
+          ${reason},
+          ${totalAmount},
+          'Pending',
+          ${serialNumbers}::text[],
+          ${itemNames}::text[],
+          ${JSON.stringify({ serial_numbers: serialNumbers, item_names: itemNames })}::jsonb,
+          ${session.user.id}::uuid
+        )
+        RETURNING id
+      `)
+      const dnRows = (dnInsert as unknown as { rows?: { id: string }[] }).rows
+        ?? (dnInsert as unknown as { id: string }[])
+      const debitNoteId = dnRows[0]?.id ?? 'unknown'
 
-    // 8. Non-blocking journal posting
+      return { debitNoteId, dnNumber, totalLandedCost, totalCGST, totalSGST, totalIGST, totalAmount }
+    })
+
+    // 8. Blocking journal posting — financial side-effects must not be best-effort
+    // Note: postDebitNoteJournal currently uses the top-level db, not the tx,
+    // so the journal is not inside the same transaction as the inventory/DN writes.
+    // If the journal fails, the response clearly flags journal_failed.
     if (totalLandedCost > 0 && po.branchId) {
-      postDebitNoteJournal({
-        debitNoteId,
-        debitNoteNumber: dnNumber,
-        poId,
-        branchId: po.branchId,
-        createdBy: session.user.id,
-        totalLandedCost,
-        totalCGST,
-        totalSGST,
-        totalIGST,
-      }).catch(err => console.error('[API /procurement/returns] journal failed (non-blocking):', err))
+      try {
+        await postDebitNoteJournal({
+          debitNoteId,
+          debitNoteNumber: dnNumber,
+          poId,
+          branchId: po.branchId,
+          createdBy: session.user.id,
+          totalLandedCost,
+          totalCGST,
+          totalSGST,
+          totalIGST,
+        })
+      } catch (journalErr) {
+        console.error('[API /procurement/returns] journal posting FAILED after DN creation:', journalErr)
+        return NextResponse.json({
+          success: false,
+          error: 'Return recorded but journal posting failed — the accounting entry was not created. Contact finance before retrying.',
+          debit_note_id: debitNoteId,
+          debit_note_number: dnNumber,
+          journal_failed: true,
+        }, { status: 500 })
+      }
     }
 
     return NextResponse.json({

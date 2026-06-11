@@ -615,7 +615,7 @@ export default function PurchaseReturn() {
                       <TableCell className="py-3 px-2 border-r border-slate-100/50">
                         <Badge className={cn(
                           "text-[9px] px-2 py-0.5 font-black uppercase tracking-tighter",
-                          ret.status === 'Paid' || ret.status === 'Authorized' 
+                          ret.status?.toLowerCase() === 'paid' || ret.status?.toLowerCase() === 'authorized' 
                             ? "bg-emerald-100 text-emerald-700" 
                             : "bg-amber-100 text-amber-700"
                         )}>
