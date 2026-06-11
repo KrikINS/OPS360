@@ -1655,8 +1655,8 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200 fancy-scroll-x">
-                    <Table className="min-w-[900px]">
+                  <ScrollableTable minWidth="900px" maxHeight="calc(100vh-380px)" className="border-b">
+                    <Table>
                       <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm">
                         <TableRow>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
@@ -1936,7 +1936,7 @@ Are you sure you want to proceed?`)) return;
                         )}
                       </TableBody>
                     </Table>
-                  </div>
+                  </ScrollableTable>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -2015,8 +2015,8 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200 fancy-scroll-x">
-                    <Table className="min-w-[900px]">
+                  <ScrollableTable minWidth="900px" maxHeight="calc(100vh-380px)" className="border-b">
+                    <Table>
                     <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                       <TableRow>
                         <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
@@ -2166,7 +2166,7 @@ Are you sure you want to proceed?`)) return;
                       )}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTable>
               </CardContent>
               </Card>
             </TabsContent>
@@ -2249,8 +2249,8 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200 fancy-scroll-x">
-                    <Table className="min-w-[900px]">
+                  <ScrollableTable minWidth="900px" maxHeight="calc(100vh-380px)" className="border-b">
+                    <Table>
                     <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                         <TableRow>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>
@@ -2481,7 +2481,7 @@ Are you sure you want to proceed?`)) return;
                         })}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTable>
               </CardContent>
               </Card>
             </TabsContent>
