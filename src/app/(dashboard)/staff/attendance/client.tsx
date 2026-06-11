@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ScrollableTable } from "@/components/ui/scrollable-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -196,8 +197,9 @@ export default function AttendanceClient({
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground text-sm">No records in this range.</div>
           ) : (
-            <Table>
-              <TableHeader>
+            <ScrollableTable minWidth="1000px">
+              <Table>
+                <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Date</TableHead>
                   <TableHead>Staff</TableHead>
@@ -237,6 +239,7 @@ export default function AttendanceClient({
                 })}
               </TableBody>
             </Table>
+            </ScrollableTable>
           )}
         </CardContent>
       </Card>

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useReactToPrint } from "react-to-print"
 import Image from "next/image"
+import { ScrollableTable } from "@/components/ui/scrollable-table"
 
 import { 
   Plus, 
@@ -1443,7 +1444,9 @@ Are you sure you want to proceed?`)) return;
                         }}
                       >
                         <SelectTrigger className="h-7 w-[220px] text-[10px] font-bold bg-slate-50 border-slate-200">
-                          <SelectValue placeholder="Apply Template..." />
+                          <SelectValue placeholder="Apply Template...">
+                            {availableTemplates.find(t => t.content === creationTerms)?.name || "Custom / Modified"}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="custom" className="hidden text-slate-500 italic">Custom / Modified</SelectItem>

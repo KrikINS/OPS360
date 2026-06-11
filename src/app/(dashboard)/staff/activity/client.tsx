@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ScrollableTable } from "@/components/ui/scrollable-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -208,8 +209,9 @@ export default function ActivityClient({
               <div className="text-sm">Try adjusting your filters or date range</div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
+            <ScrollableTable minWidth="1000px">
+              <Table>
+                <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-36">Timestamp</TableHead>
                   <TableHead>Staff</TableHead>
@@ -246,8 +248,9 @@ export default function ActivityClient({
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </ScrollableTable>
           )}
         </CardContent>
       </Card>

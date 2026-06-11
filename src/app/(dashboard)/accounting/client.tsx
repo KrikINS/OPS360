@@ -14,10 +14,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Table, TableBody, TableCell, TableHead,
-  TableHeader, TableRow
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ScrollableTable } from "@/components/ui/scrollable-table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogFooter
@@ -841,6 +840,7 @@ export default function AccountingClient({
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                <ScrollableTable minWidth="800px">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -884,6 +884,7 @@ export default function AccountingClient({
                     ))}
                   </TableBody>
                 </Table>
+                </ScrollableTable>
               </CardContent>
             </Card>
           )}
@@ -1012,6 +1013,7 @@ export default function AccountingClient({
             </CardHeader>
             <CardContent>
               {journal.length > 0 ? (
+                <ScrollableTable minWidth="800px">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1053,6 +1055,7 @@ export default function AccountingClient({
                     ))}
                   </TableBody>
                 </Table>
+                </ScrollableTable>
               ) : (
                 <p className="text-sm text-muted-foreground
                   text-center py-8">
@@ -1389,7 +1392,7 @@ export default function AccountingClient({
             </CardHeader>
             <CardContent>
               {(apAgeing?.rows ?? []).length > 0 ? (
-                <div className="overflow-x-auto">
+                <ScrollableTable minWidth="1200px">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50">
@@ -1433,7 +1436,7 @@ export default function AccountingClient({
                       })}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTable>
               ) : (
                 <div className="text-center py-12 space-y-2">
                   <CheckCircle2 className="h-8 w-8 mx-auto text-green-500" />
@@ -1474,6 +1477,7 @@ export default function AccountingClient({
           <CardContent>
             {journalEntries.length > 0 ? (
               <>
+                <ScrollableTable minWidth="1000px">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1499,6 +1503,7 @@ export default function AccountingClient({
                     ))}
                   </TableBody>
                 </Table>
+                </ScrollableTable>
 
                 {/* B8: Load More button */}
                 {journalHasMore && (
@@ -1664,6 +1669,7 @@ export default function AccountingClient({
             </CardHeader>
             <CardContent>
               {expenses.length > 0 ? (
+                <ScrollableTable minWidth="1000px">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1761,6 +1767,7 @@ export default function AccountingClient({
                     ))}
                   </TableBody>
                 </Table>
+                </ScrollableTable>
               ) : (
                 <p className="text-sm text-muted-foreground
                   text-center py-12">
@@ -1840,7 +1847,7 @@ export default function AccountingClient({
             </CardHeader>
             <CardContent>
               {(marginData?.products ?? []).length > 0 ? (
-                <div className="overflow-x-auto">
+                <ScrollableTable minWidth="1200px">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50">
@@ -1891,7 +1898,7 @@ export default function AccountingClient({
                       })}
                     </TableBody>
                   </Table>
-                </div>
+                </ScrollableTable>
               ) : (
                 <div className="text-center py-12 space-y-2">
                   <TrendingUp className="h-8 w-8 mx-auto text-muted-foreground/30" />

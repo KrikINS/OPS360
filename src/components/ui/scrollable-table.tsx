@@ -8,9 +8,10 @@ interface ScrollableTableProps {
   children: React.ReactNode
   className?: string
   minWidth?: string
+  maxHeight?: string
 }
 
-export function ScrollableTable({ children, className, minWidth = '100%' }: ScrollableTableProps) {
+export function ScrollableTable({ children, className, minWidth = '100%', maxHeight }: ScrollableTableProps) {
   const areaRef = useRef<HTMLDivElement>(null)
   const railRef = useRef<HTMLDivElement>(null)
   const [atStart, setAtStart] = useState(true)
@@ -126,8 +127,8 @@ export function ScrollableTable({ children, className, minWidth = '100%' }: Scro
 
       <div
         ref={areaRef}
-        className="overflow-x-auto"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        className={cn("overflow-x-auto", maxHeight ? "overflow-y-auto" : "")}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', maxHeight: maxHeight || undefined } as React.CSSProperties}
       >
         <div style={{ width: 'max-content', minWidth }}>
           {children}

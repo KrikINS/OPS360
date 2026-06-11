@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup } from "@/components/ui/dropdown-menu"
 import { ChevronDown, PencilLine, History, Eye } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
-
+import { ScrollableTable } from "@/components/ui/scrollable-table"
 type Discrepancy = {
   id: string;
   po_id: string | null;
@@ -300,7 +300,7 @@ export default function DiscrepancyReportPage() {
           )}
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200">
+          <ScrollableTable maxHeight="calc(100vh-380px)" className="border-b">
             <Table>
               <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                 <TableRow>
@@ -436,7 +436,7 @@ export default function DiscrepancyReportPage() {
                 )}
               </TableBody>
             </Table>
-          </div>
+          </ScrollableTable>
         </CardContent>
       </Card>
 

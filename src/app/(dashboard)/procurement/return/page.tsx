@@ -31,6 +31,7 @@ import { useRef, useMemo } from "react"
 import { DebitNotePrintTemplate } from "@/components/procurement/DebitNotePrintTemplate"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table"
+import { ScrollableTable } from "@/components/ui/scrollable-table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -544,7 +545,7 @@ export default function PurchaseReturn() {
               </div>
             </div>
           ) : (
-            <div className="overflow-auto max-h-[calc(100vh-380px)] border-b scrollbar-thin scrollbar-thumb-slate-200">
+            <ScrollableTable maxHeight="calc(100vh-380px)" className="border-b">
               <Table>
                 <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                   <TableRow>
@@ -680,7 +681,7 @@ export default function PurchaseReturn() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </ScrollableTable>
           )}
         </CardContent>
       </Card>

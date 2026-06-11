@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ScrollableTable } from "@/components/ui/scrollable-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -250,7 +251,8 @@ export default function StaffClient({
               {staff.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground text-sm">No staff members found.</div>
               ) : (
-                <Table>
+                <ScrollableTable minWidth="1000px">
+                  <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead>Name</TableHead>
@@ -279,6 +281,7 @@ export default function StaffClient({
                     ))}
                   </TableBody>
                 </Table>
+              </ScrollableTable>
               )}
             </CardContent>
           </Card>

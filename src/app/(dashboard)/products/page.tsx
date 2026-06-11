@@ -44,7 +44,7 @@ import {
   DialogDescription,
   DialogFooter 
 } from "@/components/ui/dialog"
-
+import { ScrollableTable } from "@/components/ui/scrollable-table"
 interface Product {
   id: string
   model_name: string
@@ -335,8 +335,8 @@ export default function ProductsPage() {
           )}
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-            <table className="w-full text-xs min-w-[1200px]">
+          <ScrollableTable minWidth="1200px">
+            <table className="w-full text-xs">
               <thead className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm border-b">
                 <tr>
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Model Name</th>
@@ -433,7 +433,7 @@ export default function ProductsPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollableTable>
         </CardContent>
       </Card>
 
