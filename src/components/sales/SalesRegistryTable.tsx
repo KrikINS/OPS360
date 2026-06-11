@@ -141,8 +141,7 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
                 <TableHead className="font-bold w-[100px]">Date</TableHead>
                 <TableHead className="font-bold">Customer</TableHead>
                 <TableHead className="font-bold text-right">Amount</TableHead>
-                <TableHead className="font-bold">Items Sold</TableHead>
-                <TableHead className="font-bold">Serial Numbers</TableHead>
+
                 <TableHead className="font-bold">Branch</TableHead>
                 <TableHead className="font-bold">Mode</TableHead>
                 <TableHead className="font-bold text-right sticky right-0 bg-slate-50/50 z-20 w-[120px] shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">Actions</TableHead>
@@ -191,32 +190,7 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
                        'Paid'}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5 max-w-[180px]">
-                      {sale.items_sold?.slice(0, 3).map((item, idx) => (
-                        <div key={idx} className="text-[10px] font-bold text-slate-700 truncate" title={item.name}>
-                          {item.quantity}x {item.name}
-                        </div>
-                      ))}
-                      {sale.items_sold && sale.items_sold.length > 3 && (
-                        <div className="text-[9px] font-black text-primary uppercase mt-0.5">+{sale.items_sold.length - 3} More Items</div>
-                      )}
-                      {(!sale.items_sold || sale.items_sold.length === 0) && <span className="text-slate-300">---</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5 max-w-[180px]">
-                      {sale.items_sold?.slice(0, 3).map((item, idx) => (
-                        <div key={idx} className="text-[10px] font-mono text-slate-400 truncate" title={item.serial_number}>
-                          {item.serial_number || '---'}
-                        </div>
-                      ))}
-                      {sale.items_sold && sale.items_sold.length > 3 && (
-                        <div className="text-[9px] font-mono text-slate-300 uppercase mt-0.5">...</div>
-                      )}
-                      {(!sale.items_sold || sale.items_sold.length === 0) && <span className="text-slate-300">---</span>}
-                    </div>
-                  </TableCell>
+
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />

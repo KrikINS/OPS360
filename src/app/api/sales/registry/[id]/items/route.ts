@@ -26,17 +26,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         name: products.model_name,
         hsn_code: products.hsn_code,
         gst_rate: products.gst_rate,
-        serial_number: sql<string>`string_agg(${inventory.serial_number}, ', ' ORDER BY ${inventory.created_at} ASC)`.as('serial_number'),
+        // Serials for THIS line only (joined on invoice_item_id), still sold (not returned)
+        serial_number: sql<string>`string_agg(CASE WHEN ${inventory.status} = 'Sold' THEN ${inventory.serial_number} END, ', ' ORDER BY ${inventory.created_at} ASC)`.as('serial_number'),
+        // Count of units on this line still sold vs returned — drives per-line return status
+        units_total: sql<number>`COUNT(${inventory.id})`.as('units_total'),
+        units_returned: sql<number>`COUNT(${inventory.id}) FILTER (WHERE ${inventory.status} = 'Returned')`.as('units_returned'),
       })
       .from(invoice_items)
       .leftJoin(products, eq(invoice_items.product_id, products.id))
       .leftJoin(
         inventory,
-        and(
-          eq(inventory.invoice_id, invoice_items.invoice_id),
-          eq(inventory.product_id, invoice_items.product_id),
-          eq(inventory.status, 'Sold')
-        )
+        eq(inventory.invoice_item_id, invoice_items.id)
       )
       .where(eq(invoice_items.invoice_id, id))
       .groupBy(invoice_items.id, products.id)

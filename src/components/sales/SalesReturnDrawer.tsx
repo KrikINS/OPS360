@@ -62,6 +62,16 @@ export function SalesReturnDrawer({
   const [refundMethod, setRefundMethod]   = useState<RefundMethod | null>(null)
   const [selected, setSelected]           = useState<Map<string, number>>(new Map())
   // Map<invoiceItemId, returnQty>
+  const [dispositions, setDispositions]   = useState<Map<string, 'resellable' | 'damaged' | 'scrap'>>(new Map())
+  // Map<invoiceItemId, disposition>
+
+  const setDisposition = (itemId: string, value: 'resellable' | 'damaged' | 'scrap') => {
+    setDispositions(prev => {
+      const next = new Map(prev)
+      next.set(itemId, value)
+      return next
+    })
+  }
 
   // Fetch items on open
   useEffect(() => {
@@ -70,6 +80,7 @@ export function SalesReturnDrawer({
     setLoading(true)
     setItems([])
     setSelected(new Map())
+    setDispositions(new Map())
     setReason('')
     setRefundMethod(null)
     setToast(null)
@@ -147,6 +158,7 @@ export function SalesReturnDrawer({
       cgst:          i.cgstPerUnit,
       sgst:          i.sgstPerUnit,
       igst:          i.igstPerUnit,
+      disposition:   dispositions.get(i.invoiceItemId) ?? 'resellable' as const,
     }))
 
     const result = await processReturn({
@@ -285,7 +297,8 @@ export function SalesReturnDrawer({
                         </div>
 
                         {isChecked && (
-                          <div
+                          <>
+                            <div
                             className="flex items-center justify-between mt-3"
                             onClick={e => e.stopPropagation()}
                           >
@@ -319,6 +332,19 @@ export function SalesReturnDrawer({
                               <p className="font-bold text-sm text-orange-700">{fmtINR(lineTotal)}</p>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2 mt-3 pt-3 border-t" onClick={e => e.stopPropagation()}>
+                            <span className="text-xs text-slate-500">Condition / disposition:</span>
+                            <select
+                              value={dispositions.get(item.invoiceItemId) ?? 'resellable'}
+                              onChange={e => setDisposition(item.invoiceItemId, e.target.value as 'resellable' | 'damaged' | 'scrap')}
+                              className="h-7 text-xs border border-slate-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-orange-400"
+                            >
+                              <option value="resellable">Resellable — quarantine for inspection</option>
+                              <option value="damaged">Damaged — quarantine / vendor claim</option>
+                              <option value="scrap">Scrap — write off (no restock)</option>
+                            </select>
+                          </div>
+                          </>
                         )}
                       </div>
                     </div>

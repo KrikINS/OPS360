@@ -292,6 +292,7 @@ export async function processReturn(input: {
     cgst: number
     sgst: number
     igst: number
+    disposition?: 'resellable' | 'damaged' | 'scrap'
   }>
 }) {
   const session = await getServerSession(authOptions)
@@ -302,7 +303,6 @@ export async function processReturn(input: {
     return { success: false as const, error: 'Insufficient permission: manager required' }
   }
 
-  // Fetch original invoice
   const invRows = await db.execute(
     sql`SELECT branch_id, customer_id, status, total_amount, subtotal, cgst, sgst, igst
         FROM sales_invoices WHERE id = ${input.invoiceId}::uuid`
@@ -325,7 +325,7 @@ export async function processReturn(input: {
     return { success: false as const, error: 'Invoice already reversed' }
   }
 
-  // Calculate return totals from input items
+  // Return totals
   const totalRefund    = input.items.reduce((s, i) => s + i.unitPrice * i.qty, 0)
   const returnCGST     = input.items.reduce((s, i) => s + i.cgst * i.qty, 0)
   const returnSGST     = input.items.reduce((s, i) => s + i.sgst * i.qty, 0)
@@ -333,39 +333,49 @@ export async function processReturn(input: {
   const returnSubtotal = totalRefund - returnCGST - returnSGST - returnIGST
   const returnCOGS     = input.items.reduce((s, i) => s + (i.costPrice ?? 0) * i.qty, 0)
 
+  // COGS split by disposition: resellable/damaged restore the asset (Quarantine),
+  // scrap writes it off. Refund/tax lines are unaffected by disposition.
+  const restoreCOGS  = input.items
+    .filter(i => (i.disposition ?? 'resellable') !== 'scrap')
+    .reduce((s, i) => s + (i.costPrice ?? 0) * i.qty, 0)
+  const writeoffCOGS = input.items
+    .filter(i => (i.disposition ?? 'resellable') === 'scrap')
+    .reduce((s, i) => s + (i.costPrice ?? 0) * i.qty, 0)
+
   let returnId = ''
+  let invoiceFullyReturned = false
 
   try {
     await db.transaction(async (tx) => {
-      // Restore inventory units
+      // Restore/dispose inventory units — KEEP invoice_id & invoice_item_id intact
       for (const item of input.items) {
+        const disp = item.disposition ?? 'resellable'
+        const newStatus = disp === 'scrap' ? 'Scrapped' : 'Quarantine'
+
         if (item.inventoryId) {
-          // Serialised unit — restore directly by ID
           await tx.execute(sql`
             UPDATE inventory
-            SET status = 'Available', invoice_id = null, updated_at = now()
+            SET status = ${newStatus}, updated_at = now()
             WHERE id = ${item.inventoryId}::uuid
           `)
         } else {
-          // Non-serialised — restore FIFO units matching invoice + product
+          // Non-serialised — match this line's sold units via invoice_item_id
           await tx.execute(sql`
             WITH units AS (
               SELECT id FROM inventory
-              WHERE product_id = ${item.productId}::uuid
-                AND branch_id  = ${invoice.branch_id}::uuid
-                AND status     = 'Sold'
-                AND invoice_id = ${input.invoiceId}::uuid
+              WHERE invoice_item_id = ${item.invoiceItemId}::uuid
+                AND status = 'Sold'
               LIMIT ${item.qty}
               FOR UPDATE
             )
             UPDATE inventory
-            SET status = 'Available', invoice_id = null, updated_at = now()
+            SET status = ${newStatus}, updated_at = now()
             WHERE id IN (SELECT id FROM units)
           `)
         }
       }
 
-      // Insert return header
+      // Return header
       const returnRows = await tx.execute(sql`
         INSERT INTO sales_returns
           (invoice_id, branch_id, created_by, reason, refund_method, refund_amount)
@@ -382,12 +392,13 @@ export async function processReturn(input: {
       const returnData = ((returnRows as unknown as { rows?: { id: string }[] }).rows ?? returnRows) as { id: string }[]
       returnId = returnData[0].id
 
-      // Insert return line items
+      // Return line items (with disposition)
       for (const item of input.items) {
+        const disp = item.disposition ?? 'resellable'
         await tx.execute(sql`
           INSERT INTO sales_return_items
             (return_id, invoice_item_id, product_id, inventory_id,
-             qty, unit_price, cost_price, cgst, sgst, igst)
+             qty, unit_price, cost_price, cgst, sgst, igst, disposition)
           VALUES (
             ${returnId}::uuid,
             ${item.invoiceItemId}::uuid,
@@ -398,19 +409,28 @@ export async function processReturn(input: {
             ${item.costPrice != null ? String(item.costPrice) : null},
             ${String(item.cgst)},
             ${String(item.sgst)},
-            ${String(item.igst)}
+            ${String(item.igst)},
+            ${disp}
           )
         `)
       }
 
-      // Mark invoice as returned
+      // Determine partial vs full: count remaining Sold units on this invoice
+      const remainingRows = await tx.execute(sql`
+        SELECT COUNT(*)::int AS cnt FROM inventory
+        WHERE invoice_id = ${input.invoiceId}::uuid AND status = 'Sold'
+      `)
+      const remaining = (((remainingRows as unknown as { rows?: { cnt: number }[] }).rows ?? remainingRows) as { cnt: number }[])[0]?.cnt ?? 0
+      invoiceFullyReturned = remaining === 0
+
       await tx.execute(sql`
-        UPDATE sales_invoices SET status = 'returned'
+        UPDATE sales_invoices
+        SET status = ${invoiceFullyReturned ? 'returned' : 'partially_returned'}
         WHERE id = ${input.invoiceId}::uuid
       `)
     })
 
-    // Reverse journal (non-blocking)
+    // Reverse journal (blocking)
     try {
       const { getCashAccountCode, createJournalEntry } = await import('@/actions/finance')
 
@@ -420,7 +440,7 @@ export async function processReturn(input: {
       } else if (input.refundMethod === 'bank') {
         refundAccountCode = '1020'
       } else {
-        refundAccountCode = '2050' // Loyalty Liability credited = points owed back to customer
+        refundAccountCode = '2050'
       }
 
       const reverseLines: Array<{ accountCode: string; debit?: number; credit?: number; description?: string }> = [
@@ -432,7 +452,8 @@ export async function processReturn(input: {
       if (returnIGST > 0) reverseLines.push({ accountCode: '2040', debit: returnIGST, description: 'IGST payable reversed' })
       if (returnCOGS > 0) {
         reverseLines.push({ accountCode: '5010', credit: returnCOGS, description: 'COGS reversed — goods returned' })
-        reverseLines.push({ accountCode: '1040', debit: returnCOGS, description: 'Inventory asset restored' })
+        if (restoreCOGS > 0) reverseLines.push({ accountCode: '1040', debit: restoreCOGS, description: 'Inventory restored (quarantine)' })
+        if (writeoffCOGS > 0) reverseLines.push({ accountCode: '5090', debit: writeoffCOGS, description: 'Inventory written off (scrap)' })
       }
 
       const journalEntry = await createJournalEntry({
@@ -454,13 +475,12 @@ export async function processReturn(input: {
       console.error('[RETURN] Reverse journal FAILED after return committed:', journalErr)
       return {
         success: false as const,
-        error: 'Return processed and inventory restored, but the reversal journal failed — the accounting entry was not created. Contact finance before issuing further returns on this invoice.',
+        error: 'Return processed but the reversal journal failed — the accounting entry was not created. Contact finance before issuing further returns on this invoice.',
         returnId,
         journalFailed: true as const,
       }
     }
 
-    // Loyalty points refund (non-blocking) — only if refund method is loyalty_points
     if (input.refundMethod === 'loyalty_points' && invoice.customer_id) {
       try {
         const { earnPoints } = await import('@/actions/loyalty')
@@ -475,7 +495,7 @@ export async function processReturn(input: {
       }
     }
 
-    return { success: true as const, returnId, refundAmount: totalRefund }
+    return { success: true as const, returnId, refundAmount: totalRefund, fullyReturned: invoiceFullyReturned }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
   }
