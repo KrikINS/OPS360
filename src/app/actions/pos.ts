@@ -169,19 +169,18 @@ export async function getInvoiceItemsForReturnAction(invoiceId: string) {
       JOIN products p ON p.id = ii.product_id
       LEFT JOIN LATERAL (
         SELECT landed_cost FROM inventory
-        WHERE invoice_id = ${invoiceId}::uuid
-          AND product_id = ii.product_id
+        WHERE invoice_item_id = ii.id
           AND status = 'Sold'
         LIMIT 1
       ) inv_cost ON true
       LEFT JOIN LATERAL (
         SELECT id, serial_number FROM inventory
-        WHERE invoice_id = ${invoiceId}::uuid
-          AND product_id = ii.product_id
+        WHERE invoice_item_id = ii.id
           AND status = 'Sold'
         LIMIT 1
       ) inv_sn ON true
       WHERE ii.invoice_id = ${invoiceId}::uuid
+        AND EXISTS (SELECT 1 FROM inventory s WHERE s.invoice_item_id = ii.id AND s.status = 'Sold')
     `)
 
     const rows = ((res as unknown as { rows?: unknown[] }).rows ?? res) as {

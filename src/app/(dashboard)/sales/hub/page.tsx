@@ -175,6 +175,7 @@ export default function SalesRegistryPage() {
           onExport={handleExport} 
           canExport={canExport} 
           exporting={exporting}
+          onRefresh={fetchSales}
         />
       )}
     </div>

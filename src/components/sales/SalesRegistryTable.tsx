@@ -49,9 +49,10 @@ interface SaleRegistryTableProps {
   onExport?: () => void;
   canExport?: boolean;
   exporting?: boolean;
+  onRefresh?: () => void;
 }
 
-export function SalesRegistryTable({ sales, onPrint, onExport, canExport, exporting }: SaleRegistryTableProps) {
+export function SalesRegistryTable({ sales, onPrint, onExport, canExport, exporting, onRefresh }: SaleRegistryTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null)
@@ -242,7 +243,7 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
         invoiceNumber={selectedInvoiceNumber || undefined}
         invoiceStatus={selectedSaleStatus}
         onClose={() => setDrawerOpen(false)}
-        onSuccess={() => setDrawerOpen(false)}
+        onSuccess={() => { setDrawerOpen(false); onRefresh?.() }}
       />
 
       <CustomerHistoryDrawer

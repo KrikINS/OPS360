@@ -220,7 +220,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <Button 
                   className="flex-1 h-12 bg-[#001529] dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/10" 
                   onClick={handleCheckout} 
-                  disabled={status === 'loading' || (paymentMethod === 'cash' && changeDue < 0 && parseFloat(receivedAmount) > 0)}
+                  disabled={status === 'loading' || (paymentMethod === 'cash' && (!receivedAmount || parseFloat(receivedAmount) < totals.grandTotal))}
                 >
                   {status === 'loading' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                   Seal Invoice
