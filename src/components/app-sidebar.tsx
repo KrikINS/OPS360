@@ -188,7 +188,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
             <img
               src={logoUrl || "/ethan-logo-final.png"}
               alt={companyName}
-              className={cn("object-contain transition-transform duration-300", isCollapsed ? "scale-110 p-1 w-full h-full" : "max-h-[80px] w-auto max-w-full")}
+              className={cn("object-contain transition-transform duration-300", isCollapsed ? "scale-110 p-1 w-full h-full" : "max-h-[64px] w-auto max-w-full")}
             />
           </div>
         </div>
