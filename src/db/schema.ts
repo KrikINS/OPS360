@@ -17,6 +17,27 @@ export const employees = pgTable("employees", {
   phone: text("phone"),
   status: text("status").default('active').notNull(),
   created_at: timestamp("created_at").defaultNow(),
+  designation:     text("designation"),
+  department:      text("department"),
+  date_of_joining: date("date_of_joining"),
+  branch_id:       uuid("branch_id").references(() => branches.id),
+});
+
+export const employee_salary_structures = pgTable('employee_salary_structures', {
+  id:               uuid('id').primaryKey().defaultRandom(),
+  employee_id:      uuid('employee_id').notNull().references(() => employees.id),
+  effective_from:   date('effective_from').notNull(),
+  basic:            numeric('basic').notNull(),
+  hra:              numeric('hra').notNull().default('0'),
+  gross:            numeric('gross').notNull(),
+  pf_applicable:    boolean('pf_applicable').notNull().default(false),
+  pf_employee:      numeric('pf_employee').notNull().default('0'),
+  professional_tax: numeric('professional_tax').notNull().default('0'),
+  tds_monthly:      numeric('tds_monthly').notNull().default('0'),
+  net:              numeric('net').notNull(),
+  is_active:        boolean('is_active').notNull().default(true),
+  created_by:       uuid('created_by').notNull(),
+  created_at:       timestamp('created_at').defaultNow(),
 });
 
 export const profiles = pgTable("profiles", {
@@ -582,4 +603,9 @@ export const payslips = pgTable('payslips', {
   tds:            numeric('tds').notNull().default('0'),
   net:            numeric('net').notNull(),
   notes:          text('notes'),
+  basic:                numeric('basic').notNull().default('0'),
+  hra:                  numeric('hra').notNull().default('0'),
+  pf_employee:          numeric('pf_employee').notNull().default('0'),
+  professional_tax:     numeric('professional_tax').notNull().default('0'),
+  salary_structure_id:  uuid('salary_structure_id').references(() => employee_salary_structures.id),
 })
