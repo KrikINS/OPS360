@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollableTable } from "@/components/ui/scrollable-table"
@@ -10,12 +10,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { Users, Clock, Activity, Plus, Wallet, Trash2, Eye, ChevronDown, ChevronRight, Loader2, CheckCircle2, AlertTriangle } from "lucide-react"
+import { Users, Clock, Activity, Plus, Wallet, Trash2, Eye, ChevronDown, ChevronRight, Loader2, CheckCircle2, AlertTriangle, Printer } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useSearchParams, useRouter } from "next/navigation"
 import type { StaffRow } from "@/actions/hr"
 import { processPayrollRun, getPayrollRuns, getPayslips, getEmployeesWithStructures, setSalaryStructure, upsertEmployeeDetails } from "@/actions/hr"
 import { fmtINR } from "@/lib/utils"
+
+import { PayslipTemplate } from '@/components/hr/PayslipTemplate'
+import { useBranding } from '@/providers/GlobalBrandingProvider'
 
 import ClockWidget from "@/components/hr/ClockWidget"
 import ActivityClient from "./activity/client"
@@ -79,7 +82,11 @@ type Payslip = {
   payroll_run_id: string
   staff_name: string
   staff_id: string | null
+  basic: string | null
+  hra: string | null
   gross: string
+  pf_employee: string | null
+  professional_tax: string | null
   tds: string
   net: string
   notes: string | null
@@ -107,6 +114,7 @@ export default function StaffClient({
   const router = useRouter()
   const searchParams = useSearchParams()
   const activeTab = searchParams.get("tab") || "registry"
+  const { companyName } = useBranding()
 
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -210,6 +218,90 @@ export default function StaffClient({
       if (res.success) setRunPayslips(prev => ({ ...prev, [runId]: res.payslips as unknown as Payslip[] }))
       setLoadingSlips(null)
     }
+  }
+
+  const printPayslip = (slip: Payslip, run: { payPeriod: string; paymentDate: string; paymentMethod: string; branchName: string | null }) => {
+    const printWindow = window.open('', '_blank', 'width=900,height=700')
+    if (!printWindow) { alert('Please allow popups to print payslips'); return }
+    const data = {
+      staffName:       slip.staff_name,
+      designation:     null,
+      department:      null,
+      payPeriod:       run.payPeriod,
+      paymentDate:     run.paymentDate,
+      paymentMethod:   run.paymentMethod,
+      branchName:      run.branchName,
+      basic:           Number(slip.basic ?? 0),
+      hra:             Number(slip.hra ?? 0),
+      gross:           Number(slip.gross),
+      pfEmployee:      Number(slip.pf_employee ?? 0),
+      professionalTax: Number(slip.professional_tax ?? 0),
+      tds:             Number(slip.tds),
+      net:             Number(slip.net),
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html><html><head>
+      <title>Payslip — ${data.staffName} — ${data.payPeriod}</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; color: #1e293b; font-size: 12px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #001529; padding-bottom: 12px; margin-bottom: 16px; }
+        .company { font-size: 18px; font-weight: 900; color: #001529; }
+        .title { font-size: 20px; font-weight: 900; color: #001529; text-align: right; letter-spacing: 2px; text-transform: uppercase; }
+        .employee-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; }
+        .emp-name { font-size: 16px; font-weight: 800; color: #001529; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 5px 8px; text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; }
+        .th-earn { background: #001529; border-radius: 4px 4px 0 0; }
+        .th-ded { background: #dc2626; border-radius: 4px 4px 0 0; }
+        td { padding: 4px 8px; border-bottom: 1px solid #f1f5f9; }
+        .total-row td { font-weight: 800; background: #f8fafc; }
+        .net-box { background: #001529; color: #fff; border-radius: 6px; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .net-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+        .net-amount { font-size: 24px; font-weight: 900; font-family: monospace; }
+        .footer { border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; margin-top: 16px; }
+        .right { text-align: right; font-weight: 700; color: #475569; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <div class="header">
+        <div><div class="company">${companyName || 'OPS360'}</div><div style="font-size:9px;color:#64748b;margin-top:2px"></div></div>
+        <div><div class="title">Pay Slip</div><div style="font-size:10px;color:#64748b;text-align:right;margin-top:2px">Period: <strong>${data.payPeriod}</strong></div><div style="font-size:10px;color:#64748b;text-align:right">Date: <strong>${data.paymentDate}</strong></div></div>
+      </div>
+      <div class="employee-box">
+        <div class="emp-name">${data.staffName}</div>
+        ${data.designation ? `<div style="font-size:10px;color:#475569">${data.designation}</div>` : ''}
+        <div style="font-size:10px;color:#64748b;margin-top:4px">Payment Mode: <strong style="text-transform:capitalize">${data.paymentMethod}</strong></div>
+      </div>
+      <div class="grid">
+        <div>
+          <table><thead><tr><th class="th-earn" colspan="2">Earnings</th></tr></thead><tbody>
+            <tr><td>Basic Salary</td><td style="text-align:right;font-weight:600">₹${data.basic.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+            <tr><td>HRA</td><td style="text-align:right;font-weight:600">₹${data.hra.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+            <tr class="total-row"><td>Gross Earnings</td><td style="text-align:right">₹${data.gross.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+          </tbody></table>
+        </div>
+        <div>
+          <table><thead><tr><th class="th-ded" colspan="2">Deductions</th></tr></thead><tbody>
+            ${data.pfEmployee > 0 ? `<tr><td>PF (Employee)</td><td style="text-align:right;font-weight:600">₹${data.pfEmployee.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>` : ''}
+            ${data.professionalTax > 0 ? `<tr><td>Professional Tax</td><td style="text-align:right;font-weight:600">₹${data.professionalTax.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>` : ''}
+            ${data.tds > 0 ? `<tr><td>TDS</td><td style="text-align:right;font-weight:600">₹${data.tds.toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>` : ''}
+            ${(data.pfEmployee + data.professionalTax + data.tds) === 0 ? `<tr><td colspan="2" style="color:#94a3b8;font-style:italic">No deductions</td></tr>` : ''}
+            <tr class="total-row" style="background:#fff5f5"><td style="color:#dc2626">Total Deductions</td><td style="text-align:right;color:#dc2626">₹${(data.pfEmployee+data.professionalTax+data.tds).toLocaleString('en-IN', {minimumFractionDigits:2})}</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div class="net-box">
+        <div class="net-label">Net Pay</div>
+        <div class="net-amount">₹${data.net.toLocaleString('en-IN', {minimumFractionDigits:2})}</div>
+      </div>
+      <div class="footer">
+        <div>Computer-generated payslip. No signature required.</div>
+        <div class="right">AUTHORIZED SIGNATORY<br><br>____________________</div>
+      </div>
+      <script>window.onload = function() { window.print(); }</script>
+      </body></html>
+    `)
+    printWindow.document.close()
   }
 
   const [autoFilling, setAutoFilling] = useState(false)
@@ -724,11 +816,18 @@ export default function StaffClient({
                                       <span className="text-right">Net</span>
                                     </div>
                                     {(runPayslips[run.id] ?? []).map(slip => (
-                                      <div key={slip.id} className="grid grid-cols-4 gap-2 text-sm py-1">
+                                      <div key={slip.id} className="grid grid-cols-4 gap-2 text-sm py-1 items-center">
                                         <span className="font-medium">{slip.staff_name}</span>
                                         <span className="text-right tabular-nums">{fmtINR(Number(slip.gross))}</span>
                                         <span className="text-right tabular-nums text-amber-700">{fmtINR(Number(slip.tds))}</span>
-                                        <span className="text-right tabular-nums font-semibold text-green-700">{fmtINR(Number(slip.net))}</span>
+                                        <div className="text-right tabular-nums font-semibold text-green-700 flex items-center justify-end gap-2">
+                                          {fmtINR(Number(slip.net))}
+                                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-slate-400 hover:text-slate-700"
+                                            onClick={(e) => { e.stopPropagation(); printPayslip(slip, runs.find(r => r.id === run.id)!); }}
+                                            title="Print payslip">
+                                            <Printer className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
