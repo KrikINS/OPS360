@@ -99,7 +99,7 @@ export default async function AccountingPage({
       fyEnd={fyEnd}
       marginData={marginResult.success ? marginResult : null}
       branchList={branchesResult.success ? branchesResult.branches : []}
-      apAgeing={apAgeingResult.success ? apAgeingResult : null}
+      apAgeing={(apAgeingResult.success && apAgeingResult.rows && apAgeingResult.totals) ? { rows: apAgeingResult.rows, totals: apAgeingResult.totals } : null}
     />
   )
 }

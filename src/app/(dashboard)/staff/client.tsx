@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollableTable } from "@/components/ui/scrollable-table"
@@ -136,8 +136,10 @@ export default function StaffClient({
   const [runPayslips, setRunPayslips]       = useState<Record<string, Payslip[]>>({})
   const [loadingSlips, setLoadingSlips]     = useState<string | null>(null)
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [employees, setEmployees] = useState<any[]>([])
   const [salaryDrawerOpen, setSalaryDrawerOpen] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null)
   const [salaryForm, setSalaryForm] = useState({ 
     basic: '', hra: '', pfApplicable: false, tdsMonthly: '', effectiveFrom: '',
@@ -152,7 +154,8 @@ export default function StaffClient({
   }
 
   useEffect(() => {
-    loadEmployees()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void loadEmployees()
   }, [])
 
   const openSalaryDrawer = (emp: any) => {

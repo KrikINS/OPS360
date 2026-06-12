@@ -722,8 +722,8 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       if (!resData.grandTotal || Number(resData.grandTotal) <= 0 || !resData.items || resData.items.length === 0) {
         throw new Error("Checkout failed, invoice total is 0 or no items were recorded. Check connection.")
       }
-      setInvoiceNumber(resData.invoiceNumber ?? resData.invoice_number ?? '')
-      setToast({ message: `Sale completed: ${resData.invoiceNumber ?? resData.invoice_number ?? ''}`, type: 'success' })
+      setInvoiceNumber(resData.invoice_number ?? '')
+      setToast({ message: `Sale completed: ${resData.invoice_number ?? ''}`, type: 'success' })
 
       // --- WARRANTY AUTO-REGISTRATION ---
       try {

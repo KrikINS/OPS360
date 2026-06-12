@@ -28,7 +28,6 @@ export default async function ActivityPage() {
       staff={staffResult.success ? staffResult.staff : []}
       isAdmin={isAdmin}
       isManager={isManager}
-      currentUserId={session.user.id}
     />
   )
 }

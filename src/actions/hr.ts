@@ -6,7 +6,6 @@ import { db } from '@/db/client'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import {
   profiles,
-  user_branch_access,
   branches,
   attendance_records,
   attendance_corrections,
@@ -50,6 +49,7 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
       FROM profiles p
       WHERE p.employee_id IS NULL
     `);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const profilesToBackfill = (missingProfiles as any).rows ?? missingProfiles;
     
     if (profilesToBackfill && profilesToBackfill.length > 0) {
@@ -73,6 +73,18 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
     }
     // ----------------------------------
 
+    const conditions = [eq(employees.status, 'active')];
+
+    if (!isAdmin) {
+      const effectiveBranchId = await getEffectiveBranchId(session);
+      if (!effectiveBranchId) {
+        return { success: false as const, error: 'No branch assigned to your account' };
+      }
+      conditions.push(eq(employees.branch_id, effectiveBranchId));
+    } else if (input?.branchId) {
+      conditions.push(eq(employees.branch_id, input.branchId));
+    }
+
     const query = db
       .select({
         employeeId: employees.id,
@@ -87,28 +99,8 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
       .from(employees)
       .leftJoin(profiles, eq(employees.id, profiles.employee_id))
       .leftJoin(branches, eq(employees.branch_id, branches.id))
-      .where(eq(employees.status, 'active'))
+      .where(and(...conditions))
       .orderBy(employees.first_name)
-
-    if (!isAdmin) {
-      const effectiveBranchId = await getEffectiveBranchId(session);
-      if (!effectiveBranchId) {
-        return { success: false as const, error: 'No branch assigned to your account' };
-      }
-      query.where(
-        and(
-          eq(employees.status, 'active'),
-          eq(employees.branch_id, effectiveBranchId)
-        )
-      )
-    } else if (input?.branchId) {
-      query.where(
-        and(
-          eq(employees.status, 'active'),
-          eq(employees.branch_id, input.branchId)
-        )
-      )
-    }
 
     const rawRows = await query
 
@@ -136,7 +128,7 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
   }
 }
 
-export async function createNonErpStaffMember(data: { firstName: string, lastName: string, email?: string, phone?: string }) {
+export async function createNonErpStaffMember(data: { firstName: string, lastName: string, email?: string, phone?: string, designation?: string, department?: string, dateOfJoining?: string, branchId?: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized' }
@@ -156,6 +148,10 @@ export async function createNonErpStaffMember(data: { firstName: string, lastNam
         last_name: data.lastName,
         email: data.email ?? null,
         phone: data.phone ?? null,
+        designation: data.designation ?? null,
+        department: data.department ?? null,
+        date_of_joining: data.dateOfJoining ?? null,
+        branch_id: data.branchId ?? null,
         status: 'active'
       })
       .returning()
@@ -847,7 +843,7 @@ export async function upsertEmployeeDetails(input: {
     return { success: false as const, error: 'Manager role required' }
   }
   try {
-    const updateData: any = {}
+    const updateData: Partial<typeof employees.$inferInsert> = {}
     if (input.designation !== undefined) updateData.designation = input.designation
     if (input.department !== undefined) updateData.department = input.department
     if (input.dateOfJoining !== undefined) updateData.date_of_joining = input.dateOfJoining

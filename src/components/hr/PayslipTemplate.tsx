@@ -25,7 +25,7 @@ interface PayslipTemplateProps {
 }
 
 export const PayslipTemplate = forwardRef<HTMLDivElement, PayslipTemplateProps>(({ data }, ref) => {
-  const { companyName, address, gstin, logoUrl } = useBranding()
+  const { companyName, billing_address, tax_id, logoUrl } = useBranding()
   const totalEarnings = data.gross
   const totalDeductions = data.pfEmployee + data.professionalTax + data.tds
 
@@ -34,10 +34,13 @@ export const PayslipTemplate = forwardRef<HTMLDivElement, PayslipTemplateProps>(
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8mm', paddingBottom: '4mm', borderBottom: '2px solid #001529' }}>
         <div>
-          {logoUrl && <img src={logoUrl} alt="logo" style={{ height: '32px', marginBottom: '4px' }} />}
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="logo" style={{ height: '32px', marginBottom: '4px' }} />
+          )}
           <div style={{ fontSize: '16px', fontWeight: 900, color: '#001529', letterSpacing: '-0.5px' }}>{companyName}</div>
-          <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>{address}</div>
-          {gstin && <div style={{ fontSize: '9px', color: '#64748b' }}>GSTIN: {gstin}</div>}
+          <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>{billing_address}</div>
+          {tax_id && <div style={{ fontSize: '9px', color: '#64748b' }}>GSTIN: {tax_id}</div>}
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '18px', fontWeight: 900, color: '#001529', letterSpacing: '2px', textTransform: 'uppercase' }}>Pay Slip</div>
