@@ -21,7 +21,7 @@ import {
   payslips,
   employee_salary_structures,
 } from '@/db/schema'
-import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { getCashAccountCode, createJournalEntry } from '@/actions/finance'
 
 export type StaffRow = {
