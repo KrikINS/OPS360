@@ -140,6 +140,7 @@ interface PosContextType {
     cgst: number
     sgst: number
     grandTotal: number
+    netPayable: number
   }
   isLocked: boolean
   printInvoiceId: string | null
@@ -423,9 +424,10 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       totalGst,
       cgst,
       sgst,
-      grandTotal
+      grandTotal,
+      netPayable: Math.max(0, grandTotal - loyaltyRedeem)
     }
-  }, [cart])
+  }, [cart, loyaltyRedeem])
 
   const isCartValid = useMemo(() => {
     return cart.every(item => {

@@ -15,7 +15,7 @@ import { fmtINR } from '@/lib/utils'
 type CheckoutStatus = 'idle' | 'loading' | 'success' | 'error'
 
 export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenChange: (val: boolean) => void }) {
-  const { totals, executeCheckout, cart } = usePos()
+  const { totals, executeCheckout, cart, loyaltyRedeem } = usePos()
   const [status, setStatus] = useState<CheckoutStatus>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [invoiceId, setInvoiceId] = useState<string | null>(null)
@@ -64,8 +64,8 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
   const changeDue = useMemo(() => {
     const received = parseFloat(receivedAmount) || 0
-    return Math.max(0, received - totals.grandTotal)
-  }, [receivedAmount, totals.grandTotal])
+    return Math.max(0, received - totals.netPayable)
+  }, [receivedAmount, totals.netPayable])
 
   const handleCheckout = async () => {
     setStatus('loading')
@@ -207,9 +207,17 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                    </div>
                  </div>
 
-                  <div className="flex justify-between items-end">
-                    <span className="text-xs uppercase font-black text-slate-400 dark:text-slate-500 tracking-widest">Grand Total</span>
-                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter font-mono">{fmtINR(Math.round(totals.grandTotal))}</span>
+                  {loyaltyRedeem > 0 && (
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-xs font-semibold text-purple-600">Loyalty Redeemed</span>
+                      <span className="text-sm font-bold text-purple-600">-{fmtINR(loyaltyRedeem)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-2 border-t mt-2 border-slate-100 dark:border-white/5">
+                    <span className="text-sm font-black uppercase tracking-widest text-slate-500">Grand Total</span>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter font-mono">
+                      {fmtINR(Math.round(totals.netPayable))}
+                    </span>
                   </div>
               </div>
             </div>
@@ -220,7 +228,7 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <Button 
                   className="flex-1 h-12 bg-[#001529] dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/10" 
                   onClick={handleCheckout} 
-                  disabled={status === 'loading' || (paymentMethod === 'cash' && (!receivedAmount || parseFloat(receivedAmount) < totals.grandTotal))}
+                  disabled={status === 'loading' || (paymentMethod === 'cash' && (!receivedAmount || parseFloat(receivedAmount) < totals.netPayable))}
                 >
                   {status === 'loading' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                   Seal Invoice
