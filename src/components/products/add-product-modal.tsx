@@ -24,6 +24,7 @@ import { generateProductCode } from "@/lib/product-coding"
 import { getNextSequenceAction } from "@/app/actions/products"
 import { getGlobalMastersAction } from "@/app/actions/masters"
 import { round2 } from "@/lib/utils"
+import { TRACKING_TYPES } from "@/lib/tracking-types"
 
 interface AddProductModalProps {
   open: boolean
@@ -50,6 +51,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     gst_rate: "18",
     warranty_months: "12",
     min_stock_level: "0",
+    tracking_type: "",
     description: "",
   })
   const [generatedCode, setGeneratedCode] = useState("")
@@ -89,6 +91,12 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+
+    if (!formData.tracking_type) {
+      alert("Please select a Tracking Type")
+      setLoading(false)
+      return
+    }
 
     let finalMinSell = parseFloat(formData.min_sell_price || "0")
     if (finalMinSell > parseFloat(formData.base_price)) {
@@ -144,6 +152,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
         gst_rate: "18",
         warranty_months: "12",
         min_stock_level: "0",
+        tracking_type: "",
         description: "",
       })
     } catch (error) {
@@ -371,6 +380,20 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="tracking_type">Tracking Type *</Label>
+              <Select
+                onValueChange={(v) => setFormData({ ...formData, tracking_type: v || "" })}
+                value={formData.tracking_type}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Tracking Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRACKING_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="min_stock">Min Stock Level</Label>
               <Input 
                 id="min_stock" 
@@ -379,6 +402,9 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
                 onChange={(e) => setFormData({ ...formData, min_stock_level: e.target.value })}
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="max_discount_pct">Max Discount %</Label>
               <Input 

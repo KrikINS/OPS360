@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       max_discount_pct: body.max_discount_pct?.toString() || "10",
       gst_rate: body.gst_rate?.toString() || body.tax_rate?.toString(),
       min_stock_level: body.min_stock_level ? parseInt(body.min_stock_level) : 0,
+      tracking_type: body.tracking_type || "Stocked",
       warranty_months: body.warranty_months ? parseInt(body.warranty_months) : null,
       description: body.description
     });

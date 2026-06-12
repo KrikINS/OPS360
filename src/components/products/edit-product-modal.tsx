@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
 import { round2 } from "@/lib/utils"
-
+import { TRACKING_TYPES } from "@/lib/tracking-types"
 
 interface Product {
   id: string
@@ -47,12 +47,6 @@ interface EditProductModalProps {
   onSuccess: () => void
   product: Product | null
 }
-
-const TRACKING_TYPES = [
-  { value: "Stocked", label: "Stocked" },
-  { value: "On-Demand", label: "On-Demand" },
-  { value: "Legacy", label: "Legacy" }
-]
 
 interface FormState {
   model_name: string
