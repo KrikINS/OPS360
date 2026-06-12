@@ -121,6 +121,7 @@ export default function InventoryDashboard() {
   const [expandedBranches, setExpandedBranches] = useState<Record<string, boolean>>({})
   const [canExport, setCanExport] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [releasingId, setReleasingId] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const router = useRouter()
   const activeTab = useMemo(() => {
@@ -143,6 +144,32 @@ export default function InventoryDashboard() {
       [key]: !prev[key]
     }))
   }
+
+  const handleRelease = async (inventoryId: string) => {
+    if (!confirm('Release this unit from Quarantine to Available stock?')) return
+    setReleasingId(inventoryId)
+    try {
+      const res = await fetch('/api/inventory/release-quarantine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inventoryId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        // Refresh inventory data
+        const refreshed = await getInventoryRegistryAction()
+        if (refreshed.success && refreshed.data) setInventory(refreshed.data as unknown as InventoryItem[])
+      } else {
+        alert(data.error ?? 'Release failed')
+      }
+    } catch {
+      alert('Release failed — please try again')
+    } finally {
+      setReleasingId(null)
+    }
+  }
+
+  const quarantineUnits = (inventory ?? []).filter((u: any) => u.status === 'Quarantine')
 
   // Hook-like separation for inventory fetching logic
   useEffect(() => {
@@ -444,6 +471,64 @@ export default function InventoryDashboard() {
           Dispositions (Sold/Returned)
         </button>
       </div>
+
+      {activeTab === 'dispositions' && quarantineUnits.length > 0 && (
+        <div className="mb-6 rounded-xl overflow-hidden border shadow-sm">
+          <div className="flex items-center gap-2 px-6 py-3 border-b bg-amber-50">
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-700">
+              Quarantine — Awaiting Inspection ({quarantineUnits.length} units)
+            </span>
+          </div>
+          <ScrollableTable minWidth="700px">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 border-none">
+                  <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">Serial / Unit</TableHead>
+                  <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">Product</TableHead>
+                  <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">Branch</TableHead>
+                  <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">Landed Cost</TableHead>
+                  <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">In Quarantine Since</TableHead>
+                  <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quarantineUnits.map((u: any) => (
+                  <TableRow key={u.id} className="hover:bg-amber-50/40">
+                    <TableCell className="text-xs font-mono font-bold text-slate-700">
+                      {u.serial_number ?? <span className="text-slate-400 italic font-sans font-normal">No serial</span>}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div className="font-bold text-slate-800">{u.product?.model_name ?? '—'}</div>
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{u.product?.brand ?? ''}</div>
+                    </TableCell>
+                    <TableCell className="text-xs font-semibold text-slate-600">{branches.find(b => b.id === u.branch_id)?.name || u.branch_name || '—'}</TableCell>
+                    <TableCell className="text-xs font-bold text-slate-800">
+                      {u.landed_cost ? `₹${Number(u.landed_cost).toLocaleString('en-IN')}` : (u.price ? `₹${Number(u.price).toLocaleString('en-IN')}` : '—')}
+                    </TableCell>
+                    <TableCell className="text-xs font-medium text-slate-500">
+                      {new Date(u.updated_at ?? u.created_at).toLocaleDateString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs font-bold border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors"
+                        onClick={() => handleRelease(u.id)}
+                        disabled={releasingId === u.id}
+                      >
+                        {releasingId === u.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                        {releasingId === u.id ? 'Releasing...' : 'Release to Stock'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollableTable>
+        </div>
+      )}
 
       <Card className="border-slate-200 shadow-xl overflow-hidden rounded-xl py-0">
         <CardHeader className="bg-[#001529] text-white pt-4 pb-2 mb-0 rounded-t-lg">
