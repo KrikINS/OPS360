@@ -472,3 +472,58 @@ export async function registerWarranty(input: {
     return { success: false as const, error: (error as Error).message }
   }
 }
+
+export async function getWarrantyRegistrations(input?: {
+  status?: 'active' | 'expired' | 'all'
+  search?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  try {
+    const filterStatus = input?.status ?? 'all'
+    const today = new Date().toISOString().slice(0, 10)
+
+    const rows = await db.execute(sql`
+      SELECT
+        wr.id,
+        wr.serial_number,
+        wr.product_id,
+        wr.customer_id,
+        wr.invoice_id,
+        wr.purchase_date,
+        wr.warranty_months,
+        wr.warranty_expires_at,
+        wr.notes,
+        wr.is_active,
+        wr.created_at,
+        p.model_name,
+        p.brand,
+        c.full_name AS customer_name,
+        c.phone_number AS customer_phone,
+        si.invoice_number,
+        CASE
+          WHEN wr.warranty_expires_at >= ${today}::date THEN 'active'
+          ELSE 'expired'
+        END AS warranty_status
+      FROM warranty_registrations wr
+      LEFT JOIN products p ON p.id = wr.product_id
+      LEFT JOIN customers c ON c.id = wr.customer_id
+      LEFT JOIN sales_invoices si ON si.id = wr.invoice_id
+      WHERE wr.is_active = true
+        ${input?.search ? sql`AND (
+          wr.serial_number ILIKE ${'%' + input.search + '%'}
+          OR p.model_name ILIKE ${'%' + input.search + '%'}
+          OR c.full_name ILIKE ${'%' + input.search + '%'}
+        )` : sql``}
+        ${filterStatus === 'active' ? sql`AND wr.warranty_expires_at >= ${today}::date` : sql``}
+        ${filterStatus === 'expired' ? sql`AND wr.warranty_expires_at < ${today}::date` : sql``}
+      ORDER BY wr.created_at DESC
+    `)
+
+    const data = ((rows as any).rows ?? rows) as any[]
+    return { success: true as const, registrations: data }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
