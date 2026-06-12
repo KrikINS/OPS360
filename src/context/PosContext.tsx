@@ -725,6 +725,29 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       setInvoiceNumber(resData.invoiceNumber ?? resData.invoice_number ?? '')
       setToast({ message: `Sale completed: ${resData.invoiceNumber ?? resData.invoice_number ?? ''}`, type: 'success' })
 
+      // --- WARRANTY AUTO-REGISTRATION ---
+      try {
+        const { registerWarranty } = await import('@/actions/service')
+        for (const pItem of processedItems) {
+          if (pItem.serial_number) {
+            const productMatch = products.find(p => p.id === pItem.product_id)
+            if (productMatch?.warranty_months && productMatch.warranty_months > 0) {
+              await registerWarranty({
+                serialNumber: pItem.serial_number,
+                productId: pItem.product_id,
+                customerId: selectedCustomer?.id && selectedCustomer.id !== SYSTEM_WALKIN_ID ? selectedCustomer.id : undefined,
+                invoiceId: resData.id,
+                purchaseDate: new Date().toISOString().slice(0, 10),
+                warrantyMonths: productMatch.warranty_months,
+                notes: 'Auto-registered at checkout',
+              })
+            }
+          }
+        }
+      } catch (warErr) {
+        console.error('[WARRANTY] Auto-registration failed:', warErr)
+      }
+
       // --- POST SALES JOURNAL ---
       try {
         const { postSalesJournal } = await import('@/actions/finance')

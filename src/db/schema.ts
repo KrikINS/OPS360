@@ -532,6 +532,11 @@ export const service_jobs = pgTable("service_jobs", {
   created_by: uuid("created_by").notNull(),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+  serial_number:     text("serial_number"),
+  invoice_id:        uuid("invoice_id"),
+  warranty_status:   text("warranty_status").default('unknown'),
+  resolution_notes:  text("resolution_notes"),
+  completed_at:      timestamp("completed_at"),
 })
 
 export const service_job_items = pgTable("service_job_items", {
@@ -541,6 +546,21 @@ export const service_job_items = pgTable("service_job_items", {
   qty: integer("qty").notNull().default(1),
   unit_cost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
   created_at: timestamp("created_at").defaultNow(),
+})
+
+export const warranty_registrations = pgTable('warranty_registrations', {
+  id:                  uuid('id').primaryKey().defaultRandom(),
+  serial_number:       text('serial_number').notNull(),
+  product_id:          uuid('product_id').notNull(),
+  customer_id:         uuid('customer_id'),
+  invoice_id:          uuid('invoice_id'),
+  purchase_date:       date('purchase_date').notNull(),
+  warranty_months:     integer('warranty_months').notNull().default(12),
+  warranty_expires_at: date('warranty_expires_at').notNull(),
+  notes:               text('notes'),
+  registered_by:       uuid('registered_by').notNull(),
+  is_active:           boolean('is_active').notNull().default(true),
+  created_at:          timestamp('created_at').defaultNow(),
 })
 
 // ── Sales Returns / Credit Notes ─────────────────────

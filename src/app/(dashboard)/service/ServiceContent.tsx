@@ -7,11 +7,14 @@ import { Wrench, Clock, AlertCircle, CheckCircle2, MoreVertical, Plus } from "lu
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CreateJobModal } from "@/components/service/CreateJobModal"
+import { JobDetailDrawer } from "@/components/service/JobDetailDrawer"
 import { useState } from "react"
+import type { ServiceJob } from "@/context/ServiceContext"
 
 export function ServiceContent() {
-  const { jobs, loading } = useService()
+  const { jobs, loading, refetchJobs } = useService()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<ServiceJob | null>(null)
 
   if (loading) {
     return (
@@ -59,6 +62,12 @@ export function ServiceContent() {
       </div>
 
       <CreateJobModal open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+      <JobDetailDrawer 
+        job={selectedJob} 
+        open={!!selectedJob} 
+        onClose={() => setSelectedJob(null)} 
+        onUpdated={refetchJobs} 
+      />
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {jobs.length === 0 ? (
@@ -73,7 +82,7 @@ export function ServiceContent() {
           </div>
         ) : (
           jobs.map(job => (
-            <Card key={job.id} className="group hover:shadow-xl transition-all duration-300 border-t-0 overflow-hidden rounded-2xl border-white/40 bg-white/80 backdrop-blur-md">
+            <Card key={job.id} onClick={() => setSelectedJob(job)} className="group hover:shadow-xl transition-all duration-300 border-t-0 overflow-hidden rounded-2xl border-white/40 bg-white/80 backdrop-blur-md cursor-pointer">
               <div className={`h-1.5 w-full ${
                 job.priority === 'Urgent' ? 'bg-red-500' : 
                 job.priority === 'High' ? 'bg-orange-500' : 

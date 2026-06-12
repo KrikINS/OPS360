@@ -23,6 +23,11 @@ export interface ServiceJob {
   customerPhone: string | null
   productName: string | null
   technicianName: string | null
+  serialNumber?: string | null
+  invoiceId?: string | null
+  warrantyStatus?: string
+  resolutionNotes?: string | null
+  completedAt?: Date | null
 }
 
 interface ServiceContextType {
@@ -30,6 +35,7 @@ interface ServiceContextType {
   technicians: { id: string; full_name: string | null }[]
   loading: boolean
   refreshJobs: () => Promise<void>
+  refetchJobs: () => Promise<void>
   updateJobStatus: (id: string, status: ServiceJob['status']) => Promise<void>
   createJob: (job: {
     title: string
@@ -39,6 +45,10 @@ interface ServiceContextType {
     productId?: string
     technicianId?: string
     estimatedCost?: number
+    serialNumber?: string
+    invoiceId?: string
+    warrantyStatus?: string
+    resolutionNotes?: string
   }) => Promise<void>
 }
 
@@ -97,6 +107,7 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       technicians,
       loading,
       refreshJobs,
+      refetchJobs: refreshJobs,
       updateJobStatus: handleUpdateJobStatus,
       createJob,
     }}>

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, User, Package, Wrench, Loader2, CheckCircle2 } from "lucide-react"
 import { useService } from "@/context/ServiceContext"
 import { useSession } from "next-auth/react"
+import { checkWarranty } from '@/actions/service'
 
 
 interface Customer {
@@ -40,6 +41,10 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
   const [productSearch, setProductSearch] = useState("")
   const [products, setProducts] = useState<Product[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+
+  const [serialNumber, setSerialNumber]     = useState('')
+  const [warrantyInfo, setWarrantyInfo]     = useState<Awaited<ReturnType<typeof checkWarranty>> | null>(null)
+  const [checkingWarranty, setCheckingWarranty] = useState(false)
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -91,11 +96,16 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
         title,
         description,
         priority,
+        serialNumber: serialNumber.trim() || undefined,
+        invoiceId: (warrantyInfo?.success && warrantyInfo.found) ? (warrantyInfo.invoiceId ?? undefined) : undefined,
+        warrantyStatus: (warrantyInfo?.success && warrantyInfo.found) ? warrantyInfo.warrantyStatus : 'unknown',
       })
       onOpenChange(false)
       // Reset form
       setSelectedCustomer(null)
       setSelectedProduct(null)
+      setSerialNumber('')
+      setWarrantyInfo(null)
       setTitle("")
       setDescription("")
       setTechnicianId("")
@@ -204,6 +214,72 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
+              Serial Number
+            </label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter serial number..."
+                value={serialNumber}
+                onChange={e => { setSerialNumber(e.target.value); setWarrantyInfo(null) }}
+                className="flex-1 h-10 rounded-xl border-slate-200"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-10 px-4 rounded-xl"
+                disabled={!serialNumber.trim() || checkingWarranty}
+                onClick={async () => {
+                  setCheckingWarranty(true)
+                  const result = await checkWarranty(serialNumber.trim())
+                  setWarrantyInfo(result)
+                  setCheckingWarranty(false)
+                  // Auto-fill product if found
+                  if (result.success && result.found && result.productId && result.productName) {
+                    setSelectedProduct({ id: result.productId, model_name: result.productName, brand: result.productBrand ?? '' })
+                  }
+                }}
+              >
+                {checkingWarranty ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Check'}
+              </Button>
+            </div>
+
+            {/* Warranty status banner */}
+            {warrantyInfo && warrantyInfo.success && warrantyInfo.found && (
+              <div className={`rounded-lg px-3 py-2 text-xs font-semibold flex items-center gap-2 ${
+                warrantyInfo.warrantyStatus === 'in_warranty'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : warrantyInfo.warrantyStatus === 'out_of_warranty'
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }`}>
+                <span className="text-base">
+                  {warrantyInfo.warrantyStatus === 'in_warranty' ? '✅' : warrantyInfo.warrantyStatus === 'out_of_warranty' ? '❌' : '⚠️'}
+                </span>
+                <div>
+                  <div>
+                    {warrantyInfo.warrantyStatus === 'in_warranty' && `IN WARRANTY — expires ${warrantyInfo.warrantyExpiresAt}`}
+                    {warrantyInfo.warrantyStatus === 'out_of_warranty' && `WARRANTY EXPIRED — ${warrantyInfo.warrantyExpiresAt}`}
+                    {warrantyInfo.warrantyStatus === 'unknown' && 'No warranty record found'}
+                  </div>
+                  {warrantyInfo.productName && (
+                    <div className="font-normal opacity-80">{warrantyInfo.productBrand} {warrantyInfo.productName}</div>
+                  )}
+                  {warrantyInfo.customerName && (
+                    <div className="font-normal opacity-80">Owner: {warrantyInfo.customerName}</div>
+                  )}
+                </div>
+              </div>
+            )}
+            {warrantyInfo && warrantyInfo.success && !warrantyInfo.found && (
+              <div className="rounded-lg px-3 py-2 text-xs bg-slate-50 text-slate-500 border border-slate-200">
+                ⚠️ Serial number not found in inventory
               </div>
             )}
           </div>
