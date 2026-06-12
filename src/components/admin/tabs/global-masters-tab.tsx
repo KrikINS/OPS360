@@ -478,7 +478,7 @@ export function GlobalMastersTab() {
                     <tr className="text-[10px] uppercase font-black tracking-[0.1em] text-slate-400">
                       <th className="px-4 py-3">Template Name</th>
                       <th className="px-4 py-3">Default</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3 text-right sticky right-0 bg-slate-50 z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -499,7 +499,7 @@ export function GlobalMastersTab() {
                             <span className="text-[9px] font-black uppercase tracking-tighter">{item.is_default ? 'Default' : 'Set Default'}</span>
                           </Button>
                         </td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-4 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-l border-slate-100">
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button 
                               variant="ghost" 
@@ -631,7 +631,7 @@ export function GlobalMastersTab() {
                     <tr className="text-[10px] uppercase font-black tracking-[0.1em] text-slate-400">
                       <th className="px-4 py-3">Template Name</th>
                       <th className="px-4 py-3">Default</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3 text-right sticky right-0 bg-slate-50 z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -652,7 +652,7 @@ export function GlobalMastersTab() {
                             <span className="text-[9px] font-black uppercase tracking-tighter">{item.is_default ? 'Default' : 'Set Default'}</span>
                           </Button>
                         </td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-4 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-l border-slate-100">
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"

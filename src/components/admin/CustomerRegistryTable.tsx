@@ -91,7 +91,7 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
               <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Business</TableHead>
               <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Location</TableHead>
               <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500">Joined</TableHead>
-              <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500 text-right">Actions</TableHead>
+              <TableHead className="font-bold text-[11px] uppercase tracking-widest text-slate-500 text-right sticky right-0 bg-slate-50/50 dark:bg-slate-800/50 z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -158,7 +158,7 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
                       {new Date(c.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/80 dark:group-hover:bg-white/5 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-l border-slate-100 dark:border-white/5">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-blue-500 transition-all" onClick={() => onEditClick?.(c)}>
                         <Edit className="h-4 w-4" />

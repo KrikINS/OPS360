@@ -117,49 +117,49 @@ export default function SalesRegistryPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
         <Card className="border-none shadow-md bg-gradient-to-br from-indigo-600 to-blue-700 text-white overflow-hidden relative">
-          <CardContent className="p-6">
-            <div className="relative z-10 space-y-2">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="relative z-10 space-y-1 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-indigo-100 text-xs font-black uppercase tracking-widest">Total Revenue</p>
-                {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-white/20 text-white border border-white/10">Consolidated</span>}
+                <p className="text-indigo-100 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Total Revenue</p>
+                {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-white/20 text-white border border-white/10">Consolidated</span>}
               </div>
-              <h3 className="text-4xl font-black tracking-tighter">₹{stats.totalSales.toLocaleString()}</h3>
-              <div className="flex items-center gap-1 text-[10px] bg-white/10 w-fit px-2 py-1 rounded-full border border-white/10">
+              <h3 className="text-lg sm:text-2xl lg:text-4xl font-black tracking-tighter truncate">₹{stats.totalSales.toLocaleString()}</h3>
+              <div className="hidden sm:flex items-center gap-1 text-[8px] lg:text-[10px] bg-white/10 w-fit px-2 py-1 rounded-full border border-white/10 truncate">
                 <ArrowUpRight className="h-3 w-3" />
                 {activeBranch?.id === "ALL_000" ? "Live from all branches" : "Live from active branch"}
               </div>
             </div>
-            <ShoppingBag className="absolute -right-4 -bottom-4 h-32 w-32 text-white/10 rotate-12" />
+            <ShoppingBag className="absolute -right-4 -bottom-4 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 text-white/10 rotate-12" />
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-md bg-white overflow-hidden relative group hover:shadow-xl transition-all">
-          <CardContent className="p-6">
-            <div className="relative z-10 space-y-2">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="relative z-10 space-y-1 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Invoice Volume</p>
-                {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+                <p className="text-slate-400 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Invoice Volume</p>
+                {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
               </div>
-              <h3 className="text-4xl font-black tracking-tighter text-slate-900">{stats.invoiceCount}</h3>
-              <p className="text-[10px] text-slate-500 font-medium">Completed Transactions</p>
+              <h3 className="text-lg sm:text-2xl lg:text-4xl font-black tracking-tighter text-slate-900 truncate">{stats.invoiceCount}</h3>
+              <p className="hidden sm:block text-[8px] lg:text-[10px] text-slate-500 font-medium truncate">Completed Transactions</p>
             </div>
-            <TrendingUp className="absolute -right-4 -bottom-4 h-32 w-32 text-slate-50 group-hover:text-slate-100 transition-colors rotate-12" />
+            <TrendingUp className="absolute -right-4 -bottom-4 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 text-slate-50 group-hover:text-slate-100 transition-colors rotate-12" />
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-md bg-white overflow-hidden relative group hover:shadow-xl transition-all border-l-4 border-l-emerald-500">
-          <CardContent className="p-6">
-            <div className="relative z-10 space-y-2">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="relative z-10 space-y-1 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Average Ticket</p>
-                {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+                <p className="text-slate-400 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Average Ticket</p>
+                {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
               </div>
-              <h3 className="text-4xl font-black tracking-tighter text-slate-900">₹{Math.round(stats.avgTicket).toLocaleString()}</h3>
-              <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Per Sale Value</p>
+              <h3 className="text-lg sm:text-2xl lg:text-4xl font-black tracking-tighter text-slate-900 truncate">₹{Math.round(stats.avgTicket).toLocaleString()}</h3>
+              <p className="hidden sm:block text-[8px] lg:text-[10px] text-emerald-600 font-bold uppercase tracking-wider truncate">Per Sale Value</p>
             </div>
-            <Users className="absolute -right-4 -bottom-4 h-32 w-32 text-slate-50 group-hover:text-slate-100 transition-colors rotate-12" />
+            <Users className="absolute -right-4 -bottom-4 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 text-slate-50 group-hover:text-slate-100 transition-colors rotate-12" />
           </CardContent>
         </Card>
       </div>

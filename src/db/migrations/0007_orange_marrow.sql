@@ -1,0 +1,3 @@
+ALTER TABLE "inventory" ADD COLUMN "invoice_item_id" uuid;--> statement-breakpoint
+ALTER TABLE "sales_return_items" ADD COLUMN "disposition" text DEFAULT 'resellable' NOT NULL;--> statement-breakpoint
+ALTER TABLE "inventory" ADD CONSTRAINT "inventory_invoice_item_id_invoice_items_id_fk" FOREIGN KEY ("invoice_item_id") REFERENCES "public"."invoice_items"("id") ON DELETE no action ON UPDATE no action;

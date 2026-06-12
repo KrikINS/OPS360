@@ -109,7 +109,7 @@ export function ScrollableTable({ children, className, minWidth = '100%', maxHei
           type="button"
           aria-label="Scroll left"
           onClick={() => scrollByStep(-1)}
-          className="absolute top-1/2 left-2 -translate-y-1/2 z-[3] w-7 h-7 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-300 flex items-center justify-center shadow-sm opacity-50 group-hover/scroll:opacity-100 hover:bg-slate-50 dark:hover:bg-white/5 transition-opacity duration-200"
+          className="absolute top-1/2 left-2 -translate-y-1/2 z-[30] w-7 h-7 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-300 flex items-center justify-center shadow-sm opacity-50 group-hover/scroll:opacity-100 hover:bg-slate-50 dark:hover:bg-white/5 transition-opacity duration-200"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -119,7 +119,7 @@ export function ScrollableTable({ children, className, minWidth = '100%', maxHei
           type="button"
           aria-label="Scroll right"
           onClick={() => scrollByStep(1)}
-          className="absolute top-1/2 right-2 -translate-y-1/2 z-[3] w-7 h-7 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-300 flex items-center justify-center shadow-sm opacity-50 group-hover/scroll:opacity-100 hover:bg-slate-50 dark:hover:bg-white/5 transition-opacity duration-200"
+          className="absolute top-1/2 right-2 -translate-y-1/2 z-[30] w-7 h-7 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-300 flex items-center justify-center shadow-sm opacity-50 group-hover/scroll:opacity-100 hover:bg-slate-50 dark:hover:bg-white/5 transition-opacity duration-200"
         >
           <ChevronRight className="h-4 w-4" />
         </button>

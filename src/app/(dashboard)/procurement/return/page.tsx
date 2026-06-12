@@ -557,8 +557,8 @@ export default function PurchaseReturn() {
                     <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Landed Cost / Debit Note</TableHead>
                     <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Name</TableHead>
                     <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Serials</TableHead>
-                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Status</TableHead>
-                    <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] uppercase">Actions</TableHead>
+                    <TableHead className="py-3 px-2 font-black text-slate-400 tracking-wider text-[9px] border-r border-slate-100 uppercase">Status</TableHead>
+                    <TableHead className="py-3 px-3 font-black text-slate-400 tracking-wider text-[9px] uppercase">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

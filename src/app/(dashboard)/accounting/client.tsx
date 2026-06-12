@@ -1682,7 +1682,7 @@ export default function AccountingClient({
                       </TableHead>
                       <TableHead>Status</TableHead>
                       {isAdmin && (
-                        <TableHead>Actions</TableHead>
+                        <TableHead className="">Actions</TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
@@ -1730,7 +1730,7 @@ export default function AccountingClient({
                           </Badge>
                         </TableCell>
                         {isAdmin && (
-                          <TableCell>
+                          <TableCell className="">
                             {exp.status === 'pending' && (
                               <div className="flex gap-1">
                                 <Button
