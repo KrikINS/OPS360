@@ -466,7 +466,6 @@ export default function StaffClient({
               staff={staff}
               isAdmin={isAdmin}
               isManager={isManager}
-              currentUserId={currentUserId}
             />
           </div>
         </TabsContent>

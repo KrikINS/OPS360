@@ -47,22 +47,22 @@ export default function ActivityClient({
   staff,
   isAdmin,
   isManager,
-  currentUserId,
 }: {
   activities: ActivityRow[]
   staff: StaffRow[]
   isAdmin: boolean
   isManager: boolean
-  currentUserId: string
 }) {
-  const today = new Date().toISOString().split('T')[0]
+  const [today] = useState(() => new Date().toISOString().split('T')[0])
 
   const [selectedUser, setSelectedUser] = useState('')
   const [selectedModule, setSelectedModule] = useState('All Modules')
-  const [fromDate, setFromDate] = useState(
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  )
-  const [toDate, setToDate] = useState(today)
+  const [fromDate, setFromDate] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 30)
+    return d.toISOString().split('T')[0]
+  })
+  const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
   const [page, setPage] = useState(0)
 
   // Client-side filtering (data already fetched server-side for last 30 days)
