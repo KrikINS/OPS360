@@ -166,7 +166,8 @@ export default function StaffClient({
     if (!selectedEmployee || !salaryForm.basic || !salaryForm.effectiveFrom) return
     setSalarySubmitting(true)
 
-    await upsertEmployeeDetails(selectedEmployee.id, {
+    await upsertEmployeeDetails({
+      employeeId:    selectedEmployee.id,
       designation:   salaryForm.designation || undefined,
       department:    salaryForm.department || undefined,
       dateOfJoining: salaryForm.dateOfJoining || undefined,

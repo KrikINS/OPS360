@@ -802,13 +802,16 @@ export async function upsertEmployeeDetails(input: {
     return { success: false as const, error: 'Manager role required' }
   }
   try {
+    const updateData: any = {}
+    if (input.designation !== undefined) updateData.designation = input.designation
+    if (input.department !== undefined) updateData.department = input.department
+    if (input.dateOfJoining !== undefined) updateData.date_of_joining = input.dateOfJoining
+    if (input.branchId !== undefined) updateData.branch_id = input.branchId
+
+    if (Object.keys(updateData).length === 0) return { success: true as const }
+
     await db.update(employees)
-      .set({
-        designation:     input.designation ?? null,
-        department:      input.department ?? null,
-        date_of_joining: input.dateOfJoining ?? null,
-        branch_id:       input.branchId ?? null,
-      })
+      .set(updateData)
       .where(eq(employees.id, input.employeeId))
     return { success: true as const }
   } catch (error) {
