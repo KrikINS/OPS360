@@ -6,7 +6,7 @@ import { db } from '@/db/client'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import {
   service_jobs, service_job_items, warranty_registrations,
-  customers, products, profiles,
+  customers, products, profiles, inventory, sales_invoices,
 } from '@/db/schema'
 import { eq, and, or, desc, sql } from 'drizzle-orm'
 
@@ -310,28 +310,57 @@ export async function checkWarranty(serialNumber: string) {
   if (!serialNumber?.trim()) return { success: false as const, error: 'Serial number required' }
 
   try {
-    // 1. Find the inventory unit by serial
-    const invRows = await db.execute(sql`
-      SELECT 
-        inv.id, inv.serial_number, inv.product_id, inv.invoice_id, inv.status,
-        p.model_name, p.brand, p.warranty_months,
-        si.invoice_number,
-        si.created_at AS purchase_date,
-        c.full_name AS customer_name
-      FROM inventory inv
-      LEFT JOIN products p ON p.id = inv.product_id
-      LEFT JOIN sales_invoices si ON si.id = inv.invoice_id
-      LEFT JOIN customers c ON c.id = si.customer_id
-      WHERE inv.serial_number = ${serialNumber.trim()}
-      LIMIT 1
-    `)
-    const rows = ((invRows as any).rows ?? invRows) as any[]
-    if (!rows.length) {
+    // 1. Find the inventory unit
+    const [invUnit] = await db
+      .select({
+        id:             inventory.id,
+        serial_number:  inventory.serial_number,
+        product_id:     inventory.product_id,
+        invoice_id:     inventory.invoice_id,
+        status:         inventory.status,
+      })
+      .from(inventory)
+      .where(eq(inventory.serial_number, serialNumber.trim()))
+      .limit(1)
+
+    if (!invUnit) {
       return { success: true as const, found: false, warrantyStatus: 'unknown' as const, message: 'Serial number not found in inventory' }
     }
-    const unit = rows[0]
 
-    // 2. Check warranty_registrations table first (manual or auto-registered)
+    // 2. Get product info
+    let productInfo: { model_name: string | null; brand: string | null; warranty_months: number | null } | null = null
+    if (invUnit.product_id) {
+      const [prod] = await db
+        .select({ model_name: products.model_name, brand: products.brand, warranty_months: products.warranty_months })
+        .from(products)
+        .where(eq(products.id, invUnit.product_id))
+        .limit(1)
+      productInfo = prod ?? null
+    }
+
+    // 3. Get invoice + customer info
+    let invoiceInfo: { invoice_number: string | null; created_at: Date | null; customer_name: string | null } | null = null
+    if (invUnit.invoice_id) {
+      const [inv] = await db
+        .select({ invoice_number: sales_invoices.invoice_number, created_at: sales_invoices.created_at, customer_id: sales_invoices.customer_id })
+        .from(sales_invoices)
+        .where(eq(sales_invoices.id, invUnit.invoice_id))
+        .limit(1)
+      if (inv) {
+        let customerName: string | null = null
+        if (inv.customer_id) {
+          const [cust] = await db
+            .select({ full_name: customers.full_name })
+            .from(customers)
+            .where(eq(customers.id, inv.customer_id))
+            .limit(1)
+          customerName = cust?.full_name ?? null
+        }
+        invoiceInfo = { invoice_number: inv.invoice_number, created_at: inv.created_at, customer_name: customerName }
+      }
+    }
+
+    // 4. Check warranty_registrations table first (manual or auto-registered)
     const [warReg] = await db
       .select()
       .from(warranty_registrations)
@@ -343,20 +372,19 @@ export async function checkWarranty(serialNumber: string) {
 
     let warrantyStatus: 'in_warranty' | 'out_of_warranty' | 'unknown' = 'unknown'
     let warrantyExpiresAt: string | null = null
-    let purchaseDate: string | null = null
-    let customerName: string | null = unit.customer_name ?? null
+    let purchaseDate: string | null = invoiceInfo?.created_at?.toISOString().slice(0, 10) ?? null
+    let customerName: string | null = invoiceInfo?.customer_name ?? null
 
     if (warReg) {
       warrantyExpiresAt = warReg.warranty_expires_at as string
       purchaseDate = warReg.purchase_date as string
       const expiry = new Date(warReg.warranty_expires_at as string)
       warrantyStatus = expiry >= new Date() ? 'in_warranty' : 'out_of_warranty'
-    } else if (unit.purchase_date && unit.warranty_months) {
+    } else if (invoiceInfo?.created_at && productInfo?.warranty_months) {
       // Derive from invoice + product warranty_months
-      const pd = new Date(unit.purchase_date)
-      purchaseDate = pd.toISOString().slice(0, 10)
+      const pd = new Date(invoiceInfo.created_at)
       const expiry = new Date(pd)
-      expiry.setMonth(expiry.getMonth() + Number(unit.warranty_months))
+      expiry.setMonth(expiry.getMonth() + Number(productInfo.warranty_months))
       warrantyExpiresAt = expiry.toISOString().slice(0, 10)
       warrantyStatus = expiry >= new Date() ? 'in_warranty' : 'out_of_warranty'
     }
@@ -367,11 +395,11 @@ export async function checkWarranty(serialNumber: string) {
       warrantyStatus,
       warrantyExpiresAt,
       purchaseDate,
-      productName: unit.model_name ?? null,
-      productBrand: unit.brand ?? null,
-      productId: unit.product_id ?? null,
-      invoiceId: unit.invoice_id ?? null,
-      invoiceNumber: unit.invoice_number ?? null,
+      productName: productInfo?.model_name ?? null,
+      productBrand: productInfo?.brand ?? null,
+      productId: invUnit.product_id ?? null,
+      invoiceId: invUnit.invoice_id ?? null,
+      invoiceNumber: invoiceInfo?.invoice_number ?? null,
       customerName,
     }
   } catch (error) {

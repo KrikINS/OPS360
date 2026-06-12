@@ -56,9 +56,12 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
   // Search Customers
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (customerSearch.length > 2) {
-        const { data } = await import("@/app/actions/pos").then(m => m.searchPosCustomersAction(customerSearch))
-        if (data) setCustomers(data as unknown as Customer[])
+      if (customerSearch.length > 1) {
+        try {
+          const mod = await import("@/app/actions/service")
+          const result = await mod.searchPosCustomersAction(customerSearch)
+          if (result.data) setCustomers(result.data as unknown as Customer[])
+        } catch { setCustomers([]) }
       } else {
         setCustomers([])
       }
@@ -69,9 +72,12 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
   // Search Products
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (productSearch.length > 2) {
-        const { data } = await import("@/app/actions/inventory").then(m => m.searchProductsAction(productSearch))
-        if (data) setProducts(data as unknown as Product[])
+      if (productSearch.length > 1) {
+        try {
+          const mod = await import("@/app/actions/service")
+          const result = await mod.searchProductsAction(productSearch)
+          if (result.data) setProducts(result.data as unknown as Product[])
+        } catch { setProducts([]) }
       } else {
         setProducts([])
       }
