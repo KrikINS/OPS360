@@ -382,70 +382,70 @@ export default function InventoryDashboard() {
             <Upload className="h-4 w-4" /> Import Opening Stock
           </Button>
         </div>
-      </div>      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      </div>      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
         {/* Card 1: Inventory Cost (Valuation) */}
         <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-[#001529]/20 transition-all">
           <div className="h-1 bg-[#001529]/10 w-full" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Inventory Cost</CardTitle>
-              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+          <CardHeader className="flex flex-row items-center justify-between p-2 sm:p-4 pb-1 sm:pb-1">
+            <div className="flex items-center gap-1 sm:gap-2 overflow-hidden">
+              <CardTitle className="text-[8px] sm:text-[10px] lg:text-xs font-black text-slate-400 tracking-[0.2em] uppercase truncate">Inventory Cost</CardTitle>
+              {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
             </div>
-            <div className="h-7 w-7 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-100">
-              <Package className="h-3.5 w-3.5 text-slate-400" />
+            <div className="hidden sm:flex h-5 w-5 sm:h-7 sm:w-7 bg-slate-50 rounded-lg items-center justify-center border border-slate-100 shrink-0">
+              <Package className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400" />
             </div>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className="text-2xl font-black text-[#001529] tracking-tight">
-              {loading ? <Loader2 className="animate-spin h-5 w-5 text-slate-300" /> : formatCurrency(summaryStats.totalCost)}
+          <CardContent className="p-2 sm:p-4 pt-0 sm:pt-0">
+            <div className="text-sm sm:text-2xl lg:text-3xl font-black text-[#001529] tracking-tight truncate">
+              {loading ? <Loader2 className="animate-spin h-4 w-4 sm:h-5 sm:w-5 text-slate-300" /> : formatCurrency(summaryStats.totalCost)}
             </div>
-            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Total Capital Portfolio</p>
+            <p className="text-[6px] sm:text-[9px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-tight truncate">Total Capital Portfolio</p>
           </CardContent>
         </Card>
 
         {/* Card 2: Potential Revenue (MSRP) */}
         <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-[#7FD1E3]/20 transition-all">
           <div className="h-1 bg-[#7FD1E3]/20 w-full" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Potential Revenue</CardTitle>
-              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+          <CardHeader className="flex flex-row items-center justify-between p-2 sm:p-4 pb-1 sm:pb-1">
+            <div className="flex items-center gap-1 sm:gap-2 overflow-hidden">
+              <CardTitle className="text-[8px] sm:text-[10px] lg:text-xs font-black text-slate-400 tracking-[0.2em] uppercase truncate">Potential Revenue</CardTitle>
+              {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
             </div>
-            <div className="h-7 w-7 bg-[#7FD1E3]/5 rounded-lg flex items-center justify-center border border-[#7FD1E3]/10">
-              <TrendingUp className="h-3.5 w-3.5 text-[#7FD1E3]" />
+            <div className="hidden sm:flex h-5 w-5 sm:h-7 sm:w-7 bg-[#7FD1E3]/5 rounded-lg items-center justify-center border border-[#7FD1E3]/10 shrink-0">
+              <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#7FD1E3]" />
             </div>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className="text-2xl font-black text-[#001529] tracking-tight">
-              {loading ? <Loader2 className="animate-spin h-5 w-5 text-slate-300" /> : formatCurrency(summaryStats.totalRevenue)}
+          <CardContent className="p-2 sm:p-4 pt-0 sm:pt-0">
+            <div className="text-sm sm:text-2xl lg:text-3xl font-black text-[#001529] tracking-tight truncate">
+              {loading ? <Loader2 className="animate-spin h-4 w-4 sm:h-5 sm:w-5 text-slate-300" /> : formatCurrency(summaryStats.totalRevenue)}
             </div>
-            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Expected Maturity Value</p>
+            <p className="text-[6px] sm:text-[9px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-tight truncate">Expected Maturity Value</p>
           </CardContent>
         </Card>
 
         {/* Card 3: System Health (Low Stock) */}
         <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden group hover:border-rose-200 transition-all">
           <div className="h-1 bg-rose-500/10 w-full" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">SKUs Below Threshold</CardTitle>
-              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
+          <CardHeader className="flex flex-row items-center justify-between p-2 sm:p-4 pb-1 sm:pb-1">
+            <div className="flex items-center gap-1 sm:gap-2 overflow-hidden">
+              <CardTitle className="text-[8px] sm:text-[10px] lg:text-xs font-black text-slate-400 tracking-[0.2em] uppercase truncate">SKUs Below Threshold</CardTitle>
+              {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
             </div>
             <div className={cn(
-              "h-7 w-7 rounded-lg flex items-center justify-center border transition-all",
+              "hidden sm:flex h-5 w-5 sm:h-7 sm:w-7 rounded-lg items-center justify-center border transition-all shrink-0",
               summaryStats.lowStockSKUs > 0 ? "bg-rose-50 border-rose-100" : "bg-slate-50 border-slate-100"
             )}>
-              <AlertOctagon className={cn("h-3.5 w-3.5", summaryStats.lowStockSKUs > 0 ? "text-rose-500 animate-pulse" : "text-slate-300")} />
+              <AlertOctagon className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5", summaryStats.lowStockSKUs > 0 ? "text-rose-500 animate-pulse" : "text-slate-300")} />
             </div>
           </CardHeader>
-          <CardContent className="pb-4">
+          <CardContent className="p-2 sm:p-4 pt-0 sm:pt-0">
             <div className={cn(
-              "text-2xl font-black tracking-tight",
+              "text-sm sm:text-2xl lg:text-3xl font-black tracking-tight truncate",
               summaryStats.lowStockSKUs > 0 ? "text-rose-600" : "text-[#001529]"
             )}>
-              {loading ? <Loader2 className="animate-spin h-5 w-5 text-slate-300" /> : `${summaryStats.lowStockSKUs} Asset Lines`}
+              {loading ? <Loader2 className="animate-spin h-4 w-4 sm:h-5 sm:w-5 text-slate-300" /> : `${summaryStats.lowStockSKUs} Asset Lines`}
             </div>
-            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Replenishment Required</p>
+            <p className="text-[6px] sm:text-[9px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-tight truncate">Replenishment Required</p>
           </CardContent>
         </Card>
       </div>
@@ -493,7 +493,7 @@ export default function InventoryDashboard() {
               </TableHeader>
               <TableBody>
                 {quarantineUnits.map((u: any) => (
-                  <TableRow key={u.id} className="hover:bg-amber-50/40">
+                  <TableRow key={`quarantine-${u.id}`} className="hover:bg-amber-50/40">
                     <TableCell className="text-xs font-mono font-bold text-slate-700">
                       {u.serial_number ?? <span className="text-slate-400 italic font-sans font-normal">No serial</span>}
                     </TableCell>

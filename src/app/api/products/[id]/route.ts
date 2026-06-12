@@ -30,6 +30,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (body.min_stock_level !== undefined) updateData.min_stock_level = parseInt(body.min_stock_level);
     if (body.warranty_months !== undefined) updateData.warranty_months = parseInt(body.warranty_months);
     if (body.description !== undefined) updateData.description = body.description;
+    if (body.tracking_type !== undefined) updateData.tracking_type = body.tracking_type;
 
     await db.update(products)
       .set(updateData)
