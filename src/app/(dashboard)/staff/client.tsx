@@ -85,7 +85,7 @@ type Payslip = {
   notes: string | null
 }
 
-const TAB_CLASS = "data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md rounded-t-lg rounded-b-none px-6 py-2.5 text-xs font-bold uppercase tracking-wider gap-2"
+const TAB_CLASS = "data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-t-lg rounded-b-none px-6 py-2.5 text-xs font-bold uppercase tracking-wider gap-2"
 
 export default function StaffClient({
   isAdmin = false,

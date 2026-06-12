@@ -130,7 +130,7 @@ export default function ActivityClient({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Actions',      value: filtered.length,  icon: <Activity className="h-4 w-4" />,  color: 'text-primary' },
           { label: 'Active Today',        value: activeToday,      icon: <Users className="h-4 w-4" />,     color: 'text-green-600' },
@@ -193,9 +193,11 @@ export default function ActivityClient({
       </div>
 
       {/* Activity table */}
-      <Card className="shadow-md">
-        <CardHeader className="bg-muted/30 border-b py-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-base font-semibold">Activity Timeline</CardTitle>
+      <Card className="shadow-md border-t-4 border-t-[#001529]">
+        <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-lg">Activity Timeline</CardTitle>
+          </div>
           <span className="text-xs text-muted-foreground">
             Showing {filtered.length === 0 ? 0 : page * PAGE_SIZE + 1}–
             {Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length} actions
@@ -212,17 +214,17 @@ export default function ActivityClient({
             <ScrollableTable minWidth="1000px">
               <Table>
                 <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-36">Timestamp</TableHead>
-                  <TableHead>Staff</TableHead>
-                  <TableHead className="w-28">Module</TableHead>
-                  <TableHead className="w-32">Action</TableHead>
-                  <TableHead>Description</TableHead>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-36 font-bold">Timestamp</TableHead>
+                  <TableHead className="font-bold">Staff</TableHead>
+                  <TableHead className="w-28 font-bold">Module</TableHead>
+                  <TableHead className="w-32 font-bold">Action</TableHead>
+                  <TableHead className="font-bold">Description</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paged.map(activity => (
-                  <TableRow key={`${activity.id}-${activity.actionType}`}>
+                  <TableRow key={`${activity.id}-${activity.actionType}`} className="hover:bg-muted/20 transition-colors group">
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {fmtTimestamp(activity.timestamp)}
                     </TableCell>
