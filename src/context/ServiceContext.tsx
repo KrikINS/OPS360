@@ -64,7 +64,7 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (result.success) {
       setTechnicians(
         result.staff
-          .filter(s => s.role === 'technician')
+          .filter(s => s.role?.toLowerCase() === 'technician')
           .map(s => ({ id: s.userId, full_name: s.fullName ?? null }))
       )
     }
