@@ -8,9 +8,18 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import { History, Loader2, RefreshCcw } from "lucide-react"
+import { 
+  History, 
+  Loader2, 
+  RefreshCcw,
+  ShoppingBag, 
+  TrendingUp, 
+  Users, 
+  ArrowUpRight
+} from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { usePos } from '@/context/PosContext'
-import { SalesRegistryTable } from '@/components/admin/SalesRegistryTable'
+import { SalesRegistryTable } from '@/components/sales/SalesRegistryTable'
 
 interface PosSalesHistoryDrawerProps {
   open: boolean
@@ -36,6 +45,11 @@ export function PosSalesHistoryDrawer({ open, onClose }: PosSalesHistoryDrawerPr
   const { selectedBranch, currentBranchDetails, triggerInvoicePrint } = usePos()
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(false)
+  const [stats, setStats] = useState({
+    totalSales: 0,
+    invoiceCount: 0,
+    avgTicket: 0
+  })
 
   const fetchSales = useCallback(async () => {
     if (!selectedBranch) return
@@ -45,6 +59,13 @@ export function PosSalesHistoryDrawer({ open, onClose }: PosSalesHistoryDrawerPr
       if (!res.ok) throw new Error("Failed to fetch sales history")
       const data = await res.json()
       setSales(data)
+      
+      const total = data.reduce((acc: number, s: Sale) => acc + Number(s.total_amount), 0)
+      setStats({
+        totalSales: total,
+        invoiceCount: data.length,
+        avgTicket: data.length > 0 ? total / data.length : 0
+      })
     } catch (err) {
       console.error(err)
     } finally {
@@ -86,17 +107,64 @@ export function PosSalesHistoryDrawer({ open, onClose }: PosSalesHistoryDrawerPr
           </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-auto p-4 md:p-8 bg-white">
-          {loading && sales.length === 0 ? (
-            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
-              <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
-              <p className="text-slate-400 font-bold animate-pulse uppercase tracking-widest text-xs">Syncing Registry...</p>
+        <div className="flex-1 overflow-auto p-4 md:p-8 bg-slate-50/50">
+          <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
+              <Card className="border-none shadow-md bg-gradient-to-br from-indigo-600 to-blue-700 text-white overflow-hidden relative">
+                <CardContent className="p-3 sm:p-4 lg:p-6">
+                  <div className="relative z-10 space-y-1 sm:space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-indigo-100 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Total Revenue</p>
+                    </div>
+                    <h3 className="text-lg sm:text-2xl lg:text-3xl font-black tracking-tighter truncate">₹{stats.totalSales.toLocaleString()}</h3>
+                    <div className="hidden sm:flex items-center gap-1 text-[8px] lg:text-[10px] bg-white/10 w-fit px-2 py-1 rounded-full border border-white/10 truncate mt-2">
+                      <ArrowUpRight className="h-3 w-3" />
+                      Live from active branch
+                    </div>
+                  </div>
+                  <ShoppingBag className="absolute -right-4 -bottom-4 h-16 w-16 lg:h-24 lg:w-24 text-white/10 rotate-12" />
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md bg-white overflow-hidden relative group hover:shadow-xl transition-all">
+                <CardContent className="p-3 sm:p-4 lg:p-6">
+                  <div className="relative z-10 space-y-1 sm:space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-slate-400 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Invoice Volume</p>
+                    </div>
+                    <h3 className="text-lg sm:text-2xl lg:text-3xl font-black tracking-tighter text-slate-900 truncate">{stats.invoiceCount}</h3>
+                    <p className="hidden sm:block text-[8px] lg:text-[10px] text-slate-500 font-medium truncate mt-2">Completed Transactions</p>
+                  </div>
+                  <TrendingUp className="absolute -right-4 -bottom-4 h-16 w-16 lg:h-24 lg:w-24 text-slate-50 group-hover:text-slate-100 transition-colors rotate-12" />
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md bg-white overflow-hidden relative group hover:shadow-xl transition-all border-l-4 border-l-emerald-500">
+                <CardContent className="p-3 sm:p-4 lg:p-6">
+                  <div className="relative z-10 space-y-1 sm:space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-slate-400 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Average Ticket</p>
+                    </div>
+                    <h3 className="text-lg sm:text-2xl lg:text-3xl font-black tracking-tighter text-slate-900 truncate">₹{Math.round(stats.avgTicket).toLocaleString()}</h3>
+                    <p className="hidden sm:block text-[8px] lg:text-[10px] text-emerald-600 font-bold uppercase tracking-wider truncate mt-2">Per Sale Value</p>
+                  </div>
+                  <Users className="absolute -right-4 -bottom-4 h-16 w-16 lg:h-24 lg:w-24 text-slate-50 group-hover:text-slate-100 transition-colors rotate-12" />
+                </CardContent>
+              </Card>
             </div>
-          ) : (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <SalesRegistryTable sales={sales} onPrint={triggerInvoicePrint} />
-            </div>
-          )}
+
+            {loading && sales.length === 0 ? (
+              <div className="h-[400px] flex flex-col items-center justify-center gap-4 bg-white/50 backdrop-blur-sm rounded-3xl border border-dashed border-slate-300">
+                <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
+                <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-xs">Syncing Registry...</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <SalesRegistryTable sales={sales} onPrint={triggerInvoicePrint} />
+              </div>
+            )}
+          </div>
         </div>
       </SheetContent>
     </Sheet>

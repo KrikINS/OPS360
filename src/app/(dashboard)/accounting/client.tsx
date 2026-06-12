@@ -734,54 +734,44 @@ export default function AccountingClient({
         <div className="space-y-6">
 
           {/* P&L summary cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 lg:gap-4">
             <Card className="border-green-200 bg-green-50/30">
-              <CardContent className="pt-6">
-                <div className="flex items-center
-                  justify-between">
-                  <div>
-                    <p className="text-xs font-semibold
-                      uppercase tracking-widest
-                      text-green-700">
+              <CardContent className="p-2 sm:p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[8px] sm:text-[10px] md:text-xs font-semibold uppercase tracking-widest text-green-700 truncate">
                       Total Revenue
                     </p>
-                    <p className="text-2xl font-bold
-                      text-green-800 mt-1">
+                    <p className="text-xs sm:text-base md:text-2xl font-bold text-green-800 mt-0.5 md:mt-1 truncate">
                       {fmtINR(pl?.totalRevenue ?? 0)}
                     </p>
-                    <p className="text-xs text-green-600 mt-1">
+                    <p className="text-[8px] md:text-xs text-green-600 mt-0.5 md:mt-1 hidden lg:block truncate">
                       Current financial year
                     </p>
                   </div>
-                  <div className="p-3 bg-green-100
-                    rounded-full">
-                    <TrendingUp className="h-5 w-5
-                      text-green-600" />
+                  <div className="p-1.5 md:p-3 bg-green-100 rounded-full hidden xl:block shrink-0 ml-2">
+                    <TrendingUp className="h-3 w-3 md:h-5 md:w-5 text-green-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-red-200 bg-red-50/30">
-              <CardContent className="pt-6">
-                <div className="flex items-center
-                  justify-between">
-                  <div>
-                    <p className="text-xs font-semibold
-                      uppercase tracking-widest text-red-700">
+              <CardContent className="p-2 sm:p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[8px] sm:text-[10px] md:text-xs font-semibold uppercase tracking-widest text-red-700 truncate">
                       Total Expenses
                     </p>
-                    <p className="text-2xl font-bold
-                      text-red-800 mt-1">
+                    <p className="text-xs sm:text-base md:text-2xl font-bold text-red-800 mt-0.5 md:mt-1 truncate">
                       {fmtINR(Math.abs(pl?.totalExpenses ?? 0))}
                     </p>
-                    <p className="text-xs text-red-600 mt-1">
+                    <p className="text-[8px] md:text-xs text-red-600 mt-0.5 md:mt-1 hidden lg:block truncate">
                       Current financial year
                     </p>
                   </div>
-                  <div className="p-3 bg-red-100 rounded-full">
-                    <TrendingDown className="h-5 w-5
-                      text-red-600" />
+                  <div className="p-1.5 md:p-3 bg-red-100 rounded-full hidden xl:block shrink-0 ml-2">
+                    <TrendingDown className="h-3 w-3 md:h-5 md:w-5 text-red-600" />
                   </div>
                 </div>
               </CardContent>
@@ -792,34 +782,35 @@ export default function AccountingClient({
                 ? 'border-indigo-200 bg-indigo-50/30'
                 : 'border-orange-200 bg-orange-50/30'
             }`}>
-              <CardContent className="pt-6">
-                <div className="flex items-center
-                  justify-between">
-                  <div>
-                    <p className="text-xs font-semibold
-                      uppercase tracking-widest
-                      text-indigo-700">
+              <CardContent className="p-2 sm:p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className={`text-[8px] sm:text-[10px] md:text-xs font-semibold uppercase tracking-widest truncate ${
+                      (pl?.netProfit ?? 0) >= 0 ? 'text-indigo-700' : 'text-orange-700'
+                    }`}>
                       Net Profit / Loss
                     </p>
-                    <p className={`text-2xl font-bold mt-1
+                    <p className={`text-xs sm:text-base md:text-2xl font-bold mt-0.5 md:mt-1 truncate
                       ${(pl?.netProfit ?? 0) >= 0
                         ? 'text-indigo-800'
                         : 'text-orange-700'
                       }`}>
                       {fmtINR(pl?.netProfit ?? 0)}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className={`text-[8px] md:text-xs mt-0.5 md:mt-1 hidden lg:block truncate ${
+                      (pl?.netProfit ?? 0) >= 0 ? 'text-indigo-600' : 'text-orange-600'
+                    }`}>
                       {(pl?.netProfit ?? 0) >= 0
                         ? '▲ Profitable'
                         : '▼ Net loss'}
                     </p>
                   </div>
-                  <div className={`p-3 rounded-full ${
+                  <div className={`p-1.5 md:p-3 rounded-full hidden xl:block shrink-0 ml-2 ${
                     (pl?.netProfit ?? 0) >= 0
                       ? 'bg-indigo-100'
                       : 'bg-orange-100'
                   }`}>
-                    <Scale className={`h-5 w-5 ${
+                    <Scale className={`h-3 w-3 md:h-5 md:w-5 ${
                       (pl?.netProfit ?? 0) >= 0
                         ? 'text-indigo-600'
                         : 'text-orange-600'
