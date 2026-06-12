@@ -130,7 +130,7 @@ export default function ActivityClient({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-2 sm:gap-4">
         {[
           { label: 'Total Actions',      value: filtered.length,  icon: <Activity className="h-4 w-4" />,  color: 'text-primary' },
           { label: 'Active Today',        value: activeToday,      icon: <Users className="h-4 w-4" />,     color: 'text-green-600' },
@@ -138,11 +138,11 @@ export default function ActivityClient({
           { label: 'Most Active Staff',   value: mostActiveStaff,  icon: <Clock className="h-4 w-4" />,     color: 'text-orange-600' },
         ].map(card => (
           <Card key={card.label} className="shadow-sm">
-            <CardContent className="p-4 flex items-start gap-3">
-              <span className={`mt-0.5 ${card.color}`}>{card.icon}</span>
-              <div className="min-w-0">
-                <div className={`text-xl font-bold truncate ${card.color}`}>{card.value}</div>
-                <div className="text-xs text-muted-foreground">{card.label}</div>
+            <CardContent className="p-2 sm:p-4 flex flex-col md:flex-row items-center md:items-start gap-1 sm:gap-3 text-center md:text-left">
+              <span className={`md:mt-0.5 ${card.color}`}>{card.icon}</span>
+              <div className="min-w-0 w-full">
+                <div className={`text-sm sm:text-lg md:text-xl font-bold truncate ${card.color}`}>{card.value}</div>
+                <div className="text-[9px] sm:text-xs text-muted-foreground leading-tight">{card.label}</div>
               </div>
             </CardContent>
           </Card>
