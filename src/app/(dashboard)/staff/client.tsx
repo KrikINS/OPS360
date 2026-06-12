@@ -14,7 +14,7 @@ import { Users, Clock, Activity, Plus, Wallet, Trash2, Eye, ChevronDown, Chevron
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useSearchParams, useRouter } from "next/navigation"
 import type { StaffRow } from "@/actions/hr"
-import { processPayrollRun, getPayrollRuns, getPayslips, getEmployeesWithStructures, setSalaryStructure } from "@/actions/hr"
+import { processPayrollRun, getPayrollRuns, getPayslips, getEmployeesWithStructures, setSalaryStructure, upsertEmployeeDetails } from "@/actions/hr"
 import { fmtINR } from "@/lib/utils"
 
 import ClockWidget from "@/components/hr/ClockWidget"
@@ -131,7 +131,10 @@ export default function StaffClient({
   const [employees, setEmployees] = useState<any[]>([])
   const [salaryDrawerOpen, setSalaryDrawerOpen] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null)
-  const [salaryForm, setSalaryForm] = useState({ basic: '', hra: '', pfApplicable: false, tdsMonthly: '', effectiveFrom: '' })
+  const [salaryForm, setSalaryForm] = useState({ 
+    basic: '', hra: '', pfApplicable: false, tdsMonthly: '', effectiveFrom: '',
+    designation: '', department: '', dateOfJoining: ''
+  })
   const [salarySubmitting, setSalarySubmitting] = useState(false)
   const [salaryToast, setSalaryToast] = useState<{ type: 'success' | 'error', message: string } | null>(null)
 
@@ -152,6 +155,9 @@ export default function StaffClient({
       pfApplicable:  emp.pf_applicable ?? false,
       tdsMonthly:    emp.tds_monthly ? String(Number(emp.tds_monthly)) : '',
       effectiveFrom: new Date().toISOString().slice(0, 10),
+      designation:   emp.designation || '',
+      department:    emp.department || '',
+      dateOfJoining: emp.date_of_joining || '',
     })
     setSalaryDrawerOpen(true)
   }
@@ -159,6 +165,13 @@ export default function StaffClient({
   const handleSalarySubmit = async () => {
     if (!selectedEmployee || !salaryForm.basic || !salaryForm.effectiveFrom) return
     setSalarySubmitting(true)
+
+    await upsertEmployeeDetails(selectedEmployee.id, {
+      designation:   salaryForm.designation || undefined,
+      department:    salaryForm.department || undefined,
+      dateOfJoining: salaryForm.dateOfJoining || undefined,
+    })
+
     const result = await setSalaryStructure({
       employeeId:    selectedEmployee.id,
       effectiveFrom: salaryForm.effectiveFrom,
@@ -169,7 +182,7 @@ export default function StaffClient({
     })
     setSalarySubmitting(false)
     if (result.success) {
-      setSalaryToast({ type: 'success', message: 'Salary structure saved' })
+      setSalaryToast({ type: 'success', message: 'Profile & Salary structure saved' })
       setSalaryDrawerOpen(false)
       await loadEmployees()
     } else {
@@ -796,25 +809,47 @@ export default function StaffClient({
               <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSalaryDrawerOpen(false)}>
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5" onClick={e => e.stopPropagation()}>
                   <div>
-                    <h2 className="text-lg font-bold">Set Salary Structure</h2>
+                    <h2 className="text-lg font-bold">Edit Profile & Salary</h2>
                     <p className="text-sm text-muted-foreground">{selectedEmployee.first_name} {selectedEmployee.last_name}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wide">Basic Salary (₹) *</Label>
-                      <Input type="number" min={0} placeholder="e.g. 20000" value={salaryForm.basic} onChange={e => setSalaryForm(f => ({ ...f, basic: e.target.value }))} className="h-9" />
+                  
+                  <div className="space-y-3 border-b pb-4">
+                    <h3 className="text-sm font-semibold uppercase text-slate-500">Employee Details</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wide">Designation</Label>
+                        <Input placeholder="e.g. Manager" value={salaryForm.designation} onChange={e => setSalaryForm(f => ({ ...f, designation: e.target.value }))} className="h-9" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wide">Department</Label>
+                        <Input placeholder="e.g. Sales" value={salaryForm.department} onChange={e => setSalaryForm(f => ({ ...f, department: e.target.value }))} className="h-9" />
+                      </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <Label className="text-xs font-semibold uppercase tracking-wide">Date of Joining</Label>
+                        <Input type="date" value={salaryForm.dateOfJoining} onChange={e => setSalaryForm(f => ({ ...f, dateOfJoining: e.target.value }))} className="h-9" />
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wide">HRA (₹)</Label>
-                      <Input type="number" min={0} placeholder="e.g. 8000" value={salaryForm.hra} onChange={e => setSalaryForm(f => ({ ...f, hra: e.target.value }))} className="h-9" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wide">TDS Monthly (₹)</Label>
-                      <Input type="number" min={0} placeholder="0" value={salaryForm.tdsMonthly} onChange={e => setSalaryForm(f => ({ ...f, tdsMonthly: e.target.value }))} className="h-9" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wide">Effective From *</Label>
-                      <Input type="date" value={salaryForm.effectiveFrom} onChange={e => setSalaryForm(f => ({ ...f, effectiveFrom: e.target.value }))} className="h-9" />
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold uppercase text-slate-500">Salary Structure</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wide">Basic Salary (₹) *</Label>
+                        <Input type="number" min={0} placeholder="e.g. 20000" value={salaryForm.basic} onChange={e => setSalaryForm(f => ({ ...f, basic: e.target.value }))} className="h-9" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wide">HRA (₹)</Label>
+                        <Input type="number" min={0} placeholder="e.g. 8000" value={salaryForm.hra} onChange={e => setSalaryForm(f => ({ ...f, hra: e.target.value }))} className="h-9" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wide">TDS Monthly (₹)</Label>
+                        <Input type="number" min={0} placeholder="0" value={salaryForm.tdsMonthly} onChange={e => setSalaryForm(f => ({ ...f, tdsMonthly: e.target.value }))} className="h-9" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wide">Effective From *</Label>
+                        <Input type="date" value={salaryForm.effectiveFrom} onChange={e => setSalaryForm(f => ({ ...f, effectiveFrom: e.target.value }))} className="h-9" />
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
