@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollableTable } from "@/components/ui/scrollable-table"
 import { Badge } from "@/components/ui/badge"
@@ -346,14 +346,14 @@ export default function StaffClient({
 
         {/* ── Directory ─────────────────────────────── */}
         <TabsContent value="registry" className="mt-0 outline-none">
-          <Card className="shadow-md">
-            <CardHeader className="bg-muted/30 border-b flex flex-row items-center justify-between py-3">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Users className="h-5 w-5" />
-                Staff Members
-              </CardTitle>
+          <Card className="shadow-md border-t-4 border-t-[#001529]">
+            <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Staff Members</CardTitle>
+                <CardDescription>Browse and manage all registered employees and staff.</CardDescription>
+              </div>
               {isAdmin && (
-                <Button onClick={() => setModalOpen(true)} size="sm" className="gap-2">
+                <Button onClick={() => setModalOpen(true)} size="sm" className="gap-2 bg-[#001529] hover:bg-[#002a52] text-white">
                   <Plus className="h-4 w-4" />
                   Add Offline Staff
                 </Button>
@@ -366,16 +366,16 @@ export default function StaffClient({
                 <ScrollableTable minWidth="1000px">
                   <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead>Name</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Branch</TableHead>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-bold">Name</TableHead>
+                      <TableHead className="font-bold">Role</TableHead>
+                      <TableHead className="font-bold">Email</TableHead>
+                      <TableHead className="font-bold">Branch</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {staff.map((member) => (
-                      <TableRow key={`${member.userId}-${member.branchId ?? 'none'}`}>
+                      <TableRow key={`${member.userId}-${member.branchId ?? 'none'}`} className="hover:bg-muted/20 transition-colors group">
                         <TableCell className="font-medium">
                           {member.fullName ?? <span className="text-muted-foreground italic">No name</span>}
                         </TableCell>
@@ -406,12 +406,12 @@ export default function StaffClient({
               <ClockWidget />
             </div>
             <div className="md:col-span-2">
-              <Card className="shadow-md h-full">
-                <CardHeader className="bg-muted/30 border-b py-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Clock className="h-4 w-4" />
-                    Historic Attendance Logs
-                  </CardTitle>
+              <Card className="shadow-md h-full border-t-4 border-t-[#001529]">
+                <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Historic Attendance Logs</CardTitle>
+                    <CardDescription>View past attendance records for all staff.</CardDescription>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   {attendance.length === 0 ? (
@@ -419,17 +419,17 @@ export default function StaffClient({
                   ) : (
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead>Date</TableHead>
-                          <TableHead>Staff</TableHead>
-                          <TableHead>Clock In</TableHead>
-                          <TableHead>Clock Out</TableHead>
-                          <TableHead>Duration</TableHead>
+                        <TableRow className="bg-muted/30">
+                          <TableHead className="font-bold">Date</TableHead>
+                          <TableHead className="font-bold">Staff</TableHead>
+                          <TableHead className="font-bold">Clock In</TableHead>
+                          <TableHead className="font-bold">Clock Out</TableHead>
+                          <TableHead className="font-bold">Duration</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {attendance.map((rec: AttendanceRecord) => (
-                          <TableRow key={rec.id}>
+                          <TableRow key={rec.id} className="hover:bg-muted/20 transition-colors group">
                             <TableCell className="text-xs">{rec.date}</TableCell>
                             <TableCell className="font-medium text-xs">{rec.fullName ?? 'You'}</TableCell>
                             <TableCell className="text-xs">
@@ -754,12 +754,12 @@ export default function StaffClient({
                 {salaryToast.message}
               </div>
             )}
-            <Card className="shadow-md">
-              <CardHeader className="bg-muted/30 border-b py-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Wallet className="h-4 w-4" />
-                  Employee Salary Structures
-                </CardTitle>
+            <Card className="shadow-md border-t-4 border-t-[#001529]">
+              <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Employee Salary Structures</CardTitle>
+                  <CardDescription>Manage staff designations and fixed salary components.</CardDescription>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 {employees.length === 0 ? (
@@ -768,21 +768,21 @@ export default function StaffClient({
                   <ScrollableTable minWidth="900px">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead>Employee</TableHead>
-                          <TableHead>Designation</TableHead>
-                          <TableHead className="text-right">Basic (₹)</TableHead>
-                          <TableHead className="text-right">HRA (₹)</TableHead>
-                          <TableHead className="text-right">Gross (₹)</TableHead>
-                          <TableHead className="text-right">Deductions (₹)</TableHead>
-                          <TableHead className="text-right">Net Pay (₹)</TableHead>
-                          <TableHead className="text-right">Effective From</TableHead>
+                        <TableRow className="bg-muted/30">
+                          <TableHead className="font-bold">Employee</TableHead>
+                          <TableHead className="font-bold">Designation</TableHead>
+                          <TableHead className="text-right font-bold">Basic (₹)</TableHead>
+                          <TableHead className="text-right font-bold">HRA (₹)</TableHead>
+                          <TableHead className="text-right font-bold">Gross (₹)</TableHead>
+                          <TableHead className="text-right font-bold">Deductions (₹)</TableHead>
+                          <TableHead className="text-right font-bold">Net Pay (₹)</TableHead>
+                          <TableHead className="text-right font-bold">Effective From</TableHead>
                           <TableHead />
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {employees.map((emp) => (
-                          <TableRow key={emp.id}>
+                          <TableRow key={emp.id} className="hover:bg-muted/20 transition-colors group">
                             <TableCell className="font-medium">{emp.first_name} {emp.last_name}</TableCell>
                             <TableCell className="text-muted-foreground text-sm">{emp.designation ?? '—'}</TableCell>
                             <TableCell className="text-right tabular-nums text-sm">{emp.basic ? fmtINR(Number(emp.basic)) : <span className="text-muted-foreground italic text-xs">Not set</span>}</TableCell>
