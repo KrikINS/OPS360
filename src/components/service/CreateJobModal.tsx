@@ -102,9 +102,9 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
         title,
         description,
         priority,
-        serialNumber: serialNumber.trim() || undefined,
-        invoiceId: (warrantyInfo?.success && warrantyInfo.found) ? (warrantyInfo.invoiceId ?? undefined) : undefined,
-        warrantyStatus: (warrantyInfo?.success && warrantyInfo.found) ? warrantyInfo.warrantyStatus : 'unknown',
+        serial_number: serialNumber.trim() || undefined,
+        invoice_id: (warrantyInfo?.success && warrantyInfo.found) ? (warrantyInfo.invoiceId ?? undefined) : undefined,
+        warranty_status: (warrantyInfo?.success && warrantyInfo.found) ? warrantyInfo.warrantyStatus : 'unknown',
       })
       onOpenChange(false)
       // Reset form

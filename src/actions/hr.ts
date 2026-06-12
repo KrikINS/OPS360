@@ -44,43 +44,88 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
   const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
 
   try {
+    // ---- Auto-sync backfill step ----
+    const missingProfiles = await db.execute(sql`
+      SELECT p.id, p.full_name, p.email, p.role, p.branch_id
+      FROM profiles p
+      WHERE p.employee_id IS NULL
+    `);
+    const profilesToBackfill = (missingProfiles as any).rows ?? missingProfiles;
+    
+    if (profilesToBackfill && profilesToBackfill.length > 0) {
+      for (const p of profilesToBackfill) {
+        const nameParts = (p.full_name || 'Unknown User').split(' ')
+        const firstName = nameParts[0]
+        const lastName = nameParts.slice(1).join(' ') || ' '
+        
+        const [emp] = await db.insert(employees).values({
+          first_name: firstName,
+          last_name: lastName,
+          email: p.email,
+          designation: p.role || 'staff',
+          branch_id: p.branch_id
+        }).returning()
+        
+        await db.update(profiles)
+          .set({ employee_id: emp.id })
+          .where(eq(profiles.id, p.id))
+      }
+    }
+    // ----------------------------------
+
     const query = db
       .select({
+        employeeId: employees.id,
         userId: profiles.id,
-        fullName: profiles.full_name,
-        email: profiles.email,
-        role: profiles.role,
-        branchId: user_branch_access.branch_id,
+        firstName: employees.first_name,
+        lastName: employees.last_name,
+        email: employees.email,
+        role: employees.designation,
+        branchId: employees.branch_id,
         branchName: branches.name,
-        isPrimary: user_branch_access.is_primary,
       })
-      .from(profiles)
-      .leftJoin(user_branch_access, eq(profiles.id, user_branch_access.user_id))
-      .leftJoin(branches, eq(user_branch_access.branch_id, branches.id))
-      .orderBy(profiles.full_name)
+      .from(employees)
+      .leftJoin(profiles, eq(employees.id, profiles.employee_id))
+      .leftJoin(branches, eq(employees.branch_id, branches.id))
+      .where(eq(employees.status, 'active'))
+      .orderBy(employees.first_name)
 
     if (!isAdmin) {
       const effectiveBranchId = await getEffectiveBranchId(session);
       if (!effectiveBranchId) {
         return { success: false as const, error: 'No branch assigned to your account' };
       }
-      query.where(eq(user_branch_access.branch_id, effectiveBranchId))
+      query.where(
+        and(
+          eq(employees.status, 'active'),
+          eq(employees.branch_id, effectiveBranchId)
+        )
+      )
     } else if (input?.branchId) {
-      query.where(eq(user_branch_access.branch_id, input.branchId))
+      query.where(
+        and(
+          eq(employees.status, 'active'),
+          eq(employees.branch_id, input.branchId)
+        )
+      )
     }
 
     const rawRows = await query
 
-    // Post-query reduction to deduplicate by userId
+    // Map to StaffRow format
     const staffMap = new Map<string, StaffRow>()
     for (const row of rawRows) {
-      if (!staffMap.has(row.userId)) {
-        staffMap.set(row.userId, row)
-      } else {
-        const existing = staffMap.get(row.userId)!
-        if (row.isPrimary && !existing.isPrimary) {
-          staffMap.set(row.userId, row)
-        }
+      const uId = row.userId || row.employeeId
+      if (!staffMap.has(uId)) {
+        staffMap.set(uId, {
+          userId: uId,
+          fullName: `${row.firstName} ${row.lastName}`.trim(),
+          email: row.email,
+          role: row.role,
+          branchId: row.branchId,
+          branchName: row.branchName,
+          isPrimary: true
+        })
       }
     }
     

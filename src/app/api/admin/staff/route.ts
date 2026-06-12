@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/db/client';
-import { users, profiles, user_branch_access, user_permissions, branches } from '@/db/schema';
+import { users, profiles, user_branch_access, user_permissions, branches, employees } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 
@@ -107,11 +107,25 @@ export async function POST(req: NextRequest) {
       role: newUserRole || 'staff',
     }).returning();
 
+    const nameParts = (fullName || 'Unknown User').split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || ' ';
+    const primaryBranchId = (Array.isArray(branchIds) && branchIds.length > 0) ? branchIds[0] : null;
+
+    const [newEmployee] = await db.insert(employees).values({
+      first_name: firstName,
+      last_name: lastName,
+      email: email,
+      designation: newUserRole || 'staff',
+      branch_id: primaryBranchId
+    }).returning();
+
     await db.insert(profiles).values({
       id: newUser.id,
       email,
       full_name: fullName || null,
       role: newUserRole || 'staff',
+      employee_id: newEmployee.id,
     });
 
     if (Array.isArray(branchIds) && branchIds.length > 0) {

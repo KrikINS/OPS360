@@ -45,10 +45,10 @@ interface ServiceContextType {
     productId?: string
     technicianId?: string
     estimatedCost?: number
-    serialNumber?: string
-    invoiceId?: string
-    warrantyStatus?: string
-    resolutionNotes?: string
+    serial_number?: string
+    invoice_id?: string
+    warranty_status?: string
+    resolution_notes?: string
   }) => Promise<void>
 }
 
