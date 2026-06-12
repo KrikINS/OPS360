@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollableTable } from "@/components/ui/scrollable-table"
@@ -14,7 +14,7 @@ import { Users, Clock, Activity, Plus, Wallet, Trash2, Eye, ChevronDown, Chevron
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useSearchParams, useRouter } from "next/navigation"
 import type { StaffRow } from "@/actions/hr"
-import { processPayrollRun, getPayrollRuns, getPayslips } from "@/actions/hr"
+import { processPayrollRun, getPayrollRuns, getPayslips, getEmployeesWithStructures, setSalaryStructure } from "@/actions/hr"
 import { fmtINR } from "@/lib/utils"
 
 import ClockWidget from "@/components/hr/ClockWidget"
@@ -116,6 +116,56 @@ export default function StaffClient({
   const [expandedRunId, setExpandedRunId]   = useState<string | null>(null)
   const [runPayslips, setRunPayslips]       = useState<Record<string, Payslip[]>>({})
   const [loadingSlips, setLoadingSlips]     = useState<string | null>(null)
+
+  const [employees, setEmployees] = useState<any[]>([])
+  const [salaryDrawerOpen, setSalaryDrawerOpen] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null)
+  const [salaryForm, setSalaryForm] = useState({ basic: '', hra: '', pfApplicable: false, tdsMonthly: '', effectiveFrom: '' })
+  const [salarySubmitting, setSalarySubmitting] = useState(false)
+  const [salaryToast, setSalaryToast] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+
+  const loadEmployees = async () => {
+    const result = await getEmployeesWithStructures()
+    if (result.success) setEmployees(result.employees)
+  }
+
+  useEffect(() => {
+    loadEmployees()
+  }, [])
+
+  const openSalaryDrawer = (emp: any) => {
+    setSelectedEmployee(emp)
+    setSalaryForm({
+      basic:         emp.basic ? String(Number(emp.basic)) : '',
+      hra:           emp.hra   ? String(Number(emp.hra))   : '',
+      pfApplicable:  emp.pf_applicable ?? false,
+      tdsMonthly:    emp.tds_monthly ? String(Number(emp.tds_monthly)) : '',
+      effectiveFrom: new Date().toISOString().slice(0, 10),
+    })
+    setSalaryDrawerOpen(true)
+  }
+
+  const handleSalarySubmit = async () => {
+    if (!selectedEmployee || !salaryForm.basic || !salaryForm.effectiveFrom) return
+    setSalarySubmitting(true)
+    const result = await setSalaryStructure({
+      employeeId:    selectedEmployee.id,
+      effectiveFrom: salaryForm.effectiveFrom,
+      basic:         parseFloat(salaryForm.basic),
+      hra:           parseFloat(salaryForm.hra || '0'),
+      pfApplicable:  salaryForm.pfApplicable,
+      tdsMonthly:    parseFloat(salaryForm.tdsMonthly || '0'),
+    })
+    setSalarySubmitting(false)
+    if (result.success) {
+      setSalaryToast({ type: 'success', message: 'Salary structure saved' })
+      setSalaryDrawerOpen(false)
+      await loadEmployees()
+    } else {
+      setSalaryToast({ type: 'error', message: result.error ?? 'Failed to save' })
+    }
+    setTimeout(() => setSalaryToast(null), 4000)
+  }
 
   const loadRuns = useCallback(async () => {
     const result = await getPayrollRuns()
@@ -228,6 +278,12 @@ export default function StaffClient({
             <TabsTrigger value="payroll" className={TAB_CLASS}>
               <Wallet className="h-4 w-4" />
               Payroll
+            </TabsTrigger>
+          )}
+          {isManager && (
+            <TabsTrigger value="salary" className={TAB_CLASS}>
+              <Wallet className="h-4 w-4" />
+              Salary Structures
             </TabsTrigger>
           )}
         </TabsList>
@@ -630,6 +686,129 @@ export default function StaffClient({
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+        )}
+
+        {isManager && (
+          <TabsContent value="salary" className="mt-0 outline-none space-y-6">
+            {salaryToast && (
+              <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm border ${salaryToast.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
+                {salaryToast.message}
+              </div>
+            )}
+            <Card className="shadow-md">
+              <CardHeader className="bg-muted/30 border-b py-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Wallet className="h-4 w-4" />
+                  Employee Salary Structures
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {employees.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground text-sm">No active employees found. Add employees via Staff Directory first.</div>
+                ) : (
+                  <ScrollableTable minWidth="900px">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Designation</TableHead>
+                          <TableHead className="text-right">Basic (₹)</TableHead>
+                          <TableHead className="text-right">HRA (₹)</TableHead>
+                          <TableHead className="text-right">Gross (₹)</TableHead>
+                          <TableHead className="text-right">Deductions (₹)</TableHead>
+                          <TableHead className="text-right">Net Pay (₹)</TableHead>
+                          <TableHead className="text-right">Effective From</TableHead>
+                          <TableHead />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {employees.map((emp) => (
+                          <TableRow key={emp.id}>
+                            <TableCell className="font-medium">{emp.first_name} {emp.last_name}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">{emp.designation ?? '—'}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{emp.basic ? fmtINR(Number(emp.basic)) : <span className="text-muted-foreground italic text-xs">Not set</span>}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{emp.hra ? fmtINR(Number(emp.hra)) : '—'}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm font-semibold">{emp.gross ? fmtINR(Number(emp.gross)) : '—'}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm text-amber-700">{emp.basic ? fmtINR(Number(emp.pf_employee ?? 0) + Number(emp.professional_tax ?? 0) + Number(emp.tds_monthly ?? 0)) : '—'}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm font-bold text-green-700">{emp.net ? fmtINR(Number(emp.net)) : '—'}</TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">{emp.effective_from ?? '—'}</TableCell>
+                            <TableCell className="text-right">
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openSalaryDrawer(emp)}>
+                                {emp.basic ? 'Edit' : 'Set Salary'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollableTable>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Salary structure drawer */}
+            {salaryDrawerOpen && selectedEmployee && (
+              <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSalaryDrawerOpen(false)}>
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-5" onClick={e => e.stopPropagation()}>
+                  <div>
+                    <h2 className="text-lg font-bold">Set Salary Structure</h2>
+                    <p className="text-sm text-muted-foreground">{selectedEmployee.first_name} {selectedEmployee.last_name}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide">Basic Salary (₹) *</Label>
+                      <Input type="number" min={0} placeholder="e.g. 20000" value={salaryForm.basic} onChange={e => setSalaryForm(f => ({ ...f, basic: e.target.value }))} className="h-9" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide">HRA (₹)</Label>
+                      <Input type="number" min={0} placeholder="e.g. 8000" value={salaryForm.hra} onChange={e => setSalaryForm(f => ({ ...f, hra: e.target.value }))} className="h-9" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide">TDS Monthly (₹)</Label>
+                      <Input type="number" min={0} placeholder="0" value={salaryForm.tdsMonthly} onChange={e => setSalaryForm(f => ({ ...f, tdsMonthly: e.target.value }))} className="h-9" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide">Effective From *</Label>
+                      <Input type="date" value={salaryForm.effectiveFrom} onChange={e => setSalaryForm(f => ({ ...f, effectiveFrom: e.target.value }))} className="h-9" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input type="checkbox" id="pf" checked={salaryForm.pfApplicable} onChange={e => setSalaryForm(f => ({ ...f, pfApplicable: e.target.checked }))} className="h-4 w-4 rounded" />
+                    <Label htmlFor="pf" className="text-sm cursor-pointer">PF Applicable (12% of Basic, max ₹1,800/month)</Label>
+                  </div>
+                  {salaryForm.basic && (
+                    <div className="rounded-lg bg-slate-50 border p-3 text-xs space-y-1.5">
+                      <p className="font-semibold text-slate-600 uppercase tracking-wide mb-2">Preview</p>
+                      {(() => {
+                        const basic = parseFloat(salaryForm.basic || '0')
+                        const hra   = parseFloat(salaryForm.hra || '0')
+                        const gross = basic + hra
+                        const pf    = salaryForm.pfApplicable ? Math.min(Math.round(basic * 0.12), 1800) : 0
+                        const pt    = gross > 15000 ? 200 : 0
+                        const tds   = parseFloat(salaryForm.tdsMonthly || '0')
+                        const net   = gross - pf - pt - tds
+                        return (
+                          <>
+                            <div className="flex justify-between"><span className="text-slate-500">Gross (Basic + HRA)</span><span className="font-bold">{fmtINR(gross)}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">PF Employee</span><span className="text-amber-700">-{fmtINR(pf)}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">Professional Tax</span><span className="text-amber-700">-{fmtINR(pt)}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">TDS</span><span className="text-amber-700">-{fmtINR(tds)}</span></div>
+                            <div className="flex justify-between border-t pt-1.5 mt-1"><span className="font-semibold">Net Pay</span><span className="font-bold text-green-700">{fmtINR(net)}</span></div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+                  <div className="flex gap-3 pt-1">
+                    <Button variant="outline" className="flex-1" onClick={() => setSalaryDrawerOpen(false)}>Cancel</Button>
+                    <Button className="flex-1" onClick={handleSalarySubmit} disabled={salarySubmitting || !salaryForm.basic || !salaryForm.effectiveFrom}>
+                      {salarySubmitting ? 'Saving…' : 'Save Structure'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </TabsContent>
         )}
       </Tabs>

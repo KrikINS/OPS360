@@ -19,6 +19,7 @@ import {
   employees,
   payroll_runs,
   payslips,
+  employee_salary_structures,
 } from '@/db/schema'
 import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm'
 import { getCashAccountCode, createJournalEntry } from '@/actions/finance'
@@ -727,6 +728,153 @@ export async function getPayslips(input: { payrollRunId: string }) {
     return { success: true as const, payslips: slips }
   } catch (error) {
     console.error('GET PAYSLIPS ERROR:', error)
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function getEmployeesWithStructures(input?: { branchId?: string }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  try {
+    const rows = await db
+      .select({
+        id:              employees.id,
+        first_name:      employees.first_name,
+        last_name:       employees.last_name,
+        designation:     employees.designation,
+        department:      employees.department,
+        date_of_joining: employees.date_of_joining,
+        branch_id:       employees.branch_id,
+        status:          employees.status,
+        // Active salary structure (if exists)
+        structure_id:          employee_salary_structures.id,
+        basic:                 employee_salary_structures.basic,
+        hra:                   employee_salary_structures.hra,
+        gross:                 employee_salary_structures.gross,
+        pf_applicable:         employee_salary_structures.pf_applicable,
+        pf_employee:           employee_salary_structures.pf_employee,
+        professional_tax:      employee_salary_structures.professional_tax,
+        tds_monthly:           employee_salary_structures.tds_monthly,
+        net:                   employee_salary_structures.net,
+        effective_from:        employee_salary_structures.effective_from,
+      })
+      .from(employees)
+      .leftJoin(
+        employee_salary_structures,
+        and(
+          eq(employee_salary_structures.employee_id, employees.id),
+          eq(employee_salary_structures.is_active, true)
+        )
+      )
+      .where(
+        and(
+          eq(employees.status, 'active'),
+          input?.branchId ? eq(employees.branch_id, input.branchId) : undefined
+        )
+      )
+      .orderBy(employees.first_name)
+    return { success: true as const, employees: rows }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function upsertEmployeeDetails(input: {
+  employeeId: string
+  designation?: string
+  department?: string
+  dateOfJoining?: string
+  branchId?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
+    return { success: false as const, error: 'Manager role required' }
+  }
+  try {
+    await db.update(employees)
+      .set({
+        designation:     input.designation ?? null,
+        department:      input.department ?? null,
+        date_of_joining: input.dateOfJoining ?? null,
+        branch_id:       input.branchId ?? null,
+      })
+      .where(eq(employees.id, input.employeeId))
+    return { success: true as const }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function setSalaryStructure(input: {
+  employeeId: string
+  effectiveFrom: string
+  basic: number
+  hra: number
+  pfApplicable: boolean
+  tdsMonthly: number
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
+    return { success: false as const, error: 'Manager role required' }
+  }
+  if (input.basic <= 0) return { success: false as const, error: 'Basic salary must be greater than 0' }
+  if (input.hra < 0) return { success: false as const, error: 'HRA cannot be negative' }
+
+  // Compute derived fields
+  const gross = input.basic + input.hra
+  // PF: 12% of basic, capped at 1800 (12% of statutory 15000 ceiling)
+  const pf_employee = input.pfApplicable ? Math.min(Math.round(input.basic * 0.12), 1800) : 0
+  // Professional Tax: Kerala — 200/month if gross > 15000, else 0
+  const professional_tax = gross > 15000 ? 200 : 0
+  const net = gross - pf_employee - professional_tax - input.tdsMonthly
+
+  if (net < 0) return { success: false as const, error: 'Net salary cannot be negative — check deductions' }
+
+  try {
+    // Deactivate all existing structures for this employee
+    await db.update(employee_salary_structures)
+      .set({ is_active: false })
+      .where(eq(employee_salary_structures.employee_id, input.employeeId))
+
+    // Insert new active structure
+    const [structure] = await db.insert(employee_salary_structures)
+      .values({
+        employee_id:      input.employeeId,
+        effective_from:   input.effectiveFrom,
+        basic:            String(input.basic),
+        hra:              String(input.hra),
+        gross:            String(gross),
+        pf_applicable:    input.pfApplicable,
+        pf_employee:      String(pf_employee),
+        professional_tax: String(professional_tax),
+        tds_monthly:      String(input.tdsMonthly),
+        net:              String(net),
+        is_active:        true,
+        created_by:       session.user.id,
+      })
+      .returning()
+
+    return { success: true as const, structure }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function getSalaryStructureHistory(employeeId: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  try {
+    const rows = await db
+      .select()
+      .from(employee_salary_structures)
+      .where(eq(employee_salary_structures.employee_id, employeeId))
+      .orderBy(desc(employee_salary_structures.effective_from))
+    return { success: true as const, structures: rows }
+  } catch (error) {
     return { success: false as const, error: (error as Error).message }
   }
 }
