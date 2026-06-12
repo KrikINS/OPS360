@@ -19,6 +19,10 @@ export function AddOfflineStaffModal({ open, onOpenChange }: { open: boolean, on
     lastName: "",
     email: "",
     phone: "",
+    designation: '',
+    department: '',
+    dateOfJoining: '',
+    branchId: '',
   })
 
   async function handleSubmit(e: React.FormEvent) {
@@ -26,12 +30,21 @@ export function AddOfflineStaffModal({ open, onOpenChange }: { open: boolean, on
     setError("")
     setLoading(true)
 
-    const res = await createNonErpStaffMember(formData)
+    const res = await createNonErpStaffMember({
+      firstName: formData.firstName,
+      lastName:  formData.lastName,
+      email:     formData.email || undefined,
+      phone:     formData.phone || undefined,
+      designation:   formData.designation   || undefined,
+      department:    formData.department    || undefined,
+      dateOfJoining: formData.dateOfJoining || undefined,
+      branchId:      formData.branchId      || undefined,
+    })
     setLoading(false)
 
     if (res.success) {
       onOpenChange(false)
-      setFormData({ firstName: "", lastName: "", email: "", phone: "" })
+      setFormData({ firstName: "", lastName: "", email: "", phone: "", designation: '', department: '', dateOfJoining: '', branchId: '' })
       router.refresh()
     } else {
       setError(res.error || "Failed to create staff member")
@@ -85,6 +98,22 @@ export function AddOfflineStaffModal({ open, onOpenChange }: { open: boolean, on
               value={formData.phone} 
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />
+          </div>
+          
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide">Designation</Label>
+            <Input placeholder="e.g. Sales Executive" value={formData.designation}
+              onChange={e => setFormData(f => ({ ...f, designation: e.target.value }))} className="h-9" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide">Department</Label>
+            <Input placeholder="e.g. Sales, Operations" value={formData.department}
+              onChange={e => setFormData(f => ({ ...f, department: e.target.value }))} className="h-9" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide">Date of Joining</Label>
+            <Input type="date" value={formData.dateOfJoining}
+              onChange={e => setFormData(f => ({ ...f, dateOfJoining: e.target.value }))} className="h-9" />
           </div>
           
           <DialogFooter>

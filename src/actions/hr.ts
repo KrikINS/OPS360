@@ -553,22 +553,24 @@ export async function processPayrollRun(input: {
   payslips: Array<{
     staffName: string
     staffId?: string
+    structureId?: string
+    basic: number
+    hra: number
     gross: number
-    tds?: number
+    pf_employee: number
+    professional_tax: number
+    tds: number
+    net: number
   }>
 }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user) {
-    return { success: false as const, error: 'Unauthorized' }
-  }
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
   const role = (session.user.role ?? '').toLowerCase()
-  const isManager = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
-  if (!isManager) {
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
     return { success: false as const, error: 'Manager role required' }
   }
 
-  // Validate
   if (!input.payslips || input.payslips.length === 0) {
     return { success: false as const, error: 'At least one payslip is required' }
   }
@@ -578,17 +580,17 @@ export async function processPayrollRun(input: {
   for (const p of input.payslips) {
     if (!p.staffName?.trim()) return { success: false as const, error: 'Staff name is required for each payslip' }
     if (p.gross <= 0) return { success: false as const, error: `Gross must be > 0 for ${p.staffName}` }
-    const tds = p.tds ?? 0
-    if (tds < 0 || tds > p.gross) return { success: false as const, error: `TDS must be between 0 and gross for ${p.staffName}` }
+    if (p.net < 0) return { success: false as const, error: `Net cannot be negative for ${p.staffName}` }
   }
 
-  // Compute totals
   const grossTotal = input.payslips.reduce((s, p) => s + p.gross, 0)
-  const tdsTotal   = input.payslips.reduce((s, p) => s + (p.tds ?? 0), 0)
-  const netTotal   = grossTotal - tdsTotal
+  const tdsTotal   = input.payslips.reduce((s, p) => s + p.tds, 0)
+  const netTotal   = input.payslips.reduce((s, p) => s + p.net, 0)
+  const pfTotal    = input.payslips.reduce((s, p) => s + p.pf_employee, 0)
+  const ptTotal    = input.payslips.reduce((s, p) => s + p.professional_tax, 0)
 
   try {
-    // Insert payroll_run (draft)
+    // 1. Insert payroll run
     const [run] = await db
       .insert(payroll_runs)
       .values({
@@ -605,61 +607,68 @@ export async function processPayrollRun(input: {
       })
       .returning()
 
-    // Batch-insert payslips
+    // 2. Batch-insert payslips with component breakdown
     await db.insert(payslips).values(
       input.payslips.map(p => ({
-        payroll_run_id: run.id,
-        staff_name:     p.staffName.trim(),
-        staff_id:       p.staffId ?? null,
-        gross:          String(p.gross),
-        tds:            String(p.tds ?? 0),
-        net:            String(p.gross - (p.tds ?? 0)),
-        notes:          null,
+        payroll_run_id:      run.id,
+        staff_name:          p.staffName.trim(),
+        staff_id:            p.staffId ?? null,
+        salary_structure_id: p.structureId ?? null,
+        basic:               String(p.basic),
+        hra:                 String(p.hra),
+        gross:               String(p.gross),
+        pf_employee:         String(p.pf_employee),
+        professional_tax:    String(p.professional_tax),
+        tds:                 String(p.tds),
+        net:                 String(p.net),
+        notes:               null,
       }))
     )
 
-    // Non-blocking journal — failure must not abort committed payroll data
-    let journalEntryId: string | null = null
+    // 3. Post journal — BLOCKING (financial side-effects must not be best-effort)
     try {
       const cashCode = input.paymentMethod === 'cash'
         ? await getCashAccountCode(input.branchId)
         : '1020'
 
       const lines: Array<{ accountCode: string; debit?: number; credit?: number; description: string }> = [
-        { accountCode: '5050', debit: grossTotal,  description: `Salaries — ${input.payPeriod}` },
+        { accountCode: '5050', debit: grossTotal, description: `Salaries — ${input.payPeriod}` },
         { accountCode: cashCode, credit: netTotal, description: `Net salary paid — ${input.payPeriod}` },
       ]
-      if (tdsTotal > 0) {
-        lines.push({ accountCode: '2060', credit: tdsTotal, description: `TDS deducted — ${input.payPeriod}` })
-      }
+      if (tdsTotal > 0) lines.push({ accountCode: '2060', credit: tdsTotal, description: `TDS deducted — ${input.payPeriod}` })
+      if (pfTotal  > 0) lines.push({ accountCode: '2061', credit: pfTotal,  description: `PF payable (employee) — ${input.payPeriod}` })
+      if (ptTotal  > 0) lines.push({ accountCode: '2062', credit: ptTotal,  description: `Professional tax payable — ${input.payPeriod}` })
 
       const entry = await createJournalEntry({
-        description: `Payroll: ${input.payPeriod} — Gross ₹${grossTotal.toLocaleString('en-IN')}, TDS ₹${tdsTotal.toLocaleString('en-IN')}, Net ₹${netTotal.toLocaleString('en-IN')}`,
+        description:     `Payroll: ${input.payPeriod} — Gross ₹${grossTotal.toLocaleString('en-IN')}, Net ₹${netTotal.toLocaleString('en-IN')}`,
         referenceSource: 'PAYROLL',
-        referenceId: run.id,
-        branchId: input.branchId,
-        autoGenerated: true,
-        createdBy: session.user.id,
+        referenceId:     run.id,
+        branchId:        input.branchId,
+        autoGenerated:   true,
+        createdBy:       session.user.id,
         lines,
       })
 
-      journalEntryId = entry.id
-
-      await db
-        .update(payroll_runs)
+      await db.update(payroll_runs)
         .set({ journal_entry_id: entry.id, status: 'posted' })
         .where(eq(payroll_runs.id, run.id))
-    } catch (journalErr) {
-      console.error('[PAYROLL] Journal FAILED (non-blocking):', journalErr)
-    }
 
-    return {
-      success: true as const,
-      payrollRunId:   run.id,
-      journalEntryId,
-      grossTotal,
-      tdsTotal,
-      netTotal,
+      return {
+        success:       true as const,
+        payrollRunId:  run.id,
+        journalEntryId: entry.id,
+        grossTotal,
+        tdsTotal,
+        netTotal,
+      }
+    } catch (journalErr) {
+      console.error('[PAYROLL] Journal FAILED after payroll committed:', journalErr)
+      return {
+        success:      false as const,
+        error:        'Payroll recorded but journal posting failed — the accounting entry was not created. Contact finance before running payroll again.',
+        payrollRunId: run.id,
+        journalFailed: true as const,
+      }
     }
   } catch (error) {
     console.error('PAYROLL ERROR:', error)

@@ -46,7 +46,18 @@ type AttendanceRecord = {
   duration_minutes?: number | null
 }
 
-type PayslipRow = { staffName: string; staffId?: string; gross: number; tds: number }
+type PayslipRow = {
+  staffName:        string
+  staffId?:         string
+  structureId?:     string
+  basic:            number
+  hra:              number
+  gross:            number
+  pf_employee:      number
+  professional_tax: number
+  tds:              number
+  net:              number
+}
 
 type PayrollRun = {
   id: string
@@ -104,8 +115,8 @@ export default function StaffClient({
   const [paymentDate, setPaymentDate]       = useState('')
   const [paymentMethod, setPaymentMethod]   = useState<'cash' | 'bank'>('cash')
   const [payNotes, setPayNotes]             = useState('')
-  const [payslipRows, setPayslipRows]       = useState<PayslipRow[]>([
-    { staffName: '', gross: 0, tds: 0 },
+  const [payslipRows, setPayslipRows] = useState<PayslipRow[]>([
+    { staffName: '', staffId: undefined, structureId: undefined, basic: 0, hra: 0, gross: 0, pf_employee: 0, professional_tax: 0, tds: 0, net: 0 },
   ])
   const [submitting, setSubmitting]         = useState(false)
   const [toast, setToast]                   = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -187,21 +198,45 @@ export default function StaffClient({
     }
   }
 
-  const addRow = () => setPayslipRows(r => [...r, { staffName: '', gross: 0, tds: 0 }])
+  const [autoFilling, setAutoFilling] = useState(false)
+
+  const handleAutoFill = async () => {
+    setAutoFilling(true)
+    const result = await getEmployeesWithStructures(branchId ? { branchId } : undefined)
+    setAutoFilling(false)
+    if (!result.success) return
+    const withStructures = result.employees.filter((e: any) => e.basic)
+    if (withStructures.length === 0) {
+      alert('No employees have salary structures defined. Set them in the Salary Structures tab first.')
+      return
+    }
+    setPayslipRows(withStructures.map((e: any) => ({
+      staffName:        `${e.first_name} ${e.last_name}`.trim(),
+      staffId:          e.id,
+      structureId:      e.structure_id,
+      basic:            Number(e.basic),
+      hra:              Number(e.hra ?? 0),
+      gross:            Number(e.gross),
+      pf_employee:      Number(e.pf_employee ?? 0),
+      professional_tax: Number(e.professional_tax ?? 0),
+      tds:              Number(e.tds_monthly ?? 0),
+      net:              Number(e.net),
+    })))
+  }
+
+  const addRow = () => setPayslipRows(r => [...r, { staffName: '', staffId: undefined, structureId: undefined, basic: 0, hra: 0, gross: 0, pf_employee: 0, professional_tax: 0, tds: 0, net: 0 }])
   const removeRow = (i: number) => setPayslipRows(r => r.filter((_, idx) => idx !== i))
   const updateRow = (i: number, field: keyof PayslipRow, value: string | number) =>
     setPayslipRows(r => r.map((row, idx) => idx === i ? { ...row, [field]: value } : row))
 
   const grossTotal = payslipRows.reduce((s, r) => s + (r.gross || 0), 0)
   const tdsTotal   = payslipRows.reduce((s, r) => s + (r.tds || 0), 0)
-  const netTotal   = grossTotal - tdsTotal
+  const netTotal   = payslipRows.reduce((s, r) => s + (r.net || 0), 0)
 
-  const canSubmit = (
-    payPeriod.trim().length > 0 &&
-    paymentDate.trim().length > 0 &&
+  const canSubmit =
+    !!payPeriod && !!paymentDate && !!branchId &&
     payslipRows.some(r => r.staffName.trim() && r.gross > 0) &&
     !submitting
-  )
 
   const handleSubmitPayroll = async () => {
     if (!canSubmit || !branchId) return
@@ -210,15 +245,22 @@ export default function StaffClient({
 
     const validRows = payslipRows.filter(r => r.staffName.trim() && r.gross > 0)
     const result = await processPayrollRun({
-      branchId,
+      branchId:      branchId!,
       payPeriod,
       paymentDate,
       paymentMethod,
-      notes: payNotes.trim() || undefined,
-      payslips: validRows.map(r => ({
-        staffName: r.staffName.trim(),
-        gross: r.gross,
-        tds: r.tds || 0,
+      notes:         payNotes.trim() || undefined,
+      payslips:      validRows.map(r => ({
+        staffName:        r.staffName.trim(),
+        staffId:          r.staffId,
+        structureId:      r.structureId,
+        basic:            r.basic,
+        hra:              r.hra,
+        gross:            r.gross,
+        pf_employee:      r.pf_employee,
+        professional_tax: r.professional_tax,
+        tds:              r.tds,
+        net:              r.net,
       })),
     })
 
@@ -229,7 +271,7 @@ export default function StaffClient({
       setPayPeriod('')
       setPaymentDate('')
       setPayNotes('')
-      setPayslipRows([{ staffName: '', gross: 0, tds: 0 }])
+      setPayslipRows([{ staffName: '', staffId: undefined, structureId: undefined, basic: 0, hra: 0, gross: 0, pf_employee: 0, professional_tax: 0, tds: 0, net: 0 }])
       setPaymentMethod('cash')
       await loadRuns()
     } else {
@@ -498,49 +540,51 @@ export default function StaffClient({
                   </div>
                 </div>
 
-                <Separator />
-
-                {/* Payslip rows */}
-                <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-2 px-1">
-                    <span className="col-span-5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Staff Name</span>
-                    <span className="col-span-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Gross (₹)</span>
-                    <span className="col-span-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">TDS (₹)</span>
-                    <span className="col-span-1" />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Staff Payslips</span>
+                    <Button variant="outline" size="sm" className="gap-2 text-xs h-8" onClick={handleAutoFill} disabled={autoFilling}>
+                      {autoFilling ? <Loader2 className="h-3 w-3 animate-spin" /> : '⚡'}
+                      Auto-fill from Salary Structures
+                    </Button>
                   </div>
 
                   {payslipRows.map((row, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                      <Input
-                        className="col-span-5 h-9 text-sm"
-                        placeholder="e.g. Rajan Sharma"
-                        value={row.staffName}
-                        onChange={e => updateRow(i, 'staffName', e.target.value)}
-                      />
-                      <Input
-                        className="col-span-3 h-9 text-sm tabular-nums"
-                        type="number"
-                        min={0}
-                        placeholder="0"
-                        value={row.gross || ''}
-                        onChange={e => updateRow(i, 'gross', parseFloat(e.target.value) || 0)}
-                      />
-                      <Input
-                        className="col-span-3 h-9 text-sm tabular-nums"
-                        type="number"
-                        min={0}
-                        placeholder="0"
-                        value={row.tds || ''}
-                        onChange={e => updateRow(i, 'tds', parseFloat(e.target.value) || 0)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeRow(i)}
-                        disabled={payslipRows.length === 1}
-                        className="col-span-1 flex items-center justify-center h-9 w-9 rounded-lg hover:bg-red-50 hover:text-red-500 text-slate-400 disabled:opacity-30 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                    <div key={i} className="border rounded-lg p-3 space-y-2 bg-slate-50/50">
+                      <div className="flex items-center gap-2">
+                        <Input className="flex-1 h-9 text-sm" placeholder="Staff name" value={row.staffName}
+                          onChange={e => updateRow(i, 'staffName', e.target.value)} />
+                        <button type="button" onClick={() => removeRow(i)} disabled={payslipRows.length === 1}
+                          className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-500 text-slate-400 disabled:opacity-30">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {row.structureId ? (
+                        <div className="grid grid-cols-5 gap-2 text-xs">
+                          <div className="text-center"><p className="text-slate-400 mb-0.5">Basic</p><p className="font-bold tabular-nums">{fmtINR(row.basic)}</p></div>
+                          <div className="text-center"><p className="text-slate-400 mb-0.5">HRA</p><p className="font-bold tabular-nums">{fmtINR(row.hra)}</p></div>
+                          <div className="text-center"><p className="text-slate-400 mb-0.5">PF</p><p className="font-bold tabular-nums text-amber-700">-{fmtINR(row.pf_employee)}</p></div>
+                          <div className="text-center"><p className="text-slate-400 mb-0.5">Prof Tax</p><p className="font-bold tabular-nums text-amber-700">-{fmtINR(row.professional_tax)}</p></div>
+                          <div className="text-center"><p className="text-slate-400 mb-0.5">Net Pay</p><p className="font-bold tabular-nums text-green-700">{fmtINR(row.net)}</p></div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Gross (₹)</label>
+                            <Input type="number" min={0} className="h-8 text-sm" value={row.gross || ''}
+                              onChange={e => { const g = parseFloat(e.target.value) || 0; setPayslipRows(r => r.map((x, idx) => idx === i ? { ...x, gross: g, net: g - x.tds } : x)) }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">TDS (₹)</label>
+                            <Input type="number" min={0} className="h-8 text-sm" value={row.tds || ''}
+                              onChange={e => { const t = parseFloat(e.target.value) || 0; setPayslipRows(r => r.map((x, idx) => idx === i ? { ...x, tds: t, net: x.gross - t } : x)) }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Net Pay (₹)</label>
+                            <Input type="number" readOnly className="h-8 text-sm bg-slate-100" value={row.net || ''} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
 
