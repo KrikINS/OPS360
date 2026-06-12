@@ -310,7 +310,17 @@ export async function checkWarranty(serialNumber: string) {
   if (!serialNumber?.trim()) return { success: false as const, error: 'Serial number required' }
 
   try {
-    // 1. Find the inventory unit
+    // 1. Check warranty_registrations table first (manual or auto-registered)
+    const [warReg] = await db
+      .select()
+      .from(warranty_registrations)
+      .where(and(
+        eq(warranty_registrations.serial_number, serialNumber.trim()),
+        eq(warranty_registrations.is_active, true)
+      ))
+      .limit(1)
+
+    // 2. Find the inventory unit
     const [invUnit] = await db
       .select({
         id:             inventory.id,
@@ -323,31 +333,36 @@ export async function checkWarranty(serialNumber: string) {
       .where(eq(inventory.serial_number, serialNumber.trim()))
       .limit(1)
 
-    if (!invUnit) {
-      return { success: true as const, found: false, warrantyStatus: 'unknown' as const, message: 'Serial number not found in inventory' }
+    if (!invUnit && !warReg) {
+      return { success: true as const, found: false, warrantyStatus: 'unknown' as const, message: 'Serial number not found' }
     }
 
-    // 2. Get product info
+    const targetProductId = invUnit?.product_id || warReg?.product_id || null
+    const targetInvoiceId = invUnit?.invoice_id || warReg?.invoice_id || null
+    const targetCustomerId = warReg?.customer_id || null
+
+    // 3. Get product info
     let productInfo: { model_name: string | null; brand: string | null; warranty_months: number | null } | null = null
-    if (invUnit.product_id) {
+    if (targetProductId) {
       const [prod] = await db
         .select({ model_name: products.model_name, brand: products.brand, warranty_months: products.warranty_months })
         .from(products)
-        .where(eq(products.id, invUnit.product_id))
+        .where(eq(products.id, targetProductId))
         .limit(1)
       productInfo = prod ?? null
     }
 
-    // 3. Get invoice + customer info
+    // 4. Get invoice + customer info
     let invoiceInfo: { invoice_number: string | null; created_at: Date | null; customer_name: string | null } | null = null
-    if (invUnit.invoice_id) {
+    let customerName: string | null = null
+
+    if (targetInvoiceId) {
       const [inv] = await db
         .select({ invoice_number: sales_invoices.invoice_number, created_at: sales_invoices.created_at, customer_id: sales_invoices.customer_id })
         .from(sales_invoices)
-        .where(eq(sales_invoices.id, invUnit.invoice_id))
+        .where(eq(sales_invoices.id, targetInvoiceId))
         .limit(1)
       if (inv) {
-        let customerName: string | null = null
         if (inv.customer_id) {
           const [cust] = await db
             .select({ full_name: customers.full_name })
@@ -360,20 +375,15 @@ export async function checkWarranty(serialNumber: string) {
       }
     }
 
-    // 4. Check warranty_registrations table first (manual or auto-registered)
-    const [warReg] = await db
-      .select()
-      .from(warranty_registrations)
-      .where(and(
-        eq(warranty_registrations.serial_number, serialNumber.trim()),
-        eq(warranty_registrations.is_active, true)
-      ))
-      .limit(1)
+    // If no invoice but warReg has customer_id, get customer name
+    if (!customerName && targetCustomerId) {
+       const [cust] = await db.select({ full_name: customers.full_name }).from(customers).where(eq(customers.id, targetCustomerId)).limit(1)
+       if (cust) customerName = cust.full_name
+    }
 
     let warrantyStatus: 'in_warranty' | 'out_of_warranty' | 'unknown' = 'unknown'
     let warrantyExpiresAt: string | null = null
     let purchaseDate: string | null = invoiceInfo?.created_at?.toISOString().slice(0, 10) ?? null
-    let customerName: string | null = invoiceInfo?.customer_name ?? null
 
     if (warReg) {
       warrantyExpiresAt = warReg.warranty_expires_at as string
@@ -397,8 +407,8 @@ export async function checkWarranty(serialNumber: string) {
       purchaseDate,
       productName: productInfo?.model_name ?? null,
       productBrand: productInfo?.brand ?? null,
-      productId: invUnit.product_id ?? null,
-      invoiceId: invUnit.invoice_id ?? null,
+      productId: targetProductId,
+      invoiceId: targetInvoiceId,
       invoiceNumber: invoiceInfo?.invoice_number ?? null,
       customerName,
     }

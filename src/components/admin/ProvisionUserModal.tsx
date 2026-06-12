@@ -158,8 +158,12 @@ export function ProvisionUserModal({
                   <SelectContent>
                     <SelectGroup>
                       <SelectItem value="Admin/Owner" className="text-xs font-bold uppercase">Admin/Owner</SelectItem>
-                      <SelectItem value="manager" className="text-xs font-bold uppercase">Manager</SelectItem>
-                      <SelectItem value="staff" className="text-xs font-bold uppercase">Staff</SelectItem>
+                      <SelectItem value="Branch Manager" className="text-xs font-bold uppercase">Branch Manager</SelectItem>
+                      <SelectItem value="Sales Rep" className="text-xs font-bold uppercase">Sales Rep</SelectItem>
+                      <SelectItem value="Accounts Keeper" className="text-xs font-bold uppercase">Accounts Keeper</SelectItem>
+                      <SelectItem value="Technician" className="text-xs font-bold uppercase">Technician</SelectItem>
+                      <SelectItem value="HR Manager" className="text-xs font-bold uppercase">HR Manager</SelectItem>
+                      <SelectItem value="Driver" className="text-xs font-bold uppercase">Driver</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
