@@ -58,7 +58,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
           month: 'short',
           year: 'numeric'
         }),
-        paymentMethod: initialData.payment_method
+        paymentMethod: (initialData as any).payment_mode ?? initialData.payment_method
       })
       setLoading(false)
       setIsReady(true)
@@ -110,7 +110,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               month: 'short',
               year: 'numeric'
             }),
-            paymentMethod: invoice.payment_method
+            paymentMethod: invoice.payment_mode ?? invoice.payment_method
           })
         } catch (err) {
           console.error("Failed to fetch archival invoice:", err)
@@ -142,6 +142,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
   const invoiceNo = invoiceId ? archivalData?.invoiceNumber : posContext?.invoiceNumber
   const displayDate = invoiceId ? archivalData?.date : posContext?.currentDate
   const paymentMethodRaw = invoiceId ? archivalData?.paymentMethod : initialData?.payment_method
+  const loyaltyRedeem = invoiceId ? 0 : (posContext?.loyaltyRedeem || 0)
   
   // Mapping for readable payment method
   const getPaymentMethodDisplay = (method?: string) => {
@@ -210,7 +211,6 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               <p className="text-xs font-black text-slate-900 uppercase">
                 {getPaymentMethodDisplay(paymentMethodRaw || initialData?.payment_method)}
               </p>
-              <p className="font-bold text-slate-500 lowercase opacity-60 text-[9px]">status: settled</p>
             </div>
           </div>
 
@@ -252,7 +252,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                   <td className="py-2 text-center">{item.qty}</td>
                   <td className="py-2 text-right">{fmtINR(item.base_price)}</td>
                   {!isThermal && <td className="py-2 text-center">{item.gst_rate}%</td>}
-                  <td className="py-2 text-right text-slate-900 font-extrabold">{fmtINR((item.base_price * item.qty) + (item.gst_amount || 0))}</td>
+                  <td className="py-2 text-right text-slate-900 font-extrabold">{fmtINR(item.base_price * item.qty)}</td>
                 </tr>
               ))}
             </tbody>
@@ -271,8 +271,11 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                     cart.reduce((acc, item) => {
                       const rate = item.gst_rate;
                       if (!acc[rate]) acc[rate] = { taxable: 0, tax: 0 };
-                      acc[rate].taxable += item.base_price * item.qty;
-                      acc[rate].tax += (item.base_price * item.qty * rate) / 100;
+                      const lineInclusive = item.base_price * item.qty;
+                      const lineTaxable = lineInclusive / (1 + rate / 100);
+                      const lineTax = lineInclusive - lineTaxable;
+                      acc[rate].taxable += lineTaxable;
+                      acc[rate].tax += lineTax;
                       return acc;
                     }, {} as Record<number, { taxable: number, tax: number }>)
                   ).map(([rate, data]) => (
@@ -296,7 +299,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               </div>
               <div className="px-1 italic text-slate-500 text-[9px] leading-relaxed break-words">
                 <strong className="not-italic text-slate-400 uppercase text-[8px] block mb-0.5">Total in Words</strong>
-                {numberToWords(totals.grandTotal)}
+                {numberToWords(loyaltyRedeem > 0 && (totals as any).netPayable ? Math.round((totals as any).netPayable) : Math.round(totals.grandTotal))}
               </div>
             </div>
             
@@ -309,9 +312,15 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                 <span className="text-slate-400">Total Tax</span>
                 <span>{fmtINR(totals.totalGst)}</span>
               </div>
+              {loyaltyRedeem > 0 && (
+                <div className="flex justify-between font-bold text-[9px] border-b border-slate-100 pb-2">
+                  <span className="text-slate-400">Loyalty Redeemed</span>
+                  <span className="text-purple-600">-{fmtINR(loyaltyRedeem)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-1">
                 <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">Net Amount</span>
-                <span className={cn("font-black text-slate-900 tracking-tighter font-mono", isThermal ? "text-xl" : "text-3xl")}>{fmtINR(totals.grandTotal)}</span>
+                <span className={cn("font-black text-slate-900 tracking-tighter font-mono", isThermal ? "text-xl" : "text-3xl")}>{fmtINR(loyaltyRedeem > 0 ? (totals as any).netPayable : totals.grandTotal)}</span>
               </div>
             </div>
           </div>
