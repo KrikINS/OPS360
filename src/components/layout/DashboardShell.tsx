@@ -61,42 +61,39 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
             <div className="flex items-center gap-3">
               {/* System Administration link */}
               {isAdmin && (
-                <Link href="/admin">
-                  <Button
-                    size="sm"
-                    className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    <span className="hidden sm:inline">
-                      System Administration
-                    </span>
-                  </Button>
-                </Link>
+                <Button
+                  render={<Link href="/admin" />}
+                  size="sm"
+                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    System Administration
+                  </span>
+                </Button>
               )}
               {/* Finance Dashboard link */}
               {(isAdmin || permissions?.finance === true) && (
-                <Link href="/accounting?tab=dashboard">
-                  <Button
-                    size="sm"
-                    className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
-                  >
-                    <Receipt className="h-4 w-4" />
-                    <span className="hidden sm:inline">
-                      Finance
-                    </span>
-                  </Button>
-                </Link>
+                <Button
+                  render={<Link href="/accounting?tab=dashboard" />}
+                  size="sm"
+                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
+                >
+                  <Receipt className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    Finance
+                  </span>
+                </Button>
               )}
               {(isAdmin || permissions?.pos === true) && (
-                <Link href="/pos">
-                  <Button
-                    size="sm"
-                    className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-2 shadow-sm font-semibold"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    <span className="hidden sm:inline">POS Terminal</span>
-                  </Button>
-                </Link>
+                <Button
+                  render={<Link href="/pos" />}
+                  size="sm"
+                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-2 shadow-sm font-semibold"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  <span className="hidden sm:inline">POS Terminal</span>
+                </Button>
               )}
               <NotificationBell />
               <Link
