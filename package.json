@@ -8,7 +8,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:push:staging--DANGEROUS-DROPS-COLUMNS": "dotenv -e .env.staging -- drizzle-kit push",
     "db:migrate:staging": "dotenv -e .env.staging -- drizzle-kit migrate",
     "db:migrate:production--CONFIRM-BEFORE-RUNNING": "dotenv -e .env.production -- drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
