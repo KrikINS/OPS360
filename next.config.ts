@@ -3,13 +3,7 @@ import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
   output: 'standalone', // <--- ADD THIS LINE
-  typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
-    ignoreBuildErrors: true,
-  },
+
   images: {
     remotePatterns: [
       {
@@ -19,11 +13,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  ...({
-    eslint: {
-      ignoreDuringBuilds: true,
-    },
-  } as Record<string, unknown>),
+
 };
 
 export default withSentryConfig(nextConfig, {
