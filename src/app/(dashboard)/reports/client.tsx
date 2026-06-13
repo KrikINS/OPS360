@@ -1,5 +1,5 @@
 'use client'
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 
 import { useReactToPrint } from 'react-to-print'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,7 +35,7 @@ export default function ReportsClient({
       fromDate: from ?? fromDate,
       toDate:   to   ?? toDate,
     })
-    window.location.href = `/reports?${params.toString()}`
+    window.location.assign(`/reports?${params.toString()}`)
   }
 
   const TABS = [
@@ -43,6 +43,22 @@ export default function ReportsClient({
     { id: 'gst',   label: 'GST Summary',       icon: FileText  },
     { id: 'stock', label: 'Stock Valuation',   icon: Package   },
   ]
+
+  const datePresets = useMemo(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    const today = now.toISOString().slice(0, 10)
+    const thisMonthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`
+    const lastMonthStart = new Date(year, month - 1, 1).toISOString().slice(0, 10)
+    const lastMonthEnd   = new Date(year, month, 0).toISOString().slice(0, 10)
+    const fyStart = month >= 3 ? `${year}-04-01` : `${year - 1}-04-01`
+    return [
+      { label: 'This Month', from: thisMonthStart, to: today },
+      { label: 'Last Month', from: lastMonthStart, to: lastMonthEnd },
+      { label: 'This FY',    from: fyStart,        to: today },
+    ]
+  }, [])
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -92,11 +108,7 @@ export default function ReportsClient({
             <Input type="date" value={toDate} className="h-9 w-36"
               onChange={e => navigate(activeTab, fromDate, e.target.value)} />
           </div>
-          {[
-            { label: 'This Month', from: `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01`, to: new Date().toISOString().slice(0,10) },
-            { label: 'Last Month', from: new Date(new Date().getFullYear(), new Date().getMonth()-1, 1).toISOString().slice(0,10), to: new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().slice(0,10) },
-            { label: 'This FY',    from: new Date().getMonth() >= 3 ? `${new Date().getFullYear()}-04-01` : `${new Date().getFullYear()-1}-04-01`, to: new Date().toISOString().slice(0,10) },
-          ].map(p => (
+          {datePresets.map(p => (
             <Button key={p.label} variant="outline" size="sm" className="h-9 text-xs"
               onClick={() => navigate(activeTab, p.from, p.to)}>
               {p.label}
@@ -121,7 +133,7 @@ export default function ReportsClient({
               {activeTab !== 'stock' && (
                 <p className="text-sm text-slate-500">{fromDate} to {toDate}</p>
               )}
-              <p className="text-xs text-slate-400">Generated: {new Date().toLocaleString('en-IN')}</p>
+              <p className="text-xs text-slate-400">Generated: {typeof window !== 'undefined' ? new Date().toLocaleString('en-IN') : ''}</p>
             </div>
           </div>
         </div>
