@@ -28,6 +28,7 @@ export interface ServiceJob {
   warrantyStatus?: string
   resolutionNotes?: string | null
   completedAt?: Date | null
+  branchName?: string | null
 }
 
 interface ServiceContextType {

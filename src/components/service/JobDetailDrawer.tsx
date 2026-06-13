@@ -95,13 +95,13 @@ export function JobDetailDrawer({ job, open, onClose, onUpdated }: JobDetailDraw
         <tr><td class="label">Customer</td><td>${job.customerName ?? 'Walk-in'}</td><td class="label">Status</td><td>${job.status}</td></tr>
         <tr><td class="label">Product</td><td>${job.productName ?? '—'}</td><td class="label">Priority</td><td>${job.priority}</td></tr>
         <tr><td class="label">Serial No.</td><td>${(job as any).serialNumber ?? '—'}</td><td class="label">Technician</td><td>${job.technicianName ?? '—'}</td></tr>
-        <tr><td class="label">Est. Cost</td><td>${job.estimatedCost ? '₹' + Number(job.estimatedCost).toLocaleString('en-IN') : '—'}</td><td class="label">Branch</td><td>${job.branchId}</td></tr>
+        <tr><td class="label">Est. Cost</td><td>${job.estimatedCost ? '₹' + Number(job.estimatedCost).toLocaleString('en-IN') : '—'}</td><td class="label">Branch</td><td>${(job as any).branchName ?? job.branchId}</td></tr>
       </table>
       <div class="warranty-box">${warrantyLabel}</div>
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:4px">Issue Description</div>
       <div class="desc-box">${job.description ?? 'No description provided.'}</div>
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:4px">Resolution Notes</div>
-      <div class="desc-box" style="min-height:80px"></div>
+      <div class="desc-box" style="min-height:80px">${(job as any).resolutionNotes ?? ''}</div>
       <div class="sig-grid">
         <div><div class="sig-line">Customer Signature / Acknowledgment</div></div>
         <div><div class="sig-line">Technician / Authorized Signatory</div></div>
@@ -148,6 +148,7 @@ export function JobDetailDrawer({ job, open, onClose, onUpdated }: JobDetailDraw
               <div><p className="text-[10px] font-bold uppercase text-slate-400 mb-0.5">Serial No.</p><p className="font-mono font-semibold">{(job as any).serialNumber ?? '—'}</p></div>
               <div><p className="text-[10px] font-bold uppercase text-slate-400 mb-0.5">Est. Cost</p><p className="font-semibold">{job.estimatedCost ? fmtINR(Number(job.estimatedCost)) : '—'}</p></div>
               <div><p className="text-[10px] font-bold uppercase text-slate-400 mb-0.5">Actual Cost</p><p className="font-semibold text-green-700">{job.actualCost ? fmtINR(Number(job.actualCost)) : '—'}</p></div>
+              <div><p className="text-[10px] font-bold uppercase text-slate-400 mb-0.5">Branch</p><p className="font-semibold">{(job as any).branchName ?? job.branchId}</p></div>
             </div>
             {job.description && (
               <div><p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Description</p><p className="text-slate-600 text-sm leading-relaxed bg-slate-50 rounded-lg p-3">{job.description}</p></div>

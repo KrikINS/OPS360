@@ -6,7 +6,7 @@ import { db } from '@/db/client'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import {
   service_jobs, service_job_items, warranty_registrations,
-  customers, products, profiles, inventory, sales_invoices,
+  customers, products, profiles, inventory, sales_invoices, branches,
 } from '@/db/schema'
 import { eq, and, or, desc, sql } from 'drizzle-orm'
 
@@ -244,11 +244,13 @@ export async function getServiceJobs(input?: {
         warrantyStatus:  service_jobs.warranty_status,
         resolutionNotes: service_jobs.resolution_notes,
         completedAt:     service_jobs.completed_at,
+        branchName:      branches.name,
       })
       .from(service_jobs)
       .leftJoin(customers, eq(service_jobs.customer_id, customers.id))
       .leftJoin(products, eq(service_jobs.product_id, products.id))
       .leftJoin(profiles, eq(service_jobs.technician_id, profiles.id))
+      .leftJoin(branches, eq(service_jobs.branch_id, branches.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(service_jobs.created_at))
 
@@ -287,11 +289,18 @@ export async function getServiceJobById(jobId: string) {
       customerPhone: customers.phone_number,
       productName: products.model_name,
       technicianName: profiles.full_name,
+      serialNumber:    service_jobs.serial_number,
+      invoiceId:       service_jobs.invoice_id,
+      warrantyStatus:  service_jobs.warranty_status,
+      resolutionNotes: service_jobs.resolution_notes,
+      completedAt:     service_jobs.completed_at,
+      branchName:      branches.name,
     })
     .from(service_jobs)
     .leftJoin(customers, eq(service_jobs.customer_id, customers.id))
     .leftJoin(products, eq(service_jobs.product_id, products.id))
     .leftJoin(profiles, eq(service_jobs.technician_id, profiles.id))
+    .leftJoin(branches, eq(service_jobs.branch_id, branches.id))
     .where(eq(service_jobs.id, jobId))
     .limit(1)
 
