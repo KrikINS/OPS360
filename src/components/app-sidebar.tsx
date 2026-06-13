@@ -374,6 +374,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                   >
                     <SidebarMenuItem>
                       <SidebarMenuButton
+                        suppressHydrationWarning
                         isActive={isGroupActive}
                         tooltip={group.title}
                         nativeButton={false}
@@ -385,8 +386,8 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
                           isCollapsed && "w-full flex justify-center"
                         )}
                         render={(props) => (
-                          <CollapsibleTrigger {...props} nativeButton={false} render={(triggerProps) => (
-                            <div {...triggerProps} className={cn("flex items-center w-full h-full", isCollapsed ? "justify-center" : "gap-3 px-3", triggerProps.className)}>
+                          <CollapsibleTrigger {...props} suppressHydrationWarning nativeButton={false} render={(triggerProps) => (
+                            <div {...triggerProps} suppressHydrationWarning className={cn("flex items-center w-full h-full", isCollapsed ? "justify-center" : "gap-3 px-3", triggerProps.className)}>
                               <group.icon className={cn("h-4 w-4 shrink-0", isGroupActive ? "text-[#7FD1E3]" : "text-slate-400")} />
                               {!isCollapsed && (
                                 <>

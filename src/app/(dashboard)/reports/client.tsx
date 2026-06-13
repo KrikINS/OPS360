@@ -294,15 +294,15 @@ export default function ReportsClient({
                     <div className="text-right space-y-1">
                       <div className="flex gap-8 text-sm">
                         <span className="text-slate-500">Total Output GST</span>
-                        <span className="font-bold text-emerald-700 tabular-nums">{fmtINR(gstData.gst.reduce((s: number, g: any) => s + Number(g.collected), 0))}</span>
+                        <span className="font-bold text-emerald-700 tabular-nums">{fmtINR(gstData.gst.reduce((s: number, g: { collected: string | number }) => s + Number(g.collected), 0))}</span>
                       </div>
                       <div className="flex gap-8 text-sm">
                         <span className="text-slate-500">Total Input Credit</span>
-                        <span className="font-bold text-blue-700 tabular-nums">{fmtINR(gstData.gst.reduce((s: number, g: any) => s + Number(g.paid), 0))}</span>
+                        <span className="font-bold text-blue-700 tabular-nums">{fmtINR(gstData.gst.reduce((s: number, g: { paid: string | number }) => s + Number(g.paid), 0))}</span>
                       </div>
                       <div className="flex gap-8 text-sm border-t pt-1 mt-1">
                         <span className="font-bold">Net GST Payable</span>
-                        <span className="font-black text-red-700 tabular-nums">{fmtINR(gstData.gst.reduce((s: number, g: any) => s + Number(g.collected) - Number(g.paid), 0))}</span>
+                        <span className="font-black text-red-700 tabular-nums">{fmtINR(gstData.gst.reduce((s: number, g: { collected: string | number; paid: string | number }) => s + Number(g.collected) - Number(g.paid), 0))}</span>
                       </div>
                     </div>
                   </div>
@@ -349,7 +349,7 @@ export default function ReportsClient({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {stockData.products.map((p: any, i: number) => (
+                      {stockData.products.map((p: { model_name: string; brand: string; product_code: string | null; available_units: string | number; avg_landed_cost: string | number; total_landed_cost: string | number; mrp: string | number; total_mrp_value: string | number }, i: number) => (
                         <TableRow key={i}>
                           <TableCell className="font-medium text-sm">{p.model_name}</TableCell>
                           <TableCell className="text-sm text-slate-500">{p.brand}</TableCell>
