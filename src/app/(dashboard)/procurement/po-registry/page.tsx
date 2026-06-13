@@ -2559,7 +2559,7 @@ Are you sure you want to proceed?`)) return;
                       <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
                     </div>
                     <div className="bg-white p-2 rounded-lg">
-                       <Image src="/ethan-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
+                       <Image src="/ethan-logo-final.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
                     </div>
                   </div>
                   
@@ -2845,7 +2845,7 @@ Are you sure you want to proceed?`)) return;
                       <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
                     </div>
                     <div className="bg-white p-2 rounded-lg">
-                       <Image src="/ethan-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
+                       <Image src="/ethan-logo-final.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
                     </div>
                   </div>
                   <div className="text-[10px] text-slate-400 font-bold max-w-[280px] leading-tight mt-1 italic">
