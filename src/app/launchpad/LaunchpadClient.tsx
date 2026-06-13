@@ -6,7 +6,6 @@ import Image from "next/image"
 import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { useBranding } from "@/providers/GlobalBrandingProvider"
-import { RoleMetricsWidget } from "@/components/dashboard/RoleMetricsWidget"
 
 const BrandIdentity = () => {
   const { companyName, logoUrl } = useBranding()
@@ -73,9 +72,6 @@ export default function LaunchpadClient({ initialPermissions, initialRole, kpis 
         </div>
       </div>
 
-      <div className="w-full z-10 mt-0 relative -top-6">
-        <RoleMetricsWidget />
-      </div>
 
       {/* Card Grid Section */}
       <div className="flex-grow flex items-start justify-center px-6 pb-4 z-10 mt-2 relative -top-6">
