@@ -55,12 +55,14 @@ export async function getAdminKPIs(branchId?: string | null) {
       : null
 
     // Outstanding AP (unpaid vendor bills)
+    // AP balance = SUM of credits to account 2010 (AP) minus debits (payments made)
     const apRows = unpackRows(await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0) AS outstanding
-      FROM vendor_bills
-      WHERE status NOT IN ('paid', 'Paid', 'cancelled', 'Cancelled')
+      SELECT COALESCE(SUM(jl.credit) - SUM(jl.debit), 0) AS outstanding
+      FROM journal_lines jl
+      JOIN accounts a ON a.id = jl.account_id
+      WHERE a.code = '2010'
     `))
-    const outstandingAP = Number((apRows[0] as any)?.outstanding ?? 0)
+    const outstandingAP = Math.max(0, Number((apRows[0] as any)?.outstanding ?? 0))
 
     // Low stock count
     const lowStockRows = unpackRows(await db.execute(sql`
