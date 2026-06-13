@@ -70,3 +70,33 @@ export async function getCustomersWithLoyaltyAction() {
     return { error: { message: (error instanceof Error ? error.message : String(error)) } }
   }
 }
+
+function unpackRows<T = Record<string, unknown>>(result: unknown): T[] {
+  if (result && typeof result === 'object' && 'rows' in result) {
+    return (result as { rows: T[] }).rows
+  }
+  if (Array.isArray(result)) return result as T[]
+  return []
+}
+
+export async function getCustomerInvoices(customerId: string) {
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        si.id,
+        si.invoice_number,
+        si.created_at,
+        si.total_amount,
+        COUNT(ii.id) AS item_count
+      FROM sales_invoices si
+      LEFT JOIN invoice_items ii ON ii.invoice_id = si.id
+      WHERE si.customer_id = ${customerId}::uuid
+      GROUP BY si.id, si.invoice_number, si.created_at, si.total_amount
+      ORDER BY si.created_at DESC
+    `)
+    const invoices = unpackRows(rows)
+    return { success: true as const, invoices }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
