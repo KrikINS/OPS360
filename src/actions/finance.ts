@@ -1661,3 +1661,132 @@ export async function editJournalEntry(input: {
   }
 }
 
+export async function getSalesReport(input: {
+  branchId?: string
+  fromDate: string
+  toDate: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  try {
+    // Summary totals
+    const summaryRows = unpackRows<{
+      total_invoices: string; total_revenue: string;
+      total_cgst: string; total_sgst: string; total_igst: string;
+      total_discounts: string; unique_customers: string;
+    }>(await db.execute(sql`
+      SELECT
+        COUNT(DISTINCT si.id)           AS total_invoices,
+        COALESCE(SUM(si.total_amount),0) AS total_revenue,
+        COALESCE(SUM(si.cgst),0)        AS total_cgst,
+        COALESCE(SUM(si.sgst),0)        AS total_sgst,
+        COALESCE(SUM(si.igst),0)        AS total_igst,
+        COALESCE(SUM(si.discount_amount),0) AS total_discounts,
+        COUNT(DISTINCT si.customer_id)  AS unique_customers
+      FROM sales_invoices si
+      WHERE si.created_at >= ${input.fromDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp
+        ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}
+    `))
+    const summary = summaryRows[0] ?? {}
+
+    // Sales by product
+    const productRows = unpackRows<{
+      model_name: string; brand: string; units_sold: string;
+      total_revenue: string; total_cgst: string; total_sgst: string;
+    }>(await db.execute(sql`
+      SELECT
+        p.model_name, p.brand,
+        SUM(ii.qty)                      AS units_sold,
+        SUM(ii.unit_price * ii.qty)      AS total_revenue,
+        COALESCE(SUM(ii.cgst_amount),0)  AS total_cgst,
+        COALESCE(SUM(ii.sgst_amount),0)  AS total_sgst
+      FROM invoice_items ii
+      JOIN sales_invoices si ON si.id = ii.invoice_id
+      JOIN products p ON p.id = ii.product_id
+      WHERE si.created_at >= ${input.fromDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp
+        ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}
+      GROUP BY p.model_name, p.brand
+      ORDER BY total_revenue DESC
+      LIMIT 50
+    `))
+
+    // Sales by staff
+    const staffRows = unpackRows<{
+      staff_name: string; invoice_count: string; total_revenue: string;
+    }>(await db.execute(sql`
+      SELECT
+        COALESCE(pr.full_name, 'Unknown') AS staff_name,
+        COUNT(si.id)                       AS invoice_count,
+        COALESCE(SUM(si.total_amount), 0)  AS total_revenue
+      FROM sales_invoices si
+      LEFT JOIN profiles pr ON pr.id = si.created_by
+      WHERE si.created_at >= ${input.fromDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp
+        ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}
+      GROUP BY pr.full_name
+      ORDER BY total_revenue DESC
+    `))
+
+    // Daily sales trend
+    const dailyRows = unpackRows<{
+      sale_date: string; invoice_count: string; revenue: string;
+    }>(await db.execute(sql`
+      SELECT
+        DATE(si.created_at)             AS sale_date,
+        COUNT(*)                         AS invoice_count,
+        COALESCE(SUM(si.total_amount),0) AS revenue
+      FROM sales_invoices si
+      WHERE si.created_at >= ${input.fromDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp
+        ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}
+      GROUP BY DATE(si.created_at)
+      ORDER BY sale_date ASC
+    `))
+
+    return {
+      success: true as const,
+      summary, products: productRows, staff: staffRows, daily: dailyRows,
+    }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function getStockValuation(input: { branchId?: string }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  try {
+    const rows = unpackRows<{
+      model_name: string; brand: string; product_code: string;
+      available_units: string; total_landed_cost: string; avg_landed_cost: string;
+      mrp: string; total_mrp_value: string;
+    }>(await db.execute(sql`
+      SELECT
+        p.model_name, p.brand, p.product_code,
+        COUNT(i.id)                          AS available_units,
+        COALESCE(SUM(i.landed_cost), 0)      AS total_landed_cost,
+        COALESCE(AVG(i.landed_cost), 0)      AS avg_landed_cost,
+        p.base_price                          AS mrp,
+        p.base_price * COUNT(i.id)           AS total_mrp_value
+      FROM products p
+      LEFT JOIN inventory i ON i.product_id = p.id
+        AND i.status = 'Available'
+        ${input.branchId ? sql`AND i.branch_id = ${input.branchId}::uuid` : sql``}
+      GROUP BY p.id, p.model_name, p.brand, p.product_code, p.base_price
+      HAVING COUNT(i.id) > 0
+      ORDER BY total_landed_cost DESC
+    `))
+
+    const totalCostValue = rows.reduce((s, r) => s + Number(r.total_landed_cost), 0)
+    const totalMrpValue  = rows.reduce((s, r) => s + Number(r.total_mrp_value), 0)
+    const totalUnits     = rows.reduce((s, r) => s + Number(r.available_units), 0)
+
+    return { success: true as const, products: rows, totalCostValue, totalMrpValue, totalUnits }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}

@@ -118,6 +118,13 @@ const navigationGroups: NavigationGroup[] = [
       { title: "Customer Management", url: "/sales/customers", icon: UserSquare },
     ]
   },
+  {
+    title: "Reports",
+    url: "/reports",
+    icon: BarChart3,
+    id: "reports",
+    items: []
+  },
 
 
   {
