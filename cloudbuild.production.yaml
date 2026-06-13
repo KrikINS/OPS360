@@ -35,7 +35,7 @@ substitutions:
   _REGION: 'asia-south1'
   _REPO_NAME: 'ops360-repo'
   _APP_NAME: 'ops360-app'
-  _SERVICE_NAME: 'ops360-app-prod'
+  _SERVICE_NAME: 'ops360-erp'
 
 options:
   logging: CLOUD_LOGGING_ONLY
