@@ -16,11 +16,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollableTable } from "@/components/ui/scrollable-table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogFooter
-} from '@/components/ui/dialog'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
 } from '@/components/ui/sheet'
@@ -30,7 +25,7 @@ import {
   XCircle, Clock,
   Wallet, Download, Printer,
   CalendarRange, ChevronRight, ChevronDown, Loader2,
-  PenLine, Pencil, Trash2
+  PenLine, Trash2
 } from 'lucide-react'
 import {
   createExpenseRecord, approveExpense, rejectExpense,
@@ -734,91 +729,56 @@ export default function AccountingClient({
         <div className="space-y-6">
 
           {/* P&L summary cards */}
-          <div className="grid grid-cols-3 gap-2 lg:gap-4">
-            <Card className="border-green-200 bg-green-50/30">
-              <CardContent className="p-2 sm:p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0">
-                    <p className="text-[8px] sm:text-[10px] md:text-xs font-semibold uppercase tracking-widest text-green-700 truncate">
-                      Total Revenue
-                    </p>
-                    <p className="text-xs sm:text-base md:text-2xl font-bold text-green-800 mt-0.5 md:mt-1 truncate">
-                      {fmtINR(pl?.totalRevenue ?? 0)}
-                    </p>
-                    <p className="text-[8px] md:text-xs text-green-600 mt-0.5 md:mt-1 hidden lg:block truncate">
-                      Current financial year
-                    </p>
-                  </div>
-                  <div className="p-1.5 md:p-3 bg-green-100 rounded-full hidden xl:block shrink-0 ml-2">
-                    <TrendingUp className="h-3 w-3 md:h-5 md:w-5 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+            <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <TrendingUp className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-2">Total Revenue</p>
+                <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                  {fmtINR(pl?.totalRevenue ?? 0)}
+                </h3>
+                <p className="text-[9px] font-bold text-[#7FD1E3] mt-1 uppercase tracking-tight truncate hidden lg:block">
+                  Current financial year
+                </p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+            </div>
 
-            <Card className="border-red-200 bg-red-50/30">
-              <CardContent className="p-2 sm:p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0">
-                    <p className="text-[8px] sm:text-[10px] md:text-xs font-semibold uppercase tracking-widest text-red-700 truncate">
-                      Total Expenses
-                    </p>
-                    <p className="text-xs sm:text-base md:text-2xl font-bold text-red-800 mt-0.5 md:mt-1 truncate">
-                      {fmtINR(Math.abs(pl?.totalExpenses ?? 0))}
-                    </p>
-                    <p className="text-[8px] md:text-xs text-red-600 mt-0.5 md:mt-1 hidden lg:block truncate">
-                      Current financial year
-                    </p>
-                  </div>
-                  <div className="p-1.5 md:p-3 bg-red-100 rounded-full hidden xl:block shrink-0 ml-2">
-                    <TrendingDown className="h-3 w-3 md:h-5 md:w-5 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <TrendingDown className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-2">Total Expenses</p>
+                <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                  {fmtINR(Math.abs(pl?.totalExpenses ?? 0))}
+                </h3>
+                <p className="text-[9px] font-bold text-[#7FD1E3] mt-1 uppercase tracking-tight truncate hidden lg:block">
+                  Current financial year
+                </p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+            </div>
 
-            <Card className={`border-2 ${
-              (pl?.netProfit ?? 0) >= 0
-                ? 'border-indigo-200 bg-indigo-50/30'
-                : 'border-orange-200 bg-orange-50/30'
-            }`}>
-              <CardContent className="p-2 sm:p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0">
-                    <p className={`text-[8px] sm:text-[10px] md:text-xs font-semibold uppercase tracking-widest truncate ${
-                      (pl?.netProfit ?? 0) >= 0 ? 'text-indigo-700' : 'text-orange-700'
-                    }`}>
-                      Net Profit / Loss
-                    </p>
-                    <p className={`text-xs sm:text-base md:text-2xl font-bold mt-0.5 md:mt-1 truncate
-                      ${(pl?.netProfit ?? 0) >= 0
-                        ? 'text-indigo-800'
-                        : 'text-orange-700'
-                      }`}>
-                      {fmtINR(pl?.netProfit ?? 0)}
-                    </p>
-                    <p className={`text-[8px] md:text-xs mt-0.5 md:mt-1 hidden lg:block truncate ${
-                      (pl?.netProfit ?? 0) >= 0 ? 'text-indigo-600' : 'text-orange-600'
-                    }`}>
-                      {(pl?.netProfit ?? 0) >= 0
-                        ? '▲ Profitable'
-                        : '▼ Net loss'}
-                    </p>
-                  </div>
-                  <div className={`p-1.5 md:p-3 rounded-full hidden xl:block shrink-0 ml-2 ${
-                    (pl?.netProfit ?? 0) >= 0
-                      ? 'bg-indigo-100'
-                      : 'bg-orange-100'
-                  }`}>
-                    <Scale className={`h-3 w-3 md:h-5 md:w-5 ${
-                      (pl?.netProfit ?? 0) >= 0
-                        ? 'text-indigo-600'
-                        : 'text-orange-600'
-                    }`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Scale className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-2">Net Profit / Loss</p>
+                <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                  {fmtINR(pl?.netProfit ?? 0)}
+                </h3>
+                <p className={`text-[9px] font-bold mt-1 uppercase tracking-tight truncate hidden lg:block ${
+                  (pl?.netProfit ?? 0) >= 0 ? 'text-[#7FD1E3]' : 'text-red-400'
+                }`}>
+                  {(pl?.netProfit ?? 0) >= 0 ? '▲ Profitable' : '▼ Net loss'}
+                </p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+            </div>
           </div>
 
           {/* GST Summary */}
@@ -834,22 +794,22 @@ export default function AccountingClient({
                 <ScrollableTable minWidth="800px">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Account</TableHead>
-                      <TableHead className="text-right">
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-bold">Account</TableHead>
+                      <TableHead className="text-right font-bold">
                         Collected (Output)
                       </TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="text-right font-bold">
                         Paid / ITC (Input)
                       </TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="text-right font-bold">
                         Net Payable
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {gst.gst.map(row => (
-                      <TableRow key={row.code}>
+                      <TableRow className="hover:bg-muted/20 transition-colors group cursor-pointer" key={row.code}>
                         <TableCell className="font-medium">
                           <span className="text-xs text-muted-foreground mr-2">
                             {row.code}
@@ -1007,17 +967,17 @@ export default function AccountingClient({
                 <ScrollableTable minWidth="800px">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>FY</TableHead>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-bold">Date</TableHead>
+                      <TableHead className="font-bold">Description</TableHead>
+                      <TableHead className="font-bold">Source</TableHead>
+                      <TableHead className="font-bold">Branch</TableHead>
+                      <TableHead className="font-bold">FY</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {journal.slice(0, 10).map(entry => (
-                      <TableRow key={entry.id}>
+                      <TableRow className="hover:bg-muted/20 transition-colors group cursor-pointer" key={entry.id}>
                         <TableCell className="text-xs
                           text-muted-foreground whitespace-nowrap">
                           {fmtDate(entry.date)}
@@ -1067,7 +1027,7 @@ export default function AccountingClient({
         <div className="space-y-4">
 
           {/* Accounting equation banner */}
-          <Card className="bg-slate-900 text-white border-0">
+          <Card className="bg-[#001529] text-white border-0 shadow-xl">
             <CardContent className="pt-6">
               <div className="flex items-center
                 justify-between text-center">
@@ -1324,31 +1284,35 @@ export default function AccountingClient({
             const t = apAgeing.totals
             const rows = apAgeing.rows ?? []
             const bucketCards = [
-              { label: '0-30 Days',  amount: t.bucket0,  count: rows.filter(r => r.bucket === '0-30').length,
-                cardClass: 'border-green-200 bg-green-50/30', titleClass: 'text-green-600', amtClass: 'text-green-800', subClass: 'text-green-500' },
-              { label: '31-60 Days', amount: t.bucket31, count: rows.filter(r => r.bucket === '31-60').length,
-                cardClass: 'border-amber-200 bg-amber-50/30', titleClass: 'text-amber-600', amtClass: 'text-amber-800', subClass: 'text-amber-500' },
-              { label: '61-90 Days', amount: t.bucket61, count: rows.filter(r => r.bucket === '61-90').length,
-                cardClass: 'border-orange-200 bg-orange-50/30', titleClass: 'text-orange-600', amtClass: 'text-orange-800', subClass: 'text-orange-500' },
-              { label: '90+ Days',   amount: t.bucket90, count: rows.filter(r => r.bucket === '90+').length,
-                cardClass: 'border-red-200 bg-red-50/30', titleClass: 'text-red-600', amtClass: 'text-red-800', subClass: 'text-red-500' },
+              { label: '0-30 Days',  amount: t.bucket0,  count: rows.filter(r => r.bucket === '0-30').length },
+              { label: '31-60 Days', amount: t.bucket31, count: rows.filter(r => r.bucket === '31-60').length },
+              { label: '61-90 Days', amount: t.bucket61, count: rows.filter(r => r.bucket === '61-90').length },
+              { label: '90+ Days',   amount: t.bucket90, count: rows.filter(r => r.bucket === '90+').length },
             ]
             return (
               <>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-1 sm:gap-2 lg:gap-4">
                   {bucketCards.map(b => (
-                    <Card key={b.label} className={b.cardClass}>
-                      <CardContent className="pt-5 pb-4">
-                        <p className={`text-[10px] font-semibold uppercase tracking-widest ${b.titleClass} mb-1`}>{b.label}</p>
-                        <p className={`text-xl font-bold ${b.amtClass}`}>{fmtINR(b.amount)}</p>
-                        <p className={`text-xs ${b.subClass} mt-1`}>{b.count} PO{b.count !== 1 ? 's' : ''}</p>
-                      </CardContent>
-                    </Card>
+                    <div key={b.label} className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                      <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                        <Clock className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                      </div>
+                      <div className="relative z-10 flex flex-col h-full justify-center">
+                        <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">{b.label}</p>
+                        <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                          {fmtINR(b.amount)}
+                        </h3>
+                        <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                          {b.count} PO{b.count !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+                    </div>
                   ))}
                 </div>
 
                 {/* Outstanding total banner */}
-                <Card className="bg-slate-900 text-white border-0">
+                <Card className="bg-[#001529] text-white border-0 shadow-xl">
                   <CardContent className="pt-6 pb-5">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1365,7 +1329,7 @@ export default function AccountingClient({
               </>
             )
           })() : (
-            <Card className="bg-slate-900 text-white border-0">
+            <Card className="bg-[#001529] text-white border-0 shadow-xl">
               <CardContent className="pt-6 pb-5 text-center">
                 <p className="text-xs uppercase tracking-widest text-slate-400">Outstanding AP Total</p>
                 <p className="text-3xl font-bold text-white mt-1">{fmtINR(0)}</p>
@@ -1386,16 +1350,16 @@ export default function AccountingClient({
                 <ScrollableTable minWidth="1200px">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
-                        <TableHead className="text-xs font-semibold">Vendor</TableHead>
-                        <TableHead className="text-xs font-semibold">PO Number</TableHead>
-                        <TableHead className="text-xs font-semibold">GRN Date</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Total Charged</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Paid</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Reversed</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Outstanding</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Days</TableHead>
-                        <TableHead className="text-xs font-semibold text-center">Status</TableHead>
+                    <TableRow className="bg-slate-50 bg-muted/30">
+                        <TableHead className="text-xs font-bold">Vendor</TableHead>
+                        <TableHead className="text-xs font-bold">PO Number</TableHead>
+                        <TableHead className="text-xs font-bold">GRN Date</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Total Charged</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Paid</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Reversed</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Outstanding</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Days</TableHead>
+                        <TableHead className="text-xs font-bold text-center">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1471,16 +1435,16 @@ export default function AccountingClient({
                 <ScrollableTable minWidth="1000px">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-8"></TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>FY</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Total Amount</TableHead>
-                      <TableHead>Status</TableHead>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="w-8 font-bold"></TableHead>
+                      <TableHead className="font-bold">Date</TableHead>
+                      <TableHead className="font-bold">Description</TableHead>
+                      <TableHead className="font-bold">Source</TableHead>
+                      <TableHead className="font-bold">Branch</TableHead>
+                      <TableHead className="font-bold">FY</TableHead>
+                      <TableHead className="font-bold">Type</TableHead>
+                      <TableHead className="text-right font-bold">Total Amount</TableHead>
+                      <TableHead className="font-bold">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1663,23 +1627,23 @@ export default function AccountingClient({
                 <ScrollableTable minWidth="1000px">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead className="text-right">
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-bold">Date</TableHead>
+                      <TableHead className="font-bold">Description</TableHead>
+                      <TableHead className="font-bold">Category</TableHead>
+                      <TableHead className="font-bold">Payment</TableHead>
+                      <TableHead className="text-right font-bold">
                         Amount
                       </TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="font-bold">Status</TableHead>
                       {isAdmin && (
-                        <TableHead className="">Actions</TableHead>
+                        <TableHead className=" font-bold">Actions</TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {expenses.map(exp => (
-                      <TableRow key={exp.id}>
+                      <TableRow className="hover:bg-muted/20 transition-colors group cursor-pointer" key={exp.id}>
                         <TableCell className="text-xs
                           text-muted-foreground whitespace-nowrap">
                           {exp.created_at ? fmtDate(exp.created_at) : '—'}
@@ -1778,35 +1742,70 @@ export default function AccountingClient({
         <div className="space-y-6">
 
           {/* Summary cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-blue-200 bg-blue-50/30">
-              <CardContent className="pt-5 pb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-600 mb-1">Total Revenue</p>
-                <p className="text-xl font-bold text-blue-800">{fmtINR(marginData?.summary.totalRevenue ?? 0)}</p>
-                <p className="text-xs text-blue-500 mt-1">{marginData?.summary.totalUnitsSold ?? 0} units sold</p>
-              </CardContent>
-            </Card>
-            <Card className="border-orange-200 bg-orange-50/30">
-              <CardContent className="pt-5 pb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-orange-600 mb-1">Cost of Goods Sold</p>
-                <p className="text-xl font-bold text-orange-800">{fmtINR(marginData?.summary.totalCOGS ?? 0)}</p>
-                <p className="text-xs text-orange-500 mt-1">Purchase + landed costs</p>
-              </CardContent>
-            </Card>
-            <Card className={`border-2 ${(marginData?.summary.grossProfit ?? 0) >= 0 ? 'border-green-200 bg-green-50/30' : 'border-red-200 bg-red-50/30'}`}>
-              <CardContent className="pt-5 pb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-green-600 mb-1">Gross Profit</p>
-                <p className={`text-xl font-bold ${(marginData?.summary.grossProfit ?? 0) >= 0 ? 'text-green-800' : 'text-red-800'}`}>{fmtINR(marginData?.summary.grossProfit ?? 0)}</p>
-                <p className="text-xs text-green-500 mt-1">Revenue − COGS</p>
-              </CardContent>
-            </Card>
-            <Card className="border-indigo-200 bg-indigo-50/30">
-              <CardContent className="pt-5 pb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-600 mb-1">Overall Margin</p>
-                <p className="text-xl font-bold text-indigo-800">{(marginData?.summary.overallMarginPct ?? 0).toFixed(1)}%</p>
-                <p className="text-xs text-indigo-500 mt-1">{fmtINR(marginData?.summary.totalDiscounts ?? 0)} in discounts applied</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-4 gap-1 sm:gap-2 lg:gap-4">
+            <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+              <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full justify-center">
+                <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Total Revenue</p>
+                <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                  {fmtINR(marginData?.summary.totalRevenue ?? 0)}
+                </h3>
+                <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                  {marginData?.summary.totalUnitsSold ?? 0} units sold
+                </p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+            </div>
+
+            <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+              <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                <Receipt className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full justify-center">
+                <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Cost of Goods Sold</p>
+                <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                  {fmtINR(marginData?.summary.totalCOGS ?? 0)}
+                </h3>
+                <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                  Purchase + landed costs
+                </p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+            </div>
+
+            <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+              <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                <Scale className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full justify-center">
+                <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Gross Profit</p>
+                <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                  {fmtINR(marginData?.summary.grossProfit ?? 0)}
+                </h3>
+                <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                  Revenue − COGS
+                </p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+            </div>
+
+            <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+              <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full justify-center">
+                <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Overall Margin</p>
+                <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                  {(marginData?.summary.overallMarginPct ?? 0).toFixed(1)}%
+                </h3>
+                <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                  {fmtINR(marginData?.summary.totalDiscounts ?? 0)} in discounts applied
+                </p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+            </div>
           </div>
 
           {/* Margin health indicator */}
@@ -1841,16 +1840,16 @@ export default function AccountingClient({
                 <ScrollableTable minWidth="1200px">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
-                        <TableHead className="text-xs font-semibold">Product</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">MRP</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Units Sold</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Revenue</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">COGS</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Gross Profit</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Margin %</TableHead>
-                        <TableHead className="text-xs font-semibold text-right">Discounts</TableHead>
-                        <TableHead className="text-xs font-semibold text-center">Mgr Approvals</TableHead>
+                    <TableRow className="bg-slate-50 bg-muted/30">
+                        <TableHead className="text-xs font-bold">Product</TableHead>
+                        <TableHead className="text-xs font-bold text-right">MRP</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Units Sold</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Revenue</TableHead>
+                        <TableHead className="text-xs font-bold text-right">COGS</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Gross Profit</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Margin %</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Discounts</TableHead>
+                        <TableHead className="text-xs font-bold text-center">Mgr Approvals</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1859,7 +1858,7 @@ export default function AccountingClient({
                         const grossProfit = Number(p.gross_profit ?? 0)
                         const mgrApprovals = Number(p.manager_approved_discounts ?? 0)
                         return (
-                          <TableRow key={p.product_id}>
+                          <TableRow className="hover:bg-muted/20 transition-colors group cursor-pointer" key={p.product_id}>
                             <TableCell>
                               <div>
                                 <p className="text-sm font-medium">{p.model_name}</p>
@@ -1902,34 +1901,52 @@ export default function AccountingClient({
 
           {/* Discount analysis */}
           {marginData && marginData.summary.totalDiscounts > 0 && (
-            <Card className="border-purple-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-purple-600">
-                  Discount Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="p-4 bg-purple-50 rounded-xl text-center">
-                    <p className="text-xs uppercase tracking-widest text-purple-500 mb-1">Total Discounts Given</p>
-                    <p className="text-xl font-bold text-purple-800">{fmtINR(marginData.summary.totalDiscounts)}</p>
+            <div className="space-y-4 pt-4">
+              <h4 className="text-sm font-semibold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                Discount Analysis
+              </h4>
+              <div className="grid grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
+                <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                  <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                    <TrendingDown className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
                   </div>
-                  <div className="p-4 bg-purple-50 rounded-xl text-center">
-                    <p className="text-xs uppercase tracking-widest text-purple-500 mb-1">Discount as % of Revenue</p>
-                    <p className="text-xl font-bold text-purple-800">
-                      {marginData.summary.totalRevenue > 0 ? (marginData.summary.totalDiscounts / marginData.summary.totalRevenue * 100).toFixed(1) : '0.0'}%
-                    </p>
+                  <div className="relative z-10 flex flex-col h-full justify-center">
+                    <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Total Discounts Given</p>
+                    <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                      {fmtINR(marginData.summary.totalDiscounts)}
+                    </h3>
                   </div>
-                  <div className="p-4 bg-purple-50 rounded-xl text-center">
-                    <p className="text-xs uppercase tracking-widest text-purple-500 mb-1">Products With Discounts</p>
-                    <p className="text-xl font-bold text-purple-800">
-                      {(marginData.products ?? []).filter(p => Number(p.total_discounts) > 0).length}
-                      <span className="text-sm font-normal text-purple-500"> of {marginData.products.length}</span>
-                    </p>
-                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                  <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                    <Scale className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                  </div>
+                  <div className="relative z-10 flex flex-col h-full justify-center">
+                    <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Discount % of Revenue</p>
+                    <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                      {marginData.summary.totalRevenue > 0 ? (marginData.summary.totalDiscounts / marginData.summary.totalRevenue * 100).toFixed(1) : '0.0'}%
+                    </h3>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+                </div>
+
+                <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                  <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                    <Receipt className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                  </div>
+                  <div className="relative z-10 flex flex-col h-full justify-center">
+                    <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Products Discounted</p>
+                    <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                      {(marginData.products ?? []).filter(p => Number(p.total_discounts) > 0).length}
+                      <span className="text-[8px] sm:text-[10px] lg:text-sm font-normal text-white/40 ml-1">of {marginData.products.length}</span>
+                    </h3>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+                </div>
+              </div>
+            </div>
           )}
 
         </div>

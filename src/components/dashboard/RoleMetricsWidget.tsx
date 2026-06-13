@@ -4,7 +4,7 @@ import React from "react"
 import useSWR from "swr"
 import { getRoleMetricsAction } from "@/app/actions/stats"
 import { Activity, LayoutDashboard } from "lucide-react"
-import { cn } from "@/lib/utils"
+
 
 export function RoleMetricsWidget() {
   const { data: response, error, isLoading } = useSWR('role-metrics', getRoleMetricsAction)

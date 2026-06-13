@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { setupTestDb, teardownTestDb, cleanupTestDb, seedBranch, seedProduct, seedCoa, type TestDb } from '@/test/db'
+import { setupTestDb, teardownTestDb, cleanupTestDb, seedBranch, seedProduct, type TestDb } from '@/test/db'
 import { inventory } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 
@@ -61,7 +61,7 @@ describe('FIFO inventory costing', () => {
     const branch = await seedBranch(db)
     const product = await seedProduct(db, { branchId: branch.id })
 
-    const units = Array.from({ length: 5 }, (_, i) => ({
+    const units = Array.from({ length: 5 }, () => ({
       id: crypto.randomUUID(),
       product_id: product.id,
       branch_id: branch.id,

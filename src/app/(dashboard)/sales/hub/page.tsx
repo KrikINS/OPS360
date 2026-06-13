@@ -5,12 +5,10 @@ import { SalesRegistryTable } from '@/components/sales/SalesRegistryTable'
 import { 
   ShoppingBag, 
   TrendingUp, 
-  Users, 
-  ArrowUpRight,
+  Users,
   Loader2,
   RefreshCcw
 } from 'lucide-react'
-import { Card, CardContent } from "@/components/ui/card"
 
 import { exportToExcel } from "@/lib/export-utils"
 import { useGlobalContext } from "@/context/GlobalContext"
@@ -117,51 +115,63 @@ export default function SalesRegistryPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
-        <Card className="border-none shadow-md bg-gradient-to-br from-indigo-600 to-blue-700 text-white overflow-hidden relative">
-          <CardContent className="p-3 sm:p-4 lg:p-6">
-            <div className="relative z-10 space-y-1 sm:space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-indigo-100 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Total Revenue</p>
-                {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-white/20 text-white border border-white/10">Consolidated</span>}
-              </div>
-              <h3 className="text-lg sm:text-2xl lg:text-4xl font-black tracking-tighter truncate">₹{stats.totalSales.toLocaleString()}</h3>
-              <div className="hidden sm:flex items-center gap-1 text-[8px] lg:text-[10px] bg-white/10 w-fit px-2 py-1 rounded-full border border-white/10 truncate">
-                <ArrowUpRight className="h-3 w-3" />
-                {activeBranch?.id === "ALL_000" ? "Live from all branches" : "Live from active branch"}
-              </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <ShoppingBag className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Total Revenue</p>
+              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-[#7FD1E3]/10 text-[#7FD1E3] border border-[#7FD1E3]/20">Consolidated</span>}
             </div>
-            <ShoppingBag className="absolute -right-4 -bottom-4 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 text-white/10 rotate-12" />
-          </CardContent>
-        </Card>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors">
+              ₹{stats.totalSales.toLocaleString()}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">
+              {activeBranch?.id === "ALL_000" ? "Live from all branches" : "Live from active branch"}
+            </p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
 
-        <Card className="border-none shadow-md bg-white overflow-hidden relative group hover:shadow-xl transition-all">
-          <CardContent className="p-3 sm:p-4 lg:p-6">
-            <div className="relative z-10 space-y-1 sm:space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-slate-400 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Invoice Volume</p>
-                {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
-              </div>
-              <h3 className="text-lg sm:text-2xl lg:text-4xl font-black tracking-tighter text-slate-900 truncate">{stats.invoiceCount}</h3>
-              <p className="hidden sm:block text-[8px] lg:text-[10px] text-slate-500 font-medium truncate">Completed Transactions</p>
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <TrendingUp className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Invoice Volume</p>
+              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-[#7FD1E3]/10 text-[#7FD1E3] border border-[#7FD1E3]/20">Consolidated</span>}
             </div>
-            <TrendingUp className="absolute -right-4 -bottom-4 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 text-slate-50 group-hover:text-slate-100 transition-colors rotate-12" />
-          </CardContent>
-        </Card>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors">
+              {stats.invoiceCount}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">
+              Completed Transactions
+            </p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
 
-        <Card className="border-none shadow-md bg-white overflow-hidden relative group hover:shadow-xl transition-all border-l-4 border-l-emerald-500">
-          <CardContent className="p-3 sm:p-4 lg:p-6">
-            <div className="relative z-10 space-y-1 sm:space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-slate-400 text-[8px] sm:text-[10px] lg:text-xs font-black uppercase tracking-widest truncate">Average Ticket</p>
-                {activeBranch?.id === "ALL_000" && <span className="hidden sm:inline-block text-[8px] font-bold uppercase py-0.5 px-2 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">Consolidated</span>}
-              </div>
-              <h3 className="text-lg sm:text-2xl lg:text-4xl font-black tracking-tighter text-slate-900 truncate">₹{Math.round(stats.avgTicket).toLocaleString()}</h3>
-              <p className="hidden sm:block text-[8px] lg:text-[10px] text-emerald-600 font-bold uppercase tracking-wider truncate">Per Sale Value</p>
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Users className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Average Ticket</p>
+              {activeBranch?.id === "ALL_000" && <span className="text-[8px] font-bold uppercase py-0.5 px-1.5 rounded bg-[#7FD1E3]/10 text-[#7FD1E3] border border-[#7FD1E3]/20">Consolidated</span>}
             </div>
-            <Users className="absolute -right-4 -bottom-4 h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 text-slate-50 group-hover:text-slate-100 transition-colors rotate-12" />
-          </CardContent>
-        </Card>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors">
+              ₹{Math.round(stats.avgTicket).toLocaleString()}
+            </h3>
+            <p className="text-[9px] font-bold text-[#7FD1E3] mt-1 uppercase tracking-tight truncate">
+              Per Sale Value
+            </p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
       </div>
 
       {loading ? (

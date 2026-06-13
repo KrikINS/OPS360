@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { setupTestDb, teardownTestDb, cleanupTestDb, seedBranch, seedCoa, type TestDb } from '@/test/db'
-import { calculateLineItemGST, splitGST, calculateInvoiceTotals } from '@/lib/gst'
+import { setupTestDb, teardownTestDb, cleanupTestDb, type TestDb } from '@/test/db'
+import { splitGST } from '@/lib/gst'
 
 let db: TestDb
 

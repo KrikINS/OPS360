@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import {
-  service_jobs, service_job_items, warranty_registrations,
+  service_jobs, warranty_registrations,
   customers, products, profiles, inventory, sales_invoices, branches,
 } from '@/db/schema'
 import { eq, and, desc, sql } from 'drizzle-orm'

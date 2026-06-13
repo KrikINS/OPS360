@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollableTable } from '@/components/ui/scrollable-table'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ShieldCheck, Search, Plus, Loader2, CheckCircle2, XCircle, AlertTriangle, X } from 'lucide-react'
+import { ShieldCheck, Search, Plus, Loader2, CheckCircle2, XCircle, X } from 'lucide-react'
 import { getWarrantyRegistrations, registerWarranty } from '@/actions/service'
-import { fmtINR } from '@/lib/utils'
+
 
 type WarrantyReg = {
   id: string
@@ -31,6 +31,18 @@ type WarrantyReg = {
   warranty_status: 'active' | 'expired'
 }
 
+type ProductSearchResult = {
+  id: string
+  model_name: string
+  brand: string
+}
+
+type CustomerSearchResult = {
+  id: string
+  full_name: string
+  phone_number: string
+}
+
 export default function WarrantyManagementPage() {
   const [registrations, setRegistrations] = useState<WarrantyReg[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,8 +59,8 @@ export default function WarrantyManagementPage() {
     purchaseDate: new Date().toISOString().slice(0, 10),
     warrantyMonths: '12', notes: ''
   })
-  const [productResults, setProductResults] = useState<any[]>([])
-  const [customerResults, setCustomerResults] = useState<any[]>([])
+  const [productResults, setProductResults] = useState<ProductSearchResult[]>([])
+  const [customerResults, setCustomerResults] = useState<CustomerSearchResult[]>([])
 
   const loadRegistrations = useCallback(async () => {
     setLoading(true)
@@ -68,7 +80,7 @@ export default function WarrantyManagementPage() {
     const t = setTimeout(async () => {
       const mod = await import('@/app/actions/service')
       const result = await mod.searchProductsAction(form.productSearch)
-      if (result.data) setProductResults(result.data as any[])
+      if (result.data) setProductResults(result.data as ProductSearchResult[])
     }, 300)
     return () => clearTimeout(t)
   }, [form.productSearch])
@@ -79,7 +91,7 @@ export default function WarrantyManagementPage() {
     const t = setTimeout(async () => {
       const mod = await import('@/app/actions/service')
       const result = await mod.searchPosCustomersAction(form.customerSearch)
-      if (result.data) setCustomerResults(result.data as any[])
+      if (result.data) setCustomerResults(result.data as CustomerSearchResult[])
     }, 300)
     return () => clearTimeout(t)
   }, [form.customerSearch])
@@ -266,7 +278,7 @@ export default function WarrantyManagementPage() {
                   <Input placeholder="Search product..." value={form.productSearch} onChange={e => setForm(f => ({ ...f, productSearch: e.target.value }))} className="h-9" />
                   {productResults.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-xl overflow-hidden">
-                      {productResults.map((p: any) => (
+                      {productResults.map((p: ProductSearchResult) => (
                         <button key={p.id} className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 border-b last:border-0"
                           onClick={() => { setForm(f => ({ ...f, productId: p.id, productName: `${p.brand} ${p.model_name}`, productSearch: '', })); setProductResults([]) }}>
                           <div className="font-semibold">{p.model_name}</div>
@@ -292,7 +304,7 @@ export default function WarrantyManagementPage() {
                   <Input placeholder="Search customer..." value={form.customerSearch} onChange={e => setForm(f => ({ ...f, customerSearch: e.target.value }))} className="h-9" />
                   {customerResults.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-xl overflow-hidden">
-                      {customerResults.map((c: any) => (
+                      {customerResults.map((c: CustomerSearchResult) => (
                         <button key={c.id} className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 border-b last:border-0"
                           onClick={() => { setForm(f => ({ ...f, customerId: c.id, customerName: c.full_name, customerSearch: '' })); setCustomerResults([]) }}>
                           <div className="font-semibold">{c.full_name}</div>
