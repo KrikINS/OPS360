@@ -22,7 +22,7 @@ type WarrantyReg = {
   warranty_expires_at: string
   notes: string | null
   is_active: boolean
-  created_at: string
+  created_at: Date | string | null
   model_name: string | null
   brand: string | null
   customer_name: string | null
@@ -53,7 +53,7 @@ export default function WarrantyManagementPage() {
   const loadRegistrations = useCallback(async () => {
     setLoading(true)
     const result = await getWarrantyRegistrations({ status: filter, search: search || undefined })
-    if (result.success) setRegistrations(result.registrations as WarrantyReg[])
+    if (result.success) setRegistrations(result.registrations as unknown as WarrantyReg[])
     setLoading(false)
   }, [filter, search])
 

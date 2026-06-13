@@ -25,7 +25,7 @@ interface PayslipTemplateProps {
 }
 
 export const PayslipTemplate = forwardRef<HTMLDivElement, PayslipTemplateProps>(({ data }, ref) => {
-  const { companyName, billing_address, tax_id, logoUrl } = useBranding()
+  const { companyName, billingAddress, logoUrl } = useBranding()
   const totalEarnings = data.gross
   const totalDeductions = data.pfEmployee + data.professionalTax + data.tds
 
@@ -39,8 +39,7 @@ export const PayslipTemplate = forwardRef<HTMLDivElement, PayslipTemplateProps>(
             <img src={logoUrl} alt="logo" style={{ height: '32px', marginBottom: '4px' }} />
           )}
           <div style={{ fontSize: '16px', fontWeight: 900, color: '#001529', letterSpacing: '-0.5px' }}>{companyName}</div>
-          <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>{billing_address}</div>
-          {tax_id && <div style={{ fontSize: '9px', color: '#64748b' }}>GSTIN: {tax_id}</div>}
+          <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>{billingAddress}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '18px', fontWeight: 900, color: '#001529', letterSpacing: '2px', textTransform: 'uppercase' }}>Pay Slip</div>
