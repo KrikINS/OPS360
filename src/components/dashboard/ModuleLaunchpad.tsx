@@ -109,8 +109,6 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
   const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null)
   const router = useRouter()
   const { data: session } = useSession()
-  console.log("Session Role:", session?.user?.role)
-
   const { data: countData } = useSWR(session?.user ? 'low-stock-count' : null, getLowStockCountAction)
 
   // Derive directly from SWR data to avoid calling setState inside an effect

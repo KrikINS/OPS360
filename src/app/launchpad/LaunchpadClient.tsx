@@ -33,7 +33,7 @@ const BrandIdentity = () => {
   )
 }
 
-export default function LaunchpadClient({ initialPermissions, initialRole }: { initialPermissions: Record<string, boolean>, initialRole: string }) {
+export default function LaunchpadClient({ initialPermissions, initialRole, kpis }: { initialPermissions: Record<string, boolean>, initialRole: string, kpis?: Record<string, unknown> | null }) {
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/login' })
   }
@@ -66,6 +66,13 @@ export default function LaunchpadClient({ initialPermissions, initialRole }: { i
         <BrandIdentity />
       </div>
 
+      {/* KPI Strip */}
+      <div className="flex-none w-full flex justify-center z-10 pb-2">
+        <div className="w-full max-w-5xl">
+          <KPIStrip role={initialRole} kpis={kpis} />
+        </div>
+      </div>
+
       <div className="w-full z-10 mt-0 relative -top-6">
         <RoleMetricsWidget />
       </div>
@@ -82,6 +89,86 @@ export default function LaunchpadClient({ initialPermissions, initialRole }: { i
         <p className="text-white/30 text-[9px] font-bold uppercase tracking-[0.3em]">Powered By</p>
         <Image src="/AppTerra .PNG" alt="AppTerra" width={120} height={40} priority className="object-contain opacity-60 w-auto h-auto" style={{ mixBlendMode: "screen" }} />
       </div>
+    </div>
+  )
+}
+
+function KPIStrip({ role, kpis }: { role: string; kpis: Record<string, unknown> | null | undefined }) {
+  if (!kpis) return null
+  const normalizedRole = role.toLowerCase().trim()
+  const isAdmin = ['admin/owner', 'admin', 'owner', 'super_admin'].includes(normalizedRole)
+  const isManager = normalizedRole === 'manager'
+
+  const fmt = (n: unknown) => Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+  const fmtCurrency = (n: unknown) => `₹${fmt(n)}`
+
+  if (isAdmin) {
+    const k = kpis as {
+      todayRevenue: number; todayInvoices: number; mtdRevenue: number;
+      revenueChange: number | null; outstandingAP: number;
+      lowStockCount: number; activeServiceJobs: number;
+    }
+    return (
+      <div className="w-full max-w-5xl mx-auto px-6 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KPICard label="Today's Revenue" value={fmtCurrency(k.todayRevenue)} sub={`${k.todayInvoices} invoices`} accent="emerald" />
+        <KPICard label="MTD Revenue" value={fmtCurrency(k.mtdRevenue)} sub={k.revenueChange !== null ? `${k.revenueChange > 0 ? '+' : ''}${k.revenueChange}% vs last month` : 'vs last month'} accent={k.revenueChange !== null && k.revenueChange >= 0 ? 'emerald' : 'red'} />
+        <KPICard label="Outstanding AP" value={fmtCurrency(k.outstandingAP)} sub="unpaid vendor bills" accent="amber" />
+        <KPICard label="Alerts" value={`${k.lowStockCount} low stock`} sub={`${k.activeServiceJobs} open jobs`} accent={k.lowStockCount > 0 ? 'red' : 'slate'} />
+      </div>
+    )
+  }
+
+  if (isManager) {
+    const k = kpis as {
+      todayRevenue: number; todayInvoices: number; weekInvoices: number;
+      weekRevenue: number; pendingServiceJobs: number; lowStockCount: number;
+      topProducts: { name: string; units: number }[];
+    }
+    return (
+      <div className="w-full max-w-5xl mx-auto px-6 mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KPICard label="Today's Sales" value={fmtCurrency(k.todayRevenue)} sub={`${k.todayInvoices} invoices today`} accent="emerald" />
+        <KPICard label="This Week" value={fmtCurrency(k.weekRevenue)} sub={`${k.weekInvoices} invoices`} accent="blue" />
+        <KPICard label="Service Jobs" value={String(k.pendingServiceJobs)} sub="pending in branch" accent={k.pendingServiceJobs > 0 ? 'amber' : 'slate'} />
+        <KPICard label="Low Stock" value={String(k.lowStockCount)} sub="items below minimum" accent={k.lowStockCount > 0 ? 'red' : 'slate'} />
+      </div>
+    )
+  }
+
+  // Staff
+  const k = kpis as {
+    todayInvoices: number; todayRevenue: number;
+    attendanceStatus: string | null; clockedInAt: string | null;
+  }
+  return (
+    <div className="w-full max-w-5xl mx-auto px-6 mb-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+      <KPICard label="My Sales Today" value={String(k.todayInvoices)} sub={`${fmtCurrency(k.todayRevenue)} processed`} accent="emerald" />
+      <KPICard label="Attendance" value={k.attendanceStatus ?? 'Not recorded'} sub={k.clockedInAt ? `In at ${new Date(k.clockedInAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Not clocked in'} accent={k.attendanceStatus === 'present' ? 'emerald' : 'amber'} />
+      <KPICard label="Quick Action" value="POS Terminal" sub="tap to open checkout" accent="cyan" onClick={() => window.location.href = '/pos'} />
+    </div>
+  )
+}
+
+function KPICard({ label, value, sub, accent, onClick }: {
+  label: string; value: string; sub: string;
+  accent: 'emerald' | 'blue' | 'amber' | 'red' | 'slate' | 'cyan';
+  onClick?: () => void
+}) {
+  const accentMap = {
+    emerald: 'border-emerald-500/30 text-emerald-400',
+    blue:    'border-blue-500/30 text-blue-400',
+    amber:   'border-amber-500/30 text-amber-400',
+    red:     'border-red-500/30 text-red-400',
+    slate:   'border-white/10 text-white/40',
+    cyan:    'border-[#7FD1E3]/30 text-[#7FD1E3]',
+  }
+  return (
+    <div
+      onClick={onClick}
+      className={`bg-white/5 backdrop-blur-xl border rounded-xl p-4 ${accentMap[accent]} ${onClick ? 'cursor-pointer hover:bg-white/10 transition-colors' : ''}`}
+    >
+      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 mb-1">{label}</p>
+      <p className={`text-lg font-black tabular-nums ${accentMap[accent].split(' ')[1]}`}>{value}</p>
+      <p className="text-[10px] text-white/30 mt-0.5">{sub}</p>
     </div>
   )
 }
