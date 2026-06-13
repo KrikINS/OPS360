@@ -39,6 +39,7 @@ export function JobDetailDrawer({ job, open, onClose, onUpdated }: JobDetailDraw
   const [updating, setUpdating] = useState(false)
   const [resolutionNotes, setResolutionNotes] = useState('')
   const [actualCost, setActualCost] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank'>('cash')
   const [toast, setToast] = useState<string | null>(null)
 
   if (!job) return null
@@ -50,6 +51,7 @@ export function JobDetailDrawer({ job, open, onClose, onUpdated }: JobDetailDraw
         jobId: job.id,
         actualCost: actualCost ? parseFloat(actualCost) : undefined,
         resolutionNotes: resolutionNotes.trim() || undefined,
+        paymentMethod,
       })
       if (result.success) { setToast('Job marked as Completed'); onUpdated() }
       else setToast(result.error ?? 'Update failed')
@@ -175,6 +177,18 @@ export function JobDetailDrawer({ job, open, onClose, onUpdated }: JobDetailDraw
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold uppercase text-slate-400">Actual Cost (₹)</Label>
                   <Input type="number" min={0} placeholder="0.00" value={actualCost} onChange={e => setActualCost(e.target.value)} className="h-9" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase text-slate-400">Payment Method</Label>
+                  <div className="flex gap-2">
+                    {(['cash', 'bank'] as const).map(m => (
+                      <button key={m} type="button"
+                        className={`flex-1 h-8 rounded-lg border text-xs font-bold capitalize transition-colors ${paymentMethod === m ? 'bg-[#001529] text-white border-[#001529]' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        onClick={() => setPaymentMethod(m)}>
+                        {m === 'cash' ? '💵 Cash' : '🏦 Bank Transfer'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold uppercase text-slate-400">Resolution Notes</Label>

@@ -239,6 +239,11 @@ export async function getServiceJobs(input?: {
         customerPhone: customers.phone_number,
         productName: products.model_name,
         technicianName: profiles.full_name,
+        serialNumber:    service_jobs.serial_number,
+        invoiceId:       service_jobs.invoice_id,
+        warrantyStatus:  service_jobs.warranty_status,
+        resolutionNotes: service_jobs.resolution_notes,
+        completedAt:     service_jobs.completed_at,
       })
       .from(service_jobs)
       .leftJoin(customers, eq(service_jobs.customer_id, customers.id))
@@ -421,9 +426,24 @@ export async function completeServiceJob(input: {
   jobId: string
   actualCost?: number
   resolutionNotes?: string
+  paymentMethod?: 'cash' | 'bank'
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  const [existing] = await db
+    .select({ status: service_jobs.status })
+    .from(service_jobs)
+    .where(eq(service_jobs.id, input.jobId))
+    .limit(1)
+
+  if (!existing) return { success: false as const, error: 'Job not found' }
+
+  const allowed = STATUS_TRANSITIONS[existing.status] ?? []
+  if (!allowed.includes('Completed')) {
+    return { success: false as const, error: `Cannot complete a job with status '${existing.status}'` }
+  }
+
   try {
     await db.update(service_jobs)
       .set({
@@ -434,6 +454,38 @@ export async function completeServiceJob(input: {
         updated_at: new Date(),
       })
       .where(eq(service_jobs.id, input.jobId))
+
+    // Post service journal — blocking (only when actual cost > 0)
+    if (input.actualCost && input.actualCost > 0) {
+      try {
+        const [completedJob] = await db
+          .select({ branch_id: service_jobs.branch_id, job_id: service_jobs.job_id })
+          .from(service_jobs)
+          .where(eq(service_jobs.id, input.jobId))
+          .limit(1)
+
+        if (completedJob) {
+          const { postServiceJournal } = await import('@/actions/finance')
+          await postServiceJournal({
+            jobId:         input.jobId,
+            jobNumber:     completedJob.job_id,
+            branchId:      completedJob.branch_id,
+            actualCost:    input.actualCost,
+            paymentMethod: input.paymentMethod ?? 'cash',
+            createdBy:     session.user.id,
+          })
+        }
+      } catch (journalErr) {
+        console.error('[SERVICE] Journal FAILED after job completion:', journalErr)
+        return {
+          success: false as const,
+          error:   'Job completed but journal posting failed — contact finance.',
+          jobId:   input.jobId,
+          journalFailed: true as const,
+        }
+      }
+    }
+
     return { success: true as const }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
@@ -491,48 +543,54 @@ export async function getWarrantyRegistrations(input?: {
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
   try {
-    const filterStatus = input?.status ?? 'all'
     const today = new Date().toISOString().slice(0, 10)
+    const filterStatus = input?.status ?? 'all'
+    const searchTerm = input?.search?.trim()
 
-    const rows = await db.execute(sql`
-      SELECT
-        wr.id,
-        wr.serial_number,
-        wr.product_id,
-        wr.customer_id,
-        wr.invoice_id,
-        wr.purchase_date,
-        wr.warranty_months,
-        wr.warranty_expires_at,
-        wr.notes,
-        wr.is_active,
-        wr.created_at,
-        p.model_name,
-        p.brand,
-        c.full_name AS customer_name,
-        c.phone_number AS customer_phone,
-        si.invoice_number,
-        CASE
-          WHEN wr.warranty_expires_at >= ${today}::date THEN 'active'
-          ELSE 'expired'
-        END AS warranty_status
-      FROM warranty_registrations wr
-      LEFT JOIN products p ON p.id = wr.product_id
-      LEFT JOIN customers c ON c.id = wr.customer_id
-      LEFT JOIN sales_invoices si ON si.id = wr.invoice_id
-      WHERE wr.is_active = true
-        ${input?.search ? sql`AND (
-          wr.serial_number ILIKE ${'%' + input.search + '%'}
-          OR p.model_name ILIKE ${'%' + input.search + '%'}
-          OR c.full_name ILIKE ${'%' + input.search + '%'}
-        )` : sql``}
-        ${filterStatus === 'active' ? sql`AND wr.warranty_expires_at >= ${today}::date` : sql``}
-        ${filterStatus === 'expired' ? sql`AND wr.warranty_expires_at < ${today}::date` : sql``}
-      ORDER BY wr.created_at DESC
-    `)
+    const baseRows = await db
+      .select({
+        id:                  warranty_registrations.id,
+        serial_number:       warranty_registrations.serial_number,
+        product_id:          warranty_registrations.product_id,
+        customer_id:         warranty_registrations.customer_id,
+        invoice_id:          warranty_registrations.invoice_id,
+        purchase_date:       warranty_registrations.purchase_date,
+        warranty_months:     warranty_registrations.warranty_months,
+        warranty_expires_at: warranty_registrations.warranty_expires_at,
+        notes:               warranty_registrations.notes,
+        is_active:           warranty_registrations.is_active,
+        created_at:          warranty_registrations.created_at,
+        model_name:          products.model_name,
+        brand:               products.brand,
+        customer_name:       customers.full_name,
+        customer_phone:      customers.phone_number,
+        invoice_number:      sales_invoices.invoice_number,
+      })
+      .from(warranty_registrations)
+      .leftJoin(products, eq(warranty_registrations.product_id, products.id))
+      .leftJoin(customers, eq(warranty_registrations.customer_id, customers.id))
+      .leftJoin(sales_invoices, eq(warranty_registrations.invoice_id, sales_invoices.id))
+      .where(eq(warranty_registrations.is_active, true))
+      .orderBy(desc(warranty_registrations.created_at))
 
-    const data = ((rows as any).rows ?? rows) as any[]
-    return { success: true as const, registrations: data }
+    let filtered = baseRows.map(r => ({
+      ...r,
+      warranty_status: (r.warranty_expires_at as string) >= today ? 'active' : 'expired',
+    }))
+
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(r => r.warranty_status === filterStatus)
+    }
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(r =>
+        r.serial_number?.toLowerCase().includes(term) ||
+        r.model_name?.toLowerCase().includes(term) ||
+        r.customer_name?.toLowerCase().includes(term)
+      )
+    }
+
+    return { success: true as const, registrations: filtered }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
   }
