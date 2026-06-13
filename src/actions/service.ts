@@ -8,7 +8,7 @@ import {
   service_jobs, service_job_items, warranty_registrations,
   customers, products, profiles, inventory, sales_invoices, branches,
 } from '@/db/schema'
-import { eq, and, or, desc, sql } from 'drizzle-orm'
+import { eq, and, desc, sql } from 'drizzle-orm'
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   'Pending':         ['In-Progress', 'Cancelled'],
