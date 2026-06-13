@@ -1700,8 +1700,8 @@ export async function getSalesReport(input: {
         p.model_name, p.brand,
         SUM(ii.qty)                      AS units_sold,
         SUM(ii.unit_price * ii.qty)      AS total_revenue,
-        COALESCE(SUM(ii.cgst_amount),0)  AS total_cgst,
-        COALESCE(SUM(ii.sgst_amount),0)  AS total_sgst
+        CAST(0 AS numeric) AS total_cgst,
+        CAST(0 AS numeric) AS total_sgst
       FROM invoice_items ii
       JOIN sales_invoices si ON si.id = ii.invoice_id
       JOIN products p ON p.id = ii.product_id

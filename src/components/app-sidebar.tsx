@@ -38,6 +38,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Receipt,
+  PieChart,
 } from "lucide-react"
 import {
   Collapsible,
@@ -121,7 +122,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     title: "Reports",
     url: "/reports",
-    icon: BarChart3,
+    icon: PieChart,
     id: "reports",
     items: []
   },

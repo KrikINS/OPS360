@@ -1,6 +1,6 @@
 'use client'
 import { useRef } from 'react'
-import { useRouter } from 'next/navigation'
+
 import { useReactToPrint } from 'react-to-print'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,6 @@ interface ReportsClientProps {
 export default function ReportsClient({
   activeTab, fromDate, toDate, branchId, salesData, gstData, stockData, role,
 }: ReportsClientProps) {
-  const router = useRouter()
   const printRef = useRef<HTMLDivElement>(null)
 
   const handlePrint = useReactToPrint({ contentRef: printRef })
@@ -36,7 +35,7 @@ export default function ReportsClient({
       fromDate: from ?? fromDate,
       toDate:   to   ?? toDate,
     })
-    router.push(`/reports?${params.toString()}`)
+    window.location.href = `/reports?${params.toString()}`
   }
 
   const TABS = [
@@ -164,7 +163,6 @@ export default function ReportsClient({
                         <TableHead>Brand</TableHead>
                         <TableHead className="text-right">Units</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-right">GST</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -174,7 +172,6 @@ export default function ReportsClient({
                           <TableCell className="text-sm text-slate-500">{p.brand}</TableCell>
                           <TableCell className="text-right tabular-nums text-sm">{Number(p.units_sold)}</TableCell>
                           <TableCell className="text-right tabular-nums text-sm font-semibold">{fmtINR(Number(p.total_revenue))}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm text-amber-700">{fmtINR(Number(p.total_cgst ?? 0) + Number(p.total_sgst ?? 0))}</TableCell>
                         </TableRow>
                       ))}
                       {salesData.products.length === 0 && (
