@@ -11,6 +11,16 @@ import {
 import { eq, desc, sql, and, or, isNull } from 'drizzle-orm'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 
+// Helper to safely unpack raw SQL results from db.execute()
+// db.execute() returns different shapes depending on the driver — this normalises it
+function unpackRows<T = Record<string, unknown>>(result: unknown): T[] {
+  if (result && typeof result === 'object' && 'rows' in result) {
+    return (result as { rows: T[] }).rows
+  }
+  if (Array.isArray(result)) return result as T[]
+  return []
+}
+
 // ── Helper: derive Indian financial year ────────────
 export async function getFinancialYear(date: Date): Promise<string> {
   const month = date.getMonth() + 1
@@ -20,8 +30,8 @@ export async function getFinancialYear(date: Date): Promise<string> {
 }
 
 // ── Helper: resolve account code → id ───────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getAccountId(code: string, txClient: any = db): Promise<string> {
+type DrizzleClient = Pick<typeof db, 'select'>
+async function getAccountId(code: string, txClient: DrizzleClient = db): Promise<string> {
   const [account] = await txClient
     .select({ id: accounts.id })
     .from(accounts)
@@ -555,8 +565,7 @@ export async function settleVendorPayment(input: {
       AND a.code = '2010'
   `)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const apRows = (apBalanceResult as any).rows ?? apBalanceResult
+  const apRows = unpackRows<{ total_cr: string; total_dr: string }>(apBalanceResult)
   const totalCR = Number(apRows[0]?.total_cr ?? 0)
   const totalDR = Number(apRows[0]?.total_dr ?? 0)
   const remainingBalance = Number((totalCR - totalDR).toFixed(2))
@@ -735,8 +744,7 @@ export async function getProfitAndLoss(input: {
       GROUP BY a.code, a.name, a.type
       ORDER BY a.code
     `)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any[] = (rows as any).rows ?? rows
+    const data = unpackRows<{ code: string; name: string; type: string; net: string }>(rows)
     const revenue  = data.filter(r => r.type === 'Revenue')
     const expenses = data.filter(r => r.type === 'Expense')
     const totalRevenue  = revenue.reduce((s, r)  => s + Number(r.net), 0)
@@ -769,8 +777,7 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
       GROUP BY a.code, a.name, a.type
       ORDER BY a.code
     `)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any[] = (rows as any).rows ?? rows
+    const data = unpackRows<{ code: string; name: string; type: string; balance: string }>(rows)
 
     // 2. Compute Net Profit from Revenue/Expense accounts for the same period.
     //    Net Profit = SUM(credit - debit) across Revenue + Expense accounts.
@@ -785,8 +792,7 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
       JOIN accounts a ON a.id = jl.account_id
       WHERE a.type IN ('Revenue', 'Expense')
     `)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const plData: any[] = (plRows as any).rows ?? plRows
+    const plData = unpackRows<{ net_profit: string }>(plRows)
     const netProfit = Number(plData[0]?.net_profit ?? 0)
 
     // 3. Inject Net Profit into Retained Earnings (3010).
@@ -808,7 +814,7 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
         type: 'Equity',
         balance: String(-netProfit),
       })
-      equity.sort((a: { code: string }, b: { code: string }) => a.code.localeCompare(b.code))
+      equity.sort((a, b) => String(a.code).localeCompare(String(b.code)))
     }
 
     // 4. Tax accounts sorted by balance direction
@@ -849,8 +855,7 @@ export async function getGSTSummary(input: { branchId?: string; fromDate: string
       GROUP BY a.code, a.name
       ORDER BY a.code
     `)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any[] = (rows as any).rows ?? rows
+    const data = unpackRows<{ code: string; name: string; collected: string; paid: string }>(rows)
     return { success: true as const, gst: data }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
@@ -908,24 +913,23 @@ export async function getJournalEntries(input?: {
     `)
 
     // Normalise the pg result shape (rows array)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any[] = (rows as any).rows ?? rows
+    const data = unpackRows(rows)
 
     // If we got PAGE_SIZE+1 rows, there are more pages
     const hasMore = data.length > JOURNAL_PAGE_SIZE
     const page = hasMore ? data.slice(0, JOURNAL_PAGE_SIZE) : data
 
     const entries = page.map((r) => ({
-      id:              r.id,
-      date:            r.date,
-      description:     r.description,
-      referenceSource: r.referenceSource,
-      referenceId:     r.referenceId,
-      branchId:        r.branchId,
-      financialYear:   r.financialYear,
-      status:          r.status,
-      autoGenerated:   r.autoGenerated,
-      branchName:      r.branchName,
+      id:              r.id as string,
+      date:            new Date(r.date as string),
+      description:     r.description as string,
+      referenceSource: r.referenceSource as string,
+      referenceId:     r.referenceId as string,
+      branchId:        r.branchId as string,
+      financialYear:   r.financialYear as string,
+      status:          r.status as string,
+      autoGenerated:   r.autoGenerated as boolean,
+      branchName:      r.branchName as string,
       amount:          Number(r.amount ?? 0),
     }))
 
@@ -975,17 +979,16 @@ export async function exportJournalLedger(input: {
       ORDER BY je.date DESC, je.id, jl.debit DESC NULLS LAST, a.code ASC
     `)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any[] = (rows as any).rows ?? rows
+    const data = unpackRows(rows)
     const lines = data.map((r) => ({
-      entryDate:        r.entryDate,
-      source:           r.source,
-      referenceId:      r.referenceId ?? '',
-      entryDescription: r.entryDescription,
-      branchName:       r.branchName ?? '',
-      accountCode:      r.accountCode,
-      accountName:      r.accountName,
-      lineDescription:  r.lineDescription ?? '',
+      entryDate:        r.entryDate as string,
+      source:           r.source as string,
+      referenceId:      (r.referenceId ?? '') as string,
+      entryDescription: r.entryDescription as string,
+      branchName:       (r.branchName ?? '') as string,
+      accountCode:      r.accountCode as string,
+      accountName:      r.accountName as string,
+      lineDescription:  (r.lineDescription ?? '') as string,
       debit:            Number(r.debit ?? 0),
       credit:           Number(r.credit ?? 0),
     }))
@@ -1018,16 +1021,15 @@ export async function getJournalLines(input: { journalEntryId: string }) {
       WHERE jl.journal_entry_id = ${input.journalEntryId}::uuid
       ORDER BY jl.debit DESC NULLS LAST, a.code ASC
     `)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any[] = (rows as any).rows ?? rows
+    const data = unpackRows(rows)
     const lines = data.map((r) => ({
-      id:          r.id,
-      accountCode: r.accountCode,
-      accountName: r.accountName,
-      accountType: r.accountType,
+      id:          r.id as string,
+      accountCode: r.accountCode as string,
+      accountName: r.accountName as string,
+      accountType: r.accountType as string,
       debit:       Number(r.debit ?? 0),
       credit:      Number(r.credit ?? 0),
-      description: r.description ?? '',
+      description: (r.description ?? '') as string,
     }))
     return { success: true as const, lines }
   } catch (error) {
@@ -1124,21 +1126,21 @@ export async function getMarginReport(input: {
       ORDER BY gross_profit DESC
     `)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any[] = (result as any).rows ?? result
+    const data = unpackRows<{
+      product_id: string; model_name: string; brand: string; product_code: string
+      mrp: string | null; units_sold: string; total_revenue: string; total_cogs: string
+      gross_profit: string; margin_pct: string; total_discounts: string; manager_approved_discounts: string
+    }>(result)
 
     // Calculate totals
     const totalRevenue = data.reduce(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (s: number, r: any) => s + Number(r.total_revenue ?? 0), 0
+      (s: number, r) => s + Number(r.total_revenue ?? 0), 0
     )
     const totalCOGS = data.reduce(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (s: number, r: any) => s + Number(r.total_cogs ?? 0), 0
+      (s: number, r) => s + Number(r.total_cogs ?? 0), 0
     )
     const totalDiscounts = data.reduce(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (s: number, r: any) => s + Number(r.total_discounts ?? 0), 0
+      (s: number, r) => s + Number(r.total_discounts ?? 0), 0
     )
 
     return {
@@ -1153,8 +1155,7 @@ export async function getMarginReport(input: {
           : 0,
         totalDiscounts,
         totalUnitsSold: data.reduce(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (s: number, r: any) => s + Number(r.units_sold ?? 0), 0
+          (s: number, r) => s + Number(r.units_sold ?? 0), 0
         ),
       },
     }
@@ -1521,10 +1522,9 @@ export async function getAPAgeing(input?: {
       ORDER BY pa.grn_date ASC
     `)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawRows = (result as any).rows ?? result
+    const rawRows = unpackRows(result)
 
-    const rows: APAgeingRow[] = rawRows.map((r: any) => {
+    const rows: APAgeingRow[] = rawRows.map((r) => {
       const days = Number(r.days_outstanding ?? 0)
       let bucket: APAgeingRow['bucket']
       if (days <= 30) bucket = '0-30'
@@ -1533,11 +1533,11 @@ export async function getAPAgeing(input?: {
       else bucket = '90+'
 
       return {
-        vendorId:        r.vendor_id,
-        vendorName:      r.vendor_name,
-        poId:            r.po_id,
-        poNumber:        r.po_number,
-        grnDate:         new Date(r.grn_date).toISOString().split('T')[0],
+        vendorId:        r.vendor_id as string,
+        vendorName:      r.vendor_name as string,
+        poId:            r.po_id as string,
+        poNumber:        r.po_number as string,
+        grnDate:         new Date(String(r.grn_date)).toISOString().split('T')[0],
         totalCharged:    Number(r.total_charged),
         totalPaid:       Number(r.total_paid),
         totalReversed:   Number(r.total_reversed),
