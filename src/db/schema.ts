@@ -347,6 +347,24 @@ export const expense_records = pgTable("expense_records", {
   created_at:       timestamp("created_at").defaultNow(),
 })
 
+export const debit_notes = pgTable('debit_notes', {
+  id:                 uuid('id').primaryKey().defaultRandom(),
+  debit_note_number:  text('debit_note_number').notNull(),
+  po_id:              uuid('po_id').references(() => purchase_orders.id),
+  branch_id:          uuid('branch_id').references(() => branches.id),
+  vendor_id:          uuid('vendor_id').references(() => vendors.id),
+  reason:             text('reason'),
+  amount:             numeric('amount').notNull().default('0'),
+  status:             text('status').notNull().default('Pending'),
+  serial_numbers:     text('serial_numbers').array().default([]),
+  item_names:         text('item_names').array().default([]),
+  metadata:           jsonb('metadata'),
+  journal_entry_id:   uuid('journal_entry_id'),
+  journal_failed:     boolean('journal_failed').default(false),
+  created_by:         uuid('created_by').notNull(),
+  created_at:         timestamp('created_at').defaultNow(),
+})
+
 export const grn_notes_templates = pgTable("grn_notes_templates", {
   id:         uuid("id").primaryKey().defaultRandom(),
   name:       text("name").notNull(),
