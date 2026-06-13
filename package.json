@@ -26,11 +26,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.2",
-    "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
-    "jspdf": "^4.2.0",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "next-auth": "^4.24.14",
@@ -60,7 +57,6 @@
     "eslint-config-next": "16.1.6",
     "pg": "^8.21.0",
     "tailwindcss": "^4",
-    "tsx": "^4.22.3",
     "typescript": "^5",
     "vitest": "^4.1.7"
   }

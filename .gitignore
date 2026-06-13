@@ -86,3 +86,6 @@ deploy_gcp.ps1
 push.cmd
 ethan_logo_*.png
 Supabase Snippet Public Schema Column Listing.csv
+
+# Local Developer Binaries
+cloud_sql_proxy.exe
