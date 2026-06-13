@@ -6,11 +6,12 @@ import Image from "next/image"
 import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { useBranding } from "@/providers/GlobalBrandingProvider"
+import { RoleMetricsWidget } from "@/components/dashboard/RoleMetricsWidget"
 
 const BrandIdentity = () => {
   const { companyName, logoUrl } = useBranding()
   return (
-    <div className="flex flex-col items-center scale-[0.6]">
+    <div className="flex flex-col items-center scale-[0.45]">
       <div className="relative">
         <Image 
           src={logoUrl || "/ethan-logo-final.png"} 
@@ -61,12 +62,16 @@ export default function LaunchpadClient({ initialPermissions, initialRole }: { i
       </div>
 
       {/* Logo Section */}
-      <div className="flex-none pt-4 pb-0 w-full flex justify-center z-10">
+      <div className="flex-none pt-0 pb-0 w-full flex justify-center z-10 -mt-6">
         <BrandIdentity />
       </div>
 
+      <div className="w-full z-10 mt-0 relative -top-6">
+        <RoleMetricsWidget />
+      </div>
+
       {/* Card Grid Section */}
-      <div className="flex-grow flex items-start justify-center px-6 pb-4 z-10 -mt-10">
+      <div className="flex-grow flex items-start justify-center px-6 pb-4 z-10 mt-2 relative -top-6">
         <div className="w-full max-w-7xl relative">
           <ModuleLaunchpad permissions={initialPermissions} role={initialRole} isVisible={true} />
         </div>

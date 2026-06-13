@@ -135,8 +135,8 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
   if (!isVisible) return null
 
   return (
-    <div className="w-full flex-none flex flex-col items-center justify-center px-6 py-2">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl w-full">
+    <div className="w-full flex-none flex flex-col items-center justify-center px-6 pb-0 pt-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl w-full">
         {allowedModules.map((module, index) => (
           <div 
             key={module.id} 
@@ -155,7 +155,7 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
               module.color
             )} />
             
-            <div className="relative h-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-5 flex flex-col items-start hover:border-white/30 transition-all duration-500 shadow-2xl group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.3),0_0_30px_rgba(255,255,255,0.05)]">
+            <div className="relative h-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 flex flex-col items-start hover:border-white/30 transition-all duration-500 shadow-2xl group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.3),0_0_30px_rgba(255,255,255,0.05)]">
               {/* Icon at the Top */}
               <div className={cn(
                 "p-2.5 rounded-lg bg-gradient-to-br from-white/10 to-transparent border border-white/10 group-hover:scale-110 transition-transform duration-500 mb-auto",
@@ -174,7 +174,7 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
               </div>
               
               {/* Typography block re-aligned to the bottom-left */}
-              <div className="mt-6 space-y-1 w-full text-left">
+              <div className="mt-4 space-y-1 w-full text-left">
                 <h3 className="text-white font-bold text-[13px] tracking-tight">{module.name}</h3>
                 <p className="text-white/40 text-[10px] leading-relaxed font-medium line-clamp-2">
                   {module.description}
