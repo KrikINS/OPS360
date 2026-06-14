@@ -14,10 +14,15 @@ import { LoyaltyAdjustModal } from '@/components/admin/LoyaltyAdjustModal'
 import { Users, Loader2, Star, UserSquare, X } from "lucide-react"
 import { Customer } from "@/context/PosContext"
 import { updateCustomerCredit } from '@/actions/finance'
+import { printCustomerStatement } from '@/lib/printCustomerStatement'
 
 interface AdminCustomer extends Customer {
   created_at: string
   loyalty_balance?: number
+  is_credit_eligible?: boolean
+  credit_limit?: number | string
+  credit_balance?: number | string
+  credit_payment_terms?: string
 }
 
 export default function CustomerManagementPage() {
@@ -57,6 +62,10 @@ export default function CustomerManagementPage() {
       setCreditToast(result.error ?? 'Failed')
     }
     setTimeout(() => setCreditToast(null), 3000)
+  }
+
+  const handlePrintStatement = async (customer: AdminCustomer) => {
+    await printCustomerStatement(customer.id)
   }
 
   const fetchCustomers = useCallback(async () => {
@@ -143,13 +152,15 @@ export default function CustomerManagementPage() {
                 setHistoryDrawerOpen(true)
               }}
               onCreditClick={(customer) => {
-                setCreditCustomer(customer as AdminCustomer)
+                const adminCustomer = customer as AdminCustomer
+                setCreditCustomer(adminCustomer)
                 setCreditForm({
-                  eligible: (customer as any).is_credit_eligible ?? false,
-                  limit:    String((customer as any).credit_limit ?? ''),
-                  terms:    (customer as any).credit_payment_terms ?? '30 days',
+                  eligible: adminCustomer.is_credit_eligible ?? false,
+                  limit: adminCustomer.credit_limit?.toString() ?? '',
+                  terms: adminCustomer.credit_payment_terms ?? '30 days',
                 })
               }}
+              onStatementClick={handlePrintStatement}
             />
           )}
 

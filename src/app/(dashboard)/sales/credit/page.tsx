@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CreditCard, AlertTriangle, CheckCircle2, Loader2, X, DollarSign } from 'lucide-react'
 import { getAROutstanding, recordCreditPayment } from '@/actions/finance'
 import { fmtINR } from '@/lib/utils'
+import { printCustomerStatement } from '@/lib/printCustomerStatement'
+import { FileText } from 'lucide-react'
 
 type ARInvoice = {
   id: string; invoice_number: string; created_at: string; due_date: string | null
@@ -188,10 +190,16 @@ export default function ARManagementPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
-                            onClick={() => { setPayingInvoice(inv); setPayAmount(String(outstandingAmt)) }}>
-                            <DollarSign className="h-3 w-3" /> Record Payment
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+                              onClick={() => { setPayingInvoice(inv); setPayAmount(String(outstandingAmt)) }}>
+                              <DollarSign className="h-3 w-3" /> Record Payment
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+                              onClick={() => printCustomerStatement(inv.customer_id)}>
+                              <FileText className="h-3 w-3" /> Statement
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )

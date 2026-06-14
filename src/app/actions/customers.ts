@@ -104,3 +104,84 @@ export async function getCustomerInvoices(customerId: string) {
     return { success: false as const, error: (error as Error).message }
   }
 }
+
+export async function getCustomerStatement(customerId: string) {
+  try {
+    // 1. Customer profile + credit info
+    const customerRows = unpackRows<{
+      id: string; full_name: string; email: string | null; phone_number: string | null
+      address: string | null; city: string | null; gstin: string | null
+      customer_type: string | null; company_name: string | null
+      loyalty_balance: number; credit_limit: string | null
+      credit_balance: string | null; credit_payment_terms: string | null
+      is_credit_eligible: boolean | null
+    }>(await db.execute(sql`
+      SELECT id, full_name, email, phone_number, address, city, gstin,
+             customer_type, company_name, loyalty_balance,
+             credit_limit, credit_balance, credit_payment_terms, is_credit_eligible
+      FROM customers WHERE id = ${customerId}::uuid LIMIT 1
+    `))
+    if (!customerRows.length) return { success: false as const, error: 'Customer not found' }
+    const customer = customerRows[0]
+
+    // 2. All invoices (cash + credit)
+    const invoiceRows = unpackRows<{
+      id: string; invoice_number: string; created_at: string
+      total_amount: string; payment_mode: string | null
+      payment_status: string | null; amount_paid: string | null
+      due_date: string | null; item_count: string
+    }>(await db.execute(sql`
+      SELECT si.id, si.invoice_number, si.created_at, si.total_amount,
+             si.payment_mode, si.payment_status, si.amount_paid, si.due_date,
+             COUNT(ii.id) AS item_count
+      FROM sales_invoices si
+      LEFT JOIN invoice_items ii ON ii.invoice_id = si.id
+      WHERE si.customer_id = ${customerId}::uuid
+      GROUP BY si.id, si.invoice_number, si.created_at, si.total_amount,
+               si.payment_mode, si.payment_status, si.amount_paid, si.due_date
+      ORDER BY si.created_at ASC
+    `))
+
+    // 3. Credit payments
+    const paymentRows = unpackRows<{
+      id: string; invoice_id: string; amount: string
+      payment_mode: string; notes: string | null; created_at: string
+      invoice_number: string | null
+    }>(await db.execute(sql`
+      SELECT cp.id, cp.invoice_id, cp.amount, cp.payment_mode,
+             cp.notes, cp.created_at, si.invoice_number
+      FROM credit_payments cp
+      LEFT JOIN sales_invoices si ON si.id = cp.invoice_id
+      WHERE cp.customer_id = ${customerId}::uuid
+      ORDER BY cp.created_at ASC
+    `))
+
+    // 4. Loyalty points history
+    const loyaltyRows = unpackRows<{
+      id: string; type: string; points: number
+      balance_after: number; description: string | null; created_at: string
+    }>(await db.execute(sql`
+      SELECT id, type, points, balance_after, description, created_at
+      FROM loyalty_points
+      WHERE customer_id = ${customerId}::uuid
+      ORDER BY created_at ASC
+    `))
+
+    // 5. Summary calculations
+    const totalSpend      = invoiceRows.reduce((s, i) => s + Number(i.total_amount), 0)
+    const totalInvoices   = invoiceRows.length
+    const creditInvoices  = invoiceRows.filter(i => i.payment_mode === 'credit')
+    const totalOutstanding = creditInvoices.reduce((s, i) => s + Number(i.total_amount) - Number(i.amount_paid ?? 0), 0)
+    const firstPurchase   = invoiceRows[0]?.created_at ?? null
+    const lastPurchase    = invoiceRows[invoiceRows.length - 1]?.created_at ?? null
+
+    return {
+      success: true as const,
+      customer, invoices: invoiceRows, payments: paymentRows,
+      loyalty: loyaltyRows,
+      summary: { totalSpend, totalInvoices, totalOutstanding, firstPurchase, lastPurchase },
+    }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}

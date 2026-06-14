@@ -21,7 +21,8 @@ import {
   History,
   Edit,
   Building2,
-  CreditCard
+  CreditCard,
+  FileText
 } from "lucide-react"
 import { Customer as PosCustomer } from '@/context/PosContext'
 
@@ -35,9 +36,10 @@ interface CustomerRegistryTableProps {
   onEditClick?: (customer: Customer) => void
   onHistoryClick?: (customer: Customer) => void
   onCreditClick?: (customer: Customer) => void
+  onStatementClick?: (customer: Customer) => void
 }
 
-export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHistoryClick, onCreditClick }: CustomerRegistryTableProps) {
+export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHistoryClick, onCreditClick, onStatementClick }: CustomerRegistryTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
 
@@ -170,6 +172,9 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
                       </Button>
                       <Button title="Credit Settings" variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-purple-500 transition-all" onClick={() => onCreditClick?.(c)}>
                         <CreditCard className="h-4 w-4" />
+                      </Button>
+                      <Button title="Print Statement" variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-emerald-500 transition-all" onClick={() => onStatementClick?.(c)}>
+                        <FileText className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
