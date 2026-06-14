@@ -3,15 +3,14 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import { getSalesReport, getGSTSummary, getStockValuation } from '@/actions/finance'
-import ReportsClient from './client'
+import ReportsClient from './wrapper'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ReportsPage({
-  searchParams,
-}: {
-  searchParams: { tab?: string; fromDate?: string; toDate?: string; branchId?: string }
+export default async function ReportsPage(props: {
+  searchParams: Promise<{ tab?: string; fromDate?: string; toDate?: string; branchId?: string }>
 }) {
+  const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions)
   if (!session?.user) redirect('/login')
 

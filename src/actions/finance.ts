@@ -1682,7 +1682,6 @@ export async function getSalesReport(input: {
         COALESCE(SUM(si.cgst),0)        AS total_cgst,
         COALESCE(SUM(si.sgst),0)        AS total_sgst,
         COALESCE(SUM(si.igst),0)        AS total_igst,
-        COALESCE(SUM(si.discount_amount),0) AS total_discounts,
         COUNT(DISTINCT si.customer_id)  AS unique_customers
       FROM sales_invoices si
       WHERE si.created_at >= ${input.fromDate}::timestamp
@@ -1722,7 +1721,7 @@ export async function getSalesReport(input: {
         COUNT(si.id)                       AS invoice_count,
         COALESCE(SUM(si.total_amount), 0)  AS total_revenue
       FROM sales_invoices si
-      LEFT JOIN profiles pr ON pr.id = si.created_by
+      LEFT JOIN profiles pr ON pr.id = si.user_id
       WHERE si.created_at >= ${input.fromDate}::timestamp
         AND si.created_at <= ${input.toDate}::timestamp
         ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}

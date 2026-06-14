@@ -14,15 +14,14 @@ import {
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import AccountingClient from './client'
 
-export default async function AccountingPage({
-  searchParams,
-}: {
-  searchParams: {
+export default async function AccountingPage(props: {
+  searchParams: Promise<{
     tab?: string
     fromDate?: string
     toDate?: string
-  }
+  }>
 }) {
+  const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions)
   if (!session?.user) redirect('/login')
 
