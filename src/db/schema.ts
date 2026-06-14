@@ -97,6 +97,7 @@ export const products = pgTable("products", {
   max_discount_pct: numeric("max_discount_pct", { precision: 5, scale: 2 }).default('10'),
   hsn_code: text("hsn_code"),
   min_stock_level: integer("min_stock_level").default(0),
+  vendor_id: uuid("vendor_id"),
   tracking_type: text("tracking_type"),
   description: text("description"),
   gst_rate: numeric("gst_rate").default("18"),
