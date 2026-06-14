@@ -118,12 +118,14 @@ export default function ReportsClient({
       )}
 
       {/* Printable content */}
-      <div ref={printRef}>
+      <div ref={printRef} className="print:p-8 print:w-full">
         <style>{`
+          @page { size: auto; margin: 12mm 15mm; }
           @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             table { width: 100% !important; table-layout: auto !important; }
-            td, th { white-space: normal !important; font-size: 10px !important; padding: 3px 6px !important; }
-            .print\\:overflow-visible { overflow: visible !important; }
+            td, th { white-space: normal !important; font-size: 10px !important; padding: 4px 6px !important; }
+            .print\\:overflow-visible { overflow: visible !important; width: 100% !important; }
           }
         `}</style>
         {/* Print header — only shows when printing */}
