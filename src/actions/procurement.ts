@@ -9,6 +9,17 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { postGRNJournal, createJournalEntry, postDebitNoteJournal } from '@/actions/finance'
 import { getPurchaseOrdersAction } from '@/app/actions/procurement'
 
+export async function getVendorsAction() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { data: null, error: 'Unauthorized' }
+  try {
+    const data = await db.select({ id: vendors.id, name: vendors.name }).from(vendors)
+    return { data }
+  } catch (error) {
+    return { data: null, error: (error as Error).message }
+  }
+}
+
 export type PurchaseOrderItem = {
   productId: string
   orderedQty: number

@@ -35,6 +35,45 @@ export default function StockAlertsPage() {
   const [savingMin, setSavingMin]           = useState<Record<string, boolean>>({})
   const [creatingPO, setCreatingPO]         = useState(false)
   const [toast, setToast]                   = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [sessionBranchId, setSessionBranchId] = useState<string>('')
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([])
+  const [assigningVendor, setAssigningVendor] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    import('next-auth/react').then(({ getSession }) => {
+      getSession().then(session => {
+        if (session?.user?.branchId) setSessionBranchId(session.user.branchId)
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    import('@/actions/procurement').then(mod => {
+      if (mod.getVendorsAction) {
+        mod.getVendorsAction().then((result: any) => {
+          if (result?.data) setVendors(result.data.map((v: any) => ({ id: v.id, name: v.name })))
+        })
+      }
+    })
+  }, [])
+
+  const handleAssignVendor = async (productId: string, vendorId: string) => {
+    setAssigningVendor(p => ({ ...p, [productId]: true }))
+    try {
+      const { assignVendorToProduct } = await import('@/actions/inventory')
+      const result = await assignVendorToProduct({ productId, vendorId })
+      if (result.success) {
+        showToast('success', 'Vendor assigned')
+        load()
+      } else {
+        showToast('error', result.error ?? 'Failed to assign vendor')
+      }
+    } catch {
+      showToast('error', 'Failed to assign vendor')
+    } finally {
+      setAssigningVendor(p => ({ ...p, [productId]: false }))
+    }
+  }
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message })
@@ -82,6 +121,7 @@ export default function StockAlertsPage() {
   }
 
   const handleCreatePOs = async () => {
+    if (!sessionBranchId) { showToast('error', 'Branch not set — please refresh and try again'); return }
     const selectedItems = lowStockItems.filter(i => selected.has(i.id) && i.vendor_id)
     if (selectedItems.length === 0) { showToast('error', 'Select items with vendors assigned to create POs'); return }
 
@@ -102,7 +142,7 @@ export default function StockAlertsPage() {
 
     for (const [vendorId, items] of Object.entries(byVendor)) {
       const result = await createPurchaseOrder({
-        branchId: '',
+        branchId: sessionBranchId,
         vendorId,
         expectedDeliveryDate: deliveryDate,
         items: items.map(i => ({
@@ -288,9 +328,21 @@ export default function StockAlertsPage() {
                             />
                           </TableCell>
                           <TableCell>
-                            {item.vendor_name
-                              ? <span className="text-sm">{item.vendor_name}</span>
-                              : <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">No vendor</span>}
+                            {item.vendor_name ? (
+                              <span className="text-sm">{item.vendor_name}</span>
+                            ) : (
+                              <select
+                                className="text-xs border rounded px-2 py-1 bg-white text-slate-700 h-7"
+                                disabled={assigningVendor[item.id]}
+                                defaultValue=""
+                                onChange={e => e.target.value && handleAssignVendor(item.id, e.target.value)}
+                              >
+                                <option value="" disabled>Assign vendor...</option>
+                                {vendors.map(v => (
+                                  <option key={v.id} value={v.id}>{v.name}</option>
+                                ))}
+                              </select>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge className={`text-[10px] font-bold border ${item.available_units === 0 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>

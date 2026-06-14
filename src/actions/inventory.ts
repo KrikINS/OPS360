@@ -504,6 +504,21 @@ export async function updateMinStockLevel(input: {
   }
 }
 
+export async function assignVendorToProduct(input: { productId: string, vendorId: string }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
+    return { success: false as const, error: 'Manager role required' }
+  }
+  try {
+    await db.update(products).set({ vendor_id: input.vendorId }).where(eq(products.id, input.productId))
+    return { success: true as const }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
 export async function getAllProductsWithStockLevel(input?: { branchId?: string | null }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
