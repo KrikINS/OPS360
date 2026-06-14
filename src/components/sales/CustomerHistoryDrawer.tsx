@@ -35,6 +35,9 @@ interface HistoricalInvoice {
   created_at: string
   total_amount: number
   item_count: number
+  payment_mode?: string
+  payment_status?: string
+  amount_paid?: number
 }
 
 interface HistoricalInvoiceResponse {
@@ -74,6 +77,9 @@ export function CustomerHistoryDrawer({
           created_at: inv.created_at,
           total_amount: Number(inv.total_amount),
           item_count: Number(inv.item_count ?? 0),
+          payment_mode: inv.payment_mode ?? 'cash',
+          payment_status: inv.payment_status ?? 'paid',
+          amount_paid: Number(inv.amount_paid ?? 0),
         })))
       }
     } catch (err) {
@@ -161,8 +167,14 @@ export function CustomerHistoryDrawer({
                         <span className="font-mono text-sm font-black text-blue-600">
                           {inv.invoice_number}
                         </span>
-                        <div className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase tracking-tighter">
-                          Paid
+                        <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${
+                          inv.payment_status === 'partial'
+                            ? 'bg-amber-50 text-amber-700'
+                            : inv.payment_status === 'unpaid'
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-emerald-50 text-emerald-600'
+                        }`}>
+                          {inv.payment_status === 'partial' ? 'PARTIAL' : inv.payment_status === 'unpaid' ? 'UNPAID' : 'PAID'}
                         </div>
                       </div>
                       <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400">

@@ -91,11 +91,15 @@ export async function getCustomerInvoices(customerId: string) {
         si.invoice_number,
         si.created_at,
         si.total_amount,
+        si.payment_mode,
+        si.payment_status,
+        si.amount_paid,
         COUNT(ii.id) AS item_count
       FROM sales_invoices si
       LEFT JOIN invoice_items ii ON ii.invoice_id = si.id
       WHERE si.customer_id = ${customerId}::uuid
-      GROUP BY si.id, si.invoice_number, si.created_at, si.total_amount
+      GROUP BY si.id, si.invoice_number, si.created_at, si.total_amount,
+               si.payment_mode, si.payment_status, si.amount_paid
       ORDER BY si.created_at DESC
     `)
     const invoices = unpackRows(rows)

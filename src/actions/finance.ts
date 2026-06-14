@@ -772,7 +772,7 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
       LEFT JOIN journal_lines jl ON jl.account_id = a.id
       LEFT JOIN journal_entries je ON je.id = jl.journal_entry_id
         AND je.status = 'posted'
-        AND je.date <= ${input.asOfDate}::timestamp
+        AND je.date <= (${input.asOfDate}::date + interval '1 day' - interval '1 second')
         ${input.branchId ? sql`AND je.branch_id = ${input.branchId}::uuid` : sql``}
       WHERE a.type IN ('Asset', 'Liability', 'Equity', 'Tax')
         AND a.is_active = true
@@ -789,7 +789,7 @@ export async function getBalanceSheet(input: { branchId?: string; asOfDate: stri
       FROM journal_lines jl
       JOIN journal_entries je ON je.id = jl.journal_entry_id
         AND je.status = 'posted'
-        AND je.date <= ${input.asOfDate}::timestamp
+        AND je.date <= (${input.asOfDate}::date + interval '1 day' - interval '1 second')
         ${input.branchId ? sql`AND je.branch_id = ${input.branchId}::uuid` : sql``}
       JOIN accounts a ON a.id = jl.account_id
       WHERE a.type IN ('Revenue', 'Expense')
