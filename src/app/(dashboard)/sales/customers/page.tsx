@@ -213,6 +213,29 @@ export default function CustomerManagementPage() {
             </div>
             {creditForm.eligible && (
               <>
+                {(creditCustomer as any)?.credit_balance > 0 && (
+                  <div className="bg-purple-50 rounded-lg p-3 text-xs space-y-1 border border-purple-100">
+                    <p className="font-bold text-purple-700 uppercase tracking-wide text-[10px]">Current Credit Status</p>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Credit Used</span>
+                      <span className="font-bold text-purple-700">
+                        ₹{Number((creditCustomer as any)?.credit_balance ?? 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Current Limit</span>
+                      <span className="font-bold">
+                        ₹{Number((creditCustomer as any)?.credit_limit ?? 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1">
+                      <span className="text-slate-500">Available</span>
+                      <span className="font-bold text-emerald-700">
+                        ₹{Math.max(0, Number((creditCustomer as any)?.credit_limit ?? 0) - Number((creditCustomer as any)?.credit_balance ?? 0)).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Credit Limit (₹)</label>
                   <Input type="number" min={0} placeholder="e.g. 50000" value={creditForm.limit}

@@ -59,6 +59,10 @@ export async function getCustomersWithLoyaltyAction() {
         company_name: customers.company_name,
         customer_type: customers.customer_type,
         created_at: customers.created_at,
+        is_credit_eligible: customers.is_credit_eligible,
+        credit_limit: customers.credit_limit,
+        credit_balance: customers.credit_balance,
+        credit_payment_terms: customers.credit_payment_terms,
         loyalty_balance: sql<number>`COALESCE(SUM(${loyalty_points.points}), 0)::int`
       })
       .from(customers)

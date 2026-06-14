@@ -65,17 +65,16 @@ export function CustomerHistoryDrawer({
   const fetchHistory = React.useCallback(async () => {
     if (!customerId) return
     
-    // Fetch summary of invoices for this customer
-    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("sales_invoices"))
+    const { getCustomerInvoices } = await import("@/app/actions/customers")
+    const { success, invoices } = await getCustomerInvoices(customerId)
 
-    if (!error && data) {
-      const typedData = data as unknown as HistoricalInvoiceResponse[]
-      setInvoices(typedData.map(inv => ({
+    if (success && invoices) {
+      setInvoices((invoices as any[]).map(inv => ({
         id: inv.id,
         invoice_number: inv.invoice_number,
         created_at: inv.created_at,
         total_amount: Number(inv.total_amount),
-        item_count: inv.items[0]?.count || 0
+        item_count: Number(inv.item_count || 0)
       })))
     }
   }, [customerId])
