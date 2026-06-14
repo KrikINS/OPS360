@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ChevronRight,
   FolderTree,
+  BookOpen,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ModernOrbitSpinner } from "@/components/ui/ModernOrbitSpinner"
@@ -118,6 +119,13 @@ export default function AdminDashboardPage() {
           icon={FolderTree} 
           description="Brands, models & categories" 
           color="amber" 
+        />
+        <ModuleCard 
+          title="Chart of Accounts" 
+          href="/admin/accounts" 
+          icon={BookOpen} 
+          description="Manage COA — add & configure accounts" 
+          color="blue" 
         />
       </div>
 

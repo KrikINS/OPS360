@@ -1789,3 +1789,75 @@ export async function getStockValuation(input: { branchId?: string }) {
     return { success: false as const, error: (error as Error).message }
   }
 }
+
+export async function getChartOfAccounts() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  try {
+    const rows = await db
+      .select()
+      .from(accounts)
+      .orderBy(accounts.code)
+    return { success: true as const, accounts: rows }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function createAccount(input: {
+  code: string
+  name: string
+  type: string
+  parentId?: string
+  isSystem?: boolean
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
+    return { success: false as const, error: 'Admin role required' }
+  }
+  if (!input.code?.trim()) return { success: false as const, error: 'Account code is required' }
+  if (!input.name?.trim()) return { success: false as const, error: 'Account name is required' }
+  if (!input.type?.trim()) return { success: false as const, error: 'Account type is required' }
+
+  const validTypes = ['Asset', 'Liability', 'Equity', 'Revenue', 'Expense']
+  if (!validTypes.includes(input.type)) {
+    return { success: false as const, error: `Type must be one of: ${validTypes.join(', ')}` }
+  }
+
+  try {
+    const [account] = await db.insert(accounts).values({
+      code:      input.code.trim(),
+      name:      input.name.trim(),
+      type:      input.type,
+      parent_id: input.parentId ?? null,
+      is_system: input.isSystem ?? false,
+      is_active: true,
+    }).returning()
+    return { success: true as const, account }
+  } catch (error) {
+    const msg = (error as Error).message
+    if (msg.includes('unique') || msg.includes('duplicate')) {
+      return { success: false as const, error: `Account code ${input.code} already exists` }
+    }
+    return { success: false as const, error: msg }
+  }
+}
+
+export async function toggleAccountStatus(accountId: string, isActive: boolean) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
+    return { success: false as const, error: 'Admin role required' }
+  }
+  try {
+    await db.update(accounts)
+      .set({ is_active: isActive })
+      .where(eq(accounts.id, accountId))
+    return { success: true as const }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}

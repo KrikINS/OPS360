@@ -32,7 +32,8 @@ import {
   LayoutGrid,
   X,
   Ban,
-  Wallet
+  Wallet,
+  Pencil
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -1795,22 +1796,31 @@ Are you sure you want to proceed?`)) return;
                                       )}
 
                                       {po.status === 'draft' && (
-                                        <DropdownMenuItem
-                                          onClick={async () => {
-                                            const res = await fetch('/api/procurement/purchase-orders', {
-                                              method: 'PATCH',
-                                              headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({ id: po.id, status: 'pending_approval' })
-                                            })
-                                            if (res.ok) {
-                                              const poRes = await fetch('/api/procurement/purchase-orders')
-                                              setActivePOs(await poRes.json())
-                                            }
-                                          }}
-                                          className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
-                                        >
-                                          <CheckCircle2 className="h-4 w-4 mr-2" /> Submit for Approval
-                                        </DropdownMenuItem>
+                                        <>
+                                          <DropdownMenuItem
+                                            onClick={() => handleEditResubmit(po)}
+                                            className="text-slate-700 focus:text-slate-700 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                          >
+                                            <Pencil className="h-4 w-4 mr-2" /> Edit PO
+                                          </DropdownMenuItem>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem
+                                            onClick={async () => {
+                                              const res = await fetch('/api/procurement/purchase-orders', {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ id: po.id, status: 'pending_approval' })
+                                              })
+                                              if (res.ok) {
+                                                const poRes = await fetch('/api/procurement/purchase-orders')
+                                                setActivePOs(await poRes.json())
+                                              }
+                                            }}
+                                            className="text-blue-600 focus:text-blue-600 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
+                                          >
+                                            <CheckCircle2 className="h-4 w-4 mr-2" /> Submit for Approval
+                                          </DropdownMenuItem>
+                                        </>
                                       )}
 
                                       {(po.status === 'approved' || po.status === 'partially_received') && (

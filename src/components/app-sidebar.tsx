@@ -40,6 +40,8 @@ import {
   ChevronsRight,
   Receipt,
   PieChart,
+  Building2,
+  FolderTree,
 } from "lucide-react"
 import {
   Collapsible,
@@ -145,6 +147,18 @@ const navigationGroups: NavigationGroup[] = [
     url: "/staff",
     icon: Users,
     items: []
+  },
+  {
+    id: "admin",
+    title: "System Administration",
+    icon: ShieldCheck,
+    items: [
+      { title: "Dashboard", url: "/admin", icon: LayoutGrid },
+      { title: "Users", url: "/admin/users", icon: Users },
+      { title: "Organization", url: "/admin/organization", icon: Building2 },
+      { title: "Chart of Accounts", url: "/admin/accounts", icon: BookOpen },
+      { title: "Masters", url: "/admin/masters", icon: FolderTree },
+    ]
   }
 ]
 
