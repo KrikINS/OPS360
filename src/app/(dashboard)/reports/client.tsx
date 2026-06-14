@@ -119,6 +119,13 @@ export default function ReportsClient({
 
       {/* Printable content */}
       <div ref={printRef}>
+        <style>{`
+          @media print {
+            table { width: 100% !important; table-layout: auto !important; }
+            td, th { white-space: nowrap; font-size: 10px !important; padding: 3px 6px !important; }
+            .print\\:overflow-visible { overflow: visible !important; }
+          }
+        `}</style>
         {/* Print header — only shows when printing */}
         <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-4">
           <div className="flex justify-between items-start">
@@ -167,31 +174,33 @@ export default function ReportsClient({
                 <CardTitle className="flex items-center gap-2 text-sm"><ShoppingBag className="h-4 w-4" /> Sales by Product</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollableTable minWidth="700px">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead>Product</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead className="text-right">Units</TableHead>
-                        <TableHead className="text-right">Revenue</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {salesData.products.map((p: any, i: number) => (
-                        <TableRow key={i}>
-                          <TableCell className="font-medium text-sm">{p.model_name}</TableCell>
-                          <TableCell className="text-sm text-slate-500">{p.brand}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{Number(p.units_sold)}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm font-semibold">{fmtINR(Number(p.total_revenue))}</TableCell>
+                <div className="print:overflow-visible overflow-x-auto">
+                  <div className="print:min-w-0 min-w-[700px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead>Product</TableHead>
+                          <TableHead>Brand</TableHead>
+                          <TableHead className="text-right">Units</TableHead>
+                          <TableHead className="text-right">Revenue</TableHead>
                         </TableRow>
-                      ))}
-                      {salesData.products.length === 0 && (
-                        <TableRow><TableCell colSpan={5} className="text-center text-slate-400 py-8">No sales in this period</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </ScrollableTable>
+                      </TableHeader>
+                      <TableBody>
+                        {salesData.products.map((p: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium text-sm">{p.model_name}</TableCell>
+                            <TableCell className="text-sm text-slate-500">{p.brand}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{Number(p.units_sold)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm font-semibold">{fmtINR(Number(p.total_revenue))}</TableCell>
+                          </TableRow>
+                        ))}
+                        {salesData.products.length === 0 && (
+                          <TableRow><TableCell colSpan={5} className="text-center text-slate-400 py-8">No sales in this period</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -228,26 +237,28 @@ export default function ReportsClient({
                 <CardTitle className="flex items-center gap-2 text-sm"><TrendingUp className="h-4 w-4" /> Daily Sales Trend</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollableTable minWidth="500px">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Invoices</TableHead>
-                        <TableHead className="text-right">Revenue</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {salesData.daily.map((d: any, i: number) => (
-                        <TableRow key={i}>
-                          <TableCell className="text-sm">{new Date(d.sale_date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{Number(d.invoice_count)}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm font-semibold">{fmtINR(Number(d.revenue))}</TableCell>
+                <div className="print:overflow-visible overflow-x-auto">
+                  <div className="print:min-w-0 min-w-[500px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead>Date</TableHead>
+                          <TableHead className="text-right">Invoices</TableHead>
+                          <TableHead className="text-right">Revenue</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollableTable>
+                      </TableHeader>
+                      <TableBody>
+                        {salesData.daily.map((d: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-sm">{new Date(d.sale_date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{Number(d.invoice_count)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm font-semibold">{fmtINR(Number(d.revenue))}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -334,39 +345,41 @@ export default function ReportsClient({
                 <CardTitle className="flex items-center gap-2 text-sm"><Package className="h-4 w-4" /> Stock Valuation by Product</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollableTable minWidth="800px">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead>Product</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead>Code</TableHead>
-                        <TableHead className="text-right">Units</TableHead>
-                        <TableHead className="text-right">Avg Cost</TableHead>
-                        <TableHead className="text-right">Total Cost</TableHead>
-                        <TableHead className="text-right">MRP</TableHead>
-                        <TableHead className="text-right">MRP Value</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {stockData.products.map((p: { model_name: string; brand: string; product_code: string | null; available_units: string | number; avg_landed_cost: string | number; total_landed_cost: string | number; mrp: string | number; total_mrp_value: string | number }, i: number) => (
-                        <TableRow key={i}>
-                          <TableCell className="font-medium text-sm">{p.model_name}</TableCell>
-                          <TableCell className="text-sm text-slate-500">{p.brand}</TableCell>
-                          <TableCell className="text-xs font-mono text-slate-400">{p.product_code ?? '—'}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{Number(p.available_units)}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{fmtINR(Number(p.avg_landed_cost))}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm font-semibold text-blue-700">{fmtINR(Number(p.total_landed_cost))}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{fmtINR(Number(p.mrp))}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm font-semibold text-emerald-700">{fmtINR(Number(p.total_mrp_value))}</TableCell>
+                <div className="print:overflow-visible overflow-x-auto">
+                  <div className="print:min-w-0 min-w-[800px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead>Product</TableHead>
+                          <TableHead>Brand</TableHead>
+                          <TableHead>Code</TableHead>
+                          <TableHead className="text-right">Units</TableHead>
+                          <TableHead className="text-right">Avg Cost</TableHead>
+                          <TableHead className="text-right">Total Cost</TableHead>
+                          <TableHead className="text-right">MRP</TableHead>
+                          <TableHead className="text-right">MRP Value</TableHead>
                         </TableRow>
-                      ))}
-                      {stockData.products.length === 0 && (
-                        <TableRow><TableCell colSpan={8} className="text-center text-slate-400 py-8">No stock available</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </ScrollableTable>
+                      </TableHeader>
+                      <TableBody>
+                        {stockData.products.map((p: { model_name: string; brand: string; product_code: string | null; available_units: string | number; avg_landed_cost: string | number; total_landed_cost: string | number; mrp: string | number; total_mrp_value: string | number }, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium text-sm">{p.model_name}</TableCell>
+                            <TableCell className="text-sm text-slate-500">{p.brand}</TableCell>
+                            <TableCell className="text-xs font-mono text-slate-400">{p.product_code ?? '—'}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{Number(p.available_units)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{fmtINR(Number(p.avg_landed_cost))}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm font-semibold text-blue-700">{fmtINR(Number(p.total_landed_cost))}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{fmtINR(Number(p.mrp))}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm font-semibold text-emerald-700">{fmtINR(Number(p.total_mrp_value))}</TableCell>
+                          </TableRow>
+                        ))}
+                        {stockData.products.length === 0 && (
+                          <TableRow><TableCell colSpan={8} className="text-center text-slate-400 py-8">No stock available</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
