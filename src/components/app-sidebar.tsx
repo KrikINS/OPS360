@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   RotateCcw,
   AlertCircle,
+  AlertTriangle,
   FileText,
   ChevronRight,
   Package as PackageIcon,
@@ -95,6 +96,7 @@ const navigationGroups: NavigationGroup[] = [
       { title: "Inventory Registry", url: "/inventory/registry", icon: PackageIcon },
       { title: "Product Master", url: "/products", icon: Archive },
       { title: "Transfer Control Center", url: "/transfer", icon: ArrowRightLeft },
+      { title: "Stock Alerts", url: "/inventory/alerts", icon: AlertTriangle },
     ]
   },
   {

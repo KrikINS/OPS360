@@ -427,3 +427,112 @@ export async function getInventoryRegistryAction() {
 }
 
 export { getStockTransfersAction }
+
+import { products } from '@/db/schema'
+
+export async function getLowStockItems(input?: { branchId?: string | null }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        p.id,
+        p.model_name,
+        p.brand,
+        p.product_code,
+        p.min_stock_level,
+        p.base_price,
+        p.vendor_id,
+        v.name AS vendor_name,
+        v.id   AS vendor_id_check,
+        COUNT(CASE WHEN i.status = 'Available' THEN 1 END) AS available_units,
+        COUNT(CASE WHEN i.status = 'Available' THEN 1 END) AS total_available
+      FROM products p
+      LEFT JOIN inventory i ON i.product_id = p.id
+      LEFT JOIN vendors v ON v.id = p.vendor_id
+      WHERE p.min_stock_level > 0
+      GROUP BY p.id, p.model_name, p.brand, p.product_code,
+               p.min_stock_level, p.base_price, p.vendor_id, v.name, v.id
+      HAVING COUNT(CASE WHEN i.status = 'Available' THEN 1 END) <= p.min_stock_level
+      ORDER BY available_units ASC, p.model_name ASC
+    `)
+
+    function unpackRows<T = Record<string, unknown>>(result: unknown): T[] {
+      if (result && typeof result === 'object' && 'rows' in result) return (result as { rows: T[] }).rows
+      if (Array.isArray(result)) return result as T[]
+      return []
+    }
+
+    const items = unpackRows(rows).map((r: any) => ({
+      id:              r.id as string,
+      model_name:      r.model_name as string,
+      brand:           r.brand as string,
+      product_code:    r.product_code as string,
+      min_stock_level: Number(r.min_stock_level),
+      base_price:      Number(r.base_price),
+      vendor_id:       r.vendor_id as string | null,
+      vendor_name:     r.vendor_name as string | null,
+      available_units: Number(r.available_units),
+      total_available: Number(r.total_available),
+    }))
+
+    return { success: true as const, items }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function updateMinStockLevel(input: {
+  productId: string
+  minStockLevel: number
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
+    return { success: false as const, error: 'Manager role required' }
+  }
+  if (input.minStockLevel < 0) return { success: false as const, error: 'Min stock level cannot be negative' }
+  try {
+    await db.update(products)
+      .set({ min_stock_level: input.minStockLevel })
+      .where(eq(products.id, input.productId))
+    return { success: true as const }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function getAllProductsWithStockLevel(input?: { branchId?: string | null }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        p.id, p.model_name, p.brand, p.product_code, p.min_stock_level, p.vendor_id,
+        v.name AS vendor_name,
+        COUNT(CASE WHEN i.status = 'Available' THEN 1 END) AS available_units
+      FROM products p
+      LEFT JOIN inventory i ON i.product_id = p.id
+      LEFT JOIN vendors v ON v.id = p.vendor_id
+      GROUP BY p.id, p.model_name, p.brand, p.product_code, p.min_stock_level, p.vendor_id, v.name
+      ORDER BY p.model_name ASC
+    `)
+    function unpackRows<T = Record<string, unknown>>(result: unknown): T[] {
+      if (result && typeof result === 'object' && 'rows' in result) return (result as { rows: T[] }).rows
+      if (Array.isArray(result)) return result as T[]
+      return []
+    }
+    const items = unpackRows(rows).map((r: any) => ({
+      id: r.id as string, model_name: r.model_name as string,
+      brand: r.brand as string, product_code: r.product_code as string,
+      min_stock_level: Number(r.min_stock_level ?? 0),
+      vendor_id: r.vendor_id as string | null, vendor_name: r.vendor_name as string | null,
+      available_units: Number(r.available_units ?? 0),
+    }))
+    return { success: true as const, items }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
