@@ -122,7 +122,7 @@ export default function ReportsClient({
         <style>{`
           @media print {
             table { width: 100% !important; table-layout: auto !important; }
-            td, th { white-space: nowrap; font-size: 10px !important; padding: 3px 6px !important; }
+            td, th { white-space: normal !important; font-size: 10px !important; padding: 3px 6px !important; }
             .print\\:overflow-visible { overflow: visible !important; }
           }
         `}</style>
@@ -272,7 +272,9 @@ export default function ReportsClient({
                 <CardTitle className="flex items-center gap-2 text-sm"><FileText className="h-4 w-4" /> GST Position — {fromDate} to {toDate}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <Table>
+                <div className="print:overflow-visible overflow-x-auto">
+                  <div className="print:min-w-0 min-w-[600px]">
+                    <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead>Account Code</TableHead>
@@ -296,10 +298,12 @@ export default function ReportsClient({
                       )
                     })}
                     {gstData.gst.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-slate-400 py-8">No GST data in this period</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                          <TableRow><TableCell colSpan={5} className="text-center text-slate-400 py-8">No GST data in this period</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
                 {gstData.gst.length > 0 && (
                   <div className="border-t p-4 flex justify-end">
                     <div className="text-right space-y-1">
