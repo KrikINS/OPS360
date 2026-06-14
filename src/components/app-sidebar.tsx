@@ -42,6 +42,7 @@ import {
   PieChart,
   Building2,
   FolderTree,
+  CreditCard,
 } from "lucide-react"
 import {
   Collapsible,
@@ -121,6 +122,7 @@ const navigationGroups: NavigationGroup[] = [
     items: [
       { title: "Sales Registry", url: "/sales/hub", icon: List },
       { title: "Customer Management", url: "/sales/customers", icon: UserSquare },
+      { title: "Accounts Receivable", url: "/sales/credit", icon: CreditCard },
     ]
   },
   {

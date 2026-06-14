@@ -162,3 +162,36 @@ CREATE TABLE debit_notes (
 - `process_pos_sale` is a PostgreSQL function managed directly in the DB, not through Drizzle. Current version includes per-line `invoice_item_id` stamping and per-line cost calculation. If recreating the DB, re-apply the function from the last known good version in the codebase session history.
 - All manually applied columns are also reflected in `src/db/schema.ts` to prevent drizzle-kit from dropping them.
 - Main Branch ID (used in employee seed): `fd75205c-1475-4d60-960f-993d4399e8ef`
+
+---
+
+## 2026-06-14 — Credit Sales System
+
+```sql
+-- Extend customers with credit fields
+ALTER TABLE customers
+  ADD COLUMN IF NOT EXISTS is_credit_eligible  boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS credit_limit        numeric DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS credit_balance      numeric NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS credit_payment_terms text DEFAULT '30 days';
+
+-- Extend sales_invoices with payment tracking
+ALTER TABLE sales_invoices
+  ADD COLUMN IF NOT EXISTS due_date       date,
+  ADD COLUMN IF NOT EXISTS amount_paid    numeric NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS payment_status text NOT NULL DEFAULT 'paid';
+
+-- Credit payments ledger
+CREATE TABLE IF NOT EXISTS credit_payments (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id    uuid NOT NULL REFERENCES sales_invoices(id),
+  customer_id   uuid NOT NULL REFERENCES customers(id),
+  amount        numeric NOT NULL,
+  payment_mode  text NOT NULL DEFAULT 'cash',
+  notes         text,
+  journal_entry_id uuid,
+  created_by    uuid NOT NULL,
+  created_at    timestamp DEFAULT now()
+);
+```
+

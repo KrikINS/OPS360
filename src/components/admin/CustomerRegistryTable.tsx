@@ -20,7 +20,8 @@ import {
   Calendar,
   History,
   Edit,
-  Building2
+  Building2,
+  CreditCard
 } from "lucide-react"
 import { Customer as PosCustomer } from '@/context/PosContext'
 
@@ -33,9 +34,10 @@ interface CustomerRegistryTableProps {
   onAddClick: () => void
   onEditClick?: (customer: Customer) => void
   onHistoryClick?: (customer: Customer) => void
+  onCreditClick?: (customer: Customer) => void
 }
 
-export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHistoryClick }: CustomerRegistryTableProps) {
+export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHistoryClick, onCreditClick }: CustomerRegistryTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
 
@@ -165,6 +167,9 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
                       </Button>
                       <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-blue-500 transition-all" onClick={() => onHistoryClick?.(c)}>
                         <History className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-purple-500 transition-all" onClick={() => onCreditClick?.(c)}>
+                        <CreditCard className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

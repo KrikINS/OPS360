@@ -749,23 +749,44 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
       }
 
       // --- POST SALES JOURNAL ---
-      try {
-        const { postSalesJournal } = await import('@/actions/finance')
-        await postSalesJournal({
-          invoiceId: String(resData.id ?? ''),
-          branchId: selectedBranch ?? '',
-          createdBy: session?.user?.id ?? '',
-          saleTotal: Number((resData as any).total_amount ?? resData.grandTotal ?? 0),
-          subtotal: Number((resData as any).subtotal ?? 0),
-          cgst: Number((resData as any).cgst ?? ((resData as any).tax_amount != null ? Number((resData as any).tax_amount ?? 0) / 2 : 0)),
-          sgst: Number((resData as any).sgst ?? ((resData as any).tax_amount != null ? Number((resData as any).tax_amount ?? 0) / 2 : 0)),
-          igst: 0,
-          cogs: 0,
-          loyaltyDiscountAmount: loyaltyRedeem > 0 ? loyaltyRedeem : 0,
-        })
-      } catch (journalErr) {
-        console.error('[JOURNAL] Sales journal post FAILED — sale committed, ledger entry missing:', journalErr)
-        // Non-blocking: sale is already committed by DB procedure
+      // Route to correct journal based on payment mode
+      if (paymentMethod === 'credit') {
+        // Credit sale: DR 1030 AR instead of DR Cash, Update Customer Balance & Invoice
+        const { finalizeCreditCheckout } = await import('@/actions/finance')
+        finalizeCreditCheckout({
+          invoiceId:  String(resData.id ?? ''),
+          branchId:   selectedBranch ?? '',
+          createdBy:  session?.user?.id ?? '',
+          saleTotal:  Number((resData as any).total_amount ?? resData.grandTotal ?? 0),
+          subtotal:   Number((resData as any).subtotal ?? 0),
+          cgst:       Number((resData as any).cgst ?? ((resData as any).tax_amount != null ? Number((resData as any).tax_amount ?? 0) / 2 : 0)),
+          sgst:       Number((resData as any).sgst ?? ((resData as any).tax_amount != null ? Number((resData as any).tax_amount ?? 0) / 2 : 0)),
+          igst:       Number((resData as any).igst ?? 0),
+          cogs:       0,
+          customerId: selectedCustomer?.id ?? '',
+          creditTerms: (selectedCustomer as any)?.credit_payment_terms ?? '30 days',
+        }).catch(err => console.error('[CREDIT_CHECKOUT] Failed:', err))
+      } else {
+        // Normal sale: DR Cash/Bank
+        try {
+          const { postSalesJournal } = await import('@/actions/finance')
+          await postSalesJournal({
+            invoiceId:            String(resData.id ?? ''),
+            branchId:             selectedBranch ?? '',
+            createdBy:            session?.user?.id ?? '',
+            saleTotal:            Number((resData as any).total_amount ?? resData.grandTotal ?? 0),
+            subtotal:             Number((resData as any).subtotal ?? 0),
+            cgst:                 Number((resData as any).cgst ?? ((resData as any).tax_amount != null ? Number((resData as any).tax_amount ?? 0) / 2 : 0)),
+            sgst:                 Number((resData as any).sgst ?? ((resData as any).tax_amount != null ? Number((resData as any).tax_amount ?? 0) / 2 : 0)),
+            igst:                 0,
+            cogs:                 0,
+            loyaltyDiscountAmount: loyaltyRedeem > 0 ? loyaltyRedeem : 0,
+            paymentMode:          paymentMethod,
+          })
+        } catch (journalErr) {
+          console.error('[JOURNAL] Sales journal post FAILED — sale committed, ledger entry missing:', journalErr)
+          // Non-blocking: sale is already committed by DB procedure
+        }
       }
       // --- END POST SALES JOURNAL ---
 

@@ -15,7 +15,7 @@ import { fmtINR } from '@/lib/utils'
 type CheckoutStatus = 'idle' | 'loading' | 'success' | 'error'
 
 export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenChange: (val: boolean) => void }) {
-  const { totals, executeCheckout, cart, loyaltyRedeem } = usePos()
+  const { totals, executeCheckout, cart, loyaltyRedeem, selectedCustomer } = usePos()
   const [status, setStatus] = useState<CheckoutStatus>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [invoiceId, setInvoiceId] = useState<string | null>(null)
@@ -27,6 +27,12 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
   const componentRef = React.useRef<HTMLDivElement>(null)
   const shouldManualPrintRef = React.useRef(false)
   const [paymentMethod, setPaymentMethod] = useState<string | null>("cash")
+
+  const isCreditEligible = (selectedCustomer as any)?.is_credit_eligible === true
+  const creditLimit      = Number((selectedCustomer as any)?.credit_limit ?? 0)
+  const creditBalance    = Number((selectedCustomer as any)?.credit_balance ?? 0)
+  const availableCredit  = Math.max(0, creditLimit - creditBalance)
+  const isOverLimit      = isCreditEligible && paymentMethod === 'credit' && totals.netPayable > availableCredit
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
@@ -128,9 +134,36 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                        <SelectItem value="card" className="text-xs font-bold dark:text-slate-200">Credit/Debit Card</SelectItem>
                        <SelectItem value="upi" className="text-xs font-bold dark:text-slate-200">UPI / QR Scan</SelectItem>
                        <SelectItem value="transfer" className="text-xs font-bold dark:text-slate-200">Bank Transfer</SelectItem>
+                       {isCreditEligible && (
+                         <SelectItem value="credit" className="text-xs font-bold text-purple-700">
+                           💳 Credit Sale
+                         </SelectItem>
+                       )}
                      </SelectContent>
                    </Select>
                  </div>
+                 {paymentMethod === 'credit' && isCreditEligible && (
+                   <div className={`col-span-2 rounded-lg px-3 py-2.5 text-xs space-y-1 border ${isOverLimit ? 'bg-amber-50 border-amber-200' : 'bg-purple-50 border-purple-200'}`}>
+                     <div className="flex justify-between font-semibold">
+                       <span className={isOverLimit ? 'text-amber-700' : 'text-purple-700'}>Credit Limit</span>
+                       <span className={isOverLimit ? 'text-amber-700' : 'text-purple-700'}>₹{creditLimit.toLocaleString('en-IN')}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-slate-500">Currently Used</span>
+                       <span className="text-slate-700">₹{creditBalance.toLocaleString('en-IN')}</span>
+                     </div>
+                     <div className="flex justify-between font-bold border-t pt-1 mt-1">
+                       <span className={isOverLimit ? 'text-amber-700' : 'text-emerald-700'}>Available Credit</span>
+                       <span className={isOverLimit ? 'text-amber-700' : 'text-emerald-700'}>₹{availableCredit.toLocaleString('en-IN')}</span>
+                     </div>
+                     {isOverLimit && (
+                       <div className="flex items-center gap-1.5 text-amber-700 font-bold pt-1 border-t">
+                         <AlertTriangle className="h-3.5 w-3.5" />
+                         Over limit by ₹{(totals.netPayable - availableCredit).toLocaleString('en-IN')} — manager approval required
+                       </div>
+                     )}
+                   </div>
+                 )}
                  <div className="space-y-1.5">
                    <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Received Amount (₹)</label>
                    <Input 
@@ -228,7 +261,10 @@ export function CheckoutModal({ open, onOpenChange }: { open: boolean, onOpenCha
                 <Button 
                   className="flex-1 h-12 bg-[#001529] dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-900/10" 
                   onClick={handleCheckout} 
-                  disabled={status === 'loading' || (paymentMethod === 'cash' && (!receivedAmount || parseFloat(receivedAmount) < totals.netPayable))}
+                  disabled={
+                    status === 'loading' || 
+                    (paymentMethod === 'cash' && (!receivedAmount || parseFloat(receivedAmount) < totals.netPayable))
+                  }
                 >
                   {status === 'loading' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                   Seal Invoice

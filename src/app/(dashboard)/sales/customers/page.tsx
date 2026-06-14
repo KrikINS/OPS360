@@ -3,14 +3,17 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 import { CustomerRegistryTable } from "@/components/admin/CustomerRegistryTable"
 import { AddCustomerModal } from "@/components/admin/AddCustomerModal"
 import { CustomerHistoryDrawer } from "@/components/admin/CustomerHistoryDrawer"
 import { LoyaltyRegistryTable } from '@/components/admin/LoyaltyRegistryTable'
 import { LoyaltyAdjustModal } from '@/components/admin/LoyaltyAdjustModal'
-import { Users, Loader2, Star, UserSquare } from "lucide-react"
+import { Users, Loader2, Star, UserSquare, X } from "lucide-react"
 import { Customer } from "@/context/PosContext"
+import { updateCustomerCredit } from '@/actions/finance'
 
 interface AdminCustomer extends Customer {
   created_at: string
@@ -31,7 +34,30 @@ export default function CustomerManagementPage() {
   const [customerToAdjust, setCustomerToAdjust] = useState<Customer | null>(null)
   const [adjustModalOpen, setAdjustModalOpen] = useState(false)
   
-  
+  const [creditCustomer, setCreditCustomer]   = useState<AdminCustomer | null>(null)
+  const [creditForm, setCreditForm]           = useState({ eligible: false, limit: '', terms: '30 days' })
+  const [savingCredit, setSavingCredit]       = useState(false)
+  const [creditToast, setCreditToast]         = useState<string | null>(null)
+
+  const handleSaveCredit = async () => {
+    if (!creditCustomer) return
+    setSavingCredit(true)
+    const result = await updateCustomerCredit({
+      customerId:         creditCustomer.id,
+      isCreditEligible:   creditForm.eligible,
+      creditLimit:        parseFloat(creditForm.limit) || 0,
+      creditPaymentTerms: creditForm.terms,
+    })
+    setSavingCredit(false)
+    if (result.success) {
+      setCreditToast('Credit settings saved')
+      setCreditCustomer(null)
+      fetchCustomers()
+    } else {
+      setCreditToast(result.error ?? 'Failed')
+    }
+    setTimeout(() => setCreditToast(null), 3000)
+  }
 
   const fetchCustomers = useCallback(async () => {
     const { getCustomersWithLoyaltyAction } = await import("@/app/actions/customers")
@@ -116,6 +142,14 @@ export default function CustomerManagementPage() {
                 setCustomerForHistory(customer)
                 setHistoryDrawerOpen(true)
               }}
+              onCreditClick={(customer) => {
+                setCreditCustomer(customer as AdminCustomer)
+                setCreditForm({
+                  eligible: (customer as any).is_credit_eligible ?? false,
+                  limit:    String((customer as any).credit_limit ?? ''),
+                  terms:    (customer as any).credit_payment_terms ?? '30 days',
+                })
+              }}
             />
           )}
 
@@ -158,6 +192,56 @@ export default function CustomerManagementPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {creditCustomer && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setCreditCustomer(null)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black">Credit Settings</h2>
+                <p className="text-sm text-slate-500">{creditCustomer.full_name}</p>
+              </div>
+              <button onClick={() => setCreditCustomer(null)} className="h-8 w-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {creditToast && <div className="px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-semibold">{creditToast}</div>}
+            <div className="flex items-center gap-3">
+              <input type="checkbox" id="eligible" checked={creditForm.eligible}
+                onChange={e => setCreditForm(f => ({ ...f, eligible: e.target.checked }))} className="h-4 w-4 rounded" />
+              <label htmlFor="eligible" className="text-sm font-semibold cursor-pointer">Enable Credit Sales for this customer</label>
+            </div>
+            {creditForm.eligible && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Credit Limit (₹)</label>
+                  <Input type="number" min={0} placeholder="e.g. 50000" value={creditForm.limit}
+                    onChange={e => setCreditForm(f => ({ ...f, limit: e.target.value }))} className="h-9" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Payment Terms</label>
+                  <select value={creditForm.terms} onChange={e => setCreditForm(f => ({ ...f, terms: e.target.value }))}
+                    className="w-full h-9 border rounded-lg px-3 text-sm bg-white">
+                    <option value="15 days">15 days</option>
+                    <option value="30 days">30 days</option>
+                    <option value="45 days">45 days</option>
+                    <option value="60 days">60 days</option>
+                    <option value="90 days">90 days</option>
+                  </select>
+                </div>
+              </>
+            )}
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setCreditCustomer(null)}>Cancel</Button>
+              <Button className="flex-1 bg-[#001529] hover:bg-[#002545] text-white"
+                onClick={handleSaveCredit} disabled={savingCredit}>
+                {savingCredit ? 'Saving...' : 'Save Credit Settings'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

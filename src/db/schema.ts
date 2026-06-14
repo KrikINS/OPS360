@@ -388,6 +388,9 @@ export const sales_invoices = pgTable("sales_invoices", {
   created_at: timestamp("created_at").defaultNow(),
   branch_id: uuid("branch_id"),
   payment_mode: text("payment_mode"),
+  due_date:       date('due_date'),
+  amount_paid:    numeric('amount_paid').notNull().default('0'),
+  payment_status: text('payment_status').notNull().default('paid'),
   user_id: uuid("user_id"),
   subtotal: numeric("subtotal"),
   cgst: numeric("cgst"),
@@ -422,6 +425,10 @@ export const customers = pgTable("customers", {
   company_name: text("company_name"),
   notes: text("notes"),
   loyalty_balance: integer("loyalty_balance").notNull().default(0),
+  is_credit_eligible:   boolean('is_credit_eligible').notNull().default(false),
+  credit_limit:         numeric('credit_limit').default('0'),
+  credit_balance:       numeric('credit_balance').notNull().default('0'),
+  credit_payment_terms: text('credit_payment_terms').default('30 days'),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
@@ -594,6 +601,18 @@ export const sales_returns = pgTable('sales_returns', {
   refund_method:    text('refund_method').notNull(),
   refund_amount:    numeric('refund_amount').notNull(),
   journal_entry_id: uuid('journal_entry_id'),
+  created_at:       timestamp('created_at').defaultNow(),
+})
+
+export const credit_payments = pgTable('credit_payments', {
+  id:               uuid('id').primaryKey().defaultRandom(),
+  invoice_id:       uuid('invoice_id').notNull().references(() => sales_invoices.id),
+  customer_id:      uuid('customer_id').notNull().references(() => customers.id),
+  amount:           numeric('amount').notNull(),
+  payment_mode:     text('payment_mode').notNull().default('cash'),
+  notes:            text('notes'),
+  journal_entry_id: uuid('journal_entry_id'),
+  created_by:       uuid('created_by').notNull(),
   created_at:       timestamp('created_at').defaultNow(),
 })
 
