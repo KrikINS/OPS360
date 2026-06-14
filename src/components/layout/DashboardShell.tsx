@@ -63,6 +63,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
               {isAdmin && (
                 <Button
                   render={<Link href="/admin" />}
+                  nativeButton={false}
                   size="sm"
                   className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
                 >
@@ -76,6 +77,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
               {(isAdmin || permissions?.finance === true) && (
                 <Button
                   render={<Link href="/accounting?tab=dashboard" />}
+                  nativeButton={false}
                   size="sm"
                   className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
                 >
@@ -88,6 +90,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
               {(isAdmin || permissions?.pos === true) && (
                 <Button
                   render={<Link href="/pos" />}
+                  nativeButton={false}
                   size="sm"
                   className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-2 shadow-sm font-semibold"
                 >
