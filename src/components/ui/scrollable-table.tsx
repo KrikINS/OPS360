@@ -130,7 +130,7 @@ export function ScrollableTable({ children, className, minWidth = '100%', maxHei
         className={cn("overflow-x-auto", maxHeight ? "overflow-y-auto" : "")}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', maxHeight: maxHeight || undefined } as React.CSSProperties}
       >
-        <div style={{ width: 'max-content', minWidth }}>
+        <div style={{ minWidth, width: '100%' }}>
           {children}
         </div>
       </div>

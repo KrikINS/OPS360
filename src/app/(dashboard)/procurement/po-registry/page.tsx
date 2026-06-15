@@ -98,7 +98,7 @@ import { approvePurchaseOrder, rejectPurchaseOrder, shortClosePO } from '@/actio
 import { getGRNReceiptsAction } from '@/app/actions/procurement'
 import ProcessReturns from "../return/page"
 import DiscrepancyReportPage from "../../discrepancy-report/page"
-import { settleVendorPayment } from '@/actions/finance'
+import { settleVendorPayment, getVendorPayments } from '@/actions/finance'
 
 // Types
 type Vendor = {
@@ -257,6 +257,15 @@ export default function ProcurementGRNPage() {
   const [activeTab, setActiveTab] = useState(initialTab)
 
   const { data: session } = useSession()
+  const [vendorPayments, setVendorPayments] = useState<Array<{
+    id: string; poId: string; vendorId: string; branchId: string
+    amount: string | number; paymentMethod: string; referenceNumber: string | null
+    paymentDate: string; notes: string | null; poNumber: string | null; vendorName: string | null
+  }>>([])
+  const [paymentsLoading, setPaymentsLoading] = useState(false)
+  const [paymentsLoaded, setPaymentsLoaded]   = useState(false)
+  const [paymentSearch, setPaymentSearch]     = useState('')
+  const [paymentVendorFilter, setPaymentVendorFilter] = useState('all')
 
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null)
@@ -565,6 +574,15 @@ export default function ProcurementGRNPage() {
       }
     }
 
+
+  const loadVendorPayments = async () => {
+    if (paymentsLoaded) return
+    setPaymentsLoading(true)
+    const result = await getVendorPayments()
+    if (result.success) setVendorPayments(result.payments as any[])
+    setPaymentsLoading(false)
+    setPaymentsLoaded(true)
+  }
 
   const getVisibleBranches = () => {
     return branches;
@@ -1495,14 +1513,14 @@ Are you sure you want to proceed?`)) return;
               <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
                 <TabsTrigger 
                   value="all" 
-                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
                 >
                   <FileText className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
                   PO Registry
                 </TabsTrigger>
                 <TabsTrigger 
                   value="pending" 
-                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group relative border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group relative border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
                 >
                   <Clock className="h-3.5 w-3.5 group-data-active:text-amber-400 transition-colors" />
                   GRN Registry
@@ -1514,10 +1532,10 @@ Are you sure you want to proceed?`)) return;
                 </TabsTrigger>
                 <TabsTrigger 
                   value="reconciliation" 
-                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 relative"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 relative"
                 >
                   <Scale className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
-                  3-Way Match Audit
+                  3-Way Match
                   {auditActionCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
                       {auditActionCount}
@@ -1526,10 +1544,10 @@ Are you sure you want to proceed?`)) return;
                 </TabsTrigger>
                 <TabsTrigger 
                   value="returns" 
-                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 relative"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 relative"
                 >
                   <RotateCcw className="h-3.5 w-3.5 group-data-active:text-orange-400 transition-colors" />
-                  Purchase Returns
+                  Returns
                   {returnActionCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
                       {returnActionCount}
@@ -1538,15 +1556,23 @@ Are you sure you want to proceed?`)) return;
                 </TabsTrigger>
                 <TabsTrigger 
                   value="discrepancy" 
-                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-4 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-normal group data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 border border-slate-200 relative"
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 border border-slate-200 relative"
                 >
                   <ShieldAlert className="h-3.5 w-3.5 group-data-active:text-red-400 transition-colors" />
-                  Discrepancy Report
+                  Discrepancies
                   {discrepancyActionCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-semibold h-[21px] w-[21px] rounded-full flex items-center justify-center border border-white shadow-sm ring-2 ring-white">
                       {discrepancyActionCount}
                     </span>
                   )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="payments"
+                  onClick={loadVendorPayments}
+                  className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80 border border-slate-200 relative"
+                >
+                  <Wallet className="h-3.5 w-3.5 group-data-active:text-emerald-400 transition-colors" />
+                  Payments
                 </TabsTrigger>
         </TabsList>
       </div>
@@ -2500,6 +2526,163 @@ Are you sure you want to proceed?`)) return;
         </TabsContent>
         <TabsContent value="discrepancy" className="animate-in slide-in-from-right-2 duration-300 mt-0">
           <DiscrepancyReportPage />
+        </TabsContent>
+        <TabsContent value="payments" className="animate-in slide-in-from-left-2 duration-300 mt-0">
+          <Card className="shadow-md border-slate-200 border-t-0 rounded-t-none py-0">
+            <CardHeader className="bg-[#001529]/95 backdrop-blur-md sticky top-0 z-20 pt-4 pb-3 px-6 border-b-0 rounded-t-none shadow-[0_4px_12px_-4px_rgba(0,21,41,0.35)] text-white">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <CardTitle className="text-lg flex items-center gap-2 text-white">
+                  <Wallet className="h-5 w-5 text-white" />
+                  Vendor Payment Ledger
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-white/40" />
+                    <input
+                      placeholder="Search PO, vendor, reference..."
+                      value={paymentSearch}
+                      onChange={e => setPaymentSearch(e.target.value)}
+                      className="pl-9 pr-3 py-1.5 text-xs bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-white/40 w-56"
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Summary stats */}
+              {!paymentsLoading && vendorPayments.length > 0 && (() => {
+                const total = vendorPayments.reduce((s, p) => s + Number(p.amount), 0)
+                const uniqueVendors = new Set(vendorPayments.map(p => p.vendorId)).size
+                return (
+                  <div className="flex gap-6 mt-3 pt-3 border-t border-white/10">
+                    <div>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Total Paid</p>
+                      <p className="text-xl font-black text-emerald-400">₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Transactions</p>
+                      <p className="text-xl font-black text-white">{vendorPayments.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Vendors Paid</p>
+                      <p className="text-xl font-black text-white">{uniqueVendors}</p>
+                    </div>
+                  </div>
+                )
+              })()}
+            </CardHeader>
+            <CardContent className="p-0">
+              {paymentsLoading ? (
+                <div className="p-12 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-slate-400" />
+                  <p className="text-xs text-slate-400 mt-2">Loading payment ledger...</p>
+                </div>
+              ) : vendorPayments.length === 0 ? (
+                <div className="p-12 text-center space-y-2">
+                  <Wallet className="h-10 w-10 mx-auto text-slate-300" />
+                  <p className="font-semibold text-slate-500">No payments recorded yet</p>
+                </div>
+              ) : (() => {
+                const filtered = vendorPayments.filter(p => {
+                  const q = paymentSearch.toLowerCase()
+                  return !q ||
+                    p.poNumber?.toLowerCase().includes(q) ||
+                    p.vendorName?.toLowerCase().includes(q) ||
+                    p.referenceNumber?.toLowerCase().includes(q) ||
+                    p.paymentMethod?.toLowerCase().includes(q)
+                })
+
+                // Group by vendor for vendor filter pills
+                const vendors = Array.from(new Set(vendorPayments.map(p => p.vendorName).filter(Boolean)))
+
+                return (
+                  <div>
+                    {/* Vendor filter pills */}
+                    <div className="flex gap-2 px-4 py-2 border-b bg-slate-50 flex-wrap">
+                      <button
+                        onClick={() => setPaymentVendorFilter('all')}
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${paymentVendorFilter === 'all' ? 'bg-[#001529] text-white border-[#001529]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                      >All</button>
+                      {vendors.map(v => (
+                        <button key={v}
+                          onClick={() => setPaymentVendorFilter(paymentVendorFilter === v ? 'all' : v!)}
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${paymentVendorFilter === v ? 'bg-[#001529] text-white border-[#001529]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                        >{v}</button>
+                      ))}
+                    </div>
+                    <ScrollableTable minWidth="100%">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-28">Date</TableHead>
+                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-32">PO Number</TableHead>
+                            <TableHead className="font-bold text-[10px] uppercase tracking-wide">Vendor</TableHead>
+                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-28">Method</TableHead>
+                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-36">Reference</TableHead>
+                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-40">Notes</TableHead>
+                            <TableHead className="font-bold text-[10px] uppercase tracking-wide text-right w-36">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filtered
+                            .filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter)
+                            .map(p => (
+                            <TableRow key={p.id} className="hover:bg-muted/30">
+                              <TableCell className="text-xs text-slate-500">
+                                {new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs font-bold text-[#001529]">{p.poNumber ?? '—'}</TableCell>
+                              <TableCell className="text-sm font-medium">{p.vendorName ?? '—'}</TableCell>
+                              <TableCell>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${
+                                  p.paymentMethod === 'bank' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                  p.paymentMethod === 'cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                  p.paymentMethod === 'upi'  ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                  'bg-slate-50 text-slate-600 border-slate-200'
+                                }`}>
+                                  {p.paymentMethod === 'bank' ? '🏦 Bank' :
+                                   p.paymentMethod === 'cash' ? '💵 Cash' :
+                                   p.paymentMethod === 'upi'  ? '📱 UPI'  :
+                                   p.paymentMethod}
+                                </span>
+                              </TableCell>
+                              <TableCell className="font-mono text-xs text-slate-400">{p.referenceNumber ?? '—'}</TableCell>
+                              <TableCell className="text-xs text-slate-500 max-w-[160px] truncate">{p.notes ?? '—'}</TableCell>
+                              <TableCell className="text-right tabular-nums font-bold text-emerald-700">
+                                ₹{Number(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {filtered.filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter).length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center text-slate-400 py-8 text-sm">
+                                No payments match your search
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                        {/* Totals footer */}
+                        {filtered.length > 0 && (
+                          <tfoot>
+                            <tr className="border-t-2 border-slate-200 bg-slate-50">
+                              <td colSpan={6} className="px-4 py-2 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                {paymentVendorFilter !== 'all' ? `${paymentVendorFilter} Total` : 'Grand Total'}
+                                {' '}({filtered.filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter).length} transactions)
+                              </td>
+                              <td className="px-4 py-2 text-right font-black text-emerald-700 tabular-nums">
+                                ₹{filtered
+                                  .filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter)
+                                  .reduce((s, p) => s + Number(p.amount), 0)
+                                  .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </Table>
+                    </ScrollableTable>
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
       </>
