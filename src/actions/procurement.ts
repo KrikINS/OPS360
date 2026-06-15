@@ -537,9 +537,7 @@ export async function createGRN(input: {
     // correct tax head.
     const isInterState = !vendorCode || !branchCode || vendorCode !== branchCode
 
-    console.log(
-      `[GRN Journal] vendor state="${vendorCode}" branch state="${branchCode}" → ${isInterState ? 'INTER-STATE (IGST → 1053)' : 'INTRA-STATE (CGST → 1051, SGST → 1052)'}`
-    )
+
 
     let totalCGST = 0
     let totalSGST = 0

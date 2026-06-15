@@ -3401,7 +3401,6 @@ Are you sure you want to proceed?`)) return;
                             title="Delete bill"
                             className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors relative z-[100] cursor-pointer"
                             onClick={(e) => {
-                              console.log("Delete button clicked for bill:", bill.id);
                               e.preventDefault();
                               e.stopPropagation();
                               handleDeleteBill(bill.id, viewingInvoices.id);

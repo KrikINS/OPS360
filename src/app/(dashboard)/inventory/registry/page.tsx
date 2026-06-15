@@ -203,7 +203,7 @@ export default function InventoryDashboard() {
 
       const inventoryResult = await getInventoryRegistryAction()
       if (!inventoryResult.success) {
-        console.error("DEBUG INVENTORY ERROR:", inventoryResult.error)
+        console.error("Inventory registry fetch failed:", inventoryResult.error)
       }
 
       let finalInventory = inventoryResult.success ? inventoryResult.data : []

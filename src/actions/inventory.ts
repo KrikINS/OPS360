@@ -55,8 +55,6 @@ export async function requestStockTransfer(input: {
     input.notes,
   )
 
-  console.log('TRANSFER RESULT:', result)
-
   if (result.error) {
     return { success: false as const, error: result.error.message }
   }
@@ -94,7 +92,7 @@ export async function completeStockTransfer(input: { transferId: string }) {
   )
 
   if (result.error) {
-    console.log('COMPLETE TRANSFER ERROR:', result.error.message)
+    console.error('COMPLETE TRANSFER ERROR:', result.error.message)
     return { success: false as const, error: result.error.message }
   }
 

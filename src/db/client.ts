@@ -14,8 +14,5 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
 });
 
-pool.on('connect', (client) => {
-  client.on('notice', (msg) => console.log('PG NOTICE:', msg.message))
-})
 
 export const db = drizzle(pool, { schema });
