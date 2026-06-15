@@ -2089,3 +2089,102 @@ export async function updateCustomerCredit(input: {
     return { success: false as const, error: (error as Error).message }
   }
 }
+
+export async function getConsolidatedReport(input: {
+  fromDate: string
+  toDate: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
+    return { success: false as const, error: 'Admin role required' }
+  }
+
+  try {
+    // Per-branch sales breakdown
+    const branchRows = unpackRows<{
+      branch_id: string; branch_name: string
+      invoice_count: string; total_revenue: string
+      total_cgst: string; total_sgst: string; total_igst: string
+      unique_customers: string
+    }>(await db.execute(sql`
+      SELECT
+        b.id AS branch_id,
+        b.name AS branch_name,
+        COUNT(DISTINCT si.id)            AS invoice_count,
+        COALESCE(SUM(si.total_amount),0) AS total_revenue,
+        COALESCE(SUM(si.cgst),0)         AS total_cgst,
+        COALESCE(SUM(si.sgst),0)         AS total_sgst,
+        COALESCE(SUM(si.igst),0)         AS total_igst,
+        COUNT(DISTINCT si.customer_id)   AS unique_customers
+      FROM branches b
+      LEFT JOIN sales_invoices si
+        ON si.branch_id = b.id
+        AND si.created_at >= ${input.fromDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp
+      GROUP BY b.id, b.name
+      ORDER BY total_revenue DESC
+    `))
+
+    // Per-branch stock value
+    const stockRows = unpackRows<{
+      branch_id: string; branch_name: string
+      total_units: string; total_cost_value: string
+    }>(await db.execute(sql`
+      SELECT
+        b.id   AS branch_id,
+        b.name AS branch_name,
+        COUNT(i.id)                       AS total_units,
+        COALESCE(SUM(i.landed_cost), 0)   AS total_cost_value
+      FROM branches b
+      LEFT JOIN inventory i ON i.branch_id = b.id AND i.status = 'Available'
+      GROUP BY b.id, b.name
+      ORDER BY b.name
+    `))
+
+    // Per-branch service jobs
+    const serviceRows = unpackRows<{
+      branch_id: string; branch_name: string
+      open_jobs: string; completed_jobs: string; total_service_revenue: string
+    }>(await db.execute(sql`
+      SELECT
+        b.id   AS branch_id,
+        b.name AS branch_name,
+        COUNT(CASE WHEN sj.status NOT IN ('Completed','Cancelled') THEN 1 END) AS open_jobs,
+        COUNT(CASE WHEN sj.status = 'Completed' THEN 1 END)                    AS completed_jobs,
+        COALESCE(SUM(
+          CASE WHEN sj.status = 'Completed'
+            AND sj.created_at >= ${input.fromDate}::timestamp
+            AND sj.created_at <= ${input.toDate}::timestamp
+          THEN sj.service_charge ELSE 0 END
+        ), 0) AS total_service_revenue
+      FROM branches b
+      LEFT JOIN service_jobs sj ON sj.branch_id = b.id
+      GROUP BY b.id, b.name
+      ORDER BY b.name
+    `))
+
+    // Consolidated totals
+    const totalRevenue      = branchRows.reduce((s, r) => s + Number(r.total_revenue), 0)
+    const totalInvoices     = branchRows.reduce((s, r) => s + Number(r.invoice_count), 0)
+    const totalGST          = branchRows.reduce((s, r) => s + Number(r.total_cgst) + Number(r.total_sgst) + Number(r.total_igst), 0)
+    const totalCustomers    = branchRows.reduce((s, r) => s + Number(r.unique_customers), 0)
+    const totalStockUnits   = stockRows.reduce((s, r) => s + Number(r.total_units), 0)
+    const totalStockValue   = stockRows.reduce((s, r) => s + Number(r.total_cost_value), 0)
+    const totalOpenJobs     = serviceRows.reduce((s, r) => s + Number(r.open_jobs), 0)
+
+    return {
+      success: true as const,
+      branches: branchRows,
+      stock:    stockRows,
+      service:  serviceRows,
+      totals: {
+        totalRevenue, totalInvoices, totalGST,
+        totalCustomers, totalStockUnits, totalStockValue, totalOpenJobs,
+      },
+    }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}

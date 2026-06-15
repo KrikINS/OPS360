@@ -25,7 +25,7 @@ import {
   XCircle, Clock,
   Wallet, Download, Printer,
   CalendarRange, ChevronRight, ChevronDown, Loader2,
-  PenLine, Trash2
+  PenLine, Trash2, Building2, Package, Wrench
 } from 'lucide-react'
 import {
   createExpenseRecord, approveExpense, rejectExpense,
@@ -194,6 +194,7 @@ export default function AccountingClient({
   marginData,
   branchList = [],
   apAgeing,
+  consolidatedData,
 }: {
   activeTab: string
   isAdmin: boolean
@@ -211,6 +212,28 @@ export default function AccountingClient({
   marginData: MarginData
   branchList?: { id: string; name: string }[]
   apAgeing?: APAgeingData
+  consolidatedData?: {
+    success: true
+    branches: Array<{
+      branch_id: string; branch_name: string
+      invoice_count: string; total_revenue: string
+      total_cgst: string; total_sgst: string; total_igst: string
+      unique_customers: string
+    }>
+    stock: Array<{
+      branch_id: string; branch_name: string
+      total_units: string; total_cost_value: string
+    }>
+    service: Array<{
+      branch_id: string; branch_name: string
+      open_jobs: string; completed_jobs: string; total_service_revenue: string
+    }>
+    totals: {
+      totalRevenue: number; totalInvoices: number; totalGST: number
+      totalCustomers: number; totalStockUnits: number
+      totalStockValue: number; totalOpenJobs: number
+    }
+  } | null
 }) {
   const router = useRouter()
   const [tab, setTab] = useState(activeTab)
@@ -569,6 +592,7 @@ export default function AccountingClient({
       icon: Receipt },
     { id: 'margins',   label: 'Margin Report',
       icon: TrendingUp },
+    ...(isAdmin ? [{ id: 'consolidated', label: 'Multi-Branch', icon: Building2 }] : []),
   ]
 
   return (
@@ -830,6 +854,9 @@ export default function AccountingClient({
                           {fmtINR(
                             Number(row.collected) - Number(row.paid)
                           )}
+
+  
+
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1951,6 +1978,170 @@ export default function AccountingClient({
 
         </div>
       )}
+{tab === 'consolidated' && isAdmin && (
+    <div className="space-y-6">
+      {!consolidatedData ? (
+        <div className="p-12 text-center text-slate-400">No consolidated data available</div>
+      ) : (
+        <>
+          {/* Consolidated KPI summary */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Consolidated Totals � All Branches</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card><CardContent className="p-4">
+                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total Revenue</p>
+                <p className="text-2xl font-black text-emerald-700">{fmtINR(consolidatedData.totals.totalRevenue)}</p>
+                <p className="text-xs text-slate-400 mt-1">{consolidatedData.totals.totalInvoices} invoices</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total GST Collected</p>
+                <p className="text-2xl font-black text-amber-700">{fmtINR(consolidatedData.totals.totalGST)}</p>
+                <p className="text-xs text-slate-400 mt-1">{consolidatedData.totals.totalCustomers} customers</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Stock Value</p>
+                <p className="text-2xl font-black text-blue-700">{fmtINR(consolidatedData.totals.totalStockValue)}</p>
+                <p className="text-xs text-slate-400 mt-1">{consolidatedData.totals.totalStockUnits} units</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Open Service Jobs</p>
+                <p className="text-2xl font-black text-purple-700">{consolidatedData.totals.totalOpenJobs}</p>
+                <p className="text-xs text-slate-400 mt-1">across all branches</p>
+              </CardContent></Card>
+            </div>
+          </div>
+
+          {/* Per-branch sales breakdown */}
+          <Card>
+            <CardHeader className="bg-muted/30 border-b py-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Building2 className="h-4 w-4" /> Sales by Branch
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollableTable minWidth="100%">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-bold">Branch</TableHead>
+                      <TableHead className="text-right font-bold">Invoices</TableHead>
+                      <TableHead className="text-right font-bold">Revenue</TableHead>
+                      <TableHead className="text-right font-bold">GST Collected</TableHead>
+                      <TableHead className="text-right font-bold">Customers</TableHead>
+                      <TableHead className="text-right font-bold">% of Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {consolidatedData.branches.map(b => {
+                      const gst = Number(b.total_cgst) + Number(b.total_sgst) + Number(b.total_igst)
+                      const pct = consolidatedData.totals.totalRevenue > 0
+                        ? ((Number(b.total_revenue) / consolidatedData.totals.totalRevenue) * 100).toFixed(1)
+                        : '0.0'
+                      return (
+                        <TableRow key={b.branch_id}>
+                          <TableCell className="font-semibold text-sm">{b.branch_name}</TableCell>
+                          <TableCell className="text-right tabular-nums text-sm">{Number(b.invoice_count)}</TableCell>
+                          <TableCell className="text-right tabular-nums text-sm font-bold text-emerald-700">{fmtINR(Number(b.total_revenue))}</TableCell>
+                          <TableCell className="text-right tabular-nums text-sm text-amber-700">{fmtINR(gst)}</TableCell>
+                          <TableCell className="text-right tabular-nums text-sm">{Number(b.unique_customers)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-bold text-slate-500 tabular-nums w-10 text-right">{pct}%</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    <TableRow className="bg-slate-50 border-t-2 font-black">
+                      <TableCell className="font-black text-sm">TOTAL</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm font-black">{consolidatedData.totals.totalInvoices}</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm font-black text-emerald-700">{fmtINR(consolidatedData.totals.totalRevenue)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm font-black text-amber-700">{fmtINR(consolidatedData.totals.totalGST)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm font-black">{consolidatedData.totals.totalCustomers}</TableCell>
+                      <TableCell className="text-right text-xs font-black text-slate-500">100%</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </ScrollableTable>
+            </CardContent>
+          </Card>
+
+          {/* Per-branch stock + service side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="bg-muted/30 border-b py-3">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Package className="h-4 w-4" /> Stock by Branch
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-bold">Branch</TableHead>
+                      <TableHead className="text-right font-bold">Units</TableHead>
+                      <TableHead className="text-right font-bold">Cost Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {consolidatedData.stock.map(b => (
+                      <TableRow key={b.branch_id}>
+                        <TableCell className="text-sm font-medium">{b.branch_name}</TableCell>
+                        <TableCell className="text-right tabular-nums text-sm">{Number(b.total_units)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-sm font-bold text-blue-700">{fmtINR(Number(b.total_cost_value))}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-slate-50 border-t-2">
+                      <TableCell className="font-black text-sm">TOTAL</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm font-black">{consolidatedData.totals.totalStockUnits}</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm font-black text-blue-700">{fmtINR(consolidatedData.totals.totalStockValue)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="bg-muted/30 border-b py-3">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Wrench className="h-4 w-4" /> Service by Branch
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-bold">Branch</TableHead>
+                      <TableHead className="text-right font-bold">Open</TableHead>
+                      <TableHead className="text-right font-bold">Completed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {consolidatedData.service.map(b => (
+                      <TableRow key={b.branch_id}>
+                        <TableCell className="text-sm font-medium">{b.branch_name}</TableCell>
+                        <TableCell className="text-right tabular-nums text-sm text-amber-600 font-bold">{Number(b.open_jobs)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-sm text-emerald-600">{Number(b.completed_jobs)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-slate-50 border-t-2">
+                      <TableCell className="font-black text-sm">TOTAL</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm font-black text-amber-600">{consolidatedData.totals.totalOpenJobs}</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm font-black text-emerald-600">{consolidatedData.service.reduce((s,b) => s + Number(b.completed_jobs), 0)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  )}
+
       </div>{/* end finance-printable */}
 
       {/* ── Off-screen print template (react-to-print target) ── */}

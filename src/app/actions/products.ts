@@ -74,3 +74,100 @@ export async function updateProductAction(id: string, updateData: Partial<typeof
   revalidatePath("/products")
   return { data: data[0] }
 }
+
+export async function bulkImportProductsAction(rows: Array<{
+  model_name: string
+  brand?: string
+  category?: string
+  product_code?: string
+  base_price?: number
+  mrp?: number
+  dealer_price?: number
+  hsn_code?: string
+  gst_rate?: number
+  warranty_months?: number
+  description?: string
+  tracking_type?: string
+  min_stock_level?: number
+}>) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { data: null, error: new Error('Unauthorized') }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
+    return { data: null, error: new Error('Manager role required') }
+  }
+
+  const summary = { added: 0, updated: 0, failed: 0 }
+  const errors: Array<{ row: number; code: string; error: string }> = []
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (!row.model_name?.trim()) {
+      errors.push({ row: i + 2, code: row.product_code ?? '-', error: 'Model Name is required' })
+      summary.failed++
+      continue
+    }
+
+    try {
+      if (row.product_code?.trim()) {
+        // Check for existing product with same code
+        const existing = await db.select({ id: products.id })
+          .from(products)
+          .where(eq(products.product_code, row.product_code.trim()))
+          .limit(1)
+
+        if (existing.length > 0) {
+          // Update existing
+          await db.update(products)
+            .set({
+              model_name:     row.model_name.trim(),
+              brand:          row.brand?.trim() ?? null,
+              category:       row.category?.trim() ?? null,
+              base_price:     row.base_price ? String(row.base_price) : null,
+              mrp:            row.mrp ? String(row.mrp) : null,
+              dealer_price:   row.dealer_price ? String(row.dealer_price) : null,
+              hsn_code:       row.hsn_code?.trim() ?? null,
+              gst_rate:       row.gst_rate ? String(row.gst_rate) : '18',
+              warranty_months: row.warranty_months ?? null,
+              description:    row.description?.trim() ?? null,
+              tracking_type:  row.tracking_type?.trim() ?? null,
+              min_stock_level: row.min_stock_level ?? 0,
+            })
+            .where(eq(products.product_code, row.product_code.trim()))
+          summary.updated++
+          continue
+        }
+      }
+
+      // Insert new
+      await db.insert(products).values({
+        model_name:     row.model_name.trim(),
+        brand:          row.brand?.trim() ?? null,
+        category:       row.category?.trim() ?? null,
+        product_code:   row.product_code?.trim() ?? null,
+        base_price:     row.base_price ? String(row.base_price) : null,
+        mrp:            row.mrp ? String(row.mrp) : null,
+        dealer_price:   row.dealer_price ? String(row.dealer_price) : null,
+        hsn_code:       row.hsn_code?.trim() ?? null,
+        gst_rate:       row.gst_rate ? String(row.gst_rate) : '18',
+        warranty_months: row.warranty_months ?? null,
+        description:    row.description?.trim() ?? null,
+        tracking_type:  row.tracking_type?.trim() ?? 'serial',
+        min_stock_level: row.min_stock_level ?? 0,
+        is_archived:    false,
+      })
+      summary.added++
+    } catch (err) {
+      errors.push({
+        row: i + 2,
+        code: row.product_code ?? '-',
+        error: (err as Error).message,
+      })
+      summary.failed++
+    }
+  }
+
+  return { data: { summary, errors }, error: null }
+}
+

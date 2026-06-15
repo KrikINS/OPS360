@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { LogOut, Settings, Loader2, KeyRound, Check } from "lucide-react"
+import { LogOut, Settings, Loader2, KeyRound, Check, Receipt, Plus } from "lucide-react"
 
 type UserNavProps = {
   profile: {
@@ -50,6 +50,14 @@ export function UserNav({ profile }: UserNavProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [switchingBranchId, setSwitchingBranchId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState("")
+  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false)
+  const [expAmount, setExpAmount]   = useState('')
+  const [expAccount, setExpAccount] = useState('5070')
+  const [expPayment, setExpPayment] = useState('1010')
+  const [expDesc, setExpDesc]       = useState('')
+  const [expError, setExpError]     = useState('')
+  const [expSubmitting, setExpSubmitting] = useState(false)
+  const [expSuccess, setExpSuccess] = useState(false)
   const { data: session } = useSession()
   const { supportEmail } = useBranding()
 
@@ -105,6 +113,54 @@ export function UserNav({ profile }: UserNavProps) {
       setTimeout(() => setSwitchingBranchId(null), 1000)
     }
   }
+
+  const handleSubmitExpense = async () => {
+    if (!expAmount || !expDesc.trim()) {
+      setExpError('Amount and description are required')
+      return
+    }
+    if (parseFloat(expAmount) <= 0) {
+      setExpError('Amount must be greater than 0')
+      return
+    }
+    setExpSubmitting(true)
+    setExpError('')
+    try {
+      const { createExpenseRecord } = await import('@/actions/finance')
+      const result = await createExpenseRecord({
+        amount:         parseFloat(expAmount),
+        expenseAccount: expAccount,
+        paymentAccount: expPayment,
+        description:    expDesc.trim(),
+      })
+      if (result.success) {
+        setExpSuccess(true)
+        setTimeout(() => {
+          setIsExpenseDialogOpen(false)
+          setExpAmount(''); setExpDesc(''); setExpAccount('5070')
+          setExpPayment('1010'); setExpSuccess(false)
+        }, 1500)
+      } else {
+        setExpError(result.error ?? 'Failed to submit expense')
+      }
+    } catch (err) {
+      setExpError((err as Error).message)
+    } finally {
+      setExpSubmitting(false)
+    }
+  }
+
+  const EXPENSE_ACCOUNTS = [
+    { code: '5020', name: 'Freight & Logistics' },
+    { code: '5030', name: 'Utilities' },
+    { code: '5040', name: 'Rent' },
+    { code: '5060', name: 'Marketing & Advertising' },
+    { code: '5070', name: 'Miscellaneous Expense' },
+  ]
+  const PAYMENT_ACCOUNTS = [
+    { code: '1010', name: 'Cash & Petty Cash' },
+    { code: '1020', name: 'Bank Accounts' },
+  ]
 
   return (
     <>
@@ -189,6 +245,16 @@ export function UserNav({ profile }: UserNavProps) {
               <KeyRound className="mr-2 h-4 w-4" />
               <span>Change Password</span>
             </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer font-bold text-[10px] uppercase tracking-wider h-11 sm:h-9 text-amber-700 hover:text-amber-800 focus:text-amber-800"
+              onClick={(e) => {
+                e.preventDefault()
+                setIsExpenseDialogOpen(true)
+              }}
+            >
+              <Receipt className="mr-2 h-4 w-4" />
+              <span>Submit Expense</span>
+            </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
@@ -242,6 +308,100 @@ export function UserNav({ profile }: UserNavProps) {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isExpenseDialogOpen} onOpenChange={open => {
+        setIsExpenseDialogOpen(open)
+        if (!open) { setExpError(''); setExpSuccess(false) }
+      }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-amber-600" />
+              Submit Expense
+            </DialogTitle>
+            <DialogDescription>
+              Submit an expense for manager approval. It will be reviewed before posting to accounts.
+            </DialogDescription>
+          </DialogHeader>
+
+          {expSuccess ? (
+            <div className="py-8 text-center space-y-2">
+              <div className="h-12 w-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto">
+                <Receipt className="h-6 w-6 text-emerald-600" />
+              </div>
+              <p className="font-bold text-emerald-700">Expense Submitted!</p>
+              <p className="text-sm text-slate-500">Your expense has been submitted for approval.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Amount (₹) *</label>
+                  <Input
+                    type="number" min="0.01" step="0.01"
+                    placeholder="0.00"
+                    value={expAmount}
+                    onChange={e => setExpAmount(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Payment Source</label>
+                  <select value={expPayment} onChange={e => setExpPayment(e.target.value)}
+                    className="h-9 border rounded-lg px-3 text-sm bg-white w-full">
+                    {PAYMENT_ACCOUNTS.map(a => (
+                      <option key={a.code} value={a.code}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Expense Category *</label>
+                <select value={expAccount} onChange={e => setExpAccount(e.target.value)}
+                  className="h-9 border rounded-lg px-3 text-sm bg-white w-full">
+                  {EXPENSE_ACCOUNTS.map(a => (
+                    <option key={a.code} value={a.code}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Description *</label>
+                <textarea
+                  placeholder="Brief description of the expense..."
+                  value={expDesc}
+                  onChange={e => setExpDesc(e.target.value)}
+                  className="min-h-[80px] w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                />
+              </div>
+
+              {expError && (
+                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-100">{expError}</p>
+              )}
+            </div>
+          )}
+
+          {!expSuccess && (
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsExpenseDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSubmitExpense}
+                disabled={expSubmitting || !expAmount || !expDesc.trim()}
+                className="bg-[#001529] hover:bg-[#002545] text-white"
+              >
+                {expSubmitting
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
+                  : <><Plus className="mr-2 h-4 w-4" />Submit Expense</>
+                }
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </>

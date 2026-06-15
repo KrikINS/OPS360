@@ -43,6 +43,7 @@ import {
   Building2,
   FolderTree,
   CreditCard,
+  CalendarDays,
 } from "lucide-react"
 import {
   Collapsible,
@@ -146,9 +147,11 @@ const navigationGroups: NavigationGroup[] = [
   {
     id: "staff",
     title: "Human Resources",
-    url: "/staff",
     icon: Users,
-    items: []
+    items: [
+      { title: "Directory", url: "/staff", icon: Users },
+      { title: "Leave Management", url: "/staff?tab=leave", icon: CalendarDays }
+    ]
   },
   {
     id: "admin",

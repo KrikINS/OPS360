@@ -10,6 +10,7 @@ import {
   getMarginReport,
   getBranches,
   getAPAgeing,
+  getConsolidatedReport,
 } from '@/actions/finance'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import AccountingClient from './client'
@@ -79,6 +80,10 @@ export default async function AccountingPage(props: {
     }),
   ])
 
+  const consolidatedResult = isAdmin
+    ? await getConsolidatedReport({ fromDate, toDate })
+    : null
+
   return (
     <AccountingClient
       activeTab={searchParams.tab ?? 'dashboard'}
@@ -99,6 +104,7 @@ export default async function AccountingPage(props: {
       marginData={marginResult.success ? marginResult : null}
       branchList={branchesResult.success ? branchesResult.branches : []}
       apAgeing={(apAgeingResult.success && apAgeingResult.rows && apAgeingResult.totals) ? { rows: apAgeingResult.rows, totals: apAgeingResult.totals } : null}
+      consolidatedData={consolidatedResult?.success ? consolidatedResult : null}
     />
   )
 }

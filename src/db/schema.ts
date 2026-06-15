@@ -542,6 +542,38 @@ export const attendance_corrections = pgTable("attendance_corrections", {
   created_at: timestamp("created_at").defaultNow(),
 })
 
+export const leave_types = pgTable('leave_types', {
+  id:           uuid('id').primaryKey().defaultRandom(),
+  name:         text('name').notNull(),
+  days_per_year: integer('days_per_year').notNull().default(0),
+  is_active:    boolean('is_active').notNull().default(true),
+  created_at:   timestamp('created_at').defaultNow(),
+})
+
+export const leave_balances = pgTable('leave_balances', {
+  id:            uuid('id').primaryKey().defaultRandom(),
+  employee_id:   uuid('employee_id').notNull().references(() => profiles.id),
+  leave_type_id: uuid('leave_type_id').notNull().references(() => leave_types.id),
+  year:          integer('year').notNull(),
+  allocated:     integer('allocated').notNull().default(0),
+  used:          integer('used').notNull().default(0),
+  created_at:    timestamp('created_at').defaultNow(),
+})
+
+export const leave_requests = pgTable('leave_requests', {
+  id:               uuid('id').primaryKey().defaultRandom(),
+  employee_id:      uuid('employee_id').notNull().references(() => profiles.id),
+  leave_type_id:    uuid('leave_type_id').notNull().references(() => leave_types.id),
+  from_date:        date('from_date').notNull(),
+  to_date:          date('to_date').notNull(),
+  days:             integer('days').notNull(),
+  reason:           text('reason'),
+  status:           text('status').notNull().default('pending'),
+  approved_by:      uuid('approved_by').references(() => profiles.id),
+  approved_at:      timestamp('approved_at'),
+  rejection_reason: text('rejection_reason'),
+  created_at:       timestamp('created_at').defaultNow(),
+})
 export const service_jobs = pgTable("service_jobs", {
   id: uuid("id").primaryKey().defaultRandom(),
   job_id: text("job_id").notNull().unique(),

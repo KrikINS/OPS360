@@ -10,11 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { Users, Clock, Activity, Plus, Wallet, Trash2, Eye, ChevronDown, ChevronRight, Loader2, CheckCircle2, AlertTriangle, Printer } from "lucide-react"
+import { Users, Clock, Activity, Plus, Wallet, Trash2, Eye, ChevronDown, ChevronRight, Loader2, CheckCircle2, AlertTriangle, Printer, CalendarDays } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useSearchParams, useRouter } from "next/navigation"
 import type { StaffRow } from "@/actions/hr"
-import { processPayrollRun, getPayrollRuns, getPayslips, getEmployeesWithStructures, setSalaryStructure, upsertEmployeeDetails } from "@/actions/hr"
+import { processPayrollRun, getPayrollRuns, getPayslips, getEmployeesWithStructures, setSalaryStructure, upsertEmployeeDetails, getLeaveTypes, getMyLeaveBalance, submitLeaveRequest, getLeaveRequests, approveLeaveRequest } from "@/actions/hr"
 import { fmtINR } from "@/lib/utils"
 
 import { PayslipTemplate } from '@/components/hr/PayslipTemplate'
@@ -23,6 +23,7 @@ import { useBranding } from '@/providers/GlobalBrandingProvider'
 import ClockWidget from "@/components/hr/ClockWidget"
 import ActivityClient from "./activity/client"
 import { AddOfflineStaffModal } from "@/components/hr/AddOfflineStaffModal"
+import { LeaveManagementTab } from "@/components/hr/LeaveManagementTab"
 
 type ActivityRow = {
   id: string
@@ -424,6 +425,10 @@ export default function StaffClient({
           <TabsTrigger value="activity" className={TAB_CLASS}>
             <Activity className="h-4 w-4" />
             Activity Log
+          </TabsTrigger>
+          <TabsTrigger value="leave" className={TAB_CLASS}>
+            <CalendarDays className="h-4 w-4" />
+            Leave
           </TabsTrigger>
           {isManager && (
             <TabsTrigger value="payroll" className={TAB_CLASS}>
@@ -992,6 +997,10 @@ export default function StaffClient({
             )}
           </TabsContent>
         )}
+
+        <TabsContent value="leave" className="mt-0 outline-none">
+          <LeaveManagementTab isAdmin={isAdmin} isManager={isManager} currentUserId={currentUserId} />
+        </TabsContent>
       </Tabs>
 
       {isAdmin && <AddOfflineStaffModal open={modalOpen} onOpenChange={setModalOpen} />}

@@ -29,13 +29,19 @@ interface BulkImportModalProps {
 }
 
 interface ImportRow {
-  Brand: string
-  Category: string
   Model_Name: string
-  EHA_Code: string
-  Purchase_Price: number
-  Selling_Price: number
-  Description: string
+  Brand?: string
+  Category?: string
+  Product_Code?: string
+  MRP?: number
+  Selling_Price?: number
+  Dealer_Price?: number
+  HSN_Code?: string
+  GST_Rate?: number
+  Warranty_Months?: number
+  Tracking_Type?: string
+  Min_Stock_Level?: number
+  Description?: string
   [key: string]: string | number | boolean | null | undefined
 }
 
@@ -54,16 +60,24 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
     errors: { row: number; code: string; error: string }[];
   } | null>(null)
 
-  const downloadTemplate = () => {
-    const headers = ["Brand", "Category", "Model_Name", "EHA_Code", "Purchase_Price", "Selling_Price", "Description"]
-    const csvContent = headers.join(",")
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.setAttribute("href", url)
-    link.setAttribute("download", `EHA_Product_Import_Template.csv`)
-    link.click()
-    URL.revokeObjectURL(url)
+  const handleDownloadTemplate = () => {
+    const wb = XLSX.utils.book_new()
+    const headers = [
+      'Model_Name', 'Brand', 'Category', 'Product_Code',
+      'MRP', 'Selling_Price', 'Dealer_Price', 'HSN_Code',
+      'GST_Rate', 'Warranty_Months', 'Tracking_Type',
+      'Min_Stock_Level', 'Description'
+    ]
+    const sample = [
+      'Samsung 55" 4K TV', 'Samsung', 'Television', 'EHA-TV-SAM-001',
+      82000, 75000, 62000, '8528', 18, 12, 'serial', 2,
+      'QLED Smart TV with voice control'
+    ]
+    const ws = XLSX.utils.aoa_to_sheet([headers, sample])
+    // Column widths
+    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 16) }))
+    XLSX.utils.book_append_sheet(wb, ws, 'Products')
+    XLSX.writeFile(wb, 'EHA_Product_Import_Template.xlsx')
   }
 
   const downloadErrorReport = () => {
@@ -137,19 +151,29 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
   const handleConfirmImport = async () => {
     setProcessing(true)
     try {
-      const { data: result, error } = await (Promise.resolve({ data: { summary: { added: 0, updated: 0, failed: 0 }, errors: [] }, error: null }) as unknown as Promise<{data: { summary: { added: number, updated: number, failed: number }, errors: { row: number; code: string; error: string }[] }, error: unknown}>)
+      const { bulkImportProductsAction } = await import('@/app/actions/products')
+      const mapped = data.map(row => ({
+        model_name:      String(row.Model_Name ?? '').trim(),
+        brand:           row.Brand ? String(row.Brand).trim() : undefined,
+        category:        row.Category ? String(row.Category).trim() : undefined,
+        product_code:    row.Product_Code ? String(row.Product_Code).trim() : undefined,
+        base_price:      row.Selling_Price ? Number(row.Selling_Price) : undefined,
+        mrp:             row.MRP ? Number(row.MRP) : undefined,
+        dealer_price:    row.Dealer_Price ? Number(row.Dealer_Price) : undefined,
+        hsn_code:        row.HSN_Code ? String(row.HSN_Code).trim() : undefined,
+        gst_rate:        row.GST_Rate ? Number(row.GST_Rate) : undefined,
+        warranty_months: row.Warranty_Months ? Number(row.Warranty_Months) : undefined,
+        tracking_type:   row.Tracking_Type ? String(row.Tracking_Type).trim() : undefined,
+        min_stock_level: row.Min_Stock_Level ? Number(row.Min_Stock_Level) : undefined,
+        description:     row.Description ? String(row.Description).trim() : undefined,
+      }))
 
+      const { data: result, error } = await bulkImportProductsAction(mapped)
       if (error) throw error
-      
-      const summary = result.summary || { added: 0, updated: 0, failed: 0 }
-      const serverErrors = result.errors || []
-      
-      setResults({
-        added: summary.added,
-        updated: summary.updated,
-        failed: summary.failed,
-        errors: serverErrors
-      })
+
+      const summary = result!.summary
+      const serverErrors = result!.errors
+      setResults({ added: summary.added, updated: summary.updated, failed: summary.failed, errors: serverErrors })
 
       if (summary.failed === 0) {
         setTimeout(() => {
@@ -160,8 +184,7 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
         }, 1500)
       }
     } catch (err: unknown) {
-      console.error(err)
-      const message = err instanceof Error ? err.message : "Bulk import failed. Check console for details."
+      const message = err instanceof Error ? err.message : 'Bulk import failed'
       setError(message)
     } finally {
       setProcessing(false)
@@ -169,7 +192,7 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
   }
 
   const isValidRow = (row: ImportRow) => {
-    return row.Brand && row.Category && row.Model_Name && row.EHA_Code
+    return !!row.Model_Name?.toString().trim()
   }
 
   return (
@@ -274,7 +297,7 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
                   title="Select File"
                   placeholder="Select File"
                   onChange={(e) => e.target.files && processFile(e.target.files[0])}
-                  accept=".csv, .xlsx"
+                  accept=".xlsx"
                 />
               </div>
 
@@ -290,7 +313,7 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
                 </div>
                 <Button 
                   variant="outline"
-                  onClick={downloadTemplate}
+                  onClick={handleDownloadTemplate}
                   className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 gap-2 font-black h-10 px-4 text-xs transition-all shadow-sm rounded-xl"
                 >
                   <FileDown className="h-4 w-4" />
@@ -318,10 +341,14 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
                 <table className="w-full text-[11px]">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase border-r">Status</th>
                       <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase border-r">Model Name</th>
                       <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase border-r">Brand</th>
-                      <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase">EHA Code</th>
+                      <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase border-r">Category</th>
+                      <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase border-r">Code</th>
+                      <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase border-r">MRP</th>
+                      <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase border-r">Selling Price</th>
+                      <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase border-r">GST%</th>
+                      <th className="py-3 px-4 text-left font-black text-slate-400 tracking-wider text-[9px] uppercase">Valid</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -329,18 +356,18 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
                       const valid = isValidRow(row)
                       return (
                         <tr key={i} className={cn("transition-colors", !valid ? "bg-rose-50" : "bg-white")}>
-                          <td className="py-2.5 px-4 font-bold">
-                            {valid ? (
-                              <span className="text-emerald-600 uppercase tracking-widest text-[8px]">Ready</span>
-                            ) : (
-                              <span className="text-rose-600 uppercase tracking-widest text-[8px] flex items-center gap-1">
-                                <AlertCircle className="h-3 w-3" /> Missing Info
-                              </span>
-                            )}
+                          <td className="py-2.5 px-4 font-bold text-slate-900 border-r">{String(row.Model_Name ?? '—')}</td>
+                          <td className="py-2.5 px-4 font-medium text-slate-600 border-r">{String(row.Brand ?? '—')}</td>
+                          <td className="py-2.5 px-4 font-medium text-slate-600 border-r">{String(row.Category ?? '—')}</td>
+                          <td className="py-2.5 px-4 font-mono font-bold text-slate-500 border-r">{String(row.Product_Code ?? '—')}</td>
+                          <td className="py-2.5 px-4 font-medium text-slate-600 border-r">{row.MRP ? `₹${Number(row.MRP).toLocaleString('en-IN')}` : '—'}</td>
+                          <td className="py-2.5 px-4 font-medium text-emerald-600 border-r">{row.Selling_Price ? `₹${Number(row.Selling_Price).toLocaleString('en-IN')}` : '—'}</td>
+                          <td className="py-2.5 px-4 font-medium text-slate-600 border-r">{row.GST_Rate ?? '18'}%</td>
+                          <td className="py-2.5 px-4">
+                            {valid
+                              ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              : <AlertCircle className="h-4 w-4 text-rose-500" />}
                           </td>
-                          <td className="py-2.5 px-4 font-bold text-slate-900 border-r">{row.Model_Name || row.model_name || "---"}</td>
-                          <td className="py-2.5 px-4 font-medium text-slate-600 border-r">{row.Brand || row.brand || "---"}</td>
-                          <td className="py-2.5 px-4 font-mono font-bold text-slate-500">{row.EHA_Code || row.eha_code || "---"}</td>
                         </tr>
                       )
                     })}

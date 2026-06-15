@@ -19,6 +19,9 @@ import {
   payroll_runs,
   payslips,
   employee_salary_structures,
+  leave_types,
+  leave_balances,
+  leave_requests,
 } from '@/db/schema'
 import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { getCashAccountCode, createJournalEntry } from '@/actions/finance'
@@ -927,6 +930,193 @@ export async function getSalaryStructureHistory(employeeId: string) {
       .where(eq(employee_salary_structures.employee_id, employeeId))
       .orderBy(desc(employee_salary_structures.effective_from))
     return { success: true as const, structures: rows }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+// ── Leave Management ──────────────────────────────────────────────────────────
+
+export async function getLeaveTypes() {
+  try {
+    const types = await db.select().from(leave_types)
+      .where(eq(leave_types.is_active, true))
+      .orderBy(leave_types.name)
+    return { success: true as const, types }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function getMyLeaveBalance() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  const year = new Date().getFullYear()
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        lt.id AS leave_type_id,
+        lt.name,
+        lt.days_per_year,
+        COALESCE(lb.allocated, lt.days_per_year) AS allocated,
+        COALESCE(lb.used, 0) AS used,
+        COALESCE(lb.allocated, lt.days_per_year) - COALESCE(lb.used, 0) AS remaining
+      FROM leave_types lt
+      LEFT JOIN leave_balances lb
+        ON lb.leave_type_id = lt.id
+        AND lb.employee_id = ${session.user.id}::uuid
+        AND lb.year = ${year}
+      WHERE lt.is_active = true
+      ORDER BY lt.name
+    `)
+    function unpackRows<T = Record<string, unknown>>(result: unknown): T[] {
+      if (result && typeof result === 'object' && 'rows' in result) return (result as { rows: T[] }).rows
+      if (Array.isArray(result)) return result as T[]
+      return []
+    }
+    const balances = unpackRows(rows)
+    return { success: true as const, balances, year }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function submitLeaveRequest(input: {
+  leaveTypeId: string
+  fromDate: string
+  toDate: string
+  reason?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  const from = new Date(input.fromDate)
+  const to   = new Date(input.toDate)
+  if (to < from) return { success: false as const, error: 'End date must be after start date' }
+
+  // Calculate working days (exclude weekends)
+  let days = 0
+  const cur = new Date(from)
+  while (cur <= to) {
+    const day = cur.getDay()
+    if (day !== 0 && day !== 6) days++
+    cur.setDate(cur.getDate() + 1)
+  }
+  if (days === 0) return { success: false as const, error: 'No working days in selected range' }
+
+  try {
+    const [request] = await db.insert(leave_requests).values({
+      employee_id:   session.user.id,
+      leave_type_id: input.leaveTypeId,
+      from_date:     input.fromDate,
+      to_date:       input.toDate,
+      days,
+      reason:        input.reason ?? null,
+      status:        'pending',
+    }).returning()
+    return { success: true as const, request, days }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function getLeaveRequests(input?: { employeeId?: string; status?: string }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  const isAdmin = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
+
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        lr.id, lr.from_date, lr.to_date, lr.days,
+        lr.reason, lr.status, lr.created_at,
+        lr.rejection_reason,
+        lt.name AS leave_type_name,
+        p.full_name AS employee_name,
+        ap.full_name AS approved_by_name
+      FROM leave_requests lr
+      JOIN leave_types lt ON lt.id = lr.leave_type_id
+      JOIN profiles p ON p.id = lr.employee_id
+      LEFT JOIN profiles ap ON ap.id = lr.approved_by
+      WHERE (
+        ${isAdmin ? sql`TRUE` : sql`lr.employee_id = ${session.user.id}::uuid`}
+      )
+      ${input?.status ? sql`AND lr.status = ${input.status}` : sql``}
+      ${input?.employeeId ? sql`AND lr.employee_id = ${input.employeeId}::uuid` : sql``}
+      ORDER BY lr.created_at DESC
+      LIMIT 100
+    `)
+    function unpackRows<T = Record<string, unknown>>(result: unknown): T[] {
+      if (result && typeof result === 'object' && 'rows' in result) return (result as { rows: T[] }).rows
+      if (Array.isArray(result)) return result as T[]
+      return []
+    }
+    return { success: true as const, requests: unpackRows(rows) }
+  } catch (error) {
+    return { success: false as const, error: (error as Error).message }
+  }
+}
+
+export async function approveLeaveRequest(input: {
+  requestId: string
+  action: 'approve' | 'reject'
+  rejectionReason?: string
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  const role = (session.user.role ?? '').toLowerCase()
+  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
+    return { success: false as const, error: 'Manager role required' }
+  }
+
+  try {
+    const [request] = await db.select().from(leave_requests)
+      .where(eq(leave_requests.id, input.requestId)).limit(1)
+    if (!request) return { success: false as const, error: 'Request not found' }
+    if (request.status !== 'pending') return { success: false as const, error: 'Request already processed' }
+
+    if (input.action === 'approve') {
+      await db.update(leave_requests)
+        .set({ status: 'approved', approved_by: session.user.id, approved_at: new Date() })
+        .where(eq(leave_requests.id, input.requestId))
+
+      // Upsert leave balance — increment used days
+      const year = new Date(request.from_date).getFullYear()
+      const existing = await db.select().from(leave_balances)
+        .where(
+          and(
+            eq(leave_balances.employee_id, request.employee_id),
+            eq(leave_balances.leave_type_id, request.leave_type_id),
+            eq(leave_balances.year, year)
+          )
+        ).limit(1)
+
+      if (existing.length > 0) {
+        await db.update(leave_balances)
+          .set({ used: existing[0].used + request.days })
+          .where(eq(leave_balances.id, existing[0].id))
+      } else {
+        const [leaveType] = await db.select().from(leave_types)
+          .where(eq(leave_types.id, request.leave_type_id)).limit(1)
+        await db.insert(leave_balances).values({
+          employee_id:   request.employee_id,
+          leave_type_id: request.leave_type_id,
+          year,
+          allocated:     leaveType?.days_per_year ?? 0,
+          used:          request.days,
+        })
+      }
+    } else {
+      await db.update(leave_requests)
+        .set({ status: 'rejected', approved_by: session.user.id, approved_at: new Date(), rejection_reason: input.rejectionReason ?? null })
+        .where(eq(leave_requests.id, input.requestId))
+    }
+
+    return { success: true as const }
   } catch (error) {
     return { success: false as const, error: (error as Error).message }
   }

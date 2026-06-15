@@ -195,3 +195,15 @@ CREATE TABLE IF NOT EXISTS credit_payments (
 );
 ```
 
+
+---
+
+## 2026-06-15 — Leave Management
+
+\\\sql
+CREATE TABLE leave_types (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, days_per_year integer NOT NULL DEFAULT 0, is_active boolean NOT NULL DEFAULT true, created_at timestamp DEFAULT now());
+INSERT INTO leave_types (name, days_per_year) VALUES ('Casual Leave',12),('Sick Leave',12),('Earned Leave',15),('Maternity Leave',90),('Paternity Leave',5);
+CREATE TABLE leave_balances (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), employee_id uuid NOT NULL REFERENCES profiles(id), leave_type_id uuid NOT NULL REFERENCES leave_types(id), year integer NOT NULL, allocated integer NOT NULL DEFAULT 0, used integer NOT NULL DEFAULT 0, created_at timestamp DEFAULT now(), UNIQUE(employee_id, leave_type_id, year));
+CREATE TABLE leave_requests (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), employee_id uuid NOT NULL REFERENCES profiles(id), leave_type_id uuid NOT NULL REFERENCES leave_types(id), from_date date NOT NULL, to_date date NOT NULL, days integer NOT NULL, reason text, status text NOT NULL DEFAULT 'pending', approved_by uuid REFERENCES profiles(id), approved_at timestamp, rejection_reason text, created_at timestamp DEFAULT now());
+\\\
+
