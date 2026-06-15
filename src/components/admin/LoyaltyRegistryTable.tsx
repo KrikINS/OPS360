@@ -9,10 +9,14 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, PlusCircle, MinusCircle, Star } from "lucide-react"
+import { Search, PlusCircle, MinusCircle, Star, History } from "lucide-react"
+import { LoyaltyHistoryDrawer } from './LoyaltyHistoryDrawer'
 
 export function LoyaltyRegistryTable({ customers, onAdjustClick }: { customers: any[], onAdjustClick: (c: any) => void }) {
   const [searchTerm, setSearchTerm] = useState('')
+  const [historyOpen, setHistoryOpen]         = useState(false)
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+  const [selectedCustomerName, setSelectedCustomerName] = useState<string | null>(null)
 
   const sorted = [...customers]
     .filter(c => c.id !== '00000000-0000-0000-0000-000000000000') // Exclude walk-in
@@ -74,6 +78,20 @@ export function LoyaltyRegistryTable({ customers, onAdjustClick }: { customers: 
                     ₹{c.loyalty_balance || 0}
                   </TableCell>
                   <TableCell className="text-right sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/80 dark:group-hover:bg-white/5 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-l border-slate-100 dark:border-white/5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg text-[10px] font-black uppercase tracking-wider text-slate-500 border-slate-200 hover:bg-slate-50 mr-1"
+                      onClick={() => {
+                        setSelectedCustomerId(c.id)
+                        setSelectedCustomerName(c.full_name)
+                        setHistoryOpen(true)
+                      }}
+                      title="View loyalty history"
+                    >
+                      <History className="h-3.5 w-3.5 mr-1" />
+                      History
+                    </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -98,6 +116,13 @@ export function LoyaltyRegistryTable({ customers, onAdjustClick }: { customers: 
           </TableBody>
         </Table>
       </div>
+
+      <LoyaltyHistoryDrawer
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        customerId={selectedCustomerId}
+        customerName={selectedCustomerName}
+      />
     </div>
   )
 }
