@@ -78,6 +78,39 @@ export default function StaffDocs() {
         </div>
       </section>
 
+      {/* NEW SECTION: Leave Management */}
+      <section className="bg-white border rounded-2xl p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-[#001529] flex items-center gap-2 mb-4">
+          <Clock className="h-6 w-6 text-purple-500" />
+          Leave Management
+        </h3>
+        <p className="text-sm text-slate-600 mb-4">A dedicated module within the HR dashboard for managing staff time-off.</p>
+        <ul className="space-y-4 text-sm text-slate-600">
+          <li className="bg-slate-50 p-4 rounded-xl border">
+            <strong className="text-[#001529] block mb-2">Leave Types & Balances:</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Admins define Leave Types (e.g., Casual, Sick) with annual day quotas.</li>
+              <li>Each staff member gets an individual Leave Balance ledger tracking their accrued vs. used days.</li>
+            </ul>
+          </li>
+          <li className="bg-slate-50 p-4 rounded-xl border">
+            <strong className="text-[#001529] block mb-2">Applying for Leave:</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Staff can submit leave requests specifying start/end dates, type, and reason.</li>
+              <li>The system calculates the exact number of days.</li>
+              <li>Pending requests are routed to management for review.</li>
+            </ul>
+          </li>
+          <li className="bg-slate-50 p-4 rounded-xl border">
+            <strong className="text-[#001529] block mb-2">Approvals:</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Managers/Admins can Approve or Reject requests.</li>
+              <li>Upon approval, the system automatically deducts the requested days from the staff member's balance.</li>
+            </ul>
+          </li>
+        </ul>
+      </section>
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Role Matrix */}
         <div className="bg-white border rounded-xl p-6 shadow-sm">

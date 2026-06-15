@@ -173,6 +173,7 @@ interface PosContextType {
   refreshInventory: () => Promise<void>
   fetchAvailableSerials: (productId: string) => Promise<{ id: string, serial_number: string }[]>
   assignSerialToUnit: (productId: string, slotIndex: number, unit: SelectedUnit | null) => void
+  addToCartBySerial: (serial: string) => Promise<'added' | 'duplicate' | 'not_found' | 'unavailable' | 'wrong_branch' | 'no_branch'>
   changeBranch: (branchId: string) => Promise<void>
   triggerInvoicePrint: (id: string) => void
   setPrintInvoiceId: (id: string | null) => void
@@ -840,6 +841,37 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     }
   }, [cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats, resetCustomerContext, loyaltyRedeem])
 
+  const addToCartBySerial = useCallback(async (serial: string): Promise<'added' | 'duplicate' | 'not_found' | 'unavailable' | 'wrong_branch' | 'no_branch'> => {
+    if (!selectedBranch) return 'no_branch'
+
+    const upperSerial = serial.toUpperCase()
+
+    const alreadyInCart = cart.some(item =>
+      item.selectedUnits &&
+      Object.values(item.selectedUnits).some(u => u?.serial === upperSerial)
+    )
+    if (alreadyInCart) return 'duplicate'
+
+    const { scanSerialAtPosAction } = await import('@/app/actions/pos')
+    const result = await scanSerialAtPosAction(upperSerial, selectedBranch)
+
+    if ('error' in result) return result.error
+
+    const { inventoryId, productId } = result.data
+    const product = products.find(p => p.id === productId)
+    if (!product) return 'not_found'
+
+    const cartItem = cart.find(item => item.id === productId)
+    const nextSlot = cartItem ? cartItem.qty : 0
+
+    addToCart(product)
+    setTimeout(() => {
+      assignSerialToUnit(productId, nextSlot, { id: inventoryId, serial: upperSerial })
+    }, 0)
+
+    return 'added'
+  }, [selectedBranch, cart, products, addToCart, assignSerialToUnit])
+
   // Helper with retry logic for fetching full invoice state
   const fetchInvoiceById = useCallback(async (id: string, retries = 3): Promise<InvoiceData | null> => {
     for (let i = 0; i < retries; i++) {
@@ -892,7 +924,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     updatePosPin,
     addToCart, removeFromCart, updateQty, clearCart, setToast, 
     searchCustomers, selectCustomer, setSelectedCustomer, executeCheckout, refreshInventory, changeBranch,
-    fetchAvailableSerials, assignSerialToUnit, fetchInvoiceById
+    fetchAvailableSerials, assignSerialToUnit, fetchInvoiceById, addToCartBySerial
   }
 
   return <PosContext.Provider value={value}>{children}</PosContext.Provider>

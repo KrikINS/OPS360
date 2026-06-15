@@ -100,7 +100,18 @@ export default function AdminDocs() {
           </p>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-slate-50 border rounded-lg p-4">
-              <h4 className="font-bold text-sm text-[#001529] mb-2">Adding & Editing Products</h4>
+              <h4 className="font-bold text-sm text-[#001529] mb-2">Bulk Import Products</h4>
+              <p className="text-xs text-slate-600 mb-2">
+                Use the <strong>Bulk Import</strong> feature to upload multiple product definitions simultaneously using a branded template.
+              </p>
+              <ul className="space-y-2 text-xs text-slate-600 list-disc pl-4">
+                <li><strong>Download Template:</strong> Contains columns for Model, Brand, Category, Code, Prices, MRP, and Tax settings.</li>
+                <li><strong>Validation:</strong> The system ensures required fields are met and dealer price &le; MRP &le; Min Sell Price constraints are valid before importing.</li>
+                <li><strong>Data Population:</strong> Upon successful upload, the global catalog is populated, immediately making these products available for GRN across all branches.</li>
+              </ul>
+            </div>
+            <div className="bg-slate-50 border rounded-lg p-4">
+              <h4 className="font-bold text-sm text-[#001529] mb-2">Adding & Editing Products Manually</h4>
               <p className="text-xs text-slate-600 mb-2">
                 When provisioning a new asset or updating an existing product via the Product Modals, the following base pricing parameters must be carefully established:
               </p>

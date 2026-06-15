@@ -223,6 +223,33 @@ export async function getInvoiceItemsForReturnAction(invoiceId: string) {
   }
 }
 
+export async function scanSerialAtPosAction(
+  serial: string,
+  branchId: string
+): Promise<
+  | { data: { inventoryId: string; productId: string } }
+  | { error: 'not_found' | 'unavailable' | 'wrong_branch' }
+> {
+  try {
+    const rows = await db
+      .select()
+      .from(inventory)
+      .where(sql`UPPER(${inventory.serial_number}) = UPPER(${serial})`)
+      .limit(1)
+
+    if (!rows.length) return { error: 'not_found' }
+
+    const row = rows[0]
+    if (row.branch_id !== branchId) return { error: 'wrong_branch' }
+    if (row.status !== 'Available') return { error: 'unavailable' }
+
+    return { data: { inventoryId: row.id, productId: row.product_id as string } }
+  } catch (error) {
+    console.error('scanSerialAtPosAction error:', error)
+    return { error: 'not_found' }
+  }
+}
+
 export async function getPosInitialDataAction(userId: string, branchId?: string) {
   try {
     const [profileData, branchesData, walkInCustomer] = await Promise.all([

@@ -61,8 +61,9 @@ export default function SalesDocs() {
           <li>Points visible in cart when customer is selected.</li>
           <li><strong>Cashier can redeem points at checkout:</strong> enter points amount → deducted from grand total. "Use All" button applies maximum redeemable.</li>
           <li>Invoice shows points earned at bottom.</li>
-          <li>Admin can manually adjust points per customer via Loyalty tab in Customer Registry.</li>
-          <li>Transaction history tracks: earn / redeem / adjustment.</li>
+          <li><strong>Loyalty History Drawer:</strong> Accessible via the Customer Registry. Clicking on a customer's loyalty balance opens a detailed audit drawer.</li>
+          <li>The History Drawer tracks every transaction: POS earnings, POS redemptions, and manual Admin adjustments with reasons and timestamps.</li>
+          <li>Admin can manually adjust points per customer via this drawer.</li>
         </ul>
       </section>
 

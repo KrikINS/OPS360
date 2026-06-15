@@ -144,6 +144,9 @@ export default function AccountingDocsPage() {
               <li><strong>Dashboard:</strong> P&L summary cards, revenue/expense breakdown, GST position, and recent journal entries.</li>
               <li><strong>Balance Sheet:</strong> Verifies Assets = Liabilities + Equity, includes an accounting equation banner and balance check indicator.</li>
               <li>
+                <strong>Multi-Branch Consolidated:</strong> (Admins Only) View aggregated revenue, GST, stock values, and open service jobs across the entire network, plus detailed per-branch breakdown tables.
+              </li>
+              <li>
                 <strong>Journal Ledger:</strong> View all entries with source badges.
                 <ul className="list-circle pl-5 mt-2 space-y-1">
                   <li><span className="font-semibold text-blue-500">GRN</span> — blue</li>
@@ -169,6 +172,7 @@ export default function AccountingDocsPage() {
           <div className="prose prose-slate dark:prose-invert max-w-none">
             <ul>
               <li>Staff submits an expense with a category and payment source.</li>
+              <li><strong>Global Access:</strong> Expenses can be submitted from anywhere in the app using the "Submit Expense" option in the User Profile dropdown (top right).</li>
               <li>Manager or Admin approves the expense, which auto-posts the journal entry.</li>
               <li><strong>Categories:</strong> COGS, Freight, Utilities, Rent, Salaries, Marketing, Miscellaneous.</li>
               <li><strong>Payment sources:</strong> Cash, Bank.</li>

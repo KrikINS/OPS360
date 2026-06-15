@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { Search, Tag, Barcode, Plus, ShoppingCart, Info } from 'lucide-react'
+import { BarcodeScannerButton } from './BarcodeScannerButton'
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -59,6 +60,7 @@ export function ProductGrid() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <BarcodeScannerButton />
         <div className="flex items-center gap-2 px-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-white/5">
           <Tag className="h-4 w-4 text-slate-400 dark:text-slate-500" />
           <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">{filteredProducts.length} Items</span>

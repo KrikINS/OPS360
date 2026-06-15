@@ -9,19 +9,34 @@ import { CartSidebar } from '@/components/pos/CartSidebar'
 import { CheckoutModal } from '@/components/pos/CheckoutModal'
 import { TerminalLockOverlay } from '@/components/pos/TerminalLockOverlay'
 import { usePosHotkeys } from '@/hooks/usePosHotkeys'
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
 import { useReactToPrint } from 'react-to-print'
 
 function POSContent() {
-  const { toast, cart, clearCart, printInvoiceId, setPrintInvoiceId, isDarkMode, isCartValid } = usePos()
+  const { toast, cart, clearCart, printInvoiceId, setPrintInvoiceId, isDarkMode, isCartValid, addToCartBySerial, setToast } = usePos()
   const [showCheckout, setShowCheckout] = useState(false)
   const [mobileCartOpen, setMobileCartOpen] = useState(false)
 
   const registryPrintRef = useRef<HTMLDivElement>(null)
   const handleRegistryPrint = useReactToPrint({
     contentRef: registryPrintRef,
+  })
+
+  useBarcodeScanner(async (serial) => {
+    const result = await addToCartBySerial(serial)
+    const messages: Record<string, { message: string; type: 'success' | 'error' }> = {
+      added:        { message: `Added: ${serial}`, type: 'success' },
+      duplicate:    { message: `Already in cart: ${serial}`, type: 'error' },
+      not_found:    { message: `Serial not found: ${serial}`, type: 'error' },
+      unavailable:  { message: `Unit not available: ${serial}`, type: 'error' },
+      wrong_branch: { message: `Serial not at this branch`, type: 'error' },
+      no_branch:    { message: `No branch selected`, type: 'error' },
+    }
+    const msg = messages[result]
+    if (msg) setToast(msg)
   })
 
   // Hotkeys Configuration
