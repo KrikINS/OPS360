@@ -117,7 +117,7 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                 <p className="text-[8px] uppercase tracking-[0.3em] font-black m-0 text-slate-500">Inventory Management Hub</p>
               </div>
               <div className="bg-white p-1 rounded border border-slate-200">
-                <Image src={logoUrl || "/ethan-logo-final.png"} alt={`${companyName} Logo`} width={32} height={32} className="h-7 w-auto object-contain" />
+                <Image src={logoUrl || "/appterra-logo.png"} alt={`${companyName} Logo`} width={32} height={32} className="h-7 w-auto object-contain" />
               </div>
             </div>
           </div>

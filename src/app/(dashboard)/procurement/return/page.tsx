@@ -950,7 +950,7 @@ export default function PurchaseReturn() {
                       <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Reverse Logistics Division</p>
                     </div>
                     <div className="bg-white p-2 rounded-lg">
-                       <NextImage src="/ethan-logo-final.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
+                       <NextImage src="/appterra-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
                     </div>
                   </div>
                 </div>

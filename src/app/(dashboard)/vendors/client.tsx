@@ -45,7 +45,8 @@ import {
   ShieldCheck,
   Pencil,
   Save,
-  X
+  X,
+  Eye
 } from "lucide-react"
 import { 
   Select, 
@@ -64,6 +65,13 @@ import {
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { MultiSelect } from "@/components/ui/multi-select"
+import { ScrollableTable } from "@/components/ui/scrollable-table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type Vendor = {
   id: string
@@ -638,7 +646,7 @@ export default function VendorsClient({
         </Dialog>
       </div>
 
-      <Card className="shadow-md border-t-4 border-t-[#001529]">
+      <Card className="shadow-md border-t-4 border-t-[#001529] overflow-visible">
         <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg">Supplier Directory</CardTitle>
@@ -659,8 +667,9 @@ export default function VendorsClient({
             </Select>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-visible">
+          <ScrollableTable minWidth="900px">
+          <Table wrapperClassName="overflow-visible">
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead className="w-[120px] font-bold">Code</TableHead>
@@ -668,16 +677,17 @@ export default function VendorsClient({
                 <TableHead className="font-bold">GSTIN</TableHead>
                 <TableHead className="font-bold">Category</TableHead>
                 <TableHead className="font-bold">Status</TableHead>
+                <TableHead className="sticky right-0 z-20 bg-white text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] w-[80px] font-bold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">Loading vendors...</TableCell>
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">Loading vendors...</TableCell>
                 </TableRow>
               ) : filteredVendors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground flex flex-col items-center justify-center">
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground flex flex-col items-center justify-center">
                     <AlertCircle className="h-8 w-8 opacity-20 mb-2" />
                     No vendors found matching criteria.
                   </TableCell>
@@ -709,11 +719,33 @@ export default function VendorsClient({
                       <Badge variant="outline" className="capitalize">{vendor.category || 'General'}</Badge>
                     </TableCell>
                     <TableCell>{getStatusBadge(vendor.status)}</TableCell>
+                    <TableCell className="sticky right-0 z-10 bg-white text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)]">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-100 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedVendor(vendor);
+                                setIsDetailOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          } />
+                          <TooltipContent side="left">View vendor details</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
+          </ScrollableTable>
         </CardContent>
       </Card>
 

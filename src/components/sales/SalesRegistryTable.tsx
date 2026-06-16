@@ -18,12 +18,19 @@ import {
   Printer, 
   Search,
   Loader2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileText
 } from "lucide-react"
 import { SaleDetailsDrawer } from './SaleDetailsDrawer'
 import { CustomerHistoryDrawer } from './CustomerHistoryDrawer'
 import { InvoiceTemplate } from '@/components/pos/InvoiceTemplate'
 import { useReactToPrint } from 'react-to-print'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface Sale {
   sale_id: string;
@@ -145,7 +152,7 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
 
                 <TableHead className="font-bold">Branch</TableHead>
                 <TableHead className="font-bold">Mode</TableHead>
-                <TableHead className="font-bold text-right sticky right-0 bg-slate-50/50 z-20 w-[120px] shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">Actions</TableHead>
+                <TableHead className="sticky right-0 z-20 bg-slate-50/50 text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] w-[100px] font-bold text-[10px] text-slate-400 uppercase tracking-widest">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -206,30 +213,44 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
                       <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Settled</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right sticky right-0 bg-white z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] border-l border-slate-100">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 rounded-xl hover:bg-slate-100 transition-all text-slate-400 hover:text-primary"
-                        onClick={() => openDetails(sale.sale_id, sale.invoice_number, sale.status)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 rounded-xl hover:bg-slate-100 transition-all text-slate-400 hover:text-primary"
-                        onClick={() => triggerPrint(sale.sale_id)}
-                        disabled={!!printingId}
-                      >
-                        {printingId === sale.sale_id ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        ) : (
-                          <Printer className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
+                  <TableCell className="sticky right-0 z-10 bg-white text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)]">
+                    <TooltipProvider>
+                      <div className="flex justify-end items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-100 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDetails(sale.sale_id, sale.invoice_number, sale.status);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          } />
+                          <TooltipContent side="left">View Details</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Generate Invoice
+                              }}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          } />
+                          <TooltipContent side="left">Generate Invoice</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}

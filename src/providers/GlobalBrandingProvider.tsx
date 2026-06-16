@@ -11,11 +11,11 @@ type BrandingSettings = {
 }
 
 const defaultBranding: BrandingSettings = {
-  companyName: "Ethan Home Appliances",
-  logoUrl: "/ethan-logo-final.png",
-  primaryColor: "#7FD1E3",
-  supportEmail: "ethanops360@gmail.com",
-  billingAddress: "Ethan Home Appliances HQ"
+  companyName: "OPS360 ERP",
+  logoUrl: "/AppTerra Logo.PNG",
+  primaryColor: "#0b3256",
+  supportEmail: "info@myappterra.com",
+  billingAddress: "3945 Ibn Shaddad, Malaz, Riyadh"
 }
 
 const GlobalBrandingContext = createContext<BrandingSettings>(defaultBranding)

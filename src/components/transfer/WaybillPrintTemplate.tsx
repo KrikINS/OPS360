@@ -69,7 +69,7 @@ export const WaybillPrintTemplate = React.forwardRef<HTMLDivElement, WaybillPrin
               <h1 className="text-[14pt] font-black tracking-tighter uppercase m-0 leading-none">Stock Transfer Waybill</h1>
               <div className="flex items-center gap-3 mt-1">
                 <div className="bg-white p-1 rounded border border-slate-200">
-                  <Image src={logoUrl || "/ethan-logo-final.png"} alt={`${companyName} Logo`} width={32} height={32} className="h-7 w-auto object-contain" />
+                  <Image src={logoUrl || "/appterra-logo.png"} alt={`${companyName} Logo`} width={32} height={32} className="h-7 w-auto object-contain" />
                 </div>
                 <div>
                    <p className="text-[10pt] font-black m-0 uppercase tracking-tight">{companyName}</p>

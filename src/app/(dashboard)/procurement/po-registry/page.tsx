@@ -1682,16 +1682,16 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <ScrollableTable minWidth="900px" maxHeight="calc(100vh-380px)" className="border-b">
-                    <Table>
+                  <ScrollableTable minWidth="1100px" maxHeight="calc(100vh-380px)" className="border-b">
+                    <Table wrapperClassName="overflow-visible">
                       <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm">
                         <TableRow>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Status</TableHead>
-                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Total Amount</TableHead>
-                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28 whitespace-nowrap text-right">Total Amount</TableHead>
+                          <TableHead className="sticky right-0 z-20 bg-slate-50 border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-right w-[110px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1733,7 +1733,7 @@ Are you sure you want to proceed?`)) return;
                                   {po.status === 'partially_received' ? 'PARTIAL' : po.status === 'needs_revision' ? 'NEEDS REVISION' : po.status === 'SHORT_CLOSED' ? 'SHORT-CLOSED' : po.status.toUpperCase()}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="py-2 px-2 font-bold text-[#001529] border-r border-slate-100/50">
+                              <TableCell className="py-2 px-2 font-bold text-[#001529] border-r border-slate-100/50 whitespace-nowrap text-right">
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger render={
@@ -1773,8 +1773,8 @@ Are you sure you want to proceed?`)) return;
                                   </Tooltip>
                                 </TooltipProvider>
                               </TableCell>
-                              <TableCell className="text-left py-4 px-2">
-                                <div className="flex items-center gap-2">
+                              <TableCell className="sticky right-0 z-10 bg-white border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] text-right py-4 px-2">
+                                <div className="flex items-center justify-end gap-2">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger render={
                                       <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
@@ -2051,15 +2051,15 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <ScrollableTable minWidth="900px" maxHeight="calc(100vh-380px)" className="border-b">
-                    <Table>
+                  <ScrollableTable minWidth="1100px" maxHeight="calc(100vh-380px)" className="border-b">
+                    <Table wrapperClassName="overflow-visible">
                     <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                       <TableRow>
                         <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Number</TableHead>
                         <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Delayed By</TableHead>
                         <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
                         <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-[300px]">Item Progress</TableHead>
-                        <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-right">Actions</TableHead>
+                        <TableHead className="sticky right-0 z-20 bg-slate-50 border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-right w-[110px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2120,7 +2120,7 @@ Are you sure you want to proceed?`)) return;
                                   })}
                                 </div>
                               </TableCell>
-                              <TableCell className="text-right py-4 px-2">
+                              <TableCell className="sticky right-0 z-10 bg-white border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] text-right py-4 px-2">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger render={
                                     <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
@@ -2285,18 +2285,18 @@ Are you sure you want to proceed?`)) return;
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <ScrollableTable minWidth="900px" maxHeight="calc(100vh-380px)" className="border-b">
-                    <Table>
+                  <ScrollableTable minWidth="1100px" maxHeight="calc(100vh-380px)" className="border-b">
+                    <Table wrapperClassName="overflow-visible">
                     <TableHeader className="bg-slate-50 border-b sticky top-0 z-10 shadow-sm transition-all duration-300">
                         <TableRow>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">PO Reference</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Delayed By</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor</TableHead>
-                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Ordered Amount</TableHead>
-                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Received Value</TableHead>
-                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Vendor&apos;s Invoice</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28 whitespace-nowrap text-right">Ordered Amount</TableHead>
+                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28 whitespace-nowrap text-right">Received Value</TableHead>
+                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 w-28 whitespace-nowrap text-right">Vendor&apos;s Invoice</TableHead>
                           <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100 text-center">Status</TableHead>
-                          <TableHead className="py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-left">Actions</TableHead>
+                          <TableHead className="sticky right-0 z-20 bg-slate-50 border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] text-right w-[110px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2358,7 +2358,7 @@ Are you sure you want to proceed?`)) return;
                                  </div>
                                </TableCell>
                                <TableCell className="py-2 px-2 border-r border-slate-100/50 font-semibold text-slate-600">{po.vendor?.name}</TableCell>
-                               <TableCell className="py-2 px-2 border-r border-slate-100/50 font-bold text-slate-500">
+                               <TableCell className="py-2 px-2 border-r border-slate-100/50 font-bold text-slate-500 whitespace-nowrap text-right">
                                  <TooltipProvider>
                                    <Tooltip>
                                      <TooltipTrigger render={
@@ -2381,7 +2381,7 @@ Are you sure you want to proceed?`)) return;
                                    </Tooltip>
                                  </TooltipProvider>
                                </TableCell>
-                               <TableCell className="py-2 px-2 border-r border-slate-100/50 font-bold text-blue-600">
+                               <TableCell className="py-2 px-2 border-r border-slate-100/50 font-bold text-blue-600 whitespace-nowrap text-right">
                                  <TooltipProvider>
                                    <Tooltip>
                                      <TooltipTrigger render={
@@ -2405,7 +2405,7 @@ Are you sure you want to proceed?`)) return;
                                  </TooltipProvider>
                                </TableCell>
                                <TableCell className={cn(
-                                 "py-2 px-2 border-r border-slate-100/50 font-bold",
+                                 "py-2 px-2 border-r border-slate-100/50 font-bold whitespace-nowrap text-right",
                                  hasBill 
                                    ? (matchesPO ? "text-[#001529]" : "text-red-600 font-black underline decoration-double") 
                                    : "text-amber-600"
@@ -2427,8 +2427,8 @@ Are you sure you want to proceed?`)) return;
                                   <Badge variant="outline" className="text-slate-400">PENDING</Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-left py-4 px-2">
-                                <div className="flex justify-start gap-2">
+                              <TableCell className="sticky right-0 z-10 bg-white border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] text-right py-4 px-2">
+                                <div className="flex justify-end gap-2">
                                   <DropdownMenu>
                                   <DropdownMenuTrigger render={
                                     <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
@@ -2752,7 +2752,7 @@ Are you sure you want to proceed?`)) return;
                       <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
                     </div>
                     <div className="bg-white p-2 rounded-lg">
-                       <Image src="/ethan-logo-final.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
+                       <Image src="/appterra-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
                     </div>
                   </div>
                   
@@ -3038,7 +3038,7 @@ Are you sure you want to proceed?`)) return;
                       <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
                     </div>
                     <div className="bg-white p-2 rounded-lg">
-                       <Image src="/ethan-logo-final.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
+                       <Image src="/appterra-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
                     </div>
                   </div>
                   <div className="text-[10px] text-slate-400 font-bold max-w-[280px] leading-tight mt-1 italic">

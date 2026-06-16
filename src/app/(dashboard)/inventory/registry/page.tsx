@@ -477,7 +477,7 @@ export default function InventoryDashboard() {
                   <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">Branch</TableHead>
                   <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">Landed Cost</TableHead>
                   <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">In Quarantine Since</TableHead>
-                  <TableHead className="font-bold text-[10px] text-slate-400 uppercase tracking-widest text-right">Action</TableHead>
+                  <TableHead className="sticky right-0 z-20 bg-slate-50 text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] w-[140px] font-bold text-[10px] text-slate-400 uppercase tracking-widest">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -499,7 +499,7 @@ export default function InventoryDashboard() {
                         day: '2-digit', month: 'short', year: 'numeric'
                       })}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="sticky right-0 z-10 bg-white text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)]">
                       <Button
                         size="sm"
                         variant="outline"

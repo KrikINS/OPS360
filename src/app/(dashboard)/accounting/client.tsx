@@ -17,6 +17,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollableTable } from "@/components/ui/scrollable-table"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
 } from '@/components/ui/sheet'
 import {
@@ -25,7 +31,7 @@ import {
   XCircle, Clock,
   Wallet, Download, Printer,
   CalendarRange, ChevronRight, ChevronDown, Loader2,
-  PenLine, Trash2, Building2, Package, Wrench
+  PenLine, Trash2, Building2, Package, Wrench, Check, X as XIcon
 } from 'lucide-react'
 import {
   createExpenseRecord, approveExpense, rejectExpense,
@@ -1664,7 +1670,7 @@ export default function AccountingClient({
                       </TableHead>
                       <TableHead className="font-bold">Status</TableHead>
                       {isAdmin && (
-                        <TableHead className=" font-bold">Actions</TableHead>
+                        <TableHead className="sticky right-0 z-20 bg-muted/30 text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] w-[100px] font-bold">Actions</TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
@@ -1712,37 +1718,43 @@ export default function AccountingClient({
                           </Badge>
                         </TableCell>
                         {isAdmin && (
-                          <TableCell className="">
-                            {exp.status === 'pending' && (
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs
-                                    text-green-700
-                                    border-green-200
-                                    hover:bg-green-50"
-                                  onClick={() =>
-                                    handleApprove(exp.id)}
-                                  disabled={isPending}
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs
-                                    text-red-700
-                                    border-red-200
-                                    hover:bg-red-50"
-                                  onClick={() =>
-                                    handleReject(exp.id)}
-                                  disabled={isPending}
-                                >
-                                  Reject
-                                </Button>
+                          <TableCell className="sticky right-0 z-10 bg-white text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)]">
+                            <TooltipProvider>
+                              <div className="flex justify-end items-center gap-1">
+                                {exp.status === 'pending' && (
+                                  <>
+                                    <Tooltip>
+                                      <TooltipTrigger render={
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-all"
+                                          onClick={() => handleApprove(exp.id)}
+                                          disabled={isPending}
+                                        >
+                                          <Check className="h-4 w-4" />
+                                        </Button>
+                                      } />
+                                      <TooltipContent side="left">Approve expense</TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger render={
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-all"
+                                          onClick={() => handleReject(exp.id)}
+                                          disabled={isPending}
+                                        >
+                                          <XIcon className="h-4 w-4" />
+                                        </Button>
+                                      } />
+                                      <TooltipContent side="left">Reject expense</TooltipContent>
+                                    </Tooltip>
+                                  </>
+                                )}
                               </div>
-                            )}
+                            </TooltipProvider>
                           </TableCell>
                         )}
                       </TableRow>

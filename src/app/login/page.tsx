@@ -28,7 +28,7 @@ const BrandIdentity = ({ stage }: { stage: AnimationStage }) => {
         stage !== "loading" && stage !== "intro" ? "opacity-100" : "animate-in fade-in zoom-in duration-1000"
       )}>
         <Image 
-          src={logoUrl || "/ethan-logo-final.png"} 
+          src={logoUrl || "/appterra-logo.png"} 
           alt={`${companyName} Logo`} 
           width={192} 
           height={192} 

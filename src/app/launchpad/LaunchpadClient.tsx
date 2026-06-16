@@ -13,7 +13,7 @@ const BrandIdentity = () => {
     <div className="flex flex-col items-center scale-[0.45]">
       <div className="relative">
         <Image 
-          src={logoUrl || "/ethan-logo-final.png"} 
+          src={logoUrl || "/appterra-logo.png"} 
           alt={`${companyName} Logo`} 
           width={400} 
           height={400} 

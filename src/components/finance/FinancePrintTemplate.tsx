@@ -194,7 +194,7 @@ export const FinancePrintTemplate =
               <div className="bg-white rounded p-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={logoUrl || "/ethan-logo-final.png"}
+                  src={logoUrl || "/appterra-logo.png"}
                   width={36}
                   height={36}
                   alt={`${companyName} Logo`}

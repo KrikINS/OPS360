@@ -45,6 +45,12 @@ import {
   DialogFooter 
 } from "@/components/ui/dialog"
 import { ScrollableTable } from "@/components/ui/scrollable-table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 interface Product {
   id: string
   model_name: string
@@ -351,7 +357,7 @@ export default function ProductsPage() {
                   <th className="text-center py-2.5 px-2 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Max Disc %</th>
                   <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Min Stock</th>
                   <th className="text-center py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tracking</th>
-                  <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] w-20">Actions</th>
+                  <th className="sticky right-0 z-20 bg-slate-50 text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] w-20">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -404,29 +410,53 @@ export default function ProductsPage() {
                           {p.tracking_type}
                         </div>
                       </td>
-                      <td className="py-2 px-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger render={
-                            <Button className="bg-[#001529] text-white hover:bg-slate-800 border-none shadow-md font-bold h-8 text-[11px] gap-2 px-4 transition-all active:scale-95">
-                              Actions <ChevronDown className="h-3 w-3" />
-                            </Button>
-                          } />
-                          <DropdownMenuContent align="end" className="w-44 font-bold text-[10px] uppercase tracking-wider text-[#001529] border-slate-200 shadow-2xl">
-                            <DropdownMenuItem onClick={() => setEditingProduct(p)} className="gap-3 cursor-pointer py-2.5 font-bold text-[10px] uppercase tracking-wider">
-                              <Edit2 className="h-3.5 w-3.5 text-blue-500" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-slate-100" />
+                      <td className="sticky right-0 z-10 bg-white text-right border-l border-slate-100 shadow-[-6px_0_12px_-2px_rgba(0,0,0,0.06)] px-4 py-2">
+                        <TooltipProvider>
+                          <div className="flex justify-end items-center gap-1">
+                            <Tooltip>
+                              <TooltipTrigger render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                                  onClick={() => setEditingProduct(p)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                              } />
+                              <TooltipContent side="left">Edit Product</TooltipContent>
+                            </Tooltip>
                             {p.is_archived ? (
-                              <DropdownMenuItem onClick={() => handleRestore(p.id)} className="gap-3 text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer py-2.5 font-bold text-[10px] uppercase tracking-wider">
-                                <RefreshCw className="h-3.5 w-3.5" /> Re-commission Asset
-                              </DropdownMenuItem>
+                              <Tooltip>
+                                <TooltipTrigger render={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
+                                    onClick={() => handleRestore(p.id)}
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                  </Button>
+                                } />
+                                <TooltipContent side="left">Re-commission</TooltipContent>
+                              </Tooltip>
                             ) : (
-                              <DropdownMenuItem onClick={() => setConfirmingArchive(p.id)} className="gap-3 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer py-2.5 font-bold text-[10px] uppercase tracking-wider">
-                                <Archive className="h-3.5 w-3.5" /> Decommission
-                              </DropdownMenuItem>
+                              <Tooltip>
+                                <TooltipTrigger render={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                    onClick={() => setConfirmingArchive(p.id)}
+                                  >
+                                    <Archive className="h-4 w-4" />
+                                  </Button>
+                                } />
+                                <TooltipContent side="left">Decommission</TooltipContent>
+                              </Tooltip>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          </div>
+                        </TooltipProvider>
                       </td>
                     </tr>
                   ))

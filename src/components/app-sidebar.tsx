@@ -44,6 +44,7 @@ import {
   FolderTree,
   CreditCard,
   CalendarDays,
+  Truck,
 } from "lucide-react"
 import {
   Collapsible,
@@ -111,10 +112,16 @@ const navigationGroups: NavigationGroup[] = [
       { title: "PO Registry", url: "/procurement/po-registry", icon: FileText },
       { title: "GRN Registry", url: "/procurement/po-registry?tab=pending", icon: CheckCircle2 },
       { title: "3-WAY Match Audit", url: "/procurement/po-registry?tab=audit", icon: ShieldCheck },
-      { title: "Invoice & Billing", url: "/procurement/po-registry?tab=invoices", icon: Receipt },
       { title: "Discrepancy Report", url: "/procurement/po-registry?tab=discrepancies", icon: AlertCircle },
-      { title: "Vendor Management", url: "/vendors", icon: Users },
+      { title: "Payments", url: "/procurement/po-registry?tab=payments", icon: Receipt },
     ]
+  },
+  {
+    id: "vendors",
+    title: "Vendor Management",
+    url: "/vendors",
+    icon: Truck,
+    items: []
   },
   {
     id: "sales",
@@ -147,23 +154,9 @@ const navigationGroups: NavigationGroup[] = [
   {
     id: "staff",
     title: "Human Resources",
+    url: "/staff",
     icon: Users,
-    items: [
-      { title: "Directory", url: "/staff", icon: Users },
-      { title: "Leave Management", url: "/staff?tab=leave", icon: CalendarDays }
-    ]
-  },
-  {
-    id: "admin",
-    title: "System Administration",
-    icon: ShieldCheck,
-    items: [
-      { title: "Dashboard", url: "/admin", icon: LayoutGrid },
-      { title: "Users", url: "/admin/users", icon: Users },
-      { title: "Organization", url: "/admin/organization", icon: Building2 },
-      { title: "Chart of Accounts", url: "/admin/accounts", icon: BookOpen },
-      { title: "Masters", url: "/admin/masters", icon: FolderTree },
-    ]
+    items: []
   }
 ]
 
@@ -214,7 +207,7 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
           )}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={logoUrl || "/ethan-logo-final.png"}
+              src={logoUrl || "/appterra-logo.png"}
               alt={companyName}
               className={cn("object-contain transition-transform duration-300", isCollapsed ? "scale-110 p-1 w-full h-full" : "max-h-[64px] w-auto max-w-full")}
             />
