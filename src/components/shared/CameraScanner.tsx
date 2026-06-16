@@ -53,6 +53,9 @@ const isIOS = () =>
 export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerProps) {
   const scannerRef = useRef<import('html5-qrcode').Html5Qrcode | null>(null)
   const isStopping = useRef(false)
+  const lastScanRef = useRef<{ value: string; time: number }>({ value: "", time: 0 })
+  const isProcessingRef = useRef(false)
+  const SCAN_COOLDOWN_MS = 2000
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([])
   const [activeCamIdx, setActiveCamIdx] = useState(0)
   const [isInitializing, setIsInitializing] = useState(false)
@@ -78,6 +81,8 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
       // ignore stop errors
     } finally {
       isStopping.current = false
+      lastScanRef.current = { value: "", time: 0 }
+      isProcessingRef.current = false
     }
   }, [])
 
@@ -116,6 +121,34 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     setIsTorchOn(false)
   }, [])
 
+  const handleDecode = useCallback((decodedText: string) => {
+    if (!decodedText) return
+    if (isProcessingRef.current) return
+
+    const raw = decodedText.trim().toUpperCase()
+    const now = Date.now()
+
+    // ignore identical re-scan within cooldown
+    if (raw === lastScanRef.current.value && now - lastScanRef.current.time < SCAN_COOLDOWN_MS) {
+      return
+    }
+    lastScanRef.current = { value: raw, time: now }
+
+    if (isDuplicate && isDuplicate(raw)) {
+      playErrorBeep()
+      return
+    }
+
+    isProcessingRef.current = true
+    playSuccessBeep()
+    setShowFlash(true)
+    setTimeout(() => {
+      setShowFlash(false)
+      onScan(raw)
+      isProcessingRef.current = false
+    }, 400)
+  }, [isDuplicate, onScan])
+
   const startCameraByFacingMode = useCallback(async () => {
     const scanner = scannerRef.current
     if (!scanner || scanner.isScanning) return
@@ -135,15 +168,6 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
       },
     }
 
-    const onDecode = (decodedText: string) => {
-      if (!decodedText) return
-      const raw = decodedText.trim().toUpperCase()
-      if (isDuplicate && isDuplicate(raw)) { playErrorBeep(); return }
-      playSuccessBeep()
-      setShowFlash(true)
-      setTimeout(() => { setShowFlash(false); onScan(raw); onClose() }, 400)
-    }
-
     setIsInitializing(true)
     const attempts: (string | MediaTrackConstraints)[] = [
       { facingMode: { exact: "environment" } } as unknown as MediaTrackConstraints,
@@ -153,7 +177,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     for (const cam of attempts) {
       try {
         if (scanner.isScanning) break
-        await scanner.start(cam, config, onDecode, () => {})
+        await scanner.start(cam, config, handleDecode, () => {})
         setIsBackCamera(true)
         detectTorch(scanner, true)
         setIsInitializing(false)
@@ -166,7 +190,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     // fallback: first enumerated device, else user-facing
     try {
       if (!scanner.isScanning && cameras.length > 0) {
-        await scanner.start(cameras[0].id, config, onDecode, () => {})
+        await scanner.start(cameras[0].id, config, handleDecode, () => {})
         const isBack = /back|rear|environment/i.test(cameras[0].label)
         setIsBackCamera(isBack)
         detectTorch(scanner, isBack)
@@ -177,7 +201,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
 
     try {
       if (!scanner.isScanning) {
-        await scanner.start({ facingMode: "user" } as unknown as string, config, onDecode, () => {})
+        await scanner.start({ facingMode: "user" } as unknown as string, config, handleDecode, () => {})
         setIsBackCamera(false)
         setHasTorch(false)
         setIsInitializing(false)
@@ -189,7 +213,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
       }
       setIsInitializing(false)
     }
-  }, [cameras, isDuplicate, onScan, onClose, detectTorch])
+  }, [cameras, detectTorch, handleDecode])
 
   const startCamera = useCallback(async (deviceId?: string) => {
     const scanner = scannerRef.current
@@ -226,21 +250,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
       await scanner.start(
         cameraParam,
         config,
-        (decodedText: string) => {
-          if (!decodedText) return
-          const raw = decodedText.trim().toUpperCase()
-          if (isDuplicate && isDuplicate(raw)) {
-            playErrorBeep()
-            return
-          }
-          playSuccessBeep()
-          setShowFlash(true)
-          setTimeout(() => {
-            setShowFlash(false)
-            onScan(raw)
-            onClose()
-          }, 400)
-        },
+        handleDecode,
         () => {}
       )
 
@@ -258,13 +268,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
               await scanner.start(
                 { facingMode: "user" } as unknown as string,
                 config,
-                (txt: string) => {
-                  const raw = txt.trim().toUpperCase()
-                  if (isDuplicate && isDuplicate(raw)) { playErrorBeep(); return }
-                  playSuccessBeep()
-                  setShowFlash(true)
-                  setTimeout(() => { setShowFlash(false); onScan(raw); onClose() }, 400)
-                },
+                handleDecode,
                 () => {}
               )
             }
@@ -276,7 +280,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     } finally {
       setIsInitializing(false)
     }
-  }, [cameras, isDuplicate, onScan, onClose, detectTorch])
+  }, [cameras, detectTorch, handleDecode])
 
   const handleStartScanning = async () => {
     setHasStarted(true)
