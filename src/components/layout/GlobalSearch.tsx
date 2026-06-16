@@ -15,6 +15,7 @@ import {
 
 export function GlobalSearch() {
   const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState("")
   const router = useRouter()
 
   React.useEffect(() => {
@@ -31,6 +32,7 @@ export function GlobalSearch() {
 
   const runCommand = React.useCallback((command: () => unknown) => {
     setOpen(false)
+    setSearch("")
     command()
   }, [])
 
@@ -47,41 +49,52 @@ export function GlobalSearch() {
         </kbd>
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog open={open} onOpenChange={(val) => {
+        setOpen(val)
+        if (!val) setSearch("")
+      }}>
         <Command>
-          <CommandInput placeholder="Type a command or search..." />
+          <CommandInput 
+            placeholder="Type a command or search..." 
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup heading="Inventory">
-              <CommandItem onSelect={() => runCommand(() => router.push("/inventory/registry"))}>Inventory Registry</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/products"))}>Product Master</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/transfer"))}>Transfer Control Center</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/inventory/alerts"))}>Stock Alerts</CommandItem>
-            </CommandGroup>
-            <CommandGroup heading="Procurement">
-              <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry"))}>PO Registry</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry?tab=pending"))}>GRN Registry (Pending)</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry?tab=audit"))}>3-WAY Match Audit</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry?tab=discrepancies"))}>Discrepancy Report</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry?tab=payments"))}>Payments Ledger</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/vendors"))}>Vendor Management</CommandItem>
-            </CommandGroup>
-            <CommandGroup heading="Sales & POS">
-              <CommandItem onSelect={() => runCommand(() => router.push("/sales/hub"))}>Sales Registry</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/sales/customers"))}>Customer Management</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/sales/credit"))}>Accounts Receivable</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/pos"))}>POS Terminal</CommandItem>
-            </CommandGroup>
-            <CommandGroup heading="Service & Support">
-              <CommandItem onSelect={() => runCommand(() => router.push("/service"))}>Job Card / Work Orders</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/service/warranty"))}>Warranty Management</CommandItem>
-            </CommandGroup>
-            <CommandGroup heading="System & Finance">
-              <CommandItem onSelect={() => runCommand(() => router.push("/accounting?tab=dashboard"))}>Finance Dashboard</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/admin"))}>Admin Console</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/reports"))}>Reports</CommandItem>
-              <CommandItem onSelect={() => runCommand(() => router.push("/staff"))}>Human Resources</CommandItem>
-            </CommandGroup>
+            <CommandEmpty>{search.length > 0 ? "No results found." : "Start typing to search..."}</CommandEmpty>
+            {search.length > 0 && (
+              <>
+                <CommandGroup heading="Inventory">
+                  <CommandItem onSelect={() => runCommand(() => router.push("/inventory/registry"))}>Inventory Registry</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/products"))}>Product Master</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/transfer"))}>Transfer Control Center</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/inventory/alerts"))}>Stock Alerts</CommandItem>
+                </CommandGroup>
+                <CommandGroup heading="Procurement">
+                  <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry"))}>PO Registry</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry?tab=pending"))}>GRN Registry (Pending)</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry?tab=audit"))}>3-WAY Match Audit</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry?tab=discrepancies"))}>Discrepancy Report</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/procurement/po-registry?tab=payments"))}>Payments Ledger</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/vendors"))}>Vendor Management</CommandItem>
+                </CommandGroup>
+                <CommandGroup heading="Sales & POS">
+                  <CommandItem onSelect={() => runCommand(() => router.push("/sales/hub"))}>Sales Registry</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/sales/customers"))}>Customer Management</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/sales/credit"))}>Accounts Receivable</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/pos"))}>POS Terminal</CommandItem>
+                </CommandGroup>
+                <CommandGroup heading="Service & Support">
+                  <CommandItem onSelect={() => runCommand(() => router.push("/service"))}>Job Card / Work Orders</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/service/warranty"))}>Warranty Management</CommandItem>
+                </CommandGroup>
+                <CommandGroup heading="System & Finance">
+                  <CommandItem onSelect={() => runCommand(() => router.push("/accounting?tab=dashboard"))}>Finance Dashboard</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/admin"))}>Admin Console</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/reports"))}>Reports</CommandItem>
+                  <CommandItem onSelect={() => runCommand(() => router.push("/staff"))}>Human Resources</CommandItem>
+                </CommandGroup>
+              </>
+            )}
           </CommandList>
         </Command>
       </CommandDialog>
