@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { setActiveBranchAction } from "@/app/actions/branch"
+import { roleLabel } from "@/lib/utils"
 import { useBranding } from "@/providers/GlobalBrandingProvider"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -64,9 +65,7 @@ export function UserNav({ profile }: UserNavProps) {
   const displayEmail = session?.user?.email || profile.email
   const displayName = session?.user?.name || profile.full_name || displayEmail.split("@")[0] || "User"
   const rawRole = session?.user?.role || profile.role || ""
-  const displayRole = rawRole
-    ? rawRole.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-    : "User"
+  const displayRole = roleLabel(rawRole)
 
   const initials = displayName
     ? displayName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()

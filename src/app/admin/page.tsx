@@ -29,7 +29,7 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts'
-import { cn } from "@/lib/utils"
+import { cn, roleLabel } from "@/lib/utils"
 import { formatCurrency } from "@/utils/format"
 
 interface RecentUser {
@@ -250,7 +250,7 @@ export default function AdminDashboardPage() {
                     <div className="text-[10px] text-slate-400 font-medium font-mono">{user.email}</div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Badge className="text-[9px] font-black uppercase tracking-widest h-5 px-3 bg-blue-50 text-blue-700 border-none">{user.role || 'Sales'}</Badge>
+                    <Badge className="text-[9px] font-black uppercase tracking-widest h-5 px-3 bg-blue-50 text-blue-700 border-none">{roleLabel(user.role)}</Badge>
                     <span className="text-[9px] text-slate-400 font-bold font-mono">{new Date(user.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>

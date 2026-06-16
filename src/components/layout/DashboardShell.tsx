@@ -11,6 +11,7 @@ import Link from "next/link"
 import { HelpCircle, Receipt, ShoppingCart, ShieldCheck } from "lucide-react"
 import { NotificationBell } from "@/components/layout/NotificationBell"
 import { Button } from "@/components/ui/button"
+import { GlobalSearch } from "@/components/layout/GlobalSearch"
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -52,13 +53,11 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
               <SidebarTrigger className="text-white/70 hover:text-white transition-colors" />
               <div className="h-5 w-[1px] bg-white/20" />
               <div className="font-bold text-sm tracking-tight text-[#7FD1E3]">
-                OPS360 ERP{' '}
-                <span className="text-white/60 font-normal">
-                  - {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} Dashboard
-                </span>
+                OPS360 ERP
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <GlobalSearch />
               {/* System Administration link */}
               {isAdmin && (
                 <Button
@@ -69,7 +68,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
                 >
                   <ShieldCheck className="h-4 w-4" />
                   <span className="hidden sm:inline">
-                    System Administration
+                    Admin Console
                   </span>
                 </Button>
               )}
