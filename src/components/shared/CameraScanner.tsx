@@ -126,7 +126,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
       const scannerAny2 = scanner as any
       const track2 = typeof scannerAny2.getRunningTrack === "function" ? scannerAny2.getRunningTrack() : null
       if (track2?.applyConstraints) {
-        track2.applyConstraints({ advanced: [{ focusMode: "continuous" }] } as unknown as MediaTrackConstraints).catch(() => {})
+        track2.applyConstraints({ advanced: [{ focusMode: "continuous" }] } as unknown as MediaTrackConstraints).catch(() => { })
       }
     } catch { /* ignore */ }
   }, [])
@@ -193,7 +193,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     for (const cam of attempts) {
       try {
         if (scanner.isScanning) break
-        await scanner.start(cam, config, handleDecode, () => {})
+        await scanner.start(cam, config, handleDecode, () => { })
         setIsBackCamera(true)
         detectTorch(scanner, true)
         setIsInitializing(false)
@@ -206,7 +206,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     // fallback: first enumerated device, else user-facing
     try {
       if (!scanner.isScanning && cameras.length > 0) {
-        await scanner.start(cameras[0].id, config, handleDecode, () => {})
+        await scanner.start(cameras[0].id, config, handleDecode, () => { })
         const isBack = /back|rear|environment/i.test(cameras[0].label)
         setIsBackCamera(isBack)
         detectTorch(scanner, isBack)
@@ -217,7 +217,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
 
     try {
       if (!scanner.isScanning) {
-        await scanner.start({ facingMode: "user" } as unknown as string, config, handleDecode, () => {})
+        await scanner.start({ facingMode: "user" } as unknown as string, config, handleDecode, () => { })
         setIsBackCamera(false)
         setHasTorch(false)
         setIsInitializing(false)
@@ -273,7 +273,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
         cameraParam,
         config,
         handleDecode,
-        () => {}
+        () => { }
       )
 
       detectTorch(scanner, !!isBack)
@@ -291,7 +291,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
                 { facingMode: "user" } as unknown as string,
                 config,
                 handleDecode,
-                () => {}
+                () => { }
               )
             }
           } catch {
@@ -331,7 +331,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     setActiveCamIdx(idx)
     setIsInitializing(true)
     if (scannerRef.current.isScanning) {
-      await scannerRef.current.stop().catch(() => {})
+      await scannerRef.current.stop().catch(() => { })
       scannerRef.current.clear()
     }
     const label = cameras[idx]?.label || ""
@@ -394,9 +394,9 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     )
   }
 
-    return (
-      <div className="sticky bottom-0 left-0 right-0 z-[110] w-full flex justify-center pointer-events-none">
-        <div className="relative w-full max-w-2xl h-[42dvh] max-h-[380px] bg-black rounded-t-3xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 ring-1 ring-white/5 pointer-events-auto">
+  return (
+    <div className="sticky bottom-0 left-0 right-0 z-[110] w-full flex justify-center pointer-events-none">
+      <div className="relative w-full max-w-2xl h-[42dvh] max-h-[380px] bg-black rounded-t-3xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 ring-1 ring-white/5 pointer-events-auto">
 
         {/* Green flash on success */}
         {showFlash && (

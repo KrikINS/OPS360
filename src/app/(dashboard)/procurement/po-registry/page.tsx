@@ -33,7 +33,9 @@ import {
   X,
   Ban,
   Wallet,
-  Pencil
+  Pencil,
+  Banknote,
+  Smartphone
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -57,7 +59,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { cn } from "@/lib/utils"
+import { cn, fmtINR } from "@/lib/utils"
 import { 
   Select, 
   SelectContent, 
@@ -583,6 +585,13 @@ export default function ProcurementGRNPage() {
     setPaymentsLoading(false)
     setPaymentsLoaded(true)
   }
+
+  useEffect(() => {
+    if (activeTab === 'payments') {
+      loadVendorPayments()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
 
   const getVisibleBranches = () => {
     return branches;
@@ -2599,62 +2608,68 @@ Are you sure you want to proceed?`)) return;
                     <div className="flex gap-2 px-4 py-2 border-b bg-slate-50 flex-wrap">
                       <button
                         onClick={() => setPaymentVendorFilter('all')}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${paymentVendorFilter === 'all' ? 'bg-[#001529] text-white border-[#001529]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${paymentVendorFilter === 'all' ? 'bg-[#001529] text-white border-[#001529]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
                       >All</button>
                       {vendors.map(v => (
                         <button key={v}
                           onClick={() => setPaymentVendorFilter(paymentVendorFilter === v ? 'all' : v!)}
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${paymentVendorFilter === v ? 'bg-[#001529] text-white border-[#001529]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                          className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${paymentVendorFilter === v ? 'bg-[#001529] text-white border-[#001529]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
                         >{v}</button>
                       ))}
                     </div>
                     <ScrollableTable minWidth="100%">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-muted/50">
-                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-28">Date</TableHead>
-                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-32">PO Number</TableHead>
-                            <TableHead className="font-bold text-[10px] uppercase tracking-wide">Vendor</TableHead>
-                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-28">Method</TableHead>
-                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-36">Reference</TableHead>
-                            <TableHead className="font-bold text-[10px] uppercase tracking-wide w-40">Notes</TableHead>
-                            <TableHead className="font-bold text-[10px] uppercase tracking-wide text-right w-36">Amount</TableHead>
+                          <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-200">
+                            <TableHead className="font-bold text-[11px] uppercase tracking-wider text-slate-400 py-3 w-28">Date</TableHead>
+                            <TableHead className="font-bold text-[11px] uppercase tracking-wider text-slate-400 py-3 w-32">PO Number</TableHead>
+                            <TableHead className="font-bold text-[11px] uppercase tracking-wider text-slate-400 py-3">Vendor</TableHead>
+                            <TableHead className="font-bold text-[11px] uppercase tracking-wider text-slate-400 py-3 w-28">Method</TableHead>
+                            <TableHead className="font-bold text-[11px] uppercase tracking-wider text-slate-400 py-3 w-36">Reference</TableHead>
+                            <TableHead className="font-bold text-[11px] uppercase tracking-wider text-slate-400 py-3 w-40">Notes</TableHead>
+                            <TableHead className="font-bold text-[11px] uppercase tracking-wider text-slate-400 py-3 text-right w-36">Amount</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filtered
                             .filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter)
                             .map(p => (
-                            <TableRow key={p.id} className="hover:bg-muted/30">
-                              <TableCell className="text-xs text-slate-500">
+                            <TableRow key={p.id} className="hover:bg-slate-50 transition-colors">
+                              <TableCell className="text-[13px] text-slate-500 whitespace-nowrap">
                                 {new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                               </TableCell>
-                              <TableCell className="font-mono text-xs font-bold text-[#001529]">{p.poNumber ?? '—'}</TableCell>
-                              <TableCell className="text-sm font-medium">{p.vendorName ?? '—'}</TableCell>
+                              <TableCell className="font-mono text-[12px] font-semibold text-[#185FA5]">{p.poNumber ?? '—'}</TableCell>
+                              <TableCell className="text-[13px] font-medium text-slate-800">{p.vendorName ?? <span className="text-slate-300">—</span>}</TableCell>
                               <TableCell>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${
+                                <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border capitalize ${
                                   p.paymentMethod === 'bank' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                                   p.paymentMethod === 'cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                                   p.paymentMethod === 'upi'  ? 'bg-purple-50 text-purple-700 border-purple-200' :
                                   'bg-slate-50 text-slate-600 border-slate-200'
                                 }`}>
-                                  {p.paymentMethod === 'bank' ? '🏦 Bank' :
-                                   p.paymentMethod === 'cash' ? '💵 Cash' :
-                                   p.paymentMethod === 'upi'  ? '📱 UPI'  :
+                                  {p.paymentMethod === 'bank' ? <Building2 className="h-3 w-3" /> :
+                                   p.paymentMethod === 'cash' ? <Banknote className="h-3 w-3" /> :
+                                   p.paymentMethod === 'upi'  ? <Smartphone className="h-3 w-3" /> : null}
+                                  {p.paymentMethod === 'bank' ? 'Bank' :
+                                   p.paymentMethod === 'cash' ? 'Cash' :
+                                   p.paymentMethod === 'upi'  ? 'UPI'  :
                                    p.paymentMethod}
                                 </span>
                               </TableCell>
-                              <TableCell className="font-mono text-xs text-slate-400">{p.referenceNumber ?? '—'}</TableCell>
-                              <TableCell className="text-xs text-slate-500 max-w-[160px] truncate">{p.notes ?? '—'}</TableCell>
-                              <TableCell className="text-right tabular-nums font-bold text-emerald-700">
-                                ₹{Number(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              <TableCell className="font-mono text-[12px] text-slate-500">{p.referenceNumber ?? <span className="text-slate-300">—</span>}</TableCell>
+                              <TableCell className="text-[13px] text-slate-500 max-w-[160px] truncate">{p.notes ?? <span className="text-slate-300">—</span>}</TableCell>
+                              <TableCell className="text-right tabular-nums text-[13px] font-bold text-emerald-700 whitespace-nowrap">
+                                {fmtINR(Number(p.amount))}
                               </TableCell>
                             </TableRow>
                           ))}
                           {filtered.filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter).length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center text-slate-400 py-8 text-sm">
-                                No payments match your search
+                              <TableCell colSpan={7} className="text-center text-slate-400 py-12 text-[13px]">
+                                <div className="flex flex-col items-center gap-2">
+                                  <Search className="h-6 w-6 text-slate-200" />
+                                  No payments match your search
+                                </div>
                               </TableCell>
                             </TableRow>
                           )}
@@ -2663,15 +2678,14 @@ Are you sure you want to proceed?`)) return;
                         {filtered.length > 0 && (
                           <tfoot>
                             <tr className="border-t-2 border-slate-200 bg-slate-50">
-                              <td colSpan={6} className="px-4 py-2 text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                {paymentVendorFilter !== 'all' ? `${paymentVendorFilter} Total` : 'Grand Total'}
-                                {' '}({filtered.filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter).length} transactions)
+                              <td colSpan={6} className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                {paymentVendorFilter !== 'all' ? `${paymentVendorFilter} total` : 'Grand total'}
+                                {' · '}{filtered.filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter).length} transactions
                               </td>
-                              <td className="px-4 py-2 text-right font-black text-emerald-700 tabular-nums">
-                                ₹{filtered
+                              <td className="px-4 py-3 text-right font-bold text-[15px] text-emerald-700 tabular-nums whitespace-nowrap">
+                                {fmtINR(filtered
                                   .filter(p => paymentVendorFilter === 'all' || p.vendorName === paymentVendorFilter)
-                                  .reduce((s, p) => s + Number(p.amount), 0)
-                                  .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  .reduce((s, p) => s + Number(p.amount), 0))}
                               </td>
                             </tr>
                           </tfoot>
