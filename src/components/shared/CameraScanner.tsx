@@ -378,25 +378,25 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
 
   if (permissionDenied) {
     return (
-      <div className="absolute inset-0 z-[110] bg-black/90 flex flex-col items-center justify-center gap-4 p-8">
-        <div className="bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-2xl p-6 text-center max-w-sm">
+      <div className="sticky bottom-0 left-0 right-0 z-[110] w-full flex justify-center">
+        <div className="relative w-full max-w-2xl bg-slate-900 rounded-t-3xl p-8 border border-white/10 flex flex-col items-center justify-center text-center gap-4">
           <X className="h-8 w-8 mx-auto mb-3 text-rose-400" />
           <p className="font-bold text-sm">Camera permission denied.</p>
           <p className="text-xs text-rose-300/70 mt-1">Please allow camera access in your browser settings and try again.</p>
+          <button
+            onClick={onClose}
+            className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-colors"
+          >
+            Close
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-colors"
-        >
-          Close
-        </button>
       </div>
     )
   }
 
-  return (
-    <div className="absolute inset-0 z-[110] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center overflow-hidden h-full w-full m-0 p-4 md:p-8">
-      <div className="relative w-full max-w-md h-[65dvh] md:max-h-[600px] bg-black rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/10 border border-white/10 ring-1 ring-white/5">
+    return (
+      <div className="sticky bottom-0 left-0 right-0 z-[110] w-full flex justify-center pointer-events-none">
+        <div className="relative w-full max-w-2xl h-[42dvh] max-h-[380px] bg-black rounded-t-3xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10 ring-1 ring-white/5 pointer-events-auto">
 
         {/* Green flash on success */}
         {showFlash && (
@@ -431,8 +431,8 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
         <div className={cn("absolute inset-0 pointer-events-none", !hasStarted && "hidden")}>
 
           {/* Target frame */}
-          <div className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none pb-8">
-            <div className="w-[65%] aspect-square max-w-[250px] border-2 border-white/30 rounded-3xl relative overflow-hidden shadow-[0_0_0_4000px_rgba(0,0,0,0.5)]">
+          <div className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none pb-2">
+            <div className="w-[85%] max-w-[420px] h-[40%] max-h-[150px] border-2 border-white/30 rounded-2xl relative overflow-hidden shadow-[0_0_0_4000px_rgba(0,0,0,0.45)]">
               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl" />
               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl" />
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl" />
@@ -443,7 +443,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
                 style={{ animation: "scanner-line 2s linear infinite" }}
               />
             </div>
-            <div className="mt-6 flex flex-col items-center gap-1.5 opacity-90">
+            <div className="mt-3 flex flex-col items-center gap-1.5 opacity-90">
               <span className="bg-black/60 backdrop-blur text-white px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase border border-white/10 shadow-lg">
                 Align Barcode inside frame
               </span>
