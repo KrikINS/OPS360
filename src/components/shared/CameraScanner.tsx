@@ -119,6 +119,16 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
       setHasTorch(false)
     }
     setIsTorchOn(false)
+
+    // best-effort: request continuous autofocus for sharper 1D barcode reads
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const scannerAny2 = scanner as any
+      const track2 = typeof scannerAny2.getRunningTrack === "function" ? scannerAny2.getRunningTrack() : null
+      if (track2?.applyConstraints) {
+        track2.applyConstraints({ advanced: [{ focusMode: "continuous" }] } as unknown as MediaTrackConstraints).catch(() => {})
+      }
+    } catch { /* ignore */ }
   }, [])
 
   const handleDecode = useCallback((decodedText: string) => {
@@ -154,17 +164,23 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     if (!scanner || scanner.isScanning) return
 
     const config = {
-      fps: 10,
-      qrbox: (w: number, h: number) => {
-        const minEdge = Math.min(w, h)
-        const size = Math.floor(minEdge * 0.7)
-        return { width: size, height: Math.floor(size * 0.6) }
+      fps: 15,
+      qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+        // Wide strip favors 1D barcodes; height stays tall enough for QR to fit.
+        const boxWidth = Math.floor(viewfinderWidth * 0.85)
+        const boxHeight = Math.floor(Math.min(viewfinderHeight * 0.6, boxWidth * 0.55))
+        return { width: boxWidth, height: boxHeight }
       },
       aspectRatio: window.innerWidth / window.innerHeight,
+      disableFlip: false,
       videoConstraints: {
         facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
+        width: { ideal: 2560 },
+        height: { ideal: 1440 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        focusMode: "continuous" as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        advanced: [{ focusMode: "continuous" }] as any,
       },
     }
 
@@ -223,17 +239,23 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     const aspectRatio = window.innerWidth / window.innerHeight
 
     const config = {
-      fps: 10,
+      fps: 15,
       qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-        const minEdge = Math.min(viewfinderWidth, viewfinderHeight)
-        const size = Math.floor(minEdge * 0.7)
-        return { width: size, height: Math.floor(size * 0.6) }
+        // Wide strip favors 1D barcodes; height stays tall enough for QR to fit.
+        const boxWidth = Math.floor(viewfinderWidth * 0.85)
+        const boxHeight = Math.floor(Math.min(viewfinderHeight * 0.6, boxWidth * 0.55))
+        return { width: boxWidth, height: boxHeight }
       },
       aspectRatio,
+      disableFlip: false,
       videoConstraints: {
         facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
+        width: { ideal: 2560 },
+        height: { ideal: 1440 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        focusMode: "continuous" as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        advanced: [{ focusMode: "continuous" }] as any,
       }
     }
 
