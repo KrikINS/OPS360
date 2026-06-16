@@ -45,6 +45,11 @@ interface CameraScannerProps {
 
 const CONTAINER_ID = "shared-camera-scanner-viewfinder"
 
+const isIOS = () =>
+  typeof navigator !== "undefined" &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))
+
 export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerProps) {
   const scannerRef = useRef<import('html5-qrcode').Html5Qrcode | null>(null)
   const isStopping = useRef(false)
@@ -94,6 +99,98 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     }
   }, [formatsToSupport, safeStop])
 
+  const detectTorch = useCallback((scanner: import('html5-qrcode').Html5Qrcode, isBack: boolean) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const scannerAny = scanner as any
+      if (typeof scannerAny.getRunningTrack === "function") {
+        const track = scannerAny.getRunningTrack()
+        const caps = track?.getCapabilities?.()
+        setHasTorch(!!caps?.torch && isBack)
+      } else {
+        setHasTorch(false)
+      }
+    } catch {
+      setHasTorch(false)
+    }
+    setIsTorchOn(false)
+  }, [])
+
+  const startCameraByFacingMode = useCallback(async () => {
+    const scanner = scannerRef.current
+    if (!scanner || scanner.isScanning) return
+
+    const config = {
+      fps: 10,
+      qrbox: (w: number, h: number) => {
+        const minEdge = Math.min(w, h)
+        const size = Math.floor(minEdge * 0.7)
+        return { width: size, height: Math.floor(size * 0.6) }
+      },
+      aspectRatio: window.innerWidth / window.innerHeight,
+      videoConstraints: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+    }
+
+    const onDecode = (decodedText: string) => {
+      if (!decodedText) return
+      const raw = decodedText.trim().toUpperCase()
+      if (isDuplicate && isDuplicate(raw)) { playErrorBeep(); return }
+      playSuccessBeep()
+      setShowFlash(true)
+      setTimeout(() => { setShowFlash(false); onScan(raw); onClose() }, 400)
+    }
+
+    setIsInitializing(true)
+    const attempts: (string | MediaTrackConstraints)[] = [
+      { facingMode: { exact: "environment" } } as unknown as MediaTrackConstraints,
+      { facingMode: "environment" } as unknown as MediaTrackConstraints,
+    ]
+
+    for (const cam of attempts) {
+      try {
+        if (scanner.isScanning) break
+        await scanner.start(cam, config, onDecode, () => {})
+        setIsBackCamera(true)
+        detectTorch(scanner, true)
+        setIsInitializing(false)
+        return
+      } catch {
+        // try next attempt
+      }
+    }
+
+    // fallback: first enumerated device, else user-facing
+    try {
+      if (!scanner.isScanning && cameras.length > 0) {
+        await scanner.start(cameras[0].id, config, onDecode, () => {})
+        const isBack = /back|rear|environment/i.test(cameras[0].label)
+        setIsBackCamera(isBack)
+        detectTorch(scanner, isBack)
+        setIsInitializing(false)
+        return
+      }
+    } catch { /* continue */ }
+
+    try {
+      if (!scanner.isScanning) {
+        await scanner.start({ facingMode: "user" } as unknown as string, config, onDecode, () => {})
+        setIsBackCamera(false)
+        setHasTorch(false)
+        setIsInitializing(false)
+      }
+    } catch (err) {
+      const msg = String(err)
+      if (msg.includes('Permission') || msg.includes('NotAllowed') || msg.includes('denied')) {
+        setPermissionDenied(true)
+      }
+      setIsInitializing(false)
+    }
+  }, [cameras, isDuplicate, onScan, onClose, detectTorch])
+
   const startCamera = useCallback(async (deviceId?: string) => {
     const scanner = scannerRef.current
     if (!scanner) return
@@ -102,10 +199,18 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     const aspectRatio = window.innerWidth / window.innerHeight
 
     const config = {
-      fps: 20,
-      qrbox: { width: 300, height: 150 },
+      fps: 10,
+      qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight)
+        const size = Math.floor(minEdge * 0.7)
+        return { width: size, height: Math.floor(size * 0.6) }
+      },
       aspectRatio,
-      videoConstraints: { width: { ideal: 1920 }, height: { ideal: 1080 } }
+      videoConstraints: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      }
     }
 
     setIsInitializing(true)
@@ -139,20 +244,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
         () => {}
       )
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const scannerAny = scanner as any
-      if (typeof scannerAny.getRunningTrack === "function") {
-        const track = scannerAny.getRunningTrack()
-        if (track?.getCapabilities) {
-          const caps = track.getCapabilities()
-          setHasTorch(!!caps.torch && !!isBack)
-        } else {
-          setHasTorch(false)
-        }
-      } else {
-        setHasTorch(false)
-      }
-      setIsTorchOn(false)
+      detectTorch(scanner, !!isBack)
     } catch (err: unknown) {
       const msg = String(err)
       if (msg.includes('Permission') || msg.includes('NotAllowed') || msg.includes('denied')) {
@@ -184,7 +276,7 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
     } finally {
       setIsInitializing(false)
     }
-  }, [cameras, isDuplicate, onScan, onClose])
+  }, [cameras, isDuplicate, onScan, onClose, detectTorch])
 
   const handleStartScanning = async () => {
     setHasStarted(true)
@@ -192,22 +284,18 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
 
     try {
       const mod = await import("html5-qrcode")
-      const devices = await mod.Html5Qrcode.getCameras()
-
-      if (devices && devices.length > 0) {
-        const mapped = devices.map((d, i) => ({ id: d.id, label: d.label || `Camera ${i + 1}` }))
-        setCameras(mapped)
-        const backIdx = mapped.findIndex(d => /back|rear|environment/i.test(d.label))
-        const targetIdx = backIdx >= 0 ? backIdx : 0
-        setActiveCamIdx(targetIdx)
-        await startCamera(mapped[targetIdx].id)
-        return
+      try {
+        const devices = await mod.Html5Qrcode.getCameras()
+        if (devices && devices.length > 0) {
+          setCameras(devices.map((d, i) => ({ id: d.id, label: d.label || `Camera ${i + 1}` })))
+        }
+      } catch {
+        // enumeration can fail before permission; ignore
       }
+      await startCameraByFacingMode()
     } catch {
-      // fall through to generic
+      await startCamera()
     }
-
-    await startCamera()
   }
 
   const manuallySelectCamera = async (targetId: string) => {
@@ -220,7 +308,15 @@ export function CameraScanner({ onScan, onClose, isDuplicate }: CameraScannerPro
       await scannerRef.current.stop().catch(() => {})
       scannerRef.current.clear()
     }
-    setTimeout(() => startCamera(targetId), 500)
+    const label = cameras[idx]?.label || ""
+    const wantsBack = /back|rear|wide|environment/i.test(label)
+    setTimeout(() => {
+      if (isIOS() && wantsBack) {
+        startCameraByFacingMode()
+      } else {
+        startCamera(targetId)
+      }
+    }, 500)
   }
 
   const toggleTorch = async () => {
