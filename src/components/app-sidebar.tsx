@@ -61,6 +61,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { can, type Module } from "@/lib/rbac"
+
+const GROUP_TO_MODULE: Record<string, Module> = {
+  inventory: "inventory",
+  procurement: "procurement",
+  vendors: "procurement",
+  sales: "sales",
+  reports: "finance",
+  service: "service",
+  staff: "hr",
+  admin: "admin",
+}
 
 const ModernOrbitSpinner = ({ size = "sm" }: { size?: "sm" | "md" }) => {
   const isMd = size === "md";
@@ -254,16 +266,18 @@ export function AppSidebar({ permissions, profile }: AppSidebarProps) {
             <SidebarMenu className="space-y-3">
             {navigationGroups
               .filter(group => {
-                const normalizedRole = (profile.role || "").toLowerCase().trim();
-                const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner' || normalizedRole === 'super_admin';
+                const moduleKey = GROUP_TO_MODULE[group.id]
+                // Unmapped groups (if any) fall back to the legacy permission flag.
+                if (!moduleKey) return permissions[group.id] === true
 
-                // Admins see everything
-                if (isAdmin) return true
-                // Special case for System Admin group - restrict to role check usually, 
-                // but if tied to a permission, check it.
-                if (group.id === 'admin') return isAdmin
-                
-                return permissions[group.id] === true
+                // Baseline: role matrix decides visibility (view capability).
+                const allowedByRole = can(profile.role, moduleKey, "view")
+
+                // Optional per-user override layer: an explicit permission flag can GRANT
+                // a module the role wouldn't otherwise show (never used to REVOKE here).
+                const grantedByOverride = permissions[group.id] === true
+
+                return allowedByRole || grantedByOverride
               })
               .map((group) => {
                 const isGroupActive = group.items.some(item => 

@@ -12,6 +12,7 @@ import { HelpCircle, Receipt, ShoppingCart, ShieldCheck } from "lucide-react"
 import { NotificationBell } from "@/components/layout/NotificationBell"
 import { Button } from "@/components/ui/button"
 import { GlobalSearch } from "@/components/layout/GlobalSearch"
+import { can } from "@/lib/rbac"
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -29,9 +30,10 @@ interface DashboardShellProps {
 export function DashboardShell({ children, profile, permissions }: DashboardShellProps) {
   const pathname = usePathname()
   const isPos = pathname === '/pos'
-  const isAdmin = ['admin/owner', 'admin', 'owner', 'super_admin'].includes(
-    (profile.role ?? '').toLowerCase().trim()
-  )
+  const role = profile.role ?? ''
+  const canAdmin   = can(role, "admin", "view")
+  const canFinance = can(role, "finance", "view")
+  const canPos     = can(role, "sales", "edit")   // POS is a sales write surface
 
   if (isPos) {
     return (
@@ -59,7 +61,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
             <div className="flex items-center gap-3">
               <GlobalSearch />
               {/* System Administration link */}
-              {isAdmin && (
+              {canAdmin && (
                 <Button
                   render={<Link href="/admin" />}
                   nativeButton={false}
@@ -73,7 +75,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
                 </Button>
               )}
               {/* Finance Dashboard link */}
-              {(isAdmin || permissions?.finance === true) && (
+              {(canFinance || permissions?.finance === true) && (
                 <Button
                   render={<Link href="/accounting?tab=dashboard" />}
                   nativeButton={false}
@@ -86,7 +88,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
                   </span>
                 </Button>
               )}
-              {(isAdmin || permissions?.pos === true) && (
+              {(canPos || permissions?.pos === true) && (
                 <Button
                   render={<Link href="/pos" />}
                   nativeButton={false}

@@ -112,7 +112,7 @@ const LEGACY_ALIASES: Record<string, Role> = {
   "staff": "sales_associate",
   "sales": "sales_associate",
   "sales_associate": "sales_associate",
-  "manager": "branch_manager",          // best-effort; migration will confirm per user
+  "manager": "general_manager",         // bare "manager" defaults to GM (all-branch); explicit branch_manager set on assignment
   "branch_manager": "branch_manager",
   "general_manager": "general_manager",
   "finance": "finance_manager",
