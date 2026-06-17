@@ -1,3 +1,5 @@
+import { user_branch_access } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
 import { getServerSession } from 'next-auth'
 import {
@@ -17,6 +19,17 @@ afterAll(async () => { await teardownTestDb() })
 
 const MANAGER_ID = '00000000-0000-0000-0000-000000000001'
 const STAFF_ID   = '00000000-0000-0000-0000-000000000002'
+
+// Seed branch access so branchFilterFor doesn't block users
+async function setupUserAccess(dbInstance: TestDb, branchId: string, userIds: string[]) {
+  for (const uid of userIds) {
+    await dbInstance.insert(user_branch_access).values({
+      user_id: uid,
+      branch_id: branchId,
+    })
+  }
+}
+
 
 // ── Shared local types ────────────────────────────────────────────────────────
 
@@ -50,6 +63,7 @@ type ActivityLogResult =
 describe('clockIn', () => {
   it('creates an attendance record for today', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: MANAGER_ID, branchId: branch.id, role: 'manager' },
     })
@@ -63,6 +77,7 @@ describe('clockIn', () => {
 
   it('rejects if already clocked in today', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
     await seedAttendanceRecord(db, {
       userId: STAFF_ID,
@@ -100,6 +115,7 @@ describe('clockIn', () => {
 describe('clockOut', () => {
   it('sets clock_out and computes duration_minutes', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
     const clockInTime = new Date(Date.now() - 60 * 60 * 1000)
     await seedAttendanceRecord(db, {
@@ -122,6 +138,7 @@ describe('clockOut', () => {
 
   it('rejects if no clock-in exists today', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -132,6 +149,7 @@ describe('clockOut', () => {
 
   it('rejects if already clocked out today', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
     const clockInTime = new Date(Date.now() - 2 * 60 * 60 * 1000)
     const clockOutTime = new Date(Date.now() - 60 * 60 * 1000)
@@ -156,6 +174,7 @@ describe('clockOut', () => {
 describe('getAttendanceByBranch', () => {
   it('returns records for the branch in date range', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
     await seedAttendanceRecord(db, {
       userId: STAFF_ID,
@@ -179,6 +198,7 @@ describe('getAttendanceByBranch', () => {
 
   it('rejects staff role — manager required', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -187,7 +207,7 @@ describe('getAttendanceByBranch', () => {
       toDate: '2025-12-31',
     })
     expect(result.success).toBe(false)
-    expect(result.error).toMatch(/manager/i)
+    expect(result.error).toMatch(/permission/i)
   })
 })
 
@@ -196,6 +216,7 @@ describe('getAttendanceByBranch', () => {
 describe('getMyAttendance', () => {
   it('returns only the current user records in date range', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
     await seedAttendanceRecord(db, {
       userId: STAFF_ID,
@@ -227,6 +248,7 @@ describe('getMyAttendance', () => {
 describe('correctAttendance', () => {
   it('updates clock times and computes new duration', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
     const record = await seedAttendanceRecord(db, {
       userId: STAFF_ID,
@@ -252,6 +274,7 @@ describe('correctAttendance', () => {
 
   it('rejects correction without a reason', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
     const record = await seedAttendanceRecord(db, {
       userId: STAFF_ID,
@@ -273,6 +296,7 @@ describe('correctAttendance', () => {
 
   it('rejects correction by staff — manager required', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
     const record = await seedAttendanceRecord(db, {
       userId: STAFF_ID,
@@ -289,7 +313,7 @@ describe('correctAttendance', () => {
       reason: 'Test',
     })
     expect(result.success).toBe(false)
-    expect(result.error).toMatch(/manager/i)
+    expect(result.error).toMatch(/permission/i)
   })
 })
 
@@ -298,6 +322,7 @@ describe('correctAttendance', () => {
 describe('getActivityLog', () => {
   it('returns activities from multiple sources', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
 
     await seedAttendanceRecord(db, {
@@ -325,6 +350,7 @@ describe('getActivityLog', () => {
 
   it('staff can only see their own activity', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
 
     await seedAttendanceRecord(db, {
@@ -356,6 +382,7 @@ describe('getActivityLog', () => {
 
   it('manager can filter by specific staff member', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     const today = new Date().toISOString().split('T')[0]
 
     await seedAttendanceRecord(db, {
@@ -387,6 +414,7 @@ describe('getActivityLog', () => {
 
   it('returns empty array when no activity in date range', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, branch.id, [MANAGER_ID, STAFF_ID])
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: MANAGER_ID, branchId: branch.id, role: 'manager' },
     })

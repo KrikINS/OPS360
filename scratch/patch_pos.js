@@ -1,77 +1,23 @@
-const fs = require('fs')
-const path = require('path')
+const fs = require('fs');
+const file = 'src/actions/__tests__/pos.test.ts';
+let code = fs.readFileSync(file, 'utf8');
 
-const target = path.join(__dirname, '../src/app/actions/pos.ts')
-let content = fs.readFileSync(target, 'utf8')
-
-// Add import
-if (!content.includes('hasCapability')) {
-  content = content.replace(
-    'import { cookies } from "next/headers"',
-    'import { cookies } from "next/headers"\nimport { hasCapability, branchFilterFor } from "@/lib/access"'
-  )
+const helper = `
+async function mockSession(userId: string, branchId: string, role: string) {
+  await db.insert(schema.users).values({ id: userId, email: userId + '@test.com', password_hash: 'hash', role }).onConflictDoNothing()
+  await db.insert(schema.user_branch_access).values({ user_id: userId, branch_id: branchId }).onConflictDoNothing()
+  vi.mocked(getServerSession).mockResolvedValue({
+    user: { id: userId, branchId, role }
+  })
 }
+`;
 
-function insertCheck(fnName, checkCode) {
-  const regex = new RegExp(`(export async function ${fnName}\\s*\\([^{]*\\)\\s*(?::\\s*[^{]+)?\\s*\\{\\n(?:\\s*try \\{\\n)?)`)
-  content = content.replace(regex, `$1${checkCode}\n`)
-}
+// Insert the helper after the beforeAll block
+code = code.replace(/afterAll\(.*?\n/, match => match + helper);
 
-// 1. getUserPosStatsAction
-content = content.replace(
-  /if \(!session\?\.user\?\.id\) return \{ data: \[\] \}/,
-  'if (!session?.user?.id) return { data: [] }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }'
-)
+// Replace all occurrences of vi.mocked(getServerSession)...
+const regex = /vi\.mocked\(getServerSession\)\.mockResolvedValue\(\{\s*user:\s*\{\s*id:\s*'([^']+)',\s*branchId:\s*([^,]+),\s*role:\s*'([^']+)'\s*\}\,?\s*\}\)/g;
 
-// 2. updatePosPinAction
-insertCheck('updatePosPinAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (session.user.id !== userId && !(await hasCapability("admin", "edit", session))) return { error: { message: "Insufficient permission" } }`)
+code = code.replace(regex, "await mockSession('$1', $2, '$3')");
 
-// 3. getPosInventoryAction
-insertCheck('getPosInventoryAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }`)
-
-// 4. getPosProductsAction
-content = content.replace(
-  /export async function getPosProductsAction\(productIds: string\[\]\) \{\n  if \(!productIds\.length\) return \{ data: \[\] \}\n  try \{/,
-  'export async function getPosProductsAction(productIds: string[]) {\n  if (!productIds.length) return { data: [] }\n  try {\n    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }'
-)
-
-// 5. getAllPosProductsAction
-insertCheck('getAllPosProductsAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }`)
-
-// 6. searchCustomerByPhoneAction
-insertCheck('searchCustomerByPhoneAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }`)
-
-// 7. searchPosCustomersAction
-insertCheck('searchPosCustomersAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }`)
-
-// 8. processPosSaleAction
-content = content.replace(
-  /export async function processPosSaleAction\(payload: Record<string, unknown>\) \{\n  try \{/,
-  'export async function processPosSaleAction(payload: Record<string, unknown>) {\n  const session = await getServerSession(authOptions)\n  if (!session?.user) return { error: { message: "Unauthorized" } }\n  if (!(await hasCapability("sales", "edit", session))) {\n    return { error: { message: "Insufficient permission" } }\n  }\n  const branchId = (payload?.branch_id ?? payload?.branchId) as string | undefined\n  const allowed = await branchFilterFor(session, "sales", "edit")\n  if (allowed !== null && (!branchId || !allowed.includes(branchId))) {\n    return { error: { message: "You don\'t have access to this branch" } }\n  }\n  try {'
-)
-
-// 9. getInvoiceHeaderAction
-insertCheck('getInvoiceHeaderAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }`)
-
-// 10. getInvoiceItemsDetailsAction
-insertCheck('getInvoiceItemsDetailsAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }`)
-
-// 11. getInvoiceItemsForReturnAction
-content = content.replace(
-  /export async function getInvoiceItemsForReturnAction\(invoiceId: string\) \{\n  const session = await getServerSession\(authOptions\)\n  if \(!session\?\.user\) return \{ error: \{ message: 'Unauthorized' \} \}/,
-  'export async function getInvoiceItemsForReturnAction(invoiceId: string) {\n  const session = await getServerSession(authOptions)\n  if (!session?.user) return { error: { message: \'Unauthorized\' } }\n  if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }'
-)
-
-// 12. scanSerialAtPosAction
-// change the return type to include 'unauthorized'
-content = content.replace(
-  /\| \{ error: 'not_found' \| 'unavailable' \| 'wrong_branch' \}/,
-  '| { error: \'not_found\' | \'unavailable\' | \'wrong_branch\' | \'unauthorized\' }'
-)
-insertCheck('scanSerialAtPosAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: 'unauthorized' }\n    if (!(await hasCapability("sales", "edit", session))) return { error: 'unauthorized' }`)
-
-// 13. getPosInitialDataAction
-insertCheck('getPosInitialDataAction', `    const session = await getServerSession(authOptions)\n    if (!session?.user) return { error: { message: "Unauthorized" } }\n    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }`)
-
-fs.writeFileSync(target, content, 'utf8')
-console.log('Successfully patched src/app/actions/pos.ts')
+fs.writeFileSync(file, code);

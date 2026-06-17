@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
+import { hasCapability, branchFilterFor } from '@/lib/access'
 import {
   profiles,
   branches,
@@ -42,8 +43,10 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  if (!await hasCapability('hr', 'view', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr view required' }
+  }
+  const allowedBranches = await branchFilterFor(session)
 
   try {
     // ---- Auto-sync backfill step ----
@@ -78,13 +81,17 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
 
     const conditions = [eq(employees.status, 'active')];
 
-    if (!isAdmin) {
-      const effectiveBranchId = await getEffectiveBranchId(session);
-      if (!effectiveBranchId) {
-        return { success: false as const, error: 'No branch assigned to your account' };
+    if (allowedBranches !== null) {
+      if (allowedBranches.length === 0) {
+        return { success: false as const, error: "You don't have access to any branches" };
       }
-      conditions.push(eq(employees.branch_id, effectiveBranchId));
-    } else if (input?.branchId) {
+      conditions.push(inArray(employees.branch_id, allowedBranches));
+    }
+    if (input?.branchId) {
+      // If scoped, must ensure they are allowed to see it
+      if (allowedBranches !== null && !allowedBranches.includes(input.branchId)) {
+        return { success: false as const, error: "You don't have access to this branch" };
+      }
       conditions.push(eq(employees.branch_id, input.branchId));
     }
 
@@ -137,10 +144,12 @@ export async function createNonErpStaffMember(data: { firstName: string, lastNam
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-  if (!isAdmin) {
-    return { success: false as const, error: 'Admin role required' }
+  if (!await hasCapability('hr', 'edit', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr edit required' }
+  }
+  const allowedBranches = await branchFilterFor(session)
+  if (data.branchId && allowedBranches !== null && !allowedBranches.includes(data.branchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
   }
 
   try {
@@ -268,16 +277,18 @@ export async function getAttendanceByBranch(input: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
-  if (!isAdmin) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!await hasCapability('hr', 'view', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr view required' }
   }
+  const allowedBranches = await branchFilterFor(session)
 
   const effectiveBranchIdFromCookie = await getEffectiveBranchId(session);
   const targetBranchId = input.branchId ?? effectiveBranchIdFromCookie;
   if (!targetBranchId) {
     return { success: false as const, error: 'No branch specified' }
+  }
+  if (allowedBranches !== null && !allowedBranches.includes(targetBranchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
   }
 
   const records = await db
@@ -341,10 +352,8 @@ export async function correctAttendance(input: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isManager = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
-  if (!isManager) {
-    return { success: false as const, error: 'Manager role required to correct attendance' }
+  if (!await hasCapability('hr', 'edit', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr edit required' }
   }
 
   if (!input.reason?.trim()) {
@@ -417,17 +426,19 @@ export async function getActivityLog(input: {
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized' }
   }
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-  const isManager = isAdmin || role === 'manager'
+  const allowedBranches = await branchFilterFor(session)
+  const isManager = await hasCapability('hr', 'view', session)
 
   const effectiveUserId: string | null = isManager
     ? (input.userId ?? null)
     : session.user.id
   const effectiveBranchIdFromCookie = await getEffectiveBranchId(session);
-  const effectiveBranchId: string | null = isAdmin
-    ? (input.branchId ?? null)
+  const effectiveBranchId: string | null = isManager
+    ? (input.branchId ?? (allowedBranches !== null ? effectiveBranchIdFromCookie : null))
     : effectiveBranchIdFromCookie
+  if (effectiveBranchId && allowedBranches !== null && !allowedBranches.includes(effectiveBranchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
+  }
 
   const limit = Math.min(input.limit ?? 50, 200)
   const offset = input.offset ?? 0
@@ -610,9 +621,12 @@ export async function processPayrollRun(input: {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!await hasCapability('hr', 'edit', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr edit required' }
+  }
+  const allowedBranches = await branchFilterFor(session)
+  if (allowedBranches !== null && !allowedBranches.includes(input.branchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
   }
 
   if (!input.payslips || input.payslips.length === 0) {
@@ -726,13 +740,16 @@ export async function getPayrollRuns(input?: { branchId?: string }) {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  if (!await hasCapability('hr', 'view', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr view required' }
+  }
+  const allowedBranches = await branchFilterFor(session)
 
   try {
-    const effectiveBranchId = isAdmin
-      ? (input?.branchId ?? null)
-      : (await getEffectiveBranchId(session))
+    const effectiveBranchId = input?.branchId ?? (allowedBranches !== null ? await getEffectiveBranchId(session) : null)
+    if (effectiveBranchId && allowedBranches !== null && !allowedBranches.includes(effectiveBranchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
 
     const query = db
       .select({
@@ -755,6 +772,8 @@ export async function getPayrollRuns(input?: { branchId?: string }) {
 
     if (effectiveBranchId) {
       query.where(eq(payroll_runs.branch_id, effectiveBranchId))
+    } else if (allowedBranches !== null) {
+      query.where(inArray(payroll_runs.branch_id, allowedBranches))
     }
 
     const runs = await query
@@ -769,6 +788,9 @@ export async function getPayslips(input: { payrollRunId: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized' }
+  }
+  if (!await hasCapability('hr', 'view', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr view required' }
   }
 
   try {
@@ -788,6 +810,13 @@ export async function getPayslips(input: { payrollRunId: string }) {
 export async function getEmployeesWithStructures(input?: { branchId?: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  if (!await hasCapability('hr', 'view', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr view required' }
+  }
+  const allowedBranches = await branchFilterFor(session)
+  if (input?.branchId && allowedBranches !== null && !allowedBranches.includes(input.branchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
+  }
   try {
     const rows = await db
       .select({
@@ -822,7 +851,8 @@ export async function getEmployeesWithStructures(input?: { branchId?: string }) 
       .where(
         and(
           eq(employees.status, 'active'),
-          input?.branchId ? eq(employees.branch_id, input.branchId) : undefined
+          input?.branchId ? eq(employees.branch_id, input.branchId) : undefined,
+          allowedBranches !== null && !input?.branchId ? inArray(employees.branch_id, allowedBranches) : undefined
         )
       )
       .orderBy(employees.first_name)
@@ -841,9 +871,8 @@ export async function upsertEmployeeDetails(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!await hasCapability('hr', 'edit', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr edit required' }
   }
   try {
     const updateData: Partial<typeof employees.$inferInsert> = {}
@@ -873,9 +902,8 @@ export async function setSalaryStructure(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!await hasCapability('hr', 'edit', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr edit required' }
   }
   if (input.basic <= 0) return { success: false as const, error: 'Basic salary must be greater than 0' }
   if (input.hra < 0) return { success: false as const, error: 'HRA cannot be negative' }
@@ -923,6 +951,9 @@ export async function setSalaryStructure(input: {
 export async function getSalaryStructureHistory(employeeId: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  if (!await hasCapability('hr', 'view', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr view required' }
+  }
   try {
     const rows = await db
       .select()
@@ -1025,8 +1056,11 @@ export async function getLeaveRequests(input?: { employeeId?: string; status?: s
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
+  const canViewAll = await hasCapability('hr', 'view', session)
+  
+  if (!canViewAll && input?.employeeId && input.employeeId !== session.user.id) {
+    return { success: false as const, error: 'Insufficient permission: hr view required to see others leave requests' }
+  }
 
   try {
     const rows = await db.execute(sql`
@@ -1042,7 +1076,7 @@ export async function getLeaveRequests(input?: { employeeId?: string; status?: s
       JOIN profiles p ON p.id = lr.employee_id
       LEFT JOIN profiles ap ON ap.id = lr.approved_by
       WHERE (
-        ${isAdmin ? sql`TRUE` : sql`lr.employee_id = ${session.user.id}::uuid`}
+        ${canViewAll && !input?.employeeId ? sql`TRUE` : sql`lr.employee_id = ${(input?.employeeId ?? session.user.id)}::uuid`}
       )
       ${input?.status ? sql`AND lr.status = ${input.status}` : sql``}
       ${input?.employeeId ? sql`AND lr.employee_id = ${input.employeeId}::uuid` : sql``}
@@ -1068,9 +1102,8 @@ export async function approveLeaveRequest(input: {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!await hasCapability('hr', 'edit', session)) {
+    return { success: false as const, error: 'Insufficient permission: hr edit required' }
   }
 
   try {
