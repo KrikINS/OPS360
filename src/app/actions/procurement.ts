@@ -2,11 +2,25 @@
 
 import { db } from "@/db/client"
 import { purchase_orders } from "@/db/schema"
-import { desc, sql } from "drizzle-orm"
+import { desc, sql, inArray } from "drizzle-orm"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { hasCapability, branchFilterFor } from "@/lib/access"
 
 export async function getPurchaseOrdersAction() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { error: { message: "Unauthorized" } }
+  if (!(await hasCapability("procurement", "view", session))) {
+    return { error: { message: "Insufficient permission" } }
+  }
+  const allowed = await branchFilterFor(session, "procurement", "view")
+
   try {
-    const data = await db.select().from(purchase_orders).orderBy(desc(purchase_orders.created_at))
+    const data = await db
+      .select()
+      .from(purchase_orders)
+      .where(allowed !== null ? inArray(purchase_orders.branch_id, allowed) : undefined)
+      .orderBy(desc(purchase_orders.created_at))
     return { data }
   } catch (error) {
     return { error: { message: (error instanceof Error ? error.message : String(error)) } }
@@ -14,6 +28,13 @@ export async function getPurchaseOrdersAction() {
 }
 
 export async function getGRNReceiptsAction(poId: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { error: { message: "Unauthorized" } }
+  if (!(await hasCapability("procurement", "view", session))) {
+    return { error: { message: "Insufficient permission" } }
+  }
+  const allowed = await branchFilterFor(session, "procurement", "view")
+
   try {
     const res = await db.execute(sql`
       SELECT
@@ -78,6 +99,7 @@ export async function getGRNReceiptsAction(poId: string) {
       LEFT JOIN branches  b  ON b.id  = gr.branch_id
       LEFT JOIN grn_items gi ON gi.grn_id = gr.id
       WHERE gr.po_id = ${poId}
+        AND (${allowed === null ? sql`1=1` : sql`gr.branch_id = ANY(${allowed}::uuid[])`})
       GROUP BY gr.id, gr.grn_number, gr.po_id, gr.branch_id,
                gr.created_by, gr.total_landed_cost,
                gr.has_discrepancy, gr.condition_notes, gr.created_at,
@@ -93,6 +115,13 @@ export async function getGRNReceiptsAction(poId: string) {
 }
 
 export async function getDiscrepanciesAction() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { error: { message: "Unauthorized" } }
+  if (!(await hasCapability("procurement", "view", session))) {
+    return { error: { message: "Insufficient permission" } }
+  }
+  const allowed = await branchFilterFor(session, "procurement", "view")
+
   try {
     const res = await db.execute(sql`
       SELECT
@@ -116,6 +145,7 @@ export async function getDiscrepanciesAction() {
       LEFT JOIN purchase_orders po ON po.id = d.po_id
       LEFT JOIN vendors          v  ON v.id  = po.vendor_id
       LEFT JOIN products         p  ON p.id  = d.product_id
+      WHERE ${allowed === null ? sql`1=1` : sql`po.branch_id = ANY(${allowed}::uuid[])`}
       ORDER BY d.created_at DESC
     `)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

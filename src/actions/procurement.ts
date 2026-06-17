@@ -8,10 +8,12 @@ import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { postGRNJournal, createJournalEntry, postDebitNoteJournal } from '@/actions/finance'
 import { getPurchaseOrdersAction } from '@/app/actions/procurement'
+import { hasCapability, branchFilterFor } from "@/lib/access"
 
 export async function getVendorsAction() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { data: null, error: 'Unauthorized' }
+  if (!(await hasCapability("procurement", "view", session))) return { data: null, error: 'Insufficient permission' }
   try {
     const data = await db.select({ id: vendors.id, name: vendors.name }).from(vendors)
     return { data }
@@ -37,9 +39,12 @@ export async function createPurchaseOrder(input: {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (role !== 'manager' && role !== 'admin' && role !== 'super_admin' && role !== 'admin/owner') {
-    return { success: false as const, error: 'Insufficient permission: manager required' }
+  if (!(await hasCapability("procurement", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const poAllowed = await branchFilterFor(session, "procurement", "edit")
+  if (poAllowed !== null && !poAllowed.includes(input.branchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
   }
 
   try {
@@ -171,9 +176,8 @@ export async function approvePurchaseOrder(input: { poId: string }) {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (role !== 'manager' && role !== 'admin' && role !== 'super_admin' && role !== 'admin/owner') {
-    return { success: false as const, error: 'Insufficient permission: manager required' }
+  if (!(await hasCapability("procurement", "approve", session))) {
+    return { success: false as const, error: 'Insufficient permission: approval required' }
   }
 
   try {
@@ -185,6 +189,10 @@ export async function approvePurchaseOrder(input: { poId: string }) {
 
     if (!existing[0]) {
       return { success: false as const, error: 'Purchase order not found' }
+    }
+    const apvAllowed = await branchFilterFor(session, "procurement", "approve")
+    if (apvAllowed !== null && existing[0].branch_id && !apvAllowed.includes(existing[0].branch_id)) {
+      return { success: false as const, error: "You don't have access to approve POs for this branch" }
     }
     const approvableStatuses = ['draft', 'pending_approval']
     if (!approvableStatuses.includes(existing[0].status ?? '')) {
@@ -225,10 +233,8 @@ export async function rejectPurchaseOrder(input: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isManager = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
-  if (!isManager) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!(await hasCapability("procurement", "approve", session))) {
+    return { success: false as const, error: 'Insufficient permission: approval required' }
   }
 
   const [existing] = await db
@@ -239,6 +245,10 @@ export async function rejectPurchaseOrder(input: {
 
   if (!existing) {
     return { success: false as const, error: 'Purchase order not found' }
+  }
+  const apvAllowed = await branchFilterFor(session, "procurement", "approve")
+  if (apvAllowed !== null && existing.branch_id && !apvAllowed.includes(existing.branch_id)) {
+    return { success: false as const, error: "You don't have access to reject POs for this branch" }
   }
 
   const rejectableStatuses = ['draft', 'pending_approval']
@@ -270,6 +280,13 @@ export async function createGRN(input: {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
+  }
+  if (!(await hasCapability("procurement", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const grnAllowed = await branchFilterFor(session, "procurement", "edit")
+  if (grnAllowed !== null && !grnAllowed.includes(input.branchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
   }
 
   try {
@@ -615,9 +632,8 @@ export async function createReturnToVendor(input: {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (role !== 'manager' && role !== 'admin' && role !== 'super_admin' && role !== 'admin/owner') {
-    return { success: false as const, error: 'Insufficient permission: manager required' }
+  if (!(await hasCapability("procurement", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
 
   const effectiveBranchId = await getEffectiveBranchId(session)
@@ -625,6 +641,11 @@ export async function createReturnToVendor(input: {
     return { success: false as const, error: 'No branch assigned to your account' }
   }
   const userBranchId = effectiveBranchId
+
+  const rtnAllowed = await branchFilterFor(session, "procurement", "edit")
+  if (rtnAllowed !== null && !rtnAllowed.includes(userBranchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
+  }
 
   try {
     // Fetch PO for state-code lookup
@@ -785,9 +806,8 @@ export async function shortClosePO(input: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required to short-close' }
+  if (!(await hasCapability("procurement", "approve", session))) {
+    return { success: false as const, error: 'Insufficient permission: approval required' }
   }
 
   const [po] = await db
@@ -804,6 +824,10 @@ export async function shortClosePO(input: {
 
   if (!po) {
     return { success: false as const, error: 'PO not found' }
+  }
+  const scAllowed = await branchFilterFor(session, "procurement", "approve")
+  if (scAllowed !== null && po.branch_id && !scAllowed.includes(po.branch_id)) {
+    return { success: false as const, error: "You don't have access to short-close POs for this branch" }
   }
 
   if (!['approved', 'partially_received'].includes(po.status ?? '')) {
