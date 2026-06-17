@@ -6,7 +6,7 @@
  *
  * Each test starts with a clean DB (cleanupTestDb runs after every test).
  * The session mock in vitest.setup.ts provides a default logged-in staff user.
- * Override it per-test with vi.mocked(getServerSession).mockResolvedValueOnce(...)
+ * Override it per-test with vi.mocked(getServerSession).mockResolvedValue(...)
  */
 
 import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
@@ -56,7 +56,7 @@ describe('createTransaction — happy path', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 20 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 
@@ -85,7 +85,7 @@ describe('createTransaction — happy path', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 5 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 
@@ -106,7 +106,7 @@ describe('createTransaction — happy path', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 
@@ -135,7 +135,7 @@ describe('createTransaction — happy path', () => {
     await seedInventoryUnits(db, { productId: p2.id, branchId: branch.id, count: 5 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 
@@ -166,7 +166,7 @@ describe('createTransaction — stock validation', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 2 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 
@@ -187,7 +187,7 @@ describe('createTransaction — stock validation', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 2 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 
@@ -216,7 +216,7 @@ describe('createTransaction — stock validation', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch2.id, count: 10 })
     await seedCounter(db, branch1.id, 'INVOICE')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch1.id, role: 'staff' },
     })
 
@@ -238,7 +238,7 @@ describe('createTransaction — stock validation', () => {
 
 describe('createTransaction — authorization', () => {
   it('rejects unauthenticated requests', async () => {
-    vi.mocked(getServerSession).mockResolvedValueOnce(null)
+    vi.mocked(getServerSession).mockResolvedValue(null)
 
     const result = await createTransaction({
       branchId: 'any-branch',
@@ -253,7 +253,7 @@ describe('createTransaction — authorization', () => {
 
   it('rejects when user branch does not match transaction branch', async () => {
     const branch = await seedBranch(db)
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: 'different-branch', role: 'staff' },
     })
 
@@ -282,7 +282,7 @@ describe('createTransaction — invoice numbering', () => {
 
     // Simulate 15 concurrent checkouts from the same branch
     const requests = Array.from({ length: 15 }, () => {
-      vi.mocked(getServerSession).mockResolvedValueOnce({
+      vi.mocked(getServerSession).mockResolvedValue({
         user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
       })
       return createTransaction({
@@ -309,7 +309,7 @@ describe('createTransaction — invoice numbering', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 50 })
     await seedCounter(db, branch.id, 'INV', 5)  // start at 5
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 
@@ -382,7 +382,7 @@ describe('voidTransaction', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 5 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
     const created = await createTransaction({
@@ -392,7 +392,7 @@ describe('voidTransaction', () => {
       customerId: null,
     })
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000002', branchId: branch.id, role: 'staff' }, // staff, not manager
     })
     expect(created.success).toBe(true)
@@ -437,7 +437,7 @@ describe('validateDiscount — POS Manager PIN verification', () => {
       created_at: new Date()
     }).returning()
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 

@@ -130,6 +130,12 @@ export async function seedUser(db: TestDb, opts: SeedUserOpts) {
     )
   }
 
+  // ALLOT the user to their branch for RBAC branchFilterFor checks
+  await db.insert(schema.user_branch_access).values({
+    user_id: user.id,
+    branch_id: opts.branchId,
+  })
+
   return user
 }
 

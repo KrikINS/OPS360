@@ -8,7 +8,18 @@ vi.mock('next/cache', () => ({
 
 vi.mock('server-only', () => ({}))
 
-
+// Mock @/lib/access branchFilterFor since test users are not seeded in user_branch_access
+vi.mock('@/lib/access', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/access')>()
+  return {
+    ...actual,
+    branchFilterFor: vi.fn(async (session) => {
+      // In tests, if session user has a branchId, assume they are allotted to it
+      if (!session?.user?.branchId) return []
+      return [session.user.branchId]
+    })
+  }
+})
 // Mock next/headers — Server Actions use cookies() and headers()
 // No active_branch_id cookie in tests — getEffectiveBranchId falls back to
 // session.user.branchId, which each test controls via mockResolvedValueOnce.
