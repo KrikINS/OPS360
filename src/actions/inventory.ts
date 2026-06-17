@@ -187,9 +187,8 @@ export async function adjustStock(input: {
     return { success: false as const, error: 'Reason required for stock adjustment' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (role !== 'manager' && role !== 'admin' && role !== 'super_admin' && role !== 'admin/owner') {
-    return { success: false as const, error: 'Insufficient permission: manager required' }
+  if (!(await hasCapability("inventory", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
 
   const { adjustmentQty, productId, branchId } = input
