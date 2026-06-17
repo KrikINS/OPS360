@@ -194,6 +194,11 @@ export async function adjustStock(input: {
 
   const { adjustmentQty, productId, branchId } = input
 
+  const adjAllowed = await branchFilterFor(session, "inventory", "edit")
+  if (adjAllowed !== null && !adjAllowed.includes(branchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
+  }
+
   // c) Count current available inventory units
   const availableQuery = await db.execute(sql`
     SELECT COUNT(*) as count FROM inventory
