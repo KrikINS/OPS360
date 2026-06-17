@@ -46,7 +46,7 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
   if (!await hasCapability('hr', 'view', session)) {
     return { success: false as const, error: 'Insufficient permission: hr view required' }
   }
-  const allowedBranches = await branchFilterFor(session)
+  const allowedBranches = await branchFilterFor(session, "hr", "view")
 
   try {
     // ---- Auto-sync backfill step ----
@@ -147,7 +147,7 @@ export async function createNonErpStaffMember(data: { firstName: string, lastNam
   if (!await hasCapability('hr', 'edit', session)) {
     return { success: false as const, error: 'Insufficient permission: hr edit required' }
   }
-  const allowedBranches = await branchFilterFor(session)
+  const allowedBranches = await branchFilterFor(session, "hr", "edit")
   if (data.branchId && allowedBranches !== null && !allowedBranches.includes(data.branchId)) {
     return { success: false as const, error: "You don't have access to this branch" }
   }
@@ -280,7 +280,7 @@ export async function getAttendanceByBranch(input: {
   if (!await hasCapability('hr', 'view', session)) {
     return { success: false as const, error: 'Insufficient permission: hr view required' }
   }
-  const allowedBranches = await branchFilterFor(session)
+  const allowedBranches = await branchFilterFor(session, "hr", "view")
 
   const effectiveBranchIdFromCookie = await getEffectiveBranchId(session);
   const targetBranchId = input.branchId ?? effectiveBranchIdFromCookie;
@@ -426,7 +426,7 @@ export async function getActivityLog(input: {
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized' }
   }
-  const allowedBranches = await branchFilterFor(session)
+  const allowedBranches = await branchFilterFor(session, "hr", "view")
   const isManager = await hasCapability('hr', 'view', session)
 
   const effectiveUserId: string | null = isManager
@@ -624,7 +624,7 @@ export async function processPayrollRun(input: {
   if (!await hasCapability('hr', 'edit', session)) {
     return { success: false as const, error: 'Insufficient permission: hr edit required' }
   }
-  const allowedBranches = await branchFilterFor(session)
+  const allowedBranches = await branchFilterFor(session, "hr", "edit")
   if (allowedBranches !== null && !allowedBranches.includes(input.branchId)) {
     return { success: false as const, error: "You don't have access to this branch" }
   }
@@ -743,7 +743,7 @@ export async function getPayrollRuns(input?: { branchId?: string }) {
   if (!await hasCapability('hr', 'view', session)) {
     return { success: false as const, error: 'Insufficient permission: hr view required' }
   }
-  const allowedBranches = await branchFilterFor(session)
+  const allowedBranches = await branchFilterFor(session, "hr", "view")
 
   try {
     const effectiveBranchId = input?.branchId ?? (allowedBranches !== null ? await getEffectiveBranchId(session) : null)
@@ -813,7 +813,7 @@ export async function getEmployeesWithStructures(input?: { branchId?: string }) 
   if (!await hasCapability('hr', 'view', session)) {
     return { success: false as const, error: 'Insufficient permission: hr view required' }
   }
-  const allowedBranches = await branchFilterFor(session)
+  const allowedBranches = await branchFilterFor(session, "hr", "view")
   if (input?.branchId && allowedBranches !== null && !allowedBranches.includes(input.branchId)) {
     return { success: false as const, error: "You don't have access to this branch" }
   }
@@ -1057,7 +1057,7 @@ export async function getLeaveRequests(input?: { employeeId?: string; status?: s
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
   const canViewAll = await hasCapability('hr', 'view', session)
-  
+
   if (!canViewAll && input?.employeeId && input.employeeId !== session.user.id) {
     return { success: false as const, error: 'Insufficient permission: hr view required to see others leave requests' }
   }
