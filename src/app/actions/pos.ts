@@ -6,11 +6,13 @@ import { eq, sql, and } from "drizzle-orm"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { cookies } from "next/headers"
+import { hasCapability, branchFilterFor } from "@/lib/access"
 
 export async function getUserPosStatsAction() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return { data: [] }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
 
     const cookieStore = await cookies()
     const branchId = session.user.branchId
@@ -33,6 +35,9 @@ export async function getUserPosStatsAction() {
 
 export async function updatePosPinAction(userId: string, newPin: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (session.user.id !== userId && !(await hasCapability("admin", "edit", session))) return { error: { message: "Insufficient permission" } }
     await db.execute(sql`UPDATE profiles SET pos_pin = ${newPin} WHERE id = ${userId}`)
     return { success: true }
   } catch (error) {
@@ -42,6 +47,9 @@ export async function updatePosPinAction(userId: string, newPin: string) {
 
 export async function getPosInventoryAction(branchId: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
     const data = await db.select().from(inventory).where(and(eq(inventory.branch_id, branchId), eq(inventory.status, 'Available')))
     return { data }
   } catch (error) {
@@ -52,6 +60,9 @@ export async function getPosInventoryAction(branchId: string) {
 export async function getPosProductsAction(productIds: string[]) {
   if (!productIds.length) return { data: [] }
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
     const data = await db.select().from(products).where(sql`${products.id} = ANY(${productIds})`)
     return { data }
   } catch (error) {
@@ -61,6 +72,9 @@ export async function getPosProductsAction(productIds: string[]) {
 
 export async function getAllPosProductsAction() {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
     const data = await db.select().from(products)
     return { data }
   } catch (error) {
@@ -70,6 +84,9 @@ export async function getAllPosProductsAction() {
 
 export async function searchCustomerByPhoneAction(phone: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
     const res = await db.execute(sql`SELECT * FROM search_customer_by_phone(${phone})`)
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
     const data = Array.isArray(result) ? result : result.rows || []
@@ -81,6 +98,9 @@ export async function searchCustomerByPhoneAction(phone: string) {
 
 export async function searchPosCustomersAction(term: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
     const res = await db.execute(sql`SELECT * FROM search_pos_customers(${term})`)
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
     const data = Array.isArray(result) ? result : result.rows || []
@@ -91,6 +111,16 @@ export async function searchPosCustomersAction(term: string) {
 }
 
 export async function processPosSaleAction(payload: Record<string, unknown>) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { error: { message: "Unauthorized" } }
+  if (!(await hasCapability("sales", "edit", session))) {
+    return { error: { message: "Insufficient permission" } }
+  }
+  const branchId = (payload?.branch_id ?? payload?.branchId) as string | undefined
+  const allowed = await branchFilterFor(session, "sales", "edit")
+  if (allowed !== null && (!branchId || !allowed.includes(branchId))) {
+    return { error: { message: "You don't have access to this branch" } }
+  }
   try {
     const res = await db.execute(sql`SELECT process_pos_sale(${JSON.stringify(payload)}::jsonb)`)
     const result = res as unknown as { rows?: { process_pos_sale: Record<string, unknown> }[] } | { process_pos_sale: Record<string, unknown> }[]
@@ -104,6 +134,9 @@ export async function processPosSaleAction(payload: Record<string, unknown>) {
 
 export async function getInvoiceHeaderAction(id: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
 
     // we would need branches and customers, but let's just use raw SQL for now
     const res = await db.execute(sql`SELECT *, row_to_json(branches.*) as branches, row_to_json(customers.*) as customers FROM sales_invoices LEFT JOIN branches ON sales_invoices.branch_id = branches.id LEFT JOIN customers ON sales_invoices.customer_id = customers.id WHERE sales_invoices.id = ${id}`)
@@ -117,6 +150,9 @@ export async function getInvoiceHeaderAction(id: string) {
 
 export async function getInvoiceItemsDetailsAction(id: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
     const res = await db.execute(sql`SELECT * FROM view_invoice_details WHERE invoice_id = ${id}`)
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
     const data = Array.isArray(result) ? result : result.rows || []
@@ -135,6 +171,7 @@ export async function getInvoiceItemsDetailsAction(id: string) {
 export async function getInvoiceItemsForReturnAction(invoiceId: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { error: { message: 'Unauthorized' } }
+  if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
 
   try {
     const res = await db.execute(sql`
@@ -228,9 +265,12 @@ export async function scanSerialAtPosAction(
   branchId: string
 ): Promise<
   | { data: { inventoryId: string; productId: string } }
-  | { error: 'not_found' | 'unavailable' | 'wrong_branch' }
+  | { error: 'not_found' | 'unavailable' | 'wrong_branch' | 'unauthorized' }
 > {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: 'unauthorized' }
+    if (!(await hasCapability("sales", "edit", session))) return { error: 'unauthorized' }
     const rows = await db
       .select()
       .from(inventory)
@@ -252,6 +292,9 @@ export async function scanSerialAtPosAction(
 
 export async function getPosInitialDataAction(userId: string, branchId?: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
     const [profileData, branchesData, walkInCustomer] = await Promise.all([
       db.select().from(profiles).where(eq(profiles.id, userId)),
       db.select().from(branches),

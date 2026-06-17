@@ -3,7 +3,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
-import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
+import { hasCapability, branchFilterFor } from "@/lib/access"
 import { sql } from 'drizzle-orm'
 import {
   processPosSaleAction,
@@ -33,15 +33,12 @@ export async function createTransaction(input: {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const effectiveBranchId = await getEffectiveBranchId(session);
-  if (!effectiveBranchId) {
-    return { success: false as const, error: 'No branch assigned to your account' };
+  if (!(await hasCapability("sales", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
-  if (!['admin', 'manager', 'super_admin', 'admin/owner'].includes(role)) {
-    if (effectiveBranchId !== input.branchId) {
-      return { success: false as const, error: 'Unauthorized: branch mismatch' }
-    }
+  const ctAllowed = await branchFilterFor(session, "sales", "edit")
+  if (ctAllowed !== null && !ctAllowed.includes(input.branchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
   }
 
   const payload = {
@@ -164,9 +161,8 @@ export async function voidTransaction(input: {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (role !== 'manager' && role !== 'admin' && role !== 'super_admin' && role !== 'admin/owner') {
-    return { success: false as const, error: 'Insufficient permission: manager required' }
+  if (!(await hasCapability("sales", "approve", session))) {
+    return { success: false as const, error: 'Insufficient permission: approval required' }
   }
 
   try {
@@ -176,6 +172,11 @@ export async function voidTransaction(input: {
       const branchId = (inv.rows[0] as { branch_id: string | null } | undefined)?.branch_id;
       
       if (!branchId) throw new Error("Invoice not found");
+
+      const vtAllowed = await branchFilterFor(session, "sales", "approve")
+      if (vtAllowed !== null && !vtAllowed.includes(branchId)) {
+        throw new Error("You don't have access to void sales for this branch");
+      }
 
       // Update invoice status
       await tx.execute(sql`UPDATE sales_invoices SET status = 'voided' WHERE id = ${input.transactionId}::uuid`);
@@ -298,9 +299,8 @@ export async function processReturn(input: {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['manager', 'admin', 'super_admin', 'admin/owner'].includes(role)) {
-    return { success: false as const, error: 'Insufficient permission: manager required' }
+  if (!(await hasCapability("sales", "approve", session))) {
+    return { success: false as const, error: 'Insufficient permission: approval required' }
   }
 
   const invRows = await db.execute(
@@ -320,6 +320,11 @@ export async function processReturn(input: {
 
   if (!invData.length) return { success: false as const, error: 'Invoice not found' }
   const invoice = invData[0]
+
+  const prAllowed = await branchFilterFor(session, "sales", "approve")
+  if (prAllowed !== null && invoice?.branch_id && !prAllowed.includes(invoice.branch_id)) {
+    return { success: false as const, error: "You don't have access to process returns for this branch" }
+  }
 
   if (invoice.status === 'returned' || invoice.status === 'voided') {
     return { success: false as const, error: 'Invoice already reversed' }
@@ -502,6 +507,10 @@ export async function processReturn(input: {
 }
 
 export async function getTransactionById(id: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return null
+  if (!(await hasCapability("sales", "view", session))) return null
+
   const result = await getInvoiceHeaderAction(id)
   if (result.error) return null
   return result.data as Record<string, unknown> | null

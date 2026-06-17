@@ -173,7 +173,7 @@ interface PosContextType {
   refreshInventory: () => Promise<void>
   fetchAvailableSerials: (productId: string) => Promise<{ id: string, serial_number: string }[]>
   assignSerialToUnit: (productId: string, slotIndex: number, unit: SelectedUnit | null) => void
-  addToCartBySerial: (serial: string) => Promise<'added' | 'duplicate' | 'not_found' | 'unavailable' | 'wrong_branch' | 'no_branch'>
+  addToCartBySerial: (serial: string) => Promise<'added' | 'duplicate' | 'not_found' | 'unavailable' | 'wrong_branch' | 'no_branch' | 'unauthorized'>
   changeBranch: (branchId: string) => Promise<void>
   triggerInvoicePrint: (id: string) => void
   setPrintInvoiceId: (id: string | null) => void
@@ -841,7 +841,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
     }
   }, [cart, selectedCustomer, selectedBranch, totals, clearCart, fetchInventory, refreshSessionStats, resetCustomerContext, loyaltyRedeem])
 
-  const addToCartBySerial = useCallback(async (serial: string): Promise<'added' | 'duplicate' | 'not_found' | 'unavailable' | 'wrong_branch' | 'no_branch'> => {
+  const addToCartBySerial = useCallback(async (serial: string): Promise<'added' | 'duplicate' | 'not_found' | 'unavailable' | 'wrong_branch' | 'no_branch' | 'unauthorized'> => {
     if (!selectedBranch) return 'no_branch'
 
     const upperSerial = serial.toUpperCase()
