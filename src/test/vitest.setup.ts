@@ -6,6 +6,9 @@ vi.mock('next/cache', () => ({
   revalidateTag: vi.fn(),
 }))
 
+vi.mock('server-only', () => ({}))
+
+
 // Mock next/headers — Server Actions use cookies() and headers()
 // No active_branch_id cookie in tests — getEffectiveBranchId falls back to
 // session.user.branchId, which each test controls via mockResolvedValueOnce.

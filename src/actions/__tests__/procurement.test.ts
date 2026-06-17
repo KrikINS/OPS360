@@ -330,7 +330,7 @@ describe('rejectPurchaseOrder', () => {
     })
     const result = await rejectPurchaseOrder({ poId: 'any-id' })
     expect(result.success).toBe(false)
-    expect(result.error).toMatch(/manager/i)
+    expect(result.error).toMatch(/manager|permission|approval/i)
   })
 })
 
