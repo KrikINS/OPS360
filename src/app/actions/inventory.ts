@@ -1,5 +1,8 @@
 "use server"
 
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { hasCapability } from "@/lib/access"
 import { db } from "@/db/client"
 import { inventory, products, branches, user_permissions } from "@/db/schema"
 import { eq, or, and, sql } from "drizzle-orm"
@@ -63,7 +66,11 @@ export async function fetchInventoryDataAction(userId: string, branchId?: string
   }
 }
 
-export async function getInventoryForExportAction() { try { const data = await db.select().from(inventory); return { data }; } catch(error) { return { error: { message: String(error) } }; } }
+export async function getInventoryForExportAction() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !(await hasCapability("inventory", "view", session))) return { error: { message: 'Insufficient permission' } }
+  try { const data = await db.select().from(inventory); return { data }; } catch(error) { return { error: { message: String(error) } }; }
+}
 
 export async function getLowStockCountAction() {
   try {

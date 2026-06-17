@@ -4,15 +4,15 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
 import { inventory, inventory_transactions } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import { hasCapability, branchFilterFor } from '@/lib/access'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return new NextResponse('Unauthorized', { status: 401 })
 
-    const role = (session.user.role ?? '').toLowerCase()
-    if (!['manager', 'admin', 'super_admin', 'admin/owner'].includes(role)) {
-      return NextResponse.json({ success: false, error: 'Manager permission required' }, { status: 403 })
+    if (!(await hasCapability("inventory", "edit", session))) {
+      return NextResponse.json({ success: false, error: 'Insufficient permission' }, { status: 403 })
     }
 
     const { inventoryId } = await request.json()
@@ -23,6 +23,11 @@ export async function POST(request: NextRequest) {
       where: eq(inventory.id, inventoryId)
     })
     if (!unit) return NextResponse.json({ success: false, error: 'Unit not found' }, { status: 404 })
+
+    const allowed = await branchFilterFor(session, "inventory", "edit")
+    if (allowed !== null && unit.branch_id && !allowed.includes(unit.branch_id)) {
+      return NextResponse.json({ success: false, error: "You don't have access to this branch" }, { status: 403 })
+    }
     if (unit.status !== 'Quarantine') {
       return NextResponse.json({ success: false, error: 'Unit is not in Quarantine' }, { status: 400 })
     }

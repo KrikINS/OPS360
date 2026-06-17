@@ -8,6 +8,7 @@ import {
 import { eq, ilike, isNull, and } from 'drizzle-orm'
 import * as XLSX from 'xlsx'
 import { createJournalEntry } from '@/actions/finance'
+import { hasCapability } from '@/lib/access'
 
 export async function GET() {
   return NextResponse.json({ data: [] })

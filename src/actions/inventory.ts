@@ -13,6 +13,7 @@ import * as schema from '@/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import crypto from 'crypto'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
+import { hasCapability, branchFilterFor } from '@/lib/access'
 export async function requestStockTransfer(input: {
   fromBranchId: string
   toBranchId: string
