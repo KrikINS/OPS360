@@ -4,11 +4,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/db/client'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
+import { hasCapability, branchFilterFor } from '@/lib/access'
 import {
   service_jobs, warranty_registrations,
   customers, products, profiles, inventory, sales_invoices, branches,
 } from '@/db/schema'
-import { eq, and, desc, sql } from 'drizzle-orm'
+import { eq, and, desc, sql, inArray } from 'drizzle-orm'
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   'Pending':         ['In-Progress', 'Cancelled'],
@@ -40,7 +41,14 @@ export async function createServiceJob(input: {
   if (!session?.user) {
     return { success: false as const, error: 'Unauthorized' }
   }
+  if (!(await hasCapability("service", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "service", "edit")
   const effectiveBranchId = await getEffectiveBranchId(session);
+  if (allowed !== null && effectiveBranchId && !allowed.includes(effectiveBranchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
+  }
   if (!effectiveBranchId) {
     return { success: false as const, error: 'No branch assigned to your account' };
   }
@@ -117,10 +125,11 @@ export async function updateJobStatus(input: {
     return { success: false as const, error: 'Job not found' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-  const effectiveBranchId = await getEffectiveBranchId(session);
-  if (!isAdmin && existing.branch_id !== effectiveBranchId) {
+  if (!(await hasCapability("service", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowedBranches = await branchFilterFor(session, "service", "edit")
+  if (allowedBranches !== null && existing.branch_id && !allowedBranches.includes(existing.branch_id)) {
     return { success: false as const, error: 'Unauthorized — job belongs to a different branch' }
   }
 
@@ -152,10 +161,8 @@ export async function assignTechnician(input: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isManager = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
-  if (!isManager) {
-    return { success: false as const, error: 'Manager role required to assign technicians' }
+  if (!(await hasCapability("service", "approve", session))) {
+    return { success: false as const, error: 'Insufficient permission: approval required' }
   }
 
   const [existing] = await db
@@ -166,6 +173,10 @@ export async function assignTechnician(input: {
 
   if (!existing) {
     return { success: false as const, error: 'Job not found' }
+  }
+  const allowed = await branchFilterFor(session, "service", "approve")
+  if (allowed !== null && existing.branch_id && !allowed.includes(existing.branch_id)) {
+    return { success: false as const, error: 'Unauthorized — job belongs to a different branch' }
   }
 
   if (['Completed', 'Cancelled'].includes(existing.status)) {
@@ -197,17 +208,18 @@ export async function getServiceJobs(input?: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  if (!(await hasCapability("service", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
 
   try {
     const conditions = []
-
-    if (!isAdmin) {
-      const effectiveBranchId = await getEffectiveBranchId(session);
-      if (effectiveBranchId) {
-        conditions.push(eq(service_jobs.branch_id, effectiveBranchId))
+    const allowed = await branchFilterFor(session, "service", "view")
+    if (allowed !== null) {
+      if (allowed.length === 0) {
+        return { success: true as const, jobs: [] }
       }
+      conditions.push(inArray(service_jobs.branch_id, allowed))
     }
     if (input?.status) {
       conditions.push(eq(service_jobs.status, input.status))
@@ -308,11 +320,12 @@ export async function getServiceJobById(jobId: string) {
     return { success: false as const, error: 'Job not found' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-  const effectiveBranchId = await getEffectiveBranchId(session);
-  if (!isAdmin && job.branchId !== effectiveBranchId) {
-    return { success: false as const, error: 'Unauthorized' }
+  if (!(await hasCapability("service", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "service", "view")
+  if (allowed !== null && job.branchId && !allowed.includes(job.branchId)) {
+    return { success: false as const, error: 'Unauthorized — job belongs to a different branch' }
   }
 
   return { success: true as const, job }
@@ -321,6 +334,9 @@ export async function getServiceJobById(jobId: string) {
 export async function checkWarranty(serialNumber: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  if (!(await hasCapability("service", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
   if (!serialNumber?.trim()) return { success: false as const, error: 'Serial number required' }
 
   try {
@@ -439,14 +455,21 @@ export async function completeServiceJob(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  if (!(await hasCapability("service", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
 
   const [existing] = await db
-    .select({ status: service_jobs.status })
+    .select({ status: service_jobs.status, branch_id: service_jobs.branch_id })
     .from(service_jobs)
     .where(eq(service_jobs.id, input.jobId))
     .limit(1)
 
   if (!existing) return { success: false as const, error: 'Job not found' }
+  const allowedBranches = await branchFilterFor(session, "service", "edit")
+  if (allowedBranches !== null && existing.branch_id && !allowedBranches.includes(existing.branch_id)) {
+    return { success: false as const, error: 'Unauthorized — job belongs to a different branch' }
+  }
 
   const allowed = STATUS_TRANSITIONS[existing.status] ?? []
   if (!allowed.includes('Completed')) {
@@ -512,6 +535,9 @@ export async function registerWarranty(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  if (!(await hasCapability("service", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
   if (!input.serialNumber?.trim()) return { success: false as const, error: 'Serial number required' }
   if (input.warrantyMonths <= 0) return { success: false as const, error: 'Warranty months must be > 0' }
 
@@ -550,6 +576,9 @@ export async function getWarrantyRegistrations(input?: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  if (!(await hasCapability("service", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
 
   try {
     const today = new Date().toISOString().slice(0, 10)

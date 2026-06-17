@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
 import { getServerSession } from 'next-auth'
+import * as schema from '@/db/schema'
 import {
   setupTestDb, cleanupTestDb, teardownTestDb,
   seedBranch, seedServiceJob, seedCounter,
@@ -19,6 +20,14 @@ afterAll(async () => { await teardownTestDb() })
 const MANAGER_ID = '00000000-0000-0000-0000-000000000001'
 const STAFF_ID   = '00000000-0000-0000-0000-000000000002'
 
+async function setupUserAccess(db: TestDb, userId: string, role: string, branchId: string) {
+  await db.insert(schema.users).values({ id: userId, email: userId + '@test.com', password_hash: 'xxx', role }).onConflictDoNothing()
+  if (role !== 'admin' && role !== 'super_admin') {
+    await db.insert(schema.user_branch_access).values({ user_id: userId, branch_id: branchId }).onConflictDoNothing()
+  }
+}
+
+
 // ─────────────────────────────────────────────────────
 // createServiceJob
 // ─────────────────────────────────────────────────────
@@ -27,6 +36,7 @@ describe('createServiceJob', () => {
   it('creates a job with sequential SRV number', async () => {
     const branch = await seedBranch(db)
     await seedCounter(db, branch.id, 'SRV')
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -40,6 +50,7 @@ describe('createServiceJob', () => {
 
   it('rejects empty title', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -50,6 +61,7 @@ describe('createServiceJob', () => {
 
   it('rejects invalid priority', async () => {
     const branch = await seedBranch(db)
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -77,10 +89,11 @@ describe('createServiceJob', () => {
   it('generates unique job IDs under concurrent load', async () => {
     const branch = await seedBranch(db)
     await seedCounter(db, branch.id, 'SRV')
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     const requests = Array.from({ length: 10 }, () => {
-      vi.mocked(getServerSession).mockResolvedValueOnce({
-        user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
-      })
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
+    })
       return createServiceJob({ title: 'Concurrent job' })
     })
     const results = await Promise.all(requests)
@@ -100,6 +113,7 @@ describe('updateJobStatus', () => {
     const job = await seedServiceJob(db, {
       branchId: branch.id, createdBy: STAFF_ID, status: 'Pending',
     })
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -114,6 +128,7 @@ describe('updateJobStatus', () => {
     const job = await seedServiceJob(db, {
       branchId: branch.id, createdBy: STAFF_ID, status: 'Pending',
     })
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -127,6 +142,7 @@ describe('updateJobStatus', () => {
     const job = await seedServiceJob(db, {
       branchId: branch.id, createdBy: STAFF_ID, status: 'Completed',
     })
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -150,6 +166,7 @@ describe('updateJobStatus', () => {
   it('rejects invalid status value', async () => {
     const branch = await seedBranch(db)
     const job = await seedServiceJob(db, { branchId: branch.id, createdBy: STAFF_ID })
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
@@ -167,6 +184,7 @@ describe('assignTechnician', () => {
   it('assigns a technician — manager role', async () => {
     const branch = await seedBranch(db)
     const job = await seedServiceJob(db, { branchId: branch.id, createdBy: STAFF_ID })
+    await setupUserAccess(db, MANAGER_ID, 'manager', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: MANAGER_ID, branchId: branch.id, role: 'manager' },
     })
@@ -179,12 +197,13 @@ describe('assignTechnician', () => {
   it('rejects assignment by staff role', async () => {
     const branch = await seedBranch(db)
     const job = await seedServiceJob(db, { branchId: branch.id, createdBy: STAFF_ID })
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })
     const result = await assignTechnician({ jobId: job.id, technicianId: MANAGER_ID })
     expect(result.success).toBe(false)
-    expect(result.error).toMatch(/manager/i)
+    expect(result.error).toMatch(/permission/i)
   })
 
   it('rejects assignment on completed job', async () => {
@@ -192,6 +211,7 @@ describe('assignTechnician', () => {
     const job = await seedServiceJob(db, {
       branchId: branch.id, createdBy: STAFF_ID, status: 'Completed',
     })
+    await setupUserAccess(db, MANAGER_ID, 'manager', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: MANAGER_ID, branchId: branch.id, role: 'manager' },
     })
@@ -213,6 +233,7 @@ describe('getServiceJobs', () => {
     await seedServiceJob(db, { branchId: branch1.id, createdBy: STAFF_ID })
     await seedServiceJob(db, { branchId: branch2.id, createdBy: STAFF_ID })
 
+    await setupUserAccess(db, STAFF_ID, 'staff', branch1.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch1.id, role: 'staff' },
     })
@@ -227,6 +248,7 @@ describe('getServiceJobs', () => {
     const branch = await seedBranch(db)
     await seedServiceJob(db, { branchId: branch.id, createdBy: STAFF_ID, status: 'Pending' })
     await seedServiceJob(db, { branchId: branch.id, createdBy: STAFF_ID, status: 'Completed' })
+    await setupUserAccess(db, STAFF_ID, 'staff', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { id: STAFF_ID, branchId: branch.id, role: 'staff' },
     })

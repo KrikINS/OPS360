@@ -5,8 +5,13 @@ import { customers, products, profiles } from "@/db/schema"
 import { ilike, or, eq } from "drizzle-orm"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
+import { hasCapability } from "@/lib/access"
 
 export async function searchPosCustomersAction(searchTerm: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !(await hasCapability("service", "view", session))) {
+    return { error: { message: 'Unauthorized' } }
+  }
   try {
     const data = await db.select({
       id: customers.id,
@@ -27,6 +32,10 @@ export async function searchPosCustomersAction(searchTerm: string) {
 }
 
 export async function searchProductsAction(searchTerm: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !(await hasCapability("service", "view", session))) {
+    return { error: { message: 'Unauthorized' } }
+  }
   try {
     const data = await db.select({
       id: products.id,
