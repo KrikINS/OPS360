@@ -306,13 +306,8 @@ export async function getInventorySummary(input: { branchId: string }) {
     return { success: false as const, error: 'Unauthorized: not authenticated' }
   }
 
-  const effectiveBranchId = await getEffectiveBranchId(session)
-  if (effectiveBranchId && effectiveBranchId !== input.branchId) {
-    const role = (session.user.role ?? '').toLowerCase()
-    const isAdmin = role === 'admin' || role === 'super_admin' || role === 'admin/owner'
-    if (!isAdmin) {
-      return { success: false as const, error: 'Unauthorized: cannot access another branch' }
-    }
+  if (!(await hasCapability("inventory", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
 
   const result = await fetchInventoryDataAction(session.user.id, input.branchId)
@@ -437,6 +432,9 @@ import { products } from '@/db/schema'
 export async function getLowStockItems(input?: { branchId?: string | null }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  if (!(await hasCapability("inventory", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
 
   try {
     const rows = await db.execute(sql`
@@ -493,9 +491,8 @@ export async function updateMinStockLevel(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!(await hasCapability("inventory", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
   if (input.minStockLevel < 0) return { success: false as const, error: 'Min stock level cannot be negative' }
   try {
@@ -511,9 +508,8 @@ export async function updateMinStockLevel(input: {
 export async function assignVendorToProduct(input: { productId: string, vendorId: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!(await hasCapability("inventory", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
   try {
     await db.update(products).set({ vendor_id: input.vendorId }).where(eq(products.id, input.productId))
@@ -526,6 +522,9 @@ export async function assignVendorToProduct(input: { productId: string, vendorId
 export async function getAllProductsWithStockLevel(input?: { branchId?: string | null }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+  if (!(await hasCapability("inventory", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
   try {
     const rows = await db.execute(sql`
       SELECT

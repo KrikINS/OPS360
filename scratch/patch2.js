@@ -1,61 +1,24 @@
-const fs = require('fs')
-let content = fs.readFileSync('src/actions/service.ts', 'utf8')
+const fs = require('fs');
 
-// 1.1 createServiceJob is fine. I will just replace the rest using Regex.
+function patch() {
+  let content = fs.readFileSync('src/actions/inventory.ts', 'utf8');
 
-// 1.2 updateJobStatus
-content = content.replace(
-  /const role = \(session\.user\.role \?\? ''\)\.toLowerCase\(\)\n\s*const isAdmin = \['admin', 'super_admin', 'admin\/owner'\]\.includes\(role\)\n\s*const effectiveBranchId = await getEffectiveBranchId\(session\);\n\s*if \(!isAdmin && existing\.branch_id !== effectiveBranchId\) {\n\s*return \{ success: false as const, error: 'Unauthorized — job belongs to a different branch' \}\n\s*\}/g,
-  `if (!(await hasCapability("service", "edit", session))) {
-    return { success: false as const, error: 'Insufficient permission' }
-  }
-  const allowed = await branchFilterFor(session, "service", "edit")
-  if (allowed !== null && existing.branch_id && !allowed.includes(existing.branch_id)) {
-    return { success: false as const, error: 'Unauthorized — job belongs to a different branch' }
-  }`
-)
+  // Fix updateMinStockLevel and assignVendorToProduct
+  content = content.replace(/  const role = \(session\.user\.role \?\? ''\)\.toLowerCase\(\)\r?\n  if \(!\['admin', 'super_admin', 'admin\/owner', 'manager'\]\.includes\(role\)\) \{\r?\n    return \{ success: false as const, error: 'Manager role required' \}\r?\n  \}/g, `  if (!(await hasCapability("inventory", "edit", session))) {\n    return { success: false as const, error: 'Insufficient permission' }\n  }`);
 
-// 1.3 assignTechnician
-content = content.replace(
-  /const role = \(session\.user\.role \?\? ''\)\.toLowerCase\(\)\n\s*const isManager = \['admin', 'super_admin', 'admin\/owner', 'manager'\]\.includes\(role\)\n\s*if \(!isManager\) {\n\s*return \{ success: false as const, error: 'Manager role required to assign technicians' \}\n\s*\}/g,
-  `if (!(await hasCapability("service", "approve", session))) {
-    return { success: false as const, error: 'Insufficient permission: approval required' }
-  }
-  const allowed = await branchFilterFor(session, "service", "approve")
-  if (allowed !== null && existing.branch_id && !allowed.includes(existing.branch_id)) {
-    return { success: false as const, error: 'Unauthorized — job belongs to a different branch' }
-  }`
-)
+  // Fix getLowStockItems and getAllProductsWithStockLevel to have view guard.
+  // getLowStockItems
+  content = content.replace(
+    /export async function getLowStockItems\(input\?: \{ branchId\?: string \| null \}\) \{\r?\n  const session = await getServerSession\(authOptions\)\r?\n  if \(!session\?\.user\) return \{ success: false as const, error: 'Unauthorized' \}/g,
+    `export async function getLowStockItems(input?: { branchId?: string | null }) {\n  const session = await getServerSession(authOptions)\n  if (!session?.user) return { success: false as const, error: 'Unauthorized' }\n  if (!(await hasCapability("inventory", "view", session))) {\n    return { success: false as const, error: 'Insufficient permission' }\n  }`
+  );
 
-// 1.4 getServiceJobs
-content = content.replace(
-  /const role = \(session\.user\.role \?\? ''\)\.toLowerCase\(\)\n\s*const isAdmin = \['admin', 'super_admin', 'admin\/owner'\]\.includes\(role\)\n\n\s*try {\n\s*const conditions = \[\]\n\n\s*if \(!isAdmin\) {\n\s*const effectiveBranchId = await getEffectiveBranchId\(session\);\n\s*if \(effectiveBranchId\) {\n\s*conditions\.push\(eq\(service_jobs\.branch_id, effectiveBranchId\)\)\n\s*}\n\s*}/g,
-  `if (!(await hasCapability("service", "view", session))) {
-    return { success: false as const, error: 'Insufficient permission' }
-  }
+  // getAllProductsWithStockLevel
+  content = content.replace(
+    /export async function getAllProductsWithStockLevel\(input\?: \{ branchId\?: string \| null \}\) \{\r?\n  const session = await getServerSession\(authOptions\)\r?\n  if \(!session\?\.user\) return \{ success: false as const, error: 'Unauthorized' \}/g,
+    `export async function getAllProductsWithStockLevel(input?: { branchId?: string | null }) {\n  const session = await getServerSession(authOptions)\n  if (!session?.user) return { success: false as const, error: 'Unauthorized' }\n  if (!(await hasCapability("inventory", "view", session))) {\n    return { success: false as const, error: 'Insufficient permission' }\n  }`
+  );
 
-  try {
-    const conditions = []
-    const allowed = await branchFilterFor(session, "service", "view")
-    if (allowed !== null) {
-      if (allowed.length === 0) {
-        return { success: true as const, jobs: [] }
-      }
-      conditions.push(inArray(service_jobs.branch_id, allowed))
-    }`
-)
-
-// 1.5 getServiceJobById
-content = content.replace(
-  /const role = \(session\.user\.role \?\? ''\)\.toLowerCase\(\)\n\s*const isAdmin = \['admin', 'super_admin', 'admin\/owner'\]\.includes\(role\)\n\s*const effectiveBranchId = await getEffectiveBranchId\(session\);\n\s*if \(!isAdmin && job\.branchId !== effectiveBranchId\) {\n\s*return \{ success: false as const, error: 'Unauthorized' \}\n\s*\}/g,
-  `if (!(await hasCapability("service", "view", session))) {
-    return { success: false as const, error: 'Insufficient permission' }
-  }
-  const allowed = await branchFilterFor(session, "service", "view")
-  if (allowed !== null && job.branchId && !allowed.includes(job.branchId)) {
-    return { success: false as const, error: 'Unauthorized — job belongs to a different branch' }
-  }`
-)
-
-fs.writeFileSync('src/actions/service.ts', content)
-console.log('Patch 2 complete')
+  fs.writeFileSync('src/actions/inventory.ts', content);
+}
+patch();
