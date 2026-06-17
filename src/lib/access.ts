@@ -67,17 +67,6 @@ export async function branchFilterFor(
   // Exception: inventory VIEW is cross-branch for everyone (stock-transfer lookups).
   if (module === "inventory" && capability === "view") return null
 
-  const bId = (session.user as any)?.branchId
-  if (process.env.NODE_ENV === 'test' && bId) {
-    return [bId]
-  }
-
-  // Fallback test logic if session has it differently:
-  const assigned = (session.user as any)?.assigned_branch_ids
-  if (process.env.NODE_ENV === 'test' && assigned && assigned.length > 0) {
-    return assigned
-  }
-
   // Branch-scoped role on a normal module: limit to allotted branches.
   const rows = await db
     .select({ branchId: user_branch_access.branch_id })

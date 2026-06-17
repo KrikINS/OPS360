@@ -27,6 +27,14 @@ beforeAll(async () => { db = await setupTestDb() })
 afterEach(async () => { await cleanupTestDb(db) })
 afterAll(async () => { await teardownTestDb() })
 
+async function mockSession(userId: string, branchId: string, role: string) {
+  await db.insert(schema.users).values({ id: userId, email: userId + '@test.com', password_hash: 'hash', role }).onConflictDoNothing()
+  await db.insert(schema.user_branch_access).values({ user_id: userId, branch_id: branchId }).onConflictDoNothing()
+  vi.mocked(getServerSession).mockResolvedValue({
+    user: { id: userId, branchId, role }
+  })
+}
+
 describe('pos debug', () => {
   it('debug: confirm inventory rows exist after seeding', async () => {
     const branch = await seedBranch(db)
@@ -56,9 +64,7 @@ describe('createTransaction — happy path', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 20 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
 
     const result = await createTransaction({
       branchId: branch.id,
@@ -85,9 +91,7 @@ describe('createTransaction — happy path', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 5 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
 
     const result = await createTransaction({
       branchId: branch.id,
@@ -106,9 +110,7 @@ describe('createTransaction — happy path', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
 
     await createTransaction({
       branchId: branch.id,
@@ -135,9 +137,7 @@ describe('createTransaction — happy path', () => {
     await seedInventoryUnits(db, { productId: p2.id, branchId: branch.id, count: 5 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
 
     const result = await createTransaction({
       branchId: branch.id,
@@ -166,9 +166,7 @@ describe('createTransaction — stock validation', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 2 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
 
     const result = await createTransaction({
       branchId: branch.id,
@@ -187,9 +185,7 @@ describe('createTransaction — stock validation', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 2 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
 
     await createTransaction({
       branchId: branch.id,
@@ -216,9 +212,7 @@ describe('createTransaction — stock validation', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch2.id, count: 10 })
     await seedCounter(db, branch1.id, 'INVOICE')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch1.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch1.id, 'staff')
 
     const result = await createTransaction({
       branchId: branch1.id,
@@ -253,9 +247,7 @@ describe('createTransaction — authorization', () => {
 
   it('rejects when user branch does not match transaction branch', async () => {
     const branch = await seedBranch(db)
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: 'different-branch', role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'staff')
 
     const result = await createTransaction({
       branchId: branch.id,
@@ -281,10 +273,8 @@ describe('createTransaction — invoice numbering', () => {
     await seedCounter(db, branch.id, 'INV')
 
     // Simulate 15 concurrent checkouts from the same branch
-    const requests = Array.from({ length: 15 }, () => {
-      vi.mocked(getServerSession).mockResolvedValue({
-        user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-      })
+    const requests = Array.from({ length: 15 }, async () => {
+      await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
       return createTransaction({
         branchId: branch.id,
         items: [{ productId: product.id, qty: 1, unitPrice: 100 }],
@@ -309,9 +299,7 @@ describe('createTransaction — invoice numbering', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 50 })
     await seedCounter(db, branch.id, 'INV', 5)  // start at 5
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
 
     const result = await createTransaction({
       branchId: branch.id,
@@ -337,9 +325,7 @@ describe('voidTransaction', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'manager')
 
     const created = await createTransaction({
       branchId: branch.id,
@@ -382,9 +368,7 @@ describe('voidTransaction', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 5 })
     await seedCounter(db, branch.id, 'INV')
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
     const created = await createTransaction({
       branchId: branch.id,
       items: [{ productId: product.id, qty: 1, unitPrice: 500 }],
@@ -392,9 +376,7 @@ describe('voidTransaction', () => {
       customerId: null,
     })
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000002', branchId: branch.id, role: 'staff' }, // staff, not manager
-    })
+    await mockSession('00000000-0000-0000-0000-000000000002', branch.id, 'staff')
     expect(created.success).toBe(true)
     if (!created.success) return
     const voided = await voidTransaction({
@@ -437,9 +419,7 @@ describe('validateDiscount — POS Manager PIN verification', () => {
       created_at: new Date()
     }).returning()
 
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
+    await mockSession('00000000-0000-0000-0000-000000000001', branch.id, 'staff')
 
     // Request a 20% discount (exceeds 10% auto-approval limit)
     const result = await validateDiscount({
