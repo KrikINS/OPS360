@@ -1340,8 +1340,8 @@ export async function getActiveAccounts(input?: { branchId?: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isSuperAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  const { isBranchScoped, normalizeRole } = await import("@/lib/rbac")
+  const isSuperAdmin = !isBranchScoped(normalizeRole(session.user.role))
 
   try {
     // Explicit branchId overrides session; fall back to session branch for non-admins

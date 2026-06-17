@@ -5,6 +5,8 @@ import { db } from '@/db/client'
 import { users, profiles } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
+import { hasCapability } from "@/lib/access"
+import { normalizeRole, ROLE_RANK } from "@/lib/rbac"
 
 export async function GET() {
   return NextResponse.json({ data: [] })
@@ -15,9 +17,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!(await hasCapability("admin", "edit", session))) {
+    return NextResponse.json({ error: 'Insufficient permission' }, { status: 403 })
   }
 
   try {
@@ -27,13 +28,19 @@ export async function POST(req: NextRequest) {
     }
 
     const [targetUser] = await db
-      .select({ id: users.id })
+      .select({ id: users.id, role: users.role })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1)
 
     if (!targetUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const actorRole = normalizeRole(session.user.role)
+    const targetUserRole = normalizeRole(targetUser.role)
+    if (actorRole && targetUserRole && ROLE_RANK[targetUserRole] > ROLE_RANK[actorRole]) {
+      return NextResponse.json({ error: 'You cannot reset the password of a higher-privileged user' }, { status: 403 })
     }
 
     // ETHAN-XXXX format — excludes ambiguous chars (0, O, 1, I)

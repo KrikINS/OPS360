@@ -33,9 +33,8 @@ export async function getPendingApprovalsAction(): Promise<Notification[]> {
 
     const role = (session.user.role ?? "").toLowerCase()
     const userId = session.user.id
-    const isAdmin = role === 'admin' || role === 'super_admin' || role === 'admin/owner'
-    const isManager = role === 'manager'
-    const isAdminOrManager = isAdmin || isManager
+    const { hasCapability } = await import("@/lib/access")
+    const isAdminOrManager = await hasCapability("admin", "view", session)
     const branchId = await getEffectiveBranchId(session)
 
     const notifications: Notification[] = []

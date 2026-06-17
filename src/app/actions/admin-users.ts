@@ -27,9 +27,8 @@ export async function getAdminUsersDataAction(userId: string | undefined) {
     return { profiles: [], branches: [], currentUserProfile: null, stats: { total_users: 0, pending_requests: 0, recent_logins: 0 }, error: 'Unauthorized: not authenticated' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)
-  if (!isAdmin) {
+  const { hasCapability } = await import("@/lib/access")
+  if (!(await hasCapability("admin", "view", session))) {
     return { profiles: [], branches: [], currentUserProfile: null, stats: { total_users: 0, pending_requests: 0, recent_logins: 0 }, error: 'Insufficient permission' }
   }
 
@@ -86,10 +85,27 @@ export async function updateUserPermissionsAction(input: {
     return { success: false, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-  if (!isAdmin) {
-    return { success: false, error: 'Admin role required' }
+  const { hasCapability, branchFilterFor } = await import("@/lib/access")
+  const { normalizeRole, ROLE_RANK, isBranchScoped } = await import("@/lib/rbac")
+  if (!(await hasCapability("admin", "edit", session))) {
+    return { success: false, error: 'Insufficient permission' }
+  }
+
+  const actorRole = normalizeRole(session.user.role)
+  const targetRole = normalizeRole(input.role)
+  if (actorRole && targetRole && ROLE_RANK[targetRole] > ROLE_RANK[actorRole]) {
+    return { success: false, error: 'You cannot manage a user with a role higher than your own' }
+  }
+
+  // Branch scope check
+  if (isBranchScoped(actorRole) && input.branchIds.length > 0) {
+    const allowed = await branchFilterFor(session, "admin", "edit")
+    if (allowed !== null) {
+      const outside = input.branchIds.filter((b: string) => !allowed.includes(b))
+      if (outside.length > 0) {
+        return { success: false, error: 'You can only assign branches you manage' }
+      }
+    }
   }
 
   try {
@@ -153,10 +169,9 @@ export async function updateProfileDetailsAction(input: {
     return { success: false, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-  if (!isAdmin) {
-    return { success: false, error: 'Admin role required' }
+  const { hasCapability } = await import("@/lib/access")
+  if (!(await hasCapability("admin", "edit", session))) {
+    return { success: false, error: 'Insufficient permission' }
   }
 
   try {

@@ -5,6 +5,8 @@ import { db } from '@/db/client';
 import { users, profiles, user_branch_access, user_permissions, branches, employees } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
+import { hasCapability, branchFilterFor } from "@/lib/access";
+import { normalizeRole, isBranchScoped, ROLE_RANK } from "@/lib/rbac";
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -14,11 +16,9 @@ export async function GET() {
     )
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner']
-    .includes(role)) {
+  if (!(await hasCapability("admin", "view", session))) {
     return NextResponse.json(
-      { error: 'Admin role required' }, { status: 403 }
+      { error: 'Insufficient permission' }, { status: 403 }
     )
   }
 
@@ -82,13 +82,39 @@ export async function POST(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const role = (session.user.role ?? '').toLowerCase();
-  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!(await hasCapability("admin", "edit", session))) {
+    return NextResponse.json({ error: 'Insufficient permission' }, { status: 403 });
   }
 
   try {
     const { email, password, fullName, role: newUserRole, branchIds } = await req.json();
+
+    const actorRole = normalizeRole(session.user.role);
+    const targetRole = normalizeRole(newUserRole || 'staff');
+
+    if (!targetRole) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
+
+    if (!actorRole || ROLE_RANK[targetRole] > ROLE_RANK[actorRole]) {
+      return NextResponse.json(
+        { error: 'You cannot create a user with a role higher than your own' },
+        { status: 403 }
+      );
+    }
+
+    if (isBranchScoped(actorRole) && Array.isArray(branchIds)) {
+      const allowed = await branchFilterFor(session, "admin", "edit");
+      if (allowed !== null) {
+        const outside = branchIds.filter((b: string) => !allowed.includes(b));
+        if (outside.length > 0) {
+          return NextResponse.json(
+            { error: 'You can only assign branches you manage' },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });

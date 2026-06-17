@@ -3,8 +3,17 @@
 import { db } from "@/db/client"
 import { profiles } from "@/db/schema"
 import { desc, sql } from "drizzle-orm"
+import { hasCapability } from "@/lib/access"
 
 export async function getAdminDashboardMetricsAction() {
+  const { getServerSession } = await import('next-auth/next')
+  const { authOptions } = await import('@/lib/auth')
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { error: { message: 'Unauthorized' } }
+  if (!(await hasCapability("admin", "view", session))) {
+    return { error: { message: 'Insufficient permission' } }
+  }
+
   try {
     const res = await db.execute(sql`SELECT * FROM get_admin_dashboard_metrics()`)
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
@@ -16,6 +25,14 @@ export async function getAdminDashboardMetricsAction() {
 }
 
 export async function getRecentUsersAction() {
+  const { getServerSession } = await import('next-auth/next')
+  const { authOptions } = await import('@/lib/auth')
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { error: { message: 'Unauthorized' } }
+  if (!(await hasCapability("admin", "view", session))) {
+    return { error: { message: 'Insufficient permission' } }
+  }
+
   try {
     const data = await db.select({
       id: profiles.id,
@@ -43,9 +60,8 @@ export async function setPosPin(
   const session = await getServerSession(authOptions);
   
   if (!session?.user) return { success: false, error: 'Unauthorized' };
-  const role = (session.user.role ?? '').toLowerCase();
-  if (!['super_admin', 'admin/owner', 'admin'].includes(role)) {
-    return { success: false, error: 'Unauthorized role' };
+  if (!(await hasCapability("admin", "edit", session))) {
+    return { success: false, error: 'Insufficient permission' };
   }
 
   if (pin !== null && !/^\d{4}$/.test(pin)) {

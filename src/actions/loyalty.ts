@@ -261,8 +261,8 @@ export async function adjustPoints(input: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
+  const { hasCapability } = await import("@/lib/access")
+  if (!(await hasCapability("admin", "edit", session))) {
     return {
       success: false as const,
       error: 'Admin role required for manual adjustments'

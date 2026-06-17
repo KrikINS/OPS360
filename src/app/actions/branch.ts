@@ -26,9 +26,9 @@ export async function setActiveBranchAction(branchId: string) {
     .where(eq(profiles.id, userId))
     .limit(1)
 
-  const normalizedRole = (profile?.role ?? '').toLowerCase().trim()
-  const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'admin'
-    || normalizedRole === 'owner' || normalizedRole === 'super_admin'
+  const { isBranchScoped, normalizeRole } = await import("@/lib/rbac")
+  const normalizedRole = normalizeRole(profile?.role ?? '')
+  const isAdmin = !isBranchScoped(normalizedRole)
 
   if (!isAdmin) {
     // Validate branch access via Drizzle — targeted lookup

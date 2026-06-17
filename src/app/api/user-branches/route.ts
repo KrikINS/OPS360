@@ -5,6 +5,7 @@ import { db } from '@/db/client'
 import { branches, user_branch_access } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { asc } from 'drizzle-orm'
+import { isBranchScoped, normalizeRole } from '@/lib/rbac'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -12,11 +13,8 @@ export async function GET() {
     return NextResponse.json({ data: [] }, { status: 401 })
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
-
   try {
-    if (isAdmin) {
+    if (!isBranchScoped(normalizeRole(session.user.role))) {
       const rows = await db
         .select({ id: branches.id, name: branches.name })
         .from(branches)

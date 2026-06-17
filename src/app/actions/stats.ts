@@ -32,18 +32,21 @@ export async function getRoleMetricsAction() {
   if (!session?.user) return { error: "Unauthorized" }
 
   const branchId = await getEffectiveBranchId(session)
-  if (!branchId && session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'admin/owner') {
+  const { hasCapability } = await import("@/lib/access")
+  const isAdminView = await hasCapability("admin", "view", session)
+  if (!branchId && !isAdminView) {
     return { error: "No branch selected" }
   }
 
   const profileList = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, session.user.id))
   const profileRole = profileList[0]?.role
 
-  const role = (profileRole || session.user.role || '').toLowerCase().trim()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner', 'owner'].includes(role)
-  const isSales = role === 'sales' || role === 'cashier' || role.includes('sales')
-  const isInventory = role === 'inventory' || role === 'procurement' || role.includes('inventory')
-  const isService = role === 'service' || role === 'technician' || role.includes('service')
+  const [isAdmin, isSales, isInventory, isService] = await Promise.all([
+    hasCapability("admin", "view", session),
+    hasCapability("sales", "view", session),
+    hasCapability("inventory", "view", session),
+    hasCapability("service", "view", session)
+  ])
 
   try {
     const metrics: Record<string, { label: string, value: string | number }> = {}

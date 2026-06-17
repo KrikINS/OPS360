@@ -90,6 +90,19 @@ export const BRANCH_SCOPED: Record<Role, boolean> = {
   technician: true,
 }
 
+/**
+ * ROLE_RANK — hierarchy for privilege escalation guards.
+ * A user may not create or manage another user whose role rank is higher than their own.
+ */
+export const ROLE_RANK: Record<Role, number> = {
+  super_admin: 6,
+  general_manager: 5,
+  finance_manager: 4,
+  branch_manager: 3,
+  technician: 2,
+  sales_associate: 1,
+}
+
 /** Display labels for the UI. */
 const ROLE_LABELS: Record<Role, string> = {
   super_admin: "Super Admin",

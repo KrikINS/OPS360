@@ -39,6 +39,13 @@ function makeProvisionRequest(body: Record<string, unknown>) {
   })
 }
 
+async function setupUserAccess(db: TestDb, userId: string, role: string, branchId: string) {
+  await db.insert(schema.users).values({ id: userId, email: userId + '@test.com', password_hash: 'xxx', role }).onConflictDoNothing()
+  if (role !== 'admin' && role !== 'super_admin') {
+    await db.insert(schema.user_branch_access).values({ user_id: userId, branch_id: branchId }).onConflictDoNothing()
+  }
+}
+
 // ─────────────────────────────────────────────────────
 // POST /api/admin/staff — user provisioning
 // ─────────────────────────────────────────────────────
@@ -115,15 +122,15 @@ describe('POST /api/admin/staff — user provisioning', () => {
     expect(user).toHaveLength(0)
   })
 
-  it('rejects staff role attempting to provision — 403', async () => {
+  it('rejects sales_associate role attempting to provision — 403', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: STAFF_ID, role: 'staff', branchId: null },
+      user: { id: STAFF_ID, role: 'sales_associate', branchId: null },
     })
 
     const req = makeProvisionRequest({
       email: 'newuser@ops360.com',
       password: 'password',
-      role: 'staff',
+      role: 'sales_associate',
       branchIds: [],
     })
 
@@ -131,20 +138,64 @@ describe('POST /api/admin/staff — user provisioning', () => {
     expect(res.status).toBe(403)
   })
 
-  it('rejects manager role attempting to provision — 403', async () => {
+  it('allows branch_manager to provision a sales_associate (rank <= actor) in their own branch', async () => {
+    const branch = await seedBranch(db)
+    await setupUserAccess(db, MANAGER_ID, 'branch_manager', branch.id)
     vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: MANAGER_ID, role: 'manager', branchId: null },
+      user: { id: MANAGER_ID, role: 'branch_manager', branchId: branch.id },
     })
 
     const req = makeProvisionRequest({
-      email: 'newuser@ops360.com',
+      email: 'bm_provisioned@ops360.com',
       password: 'password',
-      role: 'staff',
-      branchIds: [],
+      fullName: 'BM Provisioned',
+      role: 'sales_associate',
+      branchIds: [branch.id],
+    })
+
+    const res = await provisionUser(req)
+    expect(res.status).toBe(201)
+  })
+
+  it('rejects branch_manager provisioning a super_admin (escalation)', async () => {
+    const branch = await seedBranch(db)
+    await setupUserAccess(db, MANAGER_ID, 'branch_manager', branch.id)
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: MANAGER_ID, role: 'branch_manager', branchId: branch.id },
+    })
+
+    const req = makeProvisionRequest({
+      email: 'evil_bm@ops360.com',
+      password: 'password',
+      role: 'super_admin',
+      branchIds: [branch.id],
     })
 
     const res = await provisionUser(req)
     expect(res.status).toBe(403)
+    const body = await res.json()
+    expect(body.error).toMatch(/higher than your own/i)
+  })
+
+  it('rejects branch_manager allotting an unmanaged branch', async () => {
+    const branchOwn = await seedBranch(db)
+    const branchOther = await seedBranch(db)
+    await setupUserAccess(db, MANAGER_ID, 'branch_manager', branchOwn.id)
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: MANAGER_ID, role: 'branch_manager', branchId: branchOwn.id },
+    })
+
+    const req = makeProvisionRequest({
+      email: 'sneaky_bm@ops360.com',
+      password: 'password',
+      role: 'sales_associate',
+      branchIds: [branchOwn.id, branchOther.id], // trying to give access to branchOther
+    })
+
+    const res = await provisionUser(req)
+    expect(res.status).toBe(403)
+    const body = await res.json()
+    expect(body.error).toMatch(/assign branches you manage/i)
   })
 
   it('rejects duplicate email with 409', async () => {
@@ -532,12 +583,29 @@ describe('POST /api/admin/reset-password', () => {
     expect(res.status).toBe(401)
   })
 
-  it('rejects staff role with 403', async () => {
+  it('rejects sales_associate role with 403', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: STAFF_ID, role: 'staff', branchId: null },
+      user: { id: STAFF_ID, role: 'sales_associate', branchId: null },
     })
     const res = await resetPassword(makeResetRequest({ userId: ADMIN_ID }))
     expect(res.status).toBe(403)
+  })
+
+  it('rejects branch_manager resetting a super_admin (escalation)', async () => {
+    await db.insert(schema.users).values({
+      id: '00000000-0000-0000-0000-000000000098',
+      email: 'target_sa@ops360.com',
+      password_hash: 'hash',
+      role: 'super_admin'
+    })
+    
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { id: MANAGER_ID, role: 'branch_manager', branchId: null },
+    })
+    const res = await resetPassword(makeResetRequest({ userId: '00000000-0000-0000-0000-000000000098' }))
+    expect(res.status).toBe(403)
+    const body = await res.json()
+    expect(body.error).toMatch(/higher-privileged/i)
   })
 
   it('rejects missing userId with 400', async () => {

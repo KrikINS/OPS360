@@ -93,9 +93,9 @@ export async function bulkImportProductsAction(rows: Array<{
   const session = await getServerSession(authOptions)
   if (!session?.user) return { data: null, error: new Error('Unauthorized') }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { data: null, error: new Error('Manager role required') }
+  const { hasCapability } = await import("@/lib/access")
+  if (!(await hasCapability("inventory", "edit", session))) {
+    return { data: null, error: new Error('Insufficient permission') }
   }
 
   const summary = { added: 0, updated: 0, failed: 0 }

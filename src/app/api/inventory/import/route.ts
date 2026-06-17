@@ -16,16 +16,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
+
   if (!session?.user) {
     return NextResponse.json(
       { error: 'Unauthorized' }, { status: 401 }
     )
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
+  if (!(await hasCapability("inventory", "edit", session))) {
     return NextResponse.json(
-      { error: 'Admin role required' }, { status: 403 }
+      { error: 'Insufficient permission' }, { status: 403 }
     )
   }
 
