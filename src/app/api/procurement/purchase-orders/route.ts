@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { purchase_orders, po_items } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { hasCapability, branchFilterFor } from "@/lib/access";
 
 type POItemPayload = {
   product_id: string
@@ -133,15 +134,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const role = (session.user.role ?? '').toLowerCase();
-    if (
-      role !== 'manager' &&
-      role !== 'admin' &&
-      role !== 'super_admin' &&
-      role !== 'admin/owner'
-    ) {
+    if (!(await hasCapability("procurement", "edit", session))) {
       return NextResponse.json(
-        { error: 'Insufficient permission: manager required' },
+        { error: 'Insufficient permission' },
         { status: 403 }
       );
     }
@@ -162,6 +157,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Missing required fields: vendor_id, branch_id, items' },
         { status: 400 }
+      );
+    }
+
+    const poAllowed = await branchFilterFor(session, "procurement", "edit");
+    if (poAllowed !== null && !poAllowed.includes(branch_id)) {
+      return NextResponse.json(
+        { error: "You don't have access to this branch" },
+        { status: 403 }
       );
     }
 
@@ -332,15 +335,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const role = (session.user.role ?? '').toLowerCase();
-    if (
-      role !== 'manager' &&
-      role !== 'admin' &&
-      role !== 'super_admin' &&
-      role !== 'admin/owner'
-    ) {
+    if (!(await hasCapability("procurement", "edit", session))) {
       return NextResponse.json(
-        { error: 'Insufficient permission: manager required' },
+        { error: 'Insufficient permission' },
         { status: 403 }
       );
     }
@@ -353,6 +350,16 @@ export async function PATCH(request: NextRequest) {
         { error: 'Missing required field: id' },
         { status: 400 }
       );
+    }
+
+    if (rest.branch_id) {
+      const poAllowed = await branchFilterFor(session, "procurement", "edit");
+      if (poAllowed !== null && !poAllowed.includes(rest.branch_id)) {
+        return NextResponse.json(
+          { error: "You don't have access to this branch" },
+          { status: 403 }
+        );
+      }
     }
 
     // Check PO exists

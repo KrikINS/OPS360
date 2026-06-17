@@ -5,6 +5,7 @@ import { db } from '@/db/client'
 import { inventory, inventory_transactions, purchase_orders, vendors, branches, products } from '@/db/schema'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { postDebitNoteJournal } from '@/actions/finance'
+import { hasCapability, branchFilterFor } from "@/lib/access"
 
 export async function GET() {
   return NextResponse.json({ data: [] })
@@ -16,10 +17,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isManager = ['manager', 'admin', 'super_admin', 'admin/owner'].includes(role)
-  if (!isManager) {
-    return NextResponse.json({ success: false, error: 'Manager role required' }, { status: 403 })
+  if (!(await hasCapability("procurement", "edit", session))) {
+    return NextResponse.json({ success: false, error: 'Insufficient permission' }, { status: 403 })
   }
 
   try {
@@ -49,6 +48,13 @@ export async function POST(req: NextRequest) {
 
     if (!po) {
       return NextResponse.json({ success: false, error: 'Purchase order not found' }, { status: 404 })
+    }
+
+    if (po.branchId) {
+      const poAllowed = await branchFilterFor(session, "procurement", "edit");
+      if (poAllowed !== null && !poAllowed.includes(po.branchId)) {
+        return NextResponse.json({ success: false, error: "You don't have access to this branch" }, { status: 403 });
+      }
     }
 
     const [vendorRow] = po.vendorId
