@@ -2,6 +2,8 @@
 
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { hasCapability, branchFilterFor } from '@/lib/access'
+import { isBranchScoped, normalizeRole } from '@/lib/rbac'
 import { db } from '@/db/client'
 import {
   accounts, journal_entries, journal_lines,
@@ -442,9 +444,8 @@ export async function approveExpense(input: { expenseId: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!(await hasCapability("finance", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
 
   const [expense] = await db
@@ -499,14 +500,8 @@ export async function settleVendorPayment(input: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isManager = ['admin', 'super_admin', 'admin/owner',
-    'manager'].includes(role)
-  if (!isManager) {
-    return {
-      success: false as const,
-      error: 'Manager role required to record payments'
-    }
+  if (!(await hasCapability("finance", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
 
   if (input.amount <= 0) {
@@ -664,6 +659,20 @@ export async function getVendorPayments(input?: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input?.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input?.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      if (input) input.branchId = allowed[0]
+    }
+  }
+
   try {
     const payments = await db
       .select({
@@ -708,9 +717,8 @@ export async function rejectExpense(input: { expenseId: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!(await hasCapability("finance", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
 
   await db
@@ -730,6 +738,20 @@ export async function getProfitAndLoss(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      input.branchId = allowed[0]
+    }
+  }
 
   try {
     const rows = await db.execute(sql`
@@ -762,6 +784,20 @@ export async function getProfitAndLoss(input: {
 export async function getBalanceSheet(input: { branchId?: string; asOfDate: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      input.branchId = allowed[0]
+    }
+  }
 
   try {
     // 1. Fetch all BS accounts (Asset, Liability, Equity, Tax)
@@ -841,6 +877,20 @@ export async function getGSTSummary(input: { branchId?: string; fromDate: string
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      input.branchId = allowed[0]
+    }
+  }
+
   try {
     const rows = await db.execute(sql`
       SELECT a.code, a.name,
@@ -879,6 +929,20 @@ export async function getJournalEntries(input?: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input?.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input?.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      if (input) input.branchId = allowed[0]
+    }
+  }
 
   try {
     // Single query with LEFT JOIN + GROUP BY (B9 fix).
@@ -958,6 +1022,20 @@ export async function exportJournalLedger(input: {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      input.branchId = allowed[0]
+    }
+  }
+
   try {
     const rows = await db.execute(sql`
       SELECT
@@ -1008,6 +1086,10 @@ export async function getJournalLines(input: { journalEntryId: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+
   try {
     const rows = await db.execute(sql`
       SELECT
@@ -1044,6 +1126,20 @@ export async function getExpenses(input?: { branchId?: string; status?: string }
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input?.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input?.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      if (input) input.branchId = allowed[0]
+    }
+  }
+
   try {
     const conditions = []
     if (input?.branchId) {
@@ -1079,13 +1175,17 @@ export async function getMarginReport(input: {
     return { success: false as const, error: 'Unauthorized' }
   }
 
-  // Only managers and admins can see margin data
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager']
-    .includes(role)) {
-    return {
-      success: false as const,
-      error: 'Manager role required for margin reports'
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      input.branchId = allowed[0]
     }
   }
 
@@ -1281,6 +1381,10 @@ export async function getBranches() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+
   try {
     const rows = await db
       .select({ id: branches.id, name: branches.name })
@@ -1304,9 +1408,8 @@ export async function createManualJournal(input: {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required to post manual journal entries' }
+  if (!(await hasCapability("finance", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
 
   if (!input.lines || input.lines.length < 2) {
@@ -1371,6 +1474,10 @@ export async function getAPBalanceForPO(input: {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return { success: false, error: 'Unauthorized' }
+  }
+
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false, error: 'Insufficient permission' }
   }
 
   try {
@@ -1457,13 +1564,20 @@ export async function getAPAgeing(input?: {
     return { success: false, error: 'Unauthorized' }
   }
 
-  const role = (session.user.role ?? '').toLowerCase()
-  const isAdmin = ['admin', 'super_admin', 'admin/owner'].includes(role)
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
 
-  // Determine branch filter
   let effectiveBranchId = input?.branchId
-  if (!isAdmin && !effectiveBranchId) {
-    effectiveBranchId = (await getEffectiveBranchId(session)) ?? undefined
+  if (allowed !== null) {
+    if (effectiveBranchId && !allowed.includes(effectiveBranchId)) {
+      return { success: false, error: "You don't have access to this branch" }
+    }
+    if (!effectiveBranchId) {
+      if (allowed.length === 0) return { success: false, error: "You don't have access to any branches" }
+      effectiveBranchId = allowed[0]
+    }
   }
 
   const asOfDate = input?.asOfDate ?? new Date().toISOString().split('T')[0]
@@ -1584,9 +1698,8 @@ export async function editJournalEntry(input: {
   }>
 }) {
   const session = await getServerSession(authOptions)
-  const role = session?.user?.role?.toLowerCase()
-  if (!session?.user?.id || (role !== 'admin' && role !== 'owner' && role !== 'admin/owner' && role !== 'super_admin')) {
-    return { success: false, error: "Unauthorized: Only Admins or Owners can edit journal entries." }
+  if (!session?.user?.id || !(await hasCapability("finance", "edit", session))) {
+    return { success: false, error: "Insufficient permission" }
   }
 
   const totalDebit = input.lines.reduce((s, l) => s + (l.debit ?? 0), 0)
@@ -1670,6 +1783,20 @@ export async function getSalesReport(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      input.branchId = allowed[0]
+    }
+  }
 
   try {
     // Summary totals
@@ -1760,6 +1887,20 @@ export async function getStockValuation(input: { branchId?: string }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      input.branchId = allowed[0]
+    }
+  }
+
   try {
     const rows = unpackRows<{
       model_name: string; brand: string; product_code: string;
@@ -1795,6 +1936,10 @@ export async function getStockValuation(input: { branchId?: string }) {
 export async function getChartOfAccounts() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
   try {
     const rows = await db
       .select()
@@ -1815,9 +1960,8 @@ export async function createAccount(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
-    return { success: false as const, error: 'Admin role required' }
+  if (!(await hasCapability("finance", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
   if (!input.code?.trim()) return { success: false as const, error: 'Account code is required' }
   if (!input.name?.trim()) return { success: false as const, error: 'Account name is required' }
@@ -1850,9 +1994,8 @@ export async function createAccount(input: {
 export async function toggleAccountStatus(accountId: string, isActive: boolean) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
-    return { success: false as const, error: 'Admin role required' }
+  if (!(await hasCapability("finance", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
   try {
     await db.update(accounts)
@@ -1956,6 +2099,14 @@ export async function recordCreditPayment(input: {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  if (!(await hasCapability("sales", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "sales", "edit")
+  if (allowed !== null && !allowed.includes(input.branchId)) {
+    return { success: false as const, error: "You don't have access to this branch" }
+  }
+
   if (input.amount <= 0) return { success: false as const, error: 'Payment amount must be > 0' }
 
   try {
@@ -2028,6 +2179,20 @@ export async function getAROutstanding(input?: { customerId?: string; branchId?:
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
 
+  if (!(await hasCapability("finance", "view", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+  const allowed = await branchFilterFor(session, "finance", "view")
+  if (allowed !== null) {
+    if (input?.branchId && !allowed.includes(input.branchId)) {
+      return { success: false as const, error: "You don't have access to this branch" }
+    }
+    if (!input?.branchId) {
+      if (allowed.length === 0) return { success: false as const, error: "You don't have access to any branches" }
+      if (input) input.branchId = allowed[0]
+    }
+  }
+
   try {
     const rows = unpackRows<{
       id: string; invoice_number: string; created_at: string; due_date: string | null
@@ -2072,9 +2237,8 @@ export async function updateCustomerCredit(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner', 'manager'].includes(role)) {
-    return { success: false as const, error: 'Manager role required' }
+  if (!(await hasCapability("finance", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
   try {
     await db.update(customers)
@@ -2096,9 +2260,8 @@ export async function getConsolidatedReport(input: {
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { success: false as const, error: 'Unauthorized' }
-  const role = (session.user.role ?? '').toLowerCase()
-  if (!['admin', 'super_admin', 'admin/owner'].includes(role)) {
-    return { success: false as const, error: 'Admin role required' }
+  if (!(await hasCapability("finance", "view", session)) || isBranchScoped(normalizeRole(session.user.role ?? ''))) {
+    return { success: false as const, error: 'Insufficient permission' }
   }
 
   try {

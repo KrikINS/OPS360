@@ -208,7 +208,7 @@ describe('createExpenseRecord + approveExpense', () => {
     expect(result.record.status).toBe('pending')
 
     vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: MANAGER_ID, role: 'manager', branchId: branch.id },
+      user: { id: MANAGER_ID, role: 'finance_manager', branchId: branch.id },
     })
     const approval = await approveExpense({ expenseId: result.record.id })
 
@@ -244,7 +244,7 @@ describe('createExpenseRecord + approveExpense', () => {
     const approval = await approveExpense({ expenseId: result.record.id })
 
     expect(approval.success).toBe(false)
-    expect(approval.error).toMatch(/manager/i)
+    expect(approval.error).toMatch(/Insufficient permission/i)
   })
 
   it('blocks double approval', async () => {
@@ -263,12 +263,12 @@ describe('createExpenseRecord + approveExpense', () => {
     if (!result.success) return
 
     vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: MANAGER_ID, role: 'manager', branchId: branch.id },
+      user: { id: MANAGER_ID, role: 'finance_manager', branchId: branch.id },
     })
     await approveExpense({ expenseId: result.record.id })
 
     vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: MANAGER_ID, role: 'manager', branchId: branch.id },
+      user: { id: MANAGER_ID, role: 'finance_manager', branchId: branch.id },
     })
     const second = await approveExpense({ expenseId: result.record.id })
 
@@ -297,7 +297,7 @@ describe('createExpenseRecord + approveExpense', () => {
     const rejection = await rejectExpense({ expenseId: result.record.id })
 
     expect(rejection.success).toBe(false)
-    expect(rejection.error).toMatch(/manager/i)
+    expect(rejection.error).toMatch(/Insufficient permission/i)
   })
 })
 
@@ -453,7 +453,7 @@ describe('Accounts Payable Settlement', () => {
       poId: '123', amount: 100, paymentMethod: 'cash'
     })
     expect(res2.success).toBe(false)
-    expect(res2.error).toMatch(/manager/i)
+    expect(res2.error).toMatch(/Insufficient permission/i)
   })
 })
 
@@ -595,7 +595,7 @@ describe('editJournalEntry Audit Compliance', () => {
 
     expect(res.success).toBe(false)
     if ('error' in res) {
-      expect(res.error).toMatch(/Unauthorized/)
+      expect(res.error).toMatch(/Insufficient permission/)
     }
   })
 
