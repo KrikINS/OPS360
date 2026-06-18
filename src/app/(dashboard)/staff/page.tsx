@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getStaffDirectory, getActivityLog, getAttendanceByBranch, getMyAttendance } from '@/actions/hr'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
+import { getBranchesAction } from '@/app/actions/admin-users'
 import StaffClient from './client'
 
 export default async function StaffPayrollPage() {
@@ -17,12 +18,13 @@ export default async function StaffPayrollPage() {
   const fromDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const toDate = today.toISOString().split('T')[0]
 
-  const [staffResult, activityResult, attendanceResult] = await Promise.all([
+  const [staffResult, activityResult, attendanceResult, branchesResult] = await Promise.all([
     getStaffDirectory(),
     getActivityLog({}),
     isManager
       ? getAttendanceByBranch({ fromDate, toDate })
-      : getMyAttendance({ fromDate, toDate })
+      : getMyAttendance({ fromDate, toDate }),
+    getBranchesAction(),
   ])
 
   const staff = staffResult.success ? staffResult.staff : []
@@ -32,6 +34,7 @@ export default async function StaffPayrollPage() {
   })) : []
 
   const attendance = attendanceResult.success ? attendanceResult.records : []
+  const branches = branchesResult.data ?? []
 
   return (
     <StaffClient
@@ -42,6 +45,7 @@ export default async function StaffPayrollPage() {
       attendance={attendance}
       currentUserId={session?.user?.id ?? ''}
       branchId={branchId}
+      branches={branches}
     />
   )
 }

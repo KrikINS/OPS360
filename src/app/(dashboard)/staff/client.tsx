@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { Users, Clock, Activity, Plus, Wallet, Trash2, Eye, ChevronDown, ChevronRight, Loader2, CheckCircle2, AlertTriangle, Printer, CalendarDays } from "lucide-react"
+import { Users, Clock, Activity, Plus, Wallet, Trash2, Eye, ChevronDown, ChevronRight, Loader2, CheckCircle2, AlertTriangle, Printer, CalendarDays, UserCheck } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useSearchParams, useRouter } from "next/navigation"
 import type { StaffRow } from "@/actions/hr"
@@ -24,6 +24,7 @@ import ClockWidget from "@/components/hr/ClockWidget"
 import ActivityClient from "./activity/client"
 import { AddOfflineStaffModal } from "@/components/hr/AddOfflineStaffModal"
 import { LeaveManagementTab } from "@/components/hr/LeaveManagementTab"
+import { PromoteEmployeeModal } from "@/components/admin/PromoteEmployeeModal"
 
 type ActivityRow = {
   id: string
@@ -103,6 +104,7 @@ export default function StaffClient({
   attendance = [],
   currentUserId,
   branchId,
+  branches = [],
 }: {
   isAdmin?: boolean
   isManager?: boolean
@@ -111,6 +113,7 @@ export default function StaffClient({
   attendance: AttendanceRecord[]
   currentUserId: string
   branchId?: string
+  branches?: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -118,6 +121,13 @@ export default function StaffClient({
   const { companyName } = useBranding()
 
   const [modalOpen, setModalOpen] = useState(false)
+  const [promoteModalOpen, setPromoteModalOpen] = useState(false)
+  const [promoteTarget, setPromoteTarget] = useState<{
+    employeeId: string
+    fullName: string | null
+    email: string | null
+    branchId: string | null
+  } | null>(null)
 
   // ── Payroll form state ────────────────────────────
   const [payPeriod, setPayPeriod]           = useState('')
@@ -471,6 +481,7 @@ export default function StaffClient({
                       <TableHead className="font-bold">Role</TableHead>
                       <TableHead className="font-bold">Email</TableHead>
                       <TableHead className="font-bold">Branch</TableHead>
+                      {isAdmin && <TableHead className="font-bold">Status</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -489,6 +500,34 @@ export default function StaffClient({
                             <span className="ml-1 text-[10px] text-primary font-semibold uppercase">Primary</span>
                           )}
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            {member.hasLogin ? (
+                              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 uppercase font-bold">Active Login</Badge>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200 uppercase font-bold">No Login</Badge>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 px-2 text-[10px] font-bold uppercase border-[#001529] text-[#001529] hover:bg-[#001529] hover:text-white"
+                                  onClick={() => {
+                                    setPromoteTarget({
+                                      employeeId: member.employeeId,
+                                      fullName: member.fullName,
+                                      email: member.email,
+                                      branchId: member.branchId,
+                                    })
+                                    setPromoteModalOpen(true)
+                                  }}
+                                >
+                                  <UserCheck className="h-3 w-3 mr-1" />
+                                  Promote
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1004,6 +1043,23 @@ export default function StaffClient({
       </Tabs>
 
       {isAdmin && <AddOfflineStaffModal open={modalOpen} onOpenChange={setModalOpen} />}
+
+      {isAdmin && promoteTarget && (
+        <PromoteEmployeeModal
+          open={promoteModalOpen}
+          onOpenChange={(o) => {
+            setPromoteModalOpen(o)
+            if (!o) setPromoteTarget(null)
+          }}
+          employee={promoteTarget}
+          branches={branches}
+          onSuccess={() => {
+            setPromoteModalOpen(false)
+            setPromoteTarget(null)
+            router.refresh()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -29,6 +29,8 @@ import { getCashAccountCode, createJournalEntry } from '@/actions/finance'
 
 export type StaffRow = {
   userId: string
+  employeeId: string          // always the employees.id
+  hasLogin: boolean           // true if a profiles row links to this employee
   fullName: string | null
   email: string | null
   role: string | null
@@ -121,6 +123,8 @@ export async function getStaffDirectory(input?: { branchId?: string }) {
       if (!staffMap.has(uId)) {
         staffMap.set(uId, {
           userId: uId,
+          employeeId: row.employeeId,
+          hasLogin: !!row.userId,
           fullName: `${row.firstName} ${row.lastName}`.trim(),
           email: row.email,
           role: row.role,

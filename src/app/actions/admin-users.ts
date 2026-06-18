@@ -3,8 +3,9 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/client"
-import { profiles, branches, user_permissions, user_branch_access, users } from "@/db/schema"
+import { profiles, branches, user_permissions, user_branch_access, users, employees } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
+import bcrypt from "bcrypt"
 
 
 export async function getBranchesAction() {
@@ -187,5 +188,106 @@ export async function updateProfileDetailsAction(input: {
   } catch (error) {
     console.error('UPDATE PROFILE ERROR:', error)
     return { success: false, error: (error as Error).message }
+  }
+}
+
+export async function promoteEmployeeToUserAction(input: {
+  employeeId: string
+  email: string
+  password: string
+  role: string
+  branchIds: string[]
+}) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { success: false as const, error: 'Unauthorized' }
+
+  const { hasCapability, branchFilterFor } = await import("@/lib/access")
+  const { normalizeRole, ROLE_RANK, isBranchScoped } = await import("@/lib/rbac")
+
+  if (!(await hasCapability("admin", "edit", session))) {
+    return { success: false as const, error: 'Insufficient permission' }
+  }
+
+  // Same escalation guard as user creation
+  const actorRole = normalizeRole(session.user.role)
+  const targetRole = normalizeRole(input.role)
+  if (!targetRole) return { success: false as const, error: 'Invalid role' }
+  if (!actorRole || ROLE_RANK[targetRole] > ROLE_RANK[actorRole]) {
+    return { success: false as const, error: 'You cannot create a user with a role higher than your own' }
+  }
+
+  // Same branch-confinement guard
+  if (isBranchScoped(actorRole) && input.branchIds.length > 0) {
+    const allowed = await branchFilterFor(session, "admin", "edit")
+    if (allowed !== null) {
+      const outside = input.branchIds.filter((b: string) => !allowed.includes(b))
+      if (outside.length > 0) {
+        return { success: false as const, error: 'You can only assign branches you manage' }
+      }
+    }
+  }
+
+  try {
+    // Guard: the employee must exist and must NOT already have a login.
+    const [emp] = await db.select().from(employees).where(eq(employees.id, input.employeeId)).limit(1)
+    if (!emp) return { success: false as const, error: 'Employee not found' }
+
+    // Guard: no duplicate login — check profiles.employee_id
+    const [existingProfile] = await db
+      .select({ id: profiles.id })
+      .from(profiles)
+      .where(eq(profiles.employee_id, input.employeeId))
+      .limit(1)
+    if (existingProfile) return { success: false as const, error: 'This employee already has a login' }
+
+    // Guard: email not already taken
+    const [emailTaken] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, input.email))
+      .limit(1)
+    if (emailTaken) return { success: false as const, error: 'Email already in use' }
+
+    // 1. Hash using bcrypt with salt 10 — same as api/admin/staff route
+    const password_hash = await bcrypt.hash(input.password, 10)
+
+    // 2. Create auth user
+    const [newUser] = await db.insert(users).values({
+      email: input.email,
+      password_hash,
+      role: input.role,
+    }).returning()
+
+    // 3. Create profile LINKED TO EXISTING EMPLOYEE — no new employees row
+    await db.insert(profiles).values({
+      id: newUser.id,
+      full_name: `${emp.first_name} ${emp.last_name}`.trim(),
+      email: input.email,
+      role: input.role,
+      employee_id: emp.id,   // ← key: links to existing employee, payroll/salary intact
+      branch_id: input.branchIds[0] ?? emp.branch_id ?? null,
+    })
+
+    // 4. Branch allotment
+    if (input.branchIds.length > 0) {
+      await db.insert(user_branch_access).values(
+        input.branchIds.map((branch_id, i) => ({
+          user_id: newUser.id,
+          branch_id,
+          is_primary: i === 0,
+        }))
+      )
+    }
+
+    // 5. Seed user_permissions baseline (all disabled — role matrix is the floor)
+    const MODULES = ['pos', 'inventory', 'procurement', 'sales', 'finance', 'service', 'admin', 'hr']
+    await db.insert(user_permissions).values(
+      MODULES.map(module => ({ user_id: newUser.id, module, enabled: false }))
+    )
+
+    return { success: true as const, userId: newUser.id }
+  } catch (error) {
+    console.error('PROMOTE EMPLOYEE ERROR:', error)
+    return { success: false as const, error: (error as Error).message }
   }
 }
