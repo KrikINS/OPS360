@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import { 
   Table, 
   TableBody, 
@@ -145,6 +146,20 @@ export default function VendorsClient({
   const [isEditingCommercials, setIsEditingCommercials] = useState(false)
   const [editFormData, setEditFormData] = useState<Partial<Vendor>>({})
   const canManage = ['admin', 'manager', 'owner', 'super_admin', 'admin/owner'].includes((userRole || '').toLowerCase())
+
+  // Auto-open vendor detail when navigated from global search with ?id=
+  const searchParams = useSearchParams()
+  const highlightVendorId = searchParams.get('id')
+  useEffect(() => {
+    if (highlightVendorId && vendors.length > 0 && !isDetailOpen) {
+      const match = vendors.find(v => v.id === highlightVendorId)
+      if (match) {
+        setSelectedVendor(match)
+        setIsDetailOpen(true)
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightVendorId, vendors])
   
   const [formData, setFormData] = useState({
     name: "",

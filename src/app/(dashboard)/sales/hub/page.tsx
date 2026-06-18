@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { SalesRegistryTable } from '@/components/sales/SalesRegistryTable'
 import { 
   ShoppingBag, 
@@ -32,6 +33,8 @@ interface Sale {
 
 export default function SalesRegistryPage() {
   const { activeBranch } = useGlobalContext()
+  const searchParams = useSearchParams()
+  const highlightInvoice = searchParams.get('invoice') ?? undefined
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -186,6 +189,7 @@ export default function SalesRegistryPage() {
           canExport={canExport} 
           exporting={exporting}
           onRefresh={fetchSales}
+          autoOpenId={highlightInvoice}
         />
       )}
     </div>

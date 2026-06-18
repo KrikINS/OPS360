@@ -57,10 +57,12 @@ interface SaleRegistryTableProps {
   canExport?: boolean;
   exporting?: boolean;
   onRefresh?: () => void;
+  initialSearch?: string     // pre-seeds the search box (e.g. from ?invoice= param)
+  autoOpenId?: string        // immediately opens the detail drawer for this sale_id
 }
 
-export function SalesRegistryTable({ sales, onPrint, onExport, canExport, exporting, onRefresh }: SaleRegistryTableProps) {
-  const [searchTerm, setSearchTerm] = useState('')
+export function SalesRegistryTable({ sales, onPrint, onExport, canExport, exporting, onRefresh, initialSearch, autoOpenId }: SaleRegistryTableProps) {
+  const [searchTerm, setSearchTerm] = useState(initialSearch ?? '')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null)
   const [selectedInvoiceNumber, setSelectedInvoiceNumber] = useState<string | null>(null)
@@ -85,6 +87,15 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
     setSelectedSaleStatus(status ?? null)
     setDrawerOpen(true)
   }
+
+  // Auto-open the drawer when navigated from global search
+  React.useEffect(() => {
+    if (autoOpenId && sales.length > 0) {
+      const sale = sales.find(s => s.sale_id === autoOpenId)
+      if (sale) openDetails(sale.sale_id, sale.invoice_number, sale.status ?? null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenId, sales])
 
   const openCustomerHistory = (id: string, name: string) => {
     if (!id || name === 'Walk-in Customer') return

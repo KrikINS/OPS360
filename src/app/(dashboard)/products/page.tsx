@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 
 import { 
   Search, 
@@ -137,6 +138,17 @@ export default function ProductsPage() {
     fetchProducts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showArchived])
+
+  // Auto-open edit modal when navigated from global search with ?id=
+  const searchParams = useSearchParams()
+  const highlightProductId = searchParams.get('id')
+  useEffect(() => {
+    if (highlightProductId && products.length > 0 && !editingProduct) {
+      const match = products.find(p => p.id === highlightProductId)
+      if (match) setEditingProduct(match)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightProductId, products])
 
   const handleArchive = async (id: string) => {
     setLoading(true)

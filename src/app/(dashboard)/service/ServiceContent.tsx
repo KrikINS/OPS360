@@ -1,6 +1,7 @@
 "use client"
 
 import { useService } from "@/context/ServiceContext"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Wrench, Clock, AlertCircle, CheckCircle2, MoreVertical, Plus } from "lucide-react"
@@ -8,13 +9,24 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CreateJobModal } from "@/components/service/CreateJobModal"
 import { JobDetailDrawer } from "@/components/service/JobDetailDrawer"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { ServiceJob } from "@/context/ServiceContext"
 
 export function ServiceContent() {
   const { jobs, loading, refetchJobs } = useService()
+  const searchParams = useSearchParams()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [selectedJob, setSelectedJob] = useState<ServiceJob | null>(null)
+
+  // Auto-open job detail when navigated from global search with ?job=
+  const highlightJobId = searchParams.get('job')
+  useEffect(() => {
+    if (highlightJobId && jobs.length > 0 && !selectedJob) {
+      const match = jobs.find(j => j.id === highlightJobId)
+      if (match) setSelectedJob(match)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightJobId, jobs])
 
   if (loading) {
     return (

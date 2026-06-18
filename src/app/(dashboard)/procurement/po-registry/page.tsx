@@ -543,6 +543,16 @@ export default function ProcurementGRNPage() {
     }
   }, [searchParams])
 
+  // Auto-open PO detail when navigated from global search with ?po=
+  useEffect(() => {
+    const poId = searchParams.get('po')
+    if (poId && activePOs.length > 0 && !viewingPO) {
+      const match = activePOs.find(p => p.id === poId)
+      if (match) setViewingPO(match)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, activePOs])
+
   const handleVendorSelect = (vendorId: string | null) => {
     if (!vendorId) {
       setSelectedVendor(null);

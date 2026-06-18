@@ -29,6 +29,7 @@ export default function CustomerManagementPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const activeTab = searchParams.get("tab") || "registry"
+  const highlightCustomerId = searchParams.get("id")
 
   const [customers, setCustomers] = useState<AdminCustomer[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,6 +44,18 @@ export default function CustomerManagementPage() {
   const [creditForm, setCreditForm]           = useState({ eligible: false, limit: '', terms: '30 days' })
   const [savingCredit, setSavingCredit]       = useState(false)
   const [creditToast, setCreditToast]         = useState<string | null>(null)
+
+  // Auto-open customer history when navigated from global search with ?id=
+  useEffect(() => {
+    if (highlightCustomerId && customers.length > 0 && !historyDrawerOpen) {
+      const match = customers.find(c => c.id === highlightCustomerId)
+      if (match) {
+        setCustomerForHistory(match)
+        setHistoryDrawerOpen(true)
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightCustomerId, customers])
 
   const handleSaveCredit = async () => {
     if (!creditCustomer) return
