@@ -54,9 +54,6 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
             <div className="flex items-center gap-3">
               <SidebarTrigger className="text-white/70 hover:text-white transition-colors" />
               <div className="h-5 w-[1px] bg-white/20" />
-              <div className="font-bold text-sm tracking-tight text-[#7FD1E3]">
-                OPS360 ERP
-              </div>
             </div>
             <div className="flex items-center gap-3">
               <GlobalSearch />
