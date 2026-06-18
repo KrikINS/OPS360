@@ -122,19 +122,19 @@ export async function updateUserPermissionsAction(input: {
 
     // No unique constraint on (user_id, module) — delete then insert
     const modules = Object.keys(input.permissions)
-    for (const module of modules) {
+    for (const mod of modules) {
       await db
         .delete(user_permissions)
         .where(
           and(
             eq(user_permissions.user_id, input.userId),
-            eq(user_permissions.module, module)
+            eq(user_permissions.module, mod)
           )
         )
       await db.insert(user_permissions).values({
         user_id: input.userId,
-        module,
-        enabled: input.permissions[module],
+        module: mod,
+        enabled: input.permissions[mod],
       })
     }
 
@@ -282,7 +282,7 @@ export async function promoteEmployeeToUserAction(input: {
     // 5. Seed user_permissions baseline (all disabled — role matrix is the floor)
     const MODULES = ['pos', 'inventory', 'procurement', 'sales', 'finance', 'service', 'admin', 'hr']
     await db.insert(user_permissions).values(
-      MODULES.map(module => ({ user_id: newUser.id, module, enabled: false }))
+      MODULES.map(mod => ({ user_id: newUser.id, module: mod, enabled: false }))
     )
 
     return { success: true as const, userId: newUser.id }
