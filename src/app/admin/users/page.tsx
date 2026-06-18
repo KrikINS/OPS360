@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { getSession } from 'next-auth/react'
 import { getAdminUsersDataAction, updateUserPermissionsAction, updateProfileDetailsAction } from '@/app/actions/admin-users'
+import { ROLES as RBAC_ROLES, roleLabel, normalizeRole, isBranchScoped, can as canByMatrix, type Role, type Module } from "@/lib/rbac"
 
 import {
   Table, 
@@ -60,7 +61,6 @@ interface Branch {
 }
 
 const MODULES = ["pos", "inventory", "procurement", "sales", "finance", "service", "admin", "hr"] as const;
-const ROLES = ["Admin/Owner", "Branch Manager", "Sales Rep", "Accounts Keeper", "Technician", "HR Manager", "Driver"] as const;
 
 export default function UserManagementPage() {
   const [stats, setStats] = useState({
@@ -114,19 +114,12 @@ export default function UserManagementPage() {
     setModifiedUserIds(prev => new Set(prev).add(profileId))
   }
 
-  const handleRoleChange = (profileId: string, newRole: string) => {
+  const handleRoleChange = (profileId: string, newRole: Role) => {
     const nextPerms: Record<string, boolean> = {}
-    
-    if (newRole === "Admin/Owner") {
-      MODULES.forEach(m => nextPerms[m] = true)
-    } else if (newRole === "Accounts Keeper") {
-      MODULES.forEach(m => nextPerms[m] = false)
-      nextPerms["finance"] = true
-    } else if (newRole === "HR Manager") {
-      MODULES.forEach(m => nextPerms[m] = false)
-      nextPerms["hr"] = true
-    } else {
-      MODULES.forEach(m => nextPerms[m] = false)
+    for (const m of MODULES) {
+      const matrixModule = (m === "pos" ? "sales" : m) as Module
+      const capNeeded = m === "pos" ? "edit" : "view"
+      nextPerms[m] = canByMatrix(newRole, matrixModule, capNeeded)
     }
 
     setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, role: newRole, permissions: nextPerms } : p))
@@ -156,7 +149,7 @@ export default function UserManagementPage() {
       for (const user of updates) {
         const result = await updateUserPermissionsAction({
           userId: user.id,
-          role: user.role ?? 'staff',
+          role: normalizeRole(user.role) ?? user.role ?? 'sales_associate',
           permissions: user.permissions ?? {},
           branchIds: user.assigned_branch_ids ?? [],
         })
@@ -194,7 +187,7 @@ export default function UserManagementPage() {
         }),
         updateUserPermissionsAction({
           userId: updated.id,
-          role: updated.role ?? 'staff',
+          role: normalizeRole(updated.role) ?? updated.role ?? 'sales_associate',
           permissions: updated.permissions ?? {},
           branchIds: updated.assigned_branch_ids || [],
         }),
@@ -343,14 +336,14 @@ export default function UserManagementPage() {
                         </button>
                       </TableCell>
                       <TableCell>
-                        <Select value={profile.role || ""} onValueChange={(val) => val && handleRoleChange(profile.id, val)}>
+                        <Select value={normalizeRole(profile.role) ?? ""} onValueChange={(val) => val && handleRoleChange(profile.id, val as Role)}>
                           <SelectTrigger className="w-full h-8 text-[10px] font-black uppercase tracking-tight bg-slate-50 border-slate-200">
                             <SelectValue placeholder="No Role" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              {ROLES.map(role => (
-                                <SelectItem key={role} value={role} className="text-[10px] uppercase font-bold">{role}</SelectItem>
+                              {RBAC_ROLES.map(r => (
+                                <SelectItem key={r} value={r} className="text-[10px] uppercase font-bold">{roleLabel(r)}</SelectItem>
                               ))}
                             </SelectGroup>
                           </SelectContent>
@@ -373,44 +366,73 @@ export default function UserManagementPage() {
                             )}
                           >
                             <span className="truncate">
-                              {(profile.assigned_branch_ids?.length === branches.length && branches.length > 0)
+                              {!isBranchScoped(normalizeRole(profile.role)) 
+                                ? "All Branches (role-wide)" 
+                                : (profile.assigned_branch_ids?.length === branches.length && branches.length > 0)
                                 ? "All Branches"
                                 : `${profile.assigned_branch_ids?.length || 0}/${branches.length} Selected`}
                             </span>
                             <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuGroup>
-                              <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Branch Access Control</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuCheckboxItem
-                                checked={profile.assigned_branch_ids?.length === branches.length && branches.length > 0}
-                                onCheckedChange={(checked) => {
-                                  if (checked) handleSelectAllBranches(profile.id)
-                                  else assignBranches(profile.id, [])
-                                }}
-                                className="text-[10px] font-black uppercase"
-                              >
-                                Select All Branches
-                              </DropdownMenuCheckboxItem>
-                              <DropdownMenuSeparator />
-                              {branches.map((branch) => (
+                            {!isBranchScoped(normalizeRole(profile.role)) ? (
+                              <div className="p-3 text-[10px] font-bold text-slate-500 uppercase text-center tracking-widest">
+                                All Branches (Role-Wide)
+                              </div>
+                            ) : normalizeRole(profile.role) === 'sales_associate' ? (
+                              <DropdownMenuGroup>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Select Primary Branch</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {branches.map((branch) => (
+                                  <DropdownMenuCheckboxItem
+                                    key={branch.id}
+                                    checked={profile.assigned_branch_ids?.includes(branch.id) || false}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        assignBranches(profile.id, [branch.id])
+                                      } else {
+                                        assignBranches(profile.id, [])
+                                      }
+                                    }}
+                                    className="text-[10px] font-bold uppercase"
+                                  >
+                                    {branch.name}
+                                  </DropdownMenuCheckboxItem>
+                                ))}
+                              </DropdownMenuGroup>
+                            ) : (
+                              <DropdownMenuGroup>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Branch Access Control</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuCheckboxItem
-                                  key={branch.id}
-                                  checked={profile.assigned_branch_ids?.includes(branch.id) || false}
+                                  checked={profile.assigned_branch_ids?.length === branches.length && branches.length > 0}
                                   onCheckedChange={(checked) => {
-                                    const current = profile.assigned_branch_ids || []
-                                    const next = checked 
-                                      ? [...current, branch.id]
-                                      : current.filter(id => id !== branch.id)
-                                    assignBranches(profile.id, next)
+                                    if (checked) handleSelectAllBranches(profile.id)
+                                    else assignBranches(profile.id, [])
                                   }}
-                                  className="text-[10px] font-bold uppercase"
+                                  className="text-[10px] font-black uppercase"
                                 >
-                                  {branch.name}
+                                  Select All Branches
                                 </DropdownMenuCheckboxItem>
-                              ))}
-                            </DropdownMenuGroup>
+                                <DropdownMenuSeparator />
+                                {branches.map((branch) => (
+                                  <DropdownMenuCheckboxItem
+                                    key={branch.id}
+                                    checked={profile.assigned_branch_ids?.includes(branch.id) || false}
+                                    onCheckedChange={(checked) => {
+                                      const current = profile.assigned_branch_ids || []
+                                      const next = checked 
+                                        ? [...current, branch.id]
+                                        : current.filter(id => id !== branch.id)
+                                      assignBranches(profile.id, next)
+                                    }}
+                                    className="text-[10px] font-bold uppercase"
+                                  >
+                                    {branch.name}
+                                  </DropdownMenuCheckboxItem>
+                                ))}
+                              </DropdownMenuGroup>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

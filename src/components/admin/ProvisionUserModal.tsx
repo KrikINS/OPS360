@@ -23,6 +23,7 @@ import {
 import { Loader2, UserPlus, AlertCircle } from "lucide-react"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ROLES, roleLabel, isBranchScoped } from "@/lib/rbac"
 
 interface Branch {
   id: string
@@ -48,7 +49,7 @@ export function ProvisionUserModal({
     email: "",
     password: "",
     fullName: "",
-    role: "staff",
+    role: "sales_associate",
     branchIds: [] as string[],
   })
 
@@ -76,7 +77,7 @@ export function ProvisionUserModal({
         email: "",
         password: "",
         fullName: "",
-        role: "staff",
+        role: "sales_associate",
         branchIds: [],
       })
     } catch (err) {
@@ -157,13 +158,9 @@ export function ProvisionUserModal({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="Admin/Owner" className="text-xs font-bold uppercase">Admin/Owner</SelectItem>
-                      <SelectItem value="Branch Manager" className="text-xs font-bold uppercase">Branch Manager</SelectItem>
-                      <SelectItem value="Sales Rep" className="text-xs font-bold uppercase">Sales Rep</SelectItem>
-                      <SelectItem value="Accounts Keeper" className="text-xs font-bold uppercase">Accounts Keeper</SelectItem>
-                      <SelectItem value="Technician" className="text-xs font-bold uppercase">Technician</SelectItem>
-                      <SelectItem value="HR Manager" className="text-xs font-bold uppercase">HR Manager</SelectItem>
-                      <SelectItem value="Driver" className="text-xs font-bold uppercase">Driver</SelectItem>
+                      {ROLES.map(r => (
+                        <SelectItem key={r} value={r} className="text-xs font-bold uppercase">{roleLabel(r)}</SelectItem>
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -171,13 +168,35 @@ export function ProvisionUserModal({
 
               <div className="grid gap-2">
                 <Label htmlFor="branch" className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Branches Allotted</Label>
-                <MultiSelect
-                  options={branches.map(b => ({ label: b.name, value: b.id }))}
-                  selected={formData.branchIds}
-                  onChange={(vals) => setFormData({ ...formData, branchIds: vals })}
-                  placeholder="Select Branches"
-                  className="h-9 min-h-0 [&>div]:min-h-[36px] [&>div]:py-1"
-                />
+                {!isBranchScoped(formData.role) ? (
+                  <div className="h-9 flex items-center px-3 border border-slate-200 rounded-md bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    All Branches (Role-Wide)
+                  </div>
+                ) : formData.role === 'sales_associate' ? (
+                  <Select
+                    value={formData.branchIds[0] || ""}
+                    onValueChange={(val) => setFormData({ ...formData, branchIds: val ? [val] : [] })}
+                  >
+                    <SelectTrigger className="h-9 text-xs font-bold border-slate-200 uppercase">
+                      <SelectValue placeholder="Select Primary Branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {branches.map(b => (
+                          <SelectItem key={b.id} value={b.id} className="text-xs font-bold uppercase">{b.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <MultiSelect
+                    options={branches.map(b => ({ label: b.name, value: b.id }))}
+                    selected={formData.branchIds}
+                    onChange={(vals) => setFormData({ ...formData, branchIds: vals })}
+                    placeholder="Select Branches"
+                    className="h-9 min-h-0 [&>div]:min-h-[36px] [&>div]:py-1"
+                  />
+                )}
               </div>
             </div>
           </div>
