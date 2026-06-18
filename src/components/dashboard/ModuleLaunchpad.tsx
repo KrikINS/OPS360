@@ -17,6 +17,18 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ModernOrbitSpinner } from "@/components/ui/ModernOrbitSpinner"
+import { can, type Module as RbacModule } from "@/lib/rbac"
+
+const LAUNCHPAD_TO_MODULE: Record<string, { module: RbacModule; capability: "view" | "edit" }> = {
+  inventory:   { module: "inventory",   capability: "view" },
+  procurement: { module: "procurement", capability: "view" },
+  sales:       { module: "sales",       capability: "view" },
+  pos:         { module: "sales",       capability: "edit" },   // POS = sales write surface
+  finance:     { module: "finance",     capability: "view" },
+  service:     { module: "service",     capability: "view" },
+  admin:       { module: "admin",       capability: "view" },
+  hr:          { module: "hr",          capability: "view" },
+}
 
 interface Module {
   id: string
@@ -120,15 +132,14 @@ export function ModuleLaunchpad({ permissions, role, isVisible }: ModuleLaunchpa
     }
   }, [isVisible])
 
-  const sessionRole = session?.user?.role ?? role ?? ""
-  const normalizedRole = sessionRole.toLowerCase().trim();
-  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
-  const isAdmin = isSuperAdmin || normalizedRole === 'admin/owner' || normalizedRole === 'admin' || normalizedRole === 'owner';
-
-  // Admins always see all modules; others filter by permissions
-  const allowedModules = isAdmin
-    ? MODULES
-    : MODULES.filter(m => permissions?.[m.id])
+  const effectiveRole = session?.user?.role ?? role ?? ""
+  const allowedModules = MODULES.filter(m => {
+    const map = LAUNCHPAD_TO_MODULE[m.id]
+    if (!map) return permissions?.[m.id] === true        // unmapped → legacy permission fallback
+    const allowedByRole = can(effectiveRole, map.module, map.capability)
+    const grantedByOverride = permissions?.[m.id] === true  // additive override layer
+    return allowedByRole || grantedByOverride
+  })
 
   if (!isVisible) return null
 
