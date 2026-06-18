@@ -330,7 +330,10 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
           })
 
           await refreshSessionStats()
-          const branchIds = profileData.assigned_branch_ids || (profileData.branch_id ? [profileData.branch_id] : [])
+          const { data: allottedIds } = await import('@/app/actions/user').then(m => m.getUserBranchIdsAction(user.id))
+          const branchIds = (allottedIds && allottedIds.length > 0)
+            ? allottedIds
+            : (profileData.branch_id ? [profileData.branch_id] : [])
 
           const { data: allBranchesData } = await fetchData("branches")
           const allBranchesList = (allBranchesData as Branch[]) || []
@@ -347,9 +350,9 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
             await fetchInventory(initialBranchIdToUse)
           }
 
-          const normalizedRole = profileData.role?.toLowerCase().trim()
-          const isAdmin = normalizedRole === 'admin/owner' || normalizedRole === 'super_admin' || normalizedRole === 'admin'
-          if (isAdmin) {
+          const { isBranchScoped, normalizeRole } = await import('@/lib/rbac')
+          const role = normalizeRole(profileData.role)
+          if (role && !isBranchScoped(role)) {
             setAllBranches(allBranchesList)
           }
         }
