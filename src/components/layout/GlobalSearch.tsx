@@ -8,6 +8,7 @@ import {
   Users, Boxes, ArrowRight,
 } from "lucide-react"
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -120,6 +121,7 @@ export function GlobalSearch() {
       </button>
 
       <CommandDialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) { setSearch(""); setHits([]) } }}>
+        <Command shouldFilter={false}>
         <CommandInput
           placeholder="Search invoices, customers, products, vendors..."
           value={search}
@@ -191,6 +193,7 @@ export function GlobalSearch() {
             </CommandGroup>
           )}
         </CommandList>
+        </Command>
       </CommandDialog>
     </>
   )
