@@ -191,7 +191,7 @@ export function StockTransfersView({
 
   const fetchTransfers = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData('stock_transfers'))
+    const { data, error } = await import("@/app/actions/transfers").then(m => m.getStockTransfersAction())
 
     if (error) {
       console.error("Failed to load transfers", error)
