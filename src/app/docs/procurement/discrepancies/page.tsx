@@ -76,34 +76,6 @@ export default function ProcurementDiscrepancyPage() {
         </div>
       </section>
 
-      {/* ── Manual Overrides ── */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-3 text-red-600">
-          <Scale className="h-6 w-6" />
-          <h2 className="text-2xl font-bold text-slate-900">Manual Tax Overrides</h2>
-        </div>
-
-        <p className="text-slate-600">
-          While HSN slab protection is active by default, certain fiscal scenarios require manual adjustment.
-        </p>
-
-        <div className="flex flex-col md:flex-row gap-6">
-           <div className="flex-1 bg-red-50 border border-red-100 rounded-2xl p-6">
-              <h4 className="text-red-900 font-bold mb-2">When to use Override?</h4>
-              <ul className="text-sm text-red-800 space-y-2 list-inside list-disc">
-                <li>Non-standard GST rates due to specific schemes</li>
-                <li>Items with fluctuating HSN tax classifications</li>
-                <li>Imported goods with customized duty structures</li>
-              </ul>
-           </div>
-           <div className="flex-1 bg-slate-50 border rounded-2xl p-6 border-dashed border-slate-300">
-              <h4 className="text-slate-900 font-bold mb-2 text-sm uppercase tracking-widest">Audit Trail</h4>
-              <p className="text-xs text-slate-500 leading-relaxed italic">
-                &quot;Every manual override is electronically signed by the manager&apos;s profile ID and timestamped. This log is immutable and available for administrative review during quarterly audits.&quot;
-              </p>
-           </div>
-        </div>
-      </section>
     </div>
   )
 }

@@ -88,39 +88,6 @@ export default function LandedCostDocs() {
         </div>
       </section>
 
-      {/* ── Vendor Performance ── */}
-      <section className="space-y-6 pt-6 border-t border-slate-100">
-        <div className="flex items-center gap-3 mb-2">
-           <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
-             <BarChart3 className="h-6 w-6" />
-           </div>
-           <h2 className="text-2xl font-bold text-slate-800">Monitoring Vendor Reliability</h2>
-        </div>
-        <p className="text-slate-600 leading-relaxed">
-          The <strong>Pending Fulfilment Hub</strong> provides real-time oversight of vendor delivery performance. 
-          By tracking the time delta between approval and reception, Ops360 flags late shipments automatically.
-        </p>
-        <div className="grid md:grid-cols-3 gap-6">
-           <Card className="shadow-sm">
-              <CardHeader className="py-4">
-                 <div className="font-bold text-sm text-slate-500">Service Level (SLA)</div>
-                 <div className="text-2xl font-black text-slate-900 italic tracking-tighter">Days Outstanding</div>
-              </CardHeader>
-           </Card>
-           <Card className="shadow-sm">
-              <CardHeader className="py-4">
-                 <div className="font-bold text-sm text-slate-500">Fulfilment Ratio</div>
-                 <div className="text-2xl font-black text-slate-900 italic tracking-tighter">Partial vs Total</div>
-              </CardHeader>
-           </Card>
-           <Card className="shadow-sm">
-              <CardHeader className="py-4">
-                 <div className="font-bold text-sm text-slate-500">Integrity Check</div>
-                 <div className="text-2xl font-black text-slate-900 italic tracking-tighter">Manual Overrides</div>
-              </CardHeader>
-           </Card>
-        </div>
-      </section>
     </div>
   )
 }

@@ -26,10 +26,10 @@ export default function DocumentRetentionReturnsDoc() {
           
           <div className="bg-slate-50 rounded-xl p-6 border border-slate-100 shadow-sm">
             <h3 className="text-sm font-black uppercase text-slate-800 tracking-wider mb-4 border-l-4 border-[#7FD1E3] pl-3">
-              Automated Archiving Process
+              Bill Upload Process
             </h3>
             <p className="text-slate-600 mb-6 font-medium">
-              The OPS360 system uses a private, secured storage container for all procurement-related documents such as Vendor Bills, Tax Invoices, and Delivery Challans.
+              The OPS360 system allows associating Vendor Bills and documentation with Purchase Orders to maintain a digital audit trail.
             </p>
             
             <ul className="space-y-4">
@@ -45,24 +45,13 @@ export default function DocumentRetentionReturnsDoc() {
                 </div>
               </li>
               <li className="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm">
-                <div className="bg-blue-100 p-2 rounded-lg shrink-0">
-                  <span className="font-bold text-blue-700">2</span>
+                <div className="bg-amber-100 p-2 rounded-lg shrink-0">
+                  <span className="font-bold text-amber-700">2</span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-800">Direct-to-Storage Upload</h4>
+                  <h4 className="font-bold text-slate-800">Document Storage Limitation</h4>
                   <p className="text-sm text-slate-600 mt-1">
-                    Selecting a PDF or Image instantly uploads it to the <code>procurement_docs</code> bucket. This secures the document against tampering and associates it directly with the PO pedigree.
-                  </p>
-                </div>
-              </li>
-              <li className="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm">
-                <div className="bg-blue-100 p-2 rounded-lg shrink-0">
-                  <span className="font-bold text-blue-700">3</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800">Secure Access</h4>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Once uploaded, the document can be viewed via the &quot;View Doc&quot; button located in the 3-Way Match Audit tab. Access is controlled via short-lived signed URLs generated on-demand.
+                    <span className="text-amber-600 font-bold">⚠️ NOTE:</span> While the UI supports attaching files during Bill Upload, server-side storage (e.g., GCS <code>procurement_docs</code> bucket) is currently pending implementation. The Bill record is created, but files are not physically stored.
                   </p>
                 </div>
               </li>

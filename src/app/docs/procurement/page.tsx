@@ -95,18 +95,19 @@ export default function ProcurementDocs() {
         </div>
       </section>
 
-      {/* ── Discrepancy Auto-Resolution ── */}
+      {/* ── Discrepancy Generation ── */}
       <section className="space-y-4">
         <div className="flex items-center gap-3 text-amber-500">
           <AlertTriangle className="h-6 w-6" />
-          <h2 className="text-2xl font-bold text-slate-900">5. Discrepancy Auto-Resolution</h2>
+          <h2 className="text-2xl font-bold text-slate-900">5. Discrepancy Generation</h2>
         </div>
         <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 shadow-sm">
           <ul className="space-y-3 text-sm text-amber-900 list-disc pl-5">
-            <li>When a partial GRN is processed, a <code>SHORT_SHIPMENT</code> discrepancy is automatically created for the shortfall.</li>
-            <li>When subsequent GRNs bring the total received up to the full ordered quantity, the discrepancy is <strong>automatically resolved</strong>.</li>
-            <li>The system adds an admin comment: <em>&quot;Auto-resolved: full quantity received across multiple GRNs&quot;</em>.</li>
-            <li>The Discrepancy Report clearly shows the PO number, product name, vendor name, and any remaining shortfall quantity.</li>
+            <li>Discrepancies are generated during <strong>Vendor Bill Upload</strong>, not during GRN.</li>
+            <li>The system compares the uploaded Bill amount/quantity against the Purchase Order.</li>
+            <li>If the quantity does not match, a <code>Quantity Mismatch</code> discrepancy is created.</li>
+            <li>If the price has a variance of ≥ ₹1.00, a <code>Price Mismatch</code> discrepancy is created.</li>
+            <li>These discrepancies must be manually reviewed and resolved in the Discrepancies registry.</li>
           </ul>
         </div>
       </section>
@@ -137,7 +138,7 @@ export default function ProcurementDocs() {
           <h2 className="text-2xl font-bold text-[#001529]">HSN Slab Protection</h2>
         </div>
         <p className="text-slate-600">
-          To prevent human error and ensure tax compliance, GST rates are strictly mapped to HSN codes:
+          To prevent human error and ensure tax compliance, Ops360 supports mapping GST rates to standard HSN codes. <em>(The table below illustrates sample categorizations)</em>:
         </p>
         <div className="overflow-hidden border rounded-xl">
           <table className="w-full text-left text-sm">
@@ -201,15 +202,9 @@ export default function ProcurementDocs() {
         <p className="text-slate-600">
           Enterprise-grade financial reporting in Ops360 uses the <strong>Lakhs/Crores</strong> format.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white border p-4 rounded-xl">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Currency Formatting</h4>
-            <code className="text-xs text-[#001529] font-bold">formatCurrency(4505600) → ₹45,05,600.00</code>
-          </div>
-          <div className="bg-white border p-4 rounded-xl">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Amount in Words</h4>
-            <code className="text-xs text-[#001529] font-bold">&quot;Forty-Five Lakh Five Thousand...&quot;</code>
-          </div>
+        <div className="bg-white border p-4 rounded-xl">
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Currency Formatting</h4>
+          <code className="text-xs text-[#001529] font-bold">formatCurrency(4505600) → ₹45,05,600.00</code>
         </div>
       </section>
 

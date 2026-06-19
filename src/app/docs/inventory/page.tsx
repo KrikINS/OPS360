@@ -90,7 +90,7 @@ export default function InventoryDocs() {
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-[#001529] min-w-[100px]">In-Transit:</span>
-              <span>Stock currently moving between geographical branches.</span>
+              <span><span className="text-red-600 font-bold">⚠️ CRITICAL:</span> Ops360 does <strong>not</strong> currently place items in a locked "In-Transit" state during branch transfers. When a transfer is submitted, items remain "Available" in the source branch until the destination branch confirms receipt. Branches must physically segregate transferred stock to avoid accidental double-selling.</span>
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-[#001529] min-w-[100px]">Sold:</span>
@@ -126,15 +126,15 @@ export default function InventoryDocs() {
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl p-6 shadow-sm">
+      <div className="bg-white border rounded-xl p-6 shadow-sm border-amber-200">
         <h3 className="text-lg font-bold text-[#001529] flex items-center gap-2 mb-4">
           <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center">
             <span className="text-indigo-600">03</span>
           </div>
-          Enterprise Logistics & Waybills
+          Transfer Tracking & Receipt Logic
         </h3>
         <p className="text-sm text-slate-600 mb-6">
-          Ops360 uses a dual-identity logistics protocol (ST/TX) to ensure 100% stock accuracy and physical tracking during inter-branch movements.
+          Ops360 uses a two-step transfer process to manage inter-branch stock movement.
         </p>
         
         <div className="grid md:grid-cols-2 gap-6">
@@ -144,9 +144,9 @@ export default function InventoryDocs() {
                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#001529]">Automatic Waybill Provisioning</h4>
+                <h4 className="text-sm font-bold text-[#001529]">Transfer Identifiers</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  When a <strong>Stock Transfer</strong> (ST-) is initiated, the system automatically generates a unique <strong>Waybill ID</strong> (TX-). These records are hard-linked, ensuring that every physical manifest has a corresponding digital ledger entry.
+                  When a Stock Transfer is initiated, the system automatically generates a unique tracking ID using a <code>TRN-XXXXXX</code> sequence based on the UUID. This serves as the primary identifier on the printed manifest.
                 </p>
               </div>
             </div>
@@ -156,9 +156,9 @@ export default function InventoryDocs() {
                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#001529]">Deterministic ID Formatting</h4>
+                <h4 className="text-sm font-bold text-[#001529]">QR-Based Scanning</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  Waybills follow a strict <code>TX-YYYY-XXXX</code> sequence (e.g., TX-2026-0001). This annually resetting sequence provides a clear audit trail and avoids collisions across the enterprise.
+                  Every printed transfer manifest contains a dynamic QR code encoded with the <strong>TRN- ID</strong>. Destination managers can scan this to instantly pull up the digital manifest and initiate receipt.
                 </p>
               </div>
             </div>
@@ -166,25 +166,13 @@ export default function InventoryDocs() {
 
           <div className="space-y-4">
             <div className="flex gap-3">
-              <div className="h-5 w-5 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+              <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-amber-600" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#001529]">QR-Based Instant Scanning</h4>
+                <h4 className="text-sm font-bold text-[#001529]">Two-Step Receipt Protocol</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  Every printed Waybill contains a dynamic QR code encoded with the <strong>TX- ID</strong>. Destination managers can scan this to instantly pull up the digital manifest and initiate the atomic receipt protocol.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <div className="h-5 w-5 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-[#001529]">Atomic Receipt Logic</h4>
-                <p className="text-xs text-slate-500 mt-1">
-                  The receipt process is cryptographically secure and uses atomic database transactions to ensure that stock is subtracted from the source and added to the destination in a single, irreversible operation.
+                  Transfer initiation <strong>does not deduct source stock</strong>. It is only when the destination branch confirms receipt that an atomic database transaction fires: deducting units from the source (marking them "Transferred") and adding identical new units (marked "Available") to the destination.
                 </p>
               </div>
             </div>
