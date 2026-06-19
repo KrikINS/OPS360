@@ -21,51 +21,6 @@ export default function VendorManagementDocs() {
         </p>
       </section>
 
-      {/* Procurement Lock Rule */}
-      <div className="p-6 rounded-2xl bg-[#001529] text-white flex items-start gap-5 overflow-hidden relative group">
-        <div className="bg-[#7FD1E3] p-3 rounded-xl transform rotate-3 transition-transform group-hover:rotate-0">
-          <ShieldCheck className="h-6 w-6 text-white" />
-        </div>
-        <div className="relative z-10">
-          <h2 className="text-lg font-bold">The Procurement Lock Rule</h2>
-          <p className="mt-1 text-slate-300 text-sm leading-relaxed">
-            Purchase Orders (POs) CANNOT be generated for vendors with a <span className="text-[#7FD1E3] font-bold italic">&apos;Pending&apos;</span> or <span className="text-rose-400 font-bold italic">&apos;Blacklisted&apos;</span> status. 
-            All vendors must be marked as <span className="text-emerald-400 font-bold italic">&apos;Verified&apos;</span> by an Area Manager.
-          </p>
-        </div>
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <ShieldCheck className="h-24 w-24" />
-        </div>
-      </div>
-
-      {/* Registration Flow Section */}
-      <section className="space-y-6">
-        <h2 className="text-2xl font-bold text-[#001529] border-b pb-3 text-emerald-600 flex items-center gap-2">
-          <BarChart2 className="h-6 w-6" />
-          Performance & Reliability Metrics
-        </h2>
-        <p className="text-slate-600 leading-relaxed">
-          The system automatically generates performance scorecards for every verified vendor based on procurement history and delivery timeliness.
-        </p>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="p-4 rounded-xl border bg-white shadow-sm hover:border-[#7FD1E3] transition-colors">
-            <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-tight">Lead Time</span>
-            <p className="text-xl font-bold text-[#001529]">Avg. 4.2 Days</p>
-            <p className="text-[10px] text-emerald-600 mt-1 font-medium">↑ 12% improvement</p>
-          </div>
-          <div className="p-4 rounded-xl border bg-white shadow-sm hover:border-[#7FD1E3] transition-colors">
-            <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-tight">Order Accuracy</span>
-            <p className="text-xl font-bold text-[#001529]">98.4%</p>
-            <p className="text-[10px] text-emerald-600 mt-1 font-medium">Optimal Rating</p>
-          </div>
-          <div className="p-4 rounded-xl border bg-white shadow-sm hover:border-[#7FD1E3] transition-colors">
-            <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-tight">Return Rate</span>
-            <p className="text-xl font-bold text-[#001529]">1.2%</p>
-            <p className="text-[10px] text-amber-600 mt-1 font-medium">Target: &lt;1.0%</p>
-          </div>
-        </div>
-      </section>
-
       <section className="space-y-6">
         <h2 className="text-2xl font-bold text-[#001529] border-b pb-3 text-blue-600 flex items-center gap-2">
           <FileText className="h-6 w-6" />

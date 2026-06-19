@@ -106,7 +106,7 @@ export default function AdminDocs() {
               </p>
               <ul className="space-y-2 text-xs text-slate-600 list-disc pl-4">
                 <li><strong>Download Template:</strong> Contains columns for Model, Brand, Category, Code, Prices, MRP, and Tax settings.</li>
-                <li><strong>Validation:</strong> The system ensures required fields are met and dealer price &le; MRP &le; Min Sell Price constraints are valid before importing.</li>
+                <li><strong>Validation:</strong> The system ensures required fields are met and dealer price &le; Min Sell Price &le; MRP constraints are valid before importing.</li>
                 <li><strong>Data Population:</strong> Upon successful upload, the global catalog is populated, immediately making these products available for GRN across all branches.</li>
               </ul>
             </div>
@@ -118,7 +118,7 @@ export default function AdminDocs() {
               <ul className="space-y-2 text-xs text-slate-600 list-disc pl-4">
                 <li><strong>MRP (Base Price):</strong> The absolute ceiling price. The system automatically calculates and previews the tax-inclusive MSRP based on the selected GST Rate.</li>
                 <li><strong>Dealer Price:</strong> Input your baseline distributor or wholesale cost.</li>
-                <li><strong>Min Sell Price:</strong> An automatically suggested hard floor (defaults to 1.05× Dealer Price) below which the POS will refuse to process any sale. You can manually override this value.</li>
+                <li><strong>Min Sell Price:</strong> An automatically suggested guideline (defaults to 1.05× Dealer Price). You can manually override this value.</li>
                 <li><strong>Max Discount %:</strong> Sets the boundary for auto-approved line-item discounts at the POS (defaults to 10%). Any discount requested beyond this tier triggers a Manager PIN override requirement.</li>
               </ul>
             </div>

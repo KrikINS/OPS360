@@ -14,7 +14,7 @@ export default function StaffDocs() {
           <Shield className="h-6 w-6 text-indigo-500" />
           HR Dashboard
         </h3>
-        <p className="text-sm text-slate-600 mb-4">The HR module now has three tabs:</p>
+        <p className="text-sm text-slate-600 mb-4">The HR module now has five core tabs:</p>
         <ul className="space-y-4 text-sm text-slate-600">
           <li className="bg-slate-50 p-4 rounded-xl border">
             <strong className="text-[#001529] block mb-2">Directory Tab:</strong>
@@ -40,6 +40,14 @@ export default function StaffDocs() {
             <ul className="list-disc pl-5 space-y-1">
               <li>System activity log per user.</li>
               <li>Tracks logins, actions, and key events.</li>
+            </ul>
+          </li>
+          <li className="bg-slate-50 p-4 rounded-xl border">
+            <strong className="text-[#001529] block mb-2">Payroll & Salary Structures (Managers Only):</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Define base pay, HRA, and TDS deductions in the Salary Structures tab.</li>
+              <li>Run payroll cycles, calculating gross/net pay per employee.</li>
+              <li>System automatically posts corresponding Journal Entries to Finance (Cash Account and Salary Expense).</li>
             </ul>
           </li>
         </ul>

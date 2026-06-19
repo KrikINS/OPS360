@@ -73,7 +73,7 @@ export default function BranchManagementDocs() {
                 <Info className="h-5 w-5 text-amber-500 shrink-0" />
                 <div className="text-sm text-amber-900">
                   <h4 className="font-bold">Important Note on Default Values</h4>
-                  <p className="mt-1 font-medium italic opacity-80">&quot;New branches are currently initialized with &apos;Delhi&apos; as the location and &apos;Main&apos; as the type. This is to maintain strict database compliance while we roll out custom geography settings.&quot;</p>
+                  <p className="mt-1 font-medium italic opacity-80">&quot;New branches are currently initialized with &apos;Kerala&apos; as the location and &apos;Main&apos; as the type. This is to maintain strict database compliance while we roll out custom geography settings.&quot;</p>
                 </div>
               </div>
             </AccordionContent>

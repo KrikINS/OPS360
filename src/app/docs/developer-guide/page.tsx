@@ -75,20 +75,16 @@ export default function DeveloperGuide() {
         </h2>
         <div className="bg-white border rounded-xl p-6 shadow-sm">
           <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-            Ops360 uses a deterministic, year-based ID generation system for all logistical entities (Transfers, Waybills, Invoices).
+            Ops360 uses a sequential counting system for all entities requiring unique human-readable codes (like Branches, POs, GRNs).
           </p>
           <ul className="space-y-3 text-sm text-slate-600">
             <li className="flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-              <span><strong>Sequential Utility:</strong> All IDs must be generated via the `public.get_next_logistics_id(prefix)` Postgres function to ensure thread-safe, non-colliding sequences across shards.</span>
+              <span><strong>Sequential Utility:</strong> System uses the `sequential_counters` table with an `INSERT ... ON CONFLICT DO UPDATE` query within a transaction to safely increment counters per prefix and year.</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-              <span><strong>Dual-ID Linkage:</strong> Every Stock Transfer (`ST-`) is hard-linked to a specific Waybill (`TX-`). This link is enforced at the database level via a `UNIQUE REFERENCES` constraint on the `waybills` table.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-              <span><strong>Trigger-Based Automation:</strong> Waybill IDs are automatically assigned via a `BEFORE INSERT` trigger. This guarantees that every transfer, whether initiated via RPC or manual entry, receives a valid logistics identity.</span>
+              <span><strong>Transaction Safety:</strong> This locking mechanism guarantees thread-safe, non-colliding sequential IDs across concurrent requests.</span>
             </li>
           </ul>
         </div>
