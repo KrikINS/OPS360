@@ -290,13 +290,13 @@ export async function scanSerialAtPosAction(
   }
 }
 
-export async function getPosInitialDataAction(userId: string, branchId?: string) {
+export async function getPosInitialDataAction(branchId?: string) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return { error: { message: "Unauthorized" } }
     if (!(await hasCapability("sales", "view", session))) return { error: { message: "Insufficient permission" } }
     const [profileData, branchesData, walkInCustomer] = await Promise.all([
-      db.select().from(profiles).where(eq(profiles.id, userId)),
+      db.select().from(profiles).where(eq(profiles.id, session.user.id)),
       db.select().from(branches),
       db.select().from(customers).where(eq(customers.phone_number, '0000000000'))
     ])
