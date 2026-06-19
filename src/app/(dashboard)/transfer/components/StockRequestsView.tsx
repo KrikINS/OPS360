@@ -105,6 +105,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
   const [cancelling, setCancelling] = useState(false)
   const [canExport, setCanExport] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const hasInitialized = useRef(false)
 
   const fetchRequests = useCallback(async () => {
     if (!userBranchId) return
@@ -193,8 +194,12 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
         }
       }
     }
-    init()
-  }, [fetchRequests, searchParams, branches, addToRequest])
+    if (!hasInitialized.current) {
+      hasInitialized.current = true
+      init()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, addToRequest])
 
   const searchProducts = useCallback((term: string) => {
     setProductSearch(term)
