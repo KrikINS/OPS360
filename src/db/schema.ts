@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey, serial, date, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, timestamp, boolean, integer, numeric, jsonb, primaryKey, serial, date, index, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -209,6 +209,10 @@ export const stock_requests = pgTable("stock_requests", {
   priority: text("priority").default('Low'),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    differentBranchesCheck: check("stock_requests_different_branches", sql`${table.source_branch_id} != ${table.requesting_branch_id}`)
+  }
 });
 
 export const stock_request_items = pgTable("stock_request_items", {

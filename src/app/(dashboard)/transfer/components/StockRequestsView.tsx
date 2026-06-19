@@ -392,7 +392,10 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
 
         <div className="flex gap-2 items-center">
           {userBranches.length > 1 && (
-            <Select value={userBranchId || ""} onValueChange={(val) => setUserBranchId(val || "")}>
+            <Select value={userBranchId || ""} onValueChange={(val) => {
+              setUserBranchId(val || "")
+              setTargetSourceId("")
+            }}>
               <SelectTrigger className="h-10 border-slate-200 bg-white min-w-[180px]">
                 <SelectValue placeholder="Select Branch">
                   {userBranches.find(b => b.id === userBranchId)?.name}
@@ -418,7 +421,10 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
             </Button>
           )}
 
-          <Dialog open={isCreating} onOpenChange={setIsCreating}>
+          <Dialog open={isCreating} onOpenChange={(open) => {
+            if (open) setTargetSourceId("")
+            setIsCreating(open)
+          }}>
           <DialogTrigger 
             render={
               <Button className="bg-[#001529] hover:bg-slate-800 font-black h-10 px-4 rounded-xl gap-2 shadow-lg flex items-center text-white text-xs">
