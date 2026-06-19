@@ -92,13 +92,23 @@ export async function getProductStockCountAction(productId: string, branchId: st
   }
 }
 
-export async function searchProductsForTransferAction(term: string) {
+export async function searchProductsForTransferAction(term: string, branchId: string) {
   try {
-    // simplified search
     const searchTerm = `%${term}%`
-    const data = await db.select().from(products).where(
-      or(ilike(products.model_name, searchTerm), ilike(products.product_code, searchTerm))
-    ).limit(10)
+    
+    // We use sql.raw to allow the dynamic branchId without parameter mapping issues, 
+    // or better, parameterized sql.
+    const res = await db.execute(sql`
+      SELECT p.*, COUNT(i.id) FILTER (WHERE i.status = 'Available')::int as available_units
+      FROM products p
+      LEFT JOIN inventory i ON i.product_id = p.id AND i.branch_id = ${branchId}
+      WHERE p.model_name ILIKE ${searchTerm} OR p.product_code ILIKE ${searchTerm}
+      GROUP BY p.id
+      LIMIT 10
+    `)
+    
+    const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
+    const data = Array.isArray(result) ? result : result.rows || []
     return { data }
   } catch (error) {
     return { error: { message: String(error) } }

@@ -192,10 +192,10 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
       return
     }
     const { data, error } = await import('@/app/actions/transfers')
-      .then(m => m.searchProductsForTransferAction(term))
+      .then(m => m.searchProductsForTransferAction(term, targetSourceId))
 
     if (!error && data) {
-      setProductResults(data.map(p => ({ ...p, available_units: 0 })) as Product[])
+      setProductResults(data as Product[])
     }
   }, [targetSourceId])
 

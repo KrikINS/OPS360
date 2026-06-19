@@ -289,10 +289,11 @@ export function StockTransfersView({
       return
     }
 
+    const branchToSearch = sourceId || userBranchId || ""
     const { data } = await import('@/app/actions/transfers')
-      .then(m => m.searchProductsForTransferAction(term))
+      .then(m => m.searchProductsForTransferAction(term, branchToSearch))
 
-    if (data) setProductSearchResults(data.map(p => ({ ...p, available_units: 0 })) as ProductWithStock[])
+    if (data) setProductSearchResults(data as ProductWithStock[])
   }
 
   const addSKUToTransfer = (p: ProductWithStock) => {
@@ -510,7 +511,9 @@ export function StockTransfersView({
                   }}
                 >
                   <SelectTrigger className="h-12 border-slate-200">
-                    <SelectValue placeholder="Dispatch From" />
+                    <SelectValue placeholder="Dispatch From">
+                      {branches.find(b => b.id === sourceId)?.name}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map(b => (
@@ -523,7 +526,9 @@ export function StockTransfersView({
                 <label className="text-[10px] font-black uppercase text-slate-400">Receive At (Destination)</label>
                 <Select value={destId} onValueChange={(val) => setDestId(val || "")} disabled={!!selectedDemandId}>
                   <SelectTrigger className="h-12 border-slate-200">
-                    <SelectValue placeholder="Receive At" />
+                    <SelectValue placeholder="Receive At">
+                      {branches.find(b => b.id === destId)?.name}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map(b => (

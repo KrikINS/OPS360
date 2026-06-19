@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { Card } from "@/components/ui/card"
 import { 
   ArrowRightLeft, 
@@ -141,7 +141,9 @@ export default function TransferControlCenter() {
             </DialogHeader>
           </div>
           <div className="flex-1 overflow-y-auto p-8 pt-6">
-            <StockRequestsView onFulfill={handleFulfillTrigger} />
+            <Suspense fallback={<div className="flex justify-center p-8"><span className="text-slate-400 font-medium">Loading requests...</span></div>}>
+              <StockRequestsView onFulfill={handleFulfillTrigger} />
+            </Suspense>
           </div>
         </DialogContent>
       </Dialog>
@@ -163,10 +165,12 @@ export default function TransferControlCenter() {
             </DialogHeader>
           </div>
           <div className="flex-1 overflow-y-auto p-8 pt-6">
-            <StockTransfersView 
-              prefillRequest={prefillRequest} 
-              onClearPrefill={() => setPrefillRequest(null)} 
-            />
+            <Suspense fallback={<div className="flex justify-center p-8"><span className="text-slate-400 font-medium">Loading transfers...</span></div>}>
+              <StockTransfersView 
+                prefillRequest={prefillRequest} 
+                onClearPrefill={() => setPrefillRequest(null)} 
+              />
+            </Suspense>
           </div>
         </DialogContent>
       </Dialog>
