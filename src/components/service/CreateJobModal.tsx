@@ -93,7 +93,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
 
     setLoading(true)
     try {
-      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(session?.user?.id || ''))
+      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
 
       await createJob({
         customerId: selectedCustomer.id,

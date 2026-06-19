@@ -452,7 +452,7 @@ export default function ProcurementGRNPage() {
         const user = session?.user
         if (user) {
           setUserId(user.id)
-          const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+          const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
           setUserRole((profile as typeof import("@/db/schema").profiles.$inferSelect)?.role || 'sales')
         }
 

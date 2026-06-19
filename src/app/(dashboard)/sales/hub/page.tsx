@@ -51,8 +51,8 @@ export default function SalesRegistryPage() {
     try {
       const { data: { user } } = await import("@/app/actions/user").then(m => m.getUserAction())
       if (user) {
-        const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
-        const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction(user.id))
+        const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
+        const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction())
         const permissions = permissionsData && Array.isArray(permissionsData) ? permissionsData.filter(p => p.module === 'accounting' && p.enabled === true) : []
         
         const isAdmin = profile?.role?.toLowerCase().trim() === 'admin/owner' || profile?.role?.toLowerCase().trim() === 'finance'

@@ -6,29 +6,29 @@ import { db } from "@/db/client"
 import { profiles, user_permissions, user_branch_access } from "@/db/schema"
 import { eq } from "drizzle-orm"
 
-export async function updateUserProfileAction(id: string, fullName: string) {
+export async function updateUserProfileAction(fullName: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return { error: { message: 'Unauthorized: not authenticated' } }
   }
 
   try {
-    const data = await db.update(profiles).set({ full_name: fullName }).where(eq(profiles.id, id)).returning()
+    const data = await db.update(profiles).set({ full_name: fullName }).where(eq(profiles.id, session.user.id)).returning()
     return { data: data[0] }
   } catch (error) {
     return { error: { message: (error instanceof Error ? error.message : String(error)) } }
   }
 }
 
-export async function getUserPermissionsAction(id: string) {
+export async function getUserPermissionsAction() {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return { error: { message: 'Unauthorized: not authenticated' } }
   }
 
   try {
-    const profileData = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, id)).limit(1)
-    const permsData = await db.select().from(user_permissions).where(eq(user_permissions.user_id, id))
+    const profileData = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, session.user.id)).limit(1)
+    const permsData = await db.select().from(user_permissions).where(eq(user_permissions.user_id, session.user.id))
 
     const permissions: Record<string, boolean> = {}
     permsData.forEach(p => {
@@ -41,14 +41,14 @@ export async function getUserPermissionsAction(id: string) {
   }
 }
 
-export async function getUserProfileAction(id: string) {
+export async function getUserProfileAction() {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return { error: { message: 'Unauthorized: not authenticated' } }
   }
 
   try {
-    const data = await db.select().from(profiles).where(eq(profiles.id, id)).limit(1)
+    const data = await db.select().from(profiles).where(eq(profiles.id, session.user.id)).limit(1)
     return { data: data[0] }
   } catch (error) {
     return { error: { message: (error instanceof Error ? error.message : String(error)) } }
@@ -65,14 +65,14 @@ export async function signOutAction() {
   return { error: null }
 }
 
-export async function getUserBranchIdsAction(id: string) {
+export async function getUserBranchIdsAction() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return { error: { message: 'Unauthorized' } }
   try {
     const rows = await db
       .select({ branchId: user_branch_access.branch_id, isPrimary: user_branch_access.is_primary })
       .from(user_branch_access)
-      .where(eq(user_branch_access.user_id, id))
+      .where(eq(user_branch_access.user_id, session.user.id))
     // primary first, then the rest
     const sorted = rows.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
     return { data: sorted.map(r => r.branchId).filter(Boolean) as string[] }

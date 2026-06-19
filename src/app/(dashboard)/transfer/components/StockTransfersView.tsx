@@ -230,7 +230,7 @@ export function StockTransfersView({
       if (branchData && Array.isArray(branchData)) setBranches(branchData as Branch[])
       
       if (user?.id) {
-        const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+        const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
         const profileRecord = profile as Record<string, unknown> | null
         if (profileRecord?.['branch_id']) {
           setUserBranchId(String(profileRecord['branch_id']))
@@ -239,7 +239,7 @@ export function StockTransfersView({
 
         // Check export permission
         const isAdmin = profile?.role === 'Admin/Owner' || profile?.role === 'SUPER_ADMIN' || profile?.role === 'finance'
-        const { data: permissions } = await import("@/app/actions/transfers").then(m => m.getUserPermissionsAction(user.id, "transfer"))
+        const { data: permissions } = await import("@/app/actions/transfers").then(m => m.getUserPermissionsAction("transfer"))
         const hasTransferPerm = permissions && permissions.length > 0
         setCanExport(Boolean(isAdmin) || Boolean(hasTransferPerm))
       }

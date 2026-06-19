@@ -151,7 +151,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
             .map((a) => allBranchesArr.find((b) => b.id === a.branch_id))
             .filter((b): b is Branch => b !== undefined)
           setUserBranches(uBranches)
-          const { data: profileData } = await import("@/app/actions/user").then(m => m.getUserProfileAction(userId))
+          const { data: profileData } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
           const profile = profileData as Record<string, unknown> | null
           if (uBranches.length === 1) {
             setUserBranchId(uBranches[0].id)

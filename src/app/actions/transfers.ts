@@ -5,10 +5,15 @@ import { inventory, products, user_permissions, profiles } from "@/db/schema"
 import { eq, sql, and, ilike, or } from "drizzle-orm"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
-import { branchFilterFor } from "@/lib/access"
+import { branchFilterFor, hasCapability } from "@/lib/access"
 
 export async function getWaybillDataAction(transferNumber: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "view", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
     const res = await db.execute(sql`SELECT * FROM waybills WHERE transfer_number = ${transferNumber}`)
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
     const data = Array.isArray(result) ? result[0] : result.rows?.[0]
@@ -20,6 +25,12 @@ export async function getWaybillDataAction(transferNumber: string) {
 
 export async function getStockTransfersAction() {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "view", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+    const allowed = await branchFilterFor(session, "inventory", "view")
 
     // we would need branches, waybills, items mapped, but doing a raw query is easier to match old UI structure
     const res = await db.execute(sql`
@@ -31,6 +42,7 @@ export async function getStockTransfersAction() {
       FROM stock_transfers st
       LEFT JOIN branches sb ON st.source_branch_id = sb.id
       LEFT JOIN branches db ON st.destination_branch_id = db.id
+      ${allowed !== null ? sql`WHERE st.source_branch_id = ANY(${allowed}::uuid[]) OR st.destination_branch_id = ANY(${allowed}::uuid[])` : sql``}
       ORDER BY st.created_at DESC
     `)
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
@@ -41,18 +53,22 @@ export async function getStockTransfersAction() {
   }
 }
 
-export async function getUserProfileAction(userId: string) {
+export async function getUserProfileAction() {
   try {
-    const data = await db.select().from(profiles).where(eq(profiles.id, userId))
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    const data = await db.select().from(profiles).where(eq(profiles.id, session.user.id))
     return { data: data[0] }
   } catch (error) {
     return { error: { message: String(error) } }
   }
 }
 
-export async function getUserPermissionsAction(userId: string, module: string) {
+export async function getUserPermissionsAction(module: string) {
   try {
-    const data = await db.select().from(user_permissions).where(and(eq(user_permissions.user_id, userId), eq(user_permissions.module, module), eq(user_permissions.enabled, true)))
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    const data = await db.select().from(user_permissions).where(and(eq(user_permissions.user_id, session.user.id), eq(user_permissions.module, module), eq(user_permissions.enabled, true)))
     return { data }
   } catch (error) {
     return { error: { message: String(error) } }
@@ -61,6 +77,16 @@ export async function getUserPermissionsAction(userId: string, module: string) {
 
 export async function getPendingDemandsAction(branchId: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "view", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+    const allowedBranches = await branchFilterFor(session, "inventory", "view")
+    if (allowedBranches !== null && !allowedBranches.includes(branchId)) {
+      return { error: { message: "Insufficient permission for this branch" } }
+    }
+
     const res = await db.execute(sql`
       SELECT sr.*, 
         row_to_json(rb.*) as requesting_branch,
@@ -122,6 +148,16 @@ export async function getBranchStockRequestsAction(branchId: string) {
 
 export async function getProductStockCountAction(productId: string, branchId: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "view", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+    const allowedBranches = await branchFilterFor(session, "inventory", "view")
+    if (allowedBranches !== null && !allowedBranches.includes(branchId)) {
+      return { error: { message: "Insufficient permission for this branch" } }
+    }
+
     const res = await db.execute(sql`SELECT count(*) FROM inventory WHERE product_id = ${productId} AND branch_id = ${branchId} AND status = 'Available'`)
     const result = res as unknown as { rows?: { count: string }[] } | { count: string }[]
     const countStr = Array.isArray(result) ? result[0]?.count : result.rows?.[0]?.count
@@ -133,6 +169,16 @@ export async function getProductStockCountAction(productId: string, branchId: st
 
 export async function searchProductsForTransferAction(term: string, branchId: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "view", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+    const allowedBranches = await branchFilterFor(session, "inventory", "view")
+    if (allowedBranches !== null && !allowedBranches.includes(branchId)) {
+      return { error: { message: "Insufficient permission for this branch" } }
+    }
+
     const searchTerm = `%${term}%`
     
     // We use sql.raw to allow the dynamic branchId without parameter mapping issues, 
@@ -156,6 +202,16 @@ export async function searchProductsForTransferAction(term: string, branchId: st
 
 export async function getAvailableUnitsAction(productId: string, branchId: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "view", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+    const allowedBranches = await branchFilterFor(session, "inventory", "view")
+    if (allowedBranches !== null && !allowedBranches.includes(branchId)) {
+      return { error: { message: "Insufficient permission for this branch" } }
+    }
+
     const data = await db.select({
       id: inventory.id,
       serial_number: inventory.serial_number,
@@ -174,6 +230,16 @@ export async function getAvailableUnitsAction(productId: string, branchId: strin
 
 export async function processStockTransferAction(sourceId: string, destId: string, inventoryIds: string[], notes: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "edit", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+    const allowedBranches = await branchFilterFor(session, "inventory", "edit")
+    if (allowedBranches !== null && !allowedBranches.includes(sourceId)) {
+      return { error: { message: "Insufficient permission for this source branch" } }
+    }
+
     const inventoryArr = `{${inventoryIds.join(',')}}`
     const res = await db.execute(sql`SELECT process_stock_transfer_send(${sourceId}, ${destId}, ${inventoryArr}::uuid[], ${notes})`)
     const result = res as unknown as { rows?: { process_stock_transfer_send: string }[] } | { process_stock_transfer_send: string }[]
@@ -186,6 +252,12 @@ export async function processStockTransferAction(sourceId: string, destId: strin
 
 export async function fulfillStockRequestAction(requestId: string, inventoryIds: string[]) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "edit", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+
     const inventoryArr = `{${inventoryIds.join(',')}}`
     const res = await db.execute(sql`SELECT fulfill_stock_request(${requestId}, ${inventoryArr}::uuid[])`)
     const result = res as unknown as { rows?: { fulfill_stock_request: string }[] } | { fulfill_stock_request: string }[]
@@ -198,6 +270,12 @@ export async function fulfillStockRequestAction(requestId: string, inventoryIds:
 
 export async function getTransferItemsAction(transferId: string) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "view", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+
     const res = await db.execute(sql`
       SELECT sti.inventory_id,
         json_build_object('serial_number', i.serial_number) as inventory,
@@ -215,9 +293,15 @@ export async function getTransferItemsAction(transferId: string) {
   }
 }
 
-export async function confirmTransferReceiptAction(transferId: string, userId: string, notes: string) {
+export async function confirmTransferReceiptAction(transferId: string, notes: string) {
   try {
-    await db.execute(sql`SELECT process_stock_transfer_receive(${transferId}, ${userId}, ${notes})`)
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+    if (!(await hasCapability("inventory", "edit", session))) {
+      return { error: { message: "Insufficient permission" } }
+    }
+
+    await db.execute(sql`SELECT process_stock_transfer_receive(${transferId}, ${session.user.id}, ${notes})`)
     return { success: true }
   } catch (error) {
     return { error: { message: String(error) } }

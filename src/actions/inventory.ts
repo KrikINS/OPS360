@@ -88,7 +88,6 @@ export async function completeStockTransfer(input: { transferId: string }) {
 
   const result = await confirmTransferReceiptAction(
     input.transferId,
-    session.user.id,
     '',
   )
 

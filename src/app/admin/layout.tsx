@@ -12,8 +12,8 @@ export default async function AdminLayout({
 
   if (!user) redirect("/login")
 
-  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
-  const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction(user.id))
+  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
+  const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction())
 
   const permissions = Array.isArray(permissionsData)
     ? permissionsData.reduce((acc: Record<string, boolean>, p: typeof import("@/db/schema").user_permissions.$inferSelect) => {

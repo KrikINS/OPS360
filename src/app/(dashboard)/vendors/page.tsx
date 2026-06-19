@@ -12,7 +12,7 @@ export default async function VendorsPage() {
   
   if (user) {
     // We must pass user.id to get the profile
-    const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+    const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
       
     if (profile) {
       role = profile.role || 'sales'

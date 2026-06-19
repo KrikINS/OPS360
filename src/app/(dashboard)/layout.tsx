@@ -25,10 +25,10 @@ export default async function DashboardLayout({
   })
 
   // Fetch Profile & Primary Branch Access
-  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
 
   // Fetch Module Permissions
-  const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction(user.id))
+  const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction())
 
   const permissions = Array.isArray(permissionsData) ? permissionsData.reduce((acc: Record<string, boolean>, p: typeof import("@/db/schema").user_permissions.$inferSelect) => {
     acc[p.module] = p.enabled || false

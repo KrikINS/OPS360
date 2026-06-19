@@ -317,7 +317,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
 
       const { data: { user } } = await getUserAction()
       if (user) {
-        const { data: profile } = await getUserProfileAction(user.id)
+        const { data: profile } = await getUserProfileAction()
 
         if (profile) {
           const profileData = profile as { role: string; full_name?: string; branch_id?: string; assigned_branch_ids?: string[]; pos_pin?: string }
@@ -330,7 +330,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
           })
 
           await refreshSessionStats()
-          const { data: allottedIds } = await import('@/app/actions/user').then(m => m.getUserBranchIdsAction(user.id))
+          const { data: allottedIds } = await import('@/app/actions/user').then(m => m.getUserBranchIdsAction())
           const branchIds = (allottedIds && allottedIds.length > 0)
             ? allottedIds
             : (profileData.branch_id ? [profileData.branch_id] : [])

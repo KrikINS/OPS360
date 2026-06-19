@@ -18,7 +18,7 @@ export default async function DocsLayout({
   }
 
   // Fetch HR metadata for UserNav
-  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+  const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
 
   type ProfileType = typeof import("@/db/schema").profiles.$inferSelect
   type BranchType = typeof import("@/db/schema").branches.$inferSelect

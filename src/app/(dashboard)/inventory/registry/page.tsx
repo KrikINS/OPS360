@@ -189,8 +189,8 @@ export default function InventoryDashboard() {
       if (!user) return
 
       // Check export permission
-      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
-      const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction(user.id))
+      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
+      const { data: permissionsData } = await import("@/app/actions/user").then(m => m.getUserPermissionsAction())
       const permissions = Array.isArray(permissionsData) ? (permissionsData as unknown as typeof import("@/db/schema").user_permissions.$inferSelect[]).filter((p) => p.module === 'accounting' && p.enabled) : []
       
       const isAdmin = (profile as typeof import("@/db/schema").profiles.$inferSelect)?.role === 'Admin/Owner' || (profile as typeof import("@/db/schema").profiles.$inferSelect)?.role === 'SUPER_ADMIN' || (profile as typeof import("@/db/schema").profiles.$inferSelect)?.role === 'finance'

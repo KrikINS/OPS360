@@ -97,7 +97,7 @@ export default function ProductsPage() {
     
     // Check export permission
     if (user) {
-      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction(user.id))
+      const { data: profile } = await import("@/app/actions/user").then(m => m.getUserProfileAction())
       const { data: permissionsData } = await import("@/app/actions/generics").then(m => m.fetchData("user_permissions"))
       const permissions = permissionsData && Array.isArray(permissionsData) ? permissionsData.filter(p => p.user_id === user.id && p.module === 'accounting' && p.enabled === true) : []
       
