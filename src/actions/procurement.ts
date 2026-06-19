@@ -437,6 +437,12 @@ export async function createGRN(input: {
         inventory_ids: inventoryIds,
       })
 
+      // Flow back actual purchase cost to product master for margin display.
+      // Latest GRN always wins — dealer_price reflects most recent purchase.
+      await db.update(products)
+        .set({ dealer_price: String(item.landedUnitCost) })
+        .where(eq(products.id, item.productId))
+
       // Discrepancy record for any shortfall
       // Get cumulative received so far including this GRN
       const existingReceived = await db.execute(sql`
