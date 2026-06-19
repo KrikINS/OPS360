@@ -36,7 +36,31 @@ export function NotificationBell() {
     }
     fetchNotifications()
 
-    const interval = setInterval(fetchNotifications, 60000)
+    let interval: ReturnType<typeof setInterval> | null = null
+
+    const startPolling = () => {
+      if (interval) return
+      interval = setInterval(fetchNotifications, 60000)
+    }
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval)
+        interval = null
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling()
+      } else {
+        fetchNotifications()
+        startPolling()
+      }
+    }
+
+    if (!document.hidden) startPolling()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     const handleUpdate = () => fetchNotifications()
     window.addEventListener('notifications-updated', handleUpdate)
@@ -50,7 +74,8 @@ export function NotificationBell() {
     }
 
     return () => {
-      clearInterval(interval)
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('notifications-updated', handleUpdate)
       window.removeEventListener('vendor-updated', handleUpdate)
     }
