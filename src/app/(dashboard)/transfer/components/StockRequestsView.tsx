@@ -105,9 +105,9 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
   const [exporting, setExporting] = useState(false)
 
   const fetchRequests = useCallback(async () => {
+    if (!userBranchId) return
     setLoading(true)
-    const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData('stock_requests'))
-    // Note: Drizzle should already include relations if properly configured, but let's assume it returns data.
+    const { data, error } = await import("@/app/actions/transfers").then(m => m.getBranchStockRequestsAction(userBranchId))
     if (!error && data && Array.isArray(data)) {
       const typedData = data as Array<StockRequest & { items: unknown[] }>
       setRequests(typedData.map((r) => ({
@@ -116,7 +116,11 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
       })))
     }
     setLoading(false)
-  }, [])
+  }, [userBranchId])
+
+  useEffect(() => {
+    fetchRequests()
+  }, [fetchRequests])
 
   const addToRequest = useCallback((product: Product) => {
     setRequestCart(prev => {
@@ -167,8 +171,6 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
         }
       }
       
-      await fetchRequests()
-
       // Handle Demand Shortcut from Inventory Registry
       const demandId = searchParams.get('demand')
       if (demandId) {

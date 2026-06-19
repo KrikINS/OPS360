@@ -3,6 +3,9 @@
 import { db } from "@/db/client"
 import { inventory, products, user_permissions, profiles } from "@/db/schema"
 import { eq, sql, and, ilike, or } from "drizzle-orm"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+import { branchFilterFor } from "@/lib/access"
 
 export async function getWaybillDataAction(transferNumber: string) {
   try {
@@ -72,6 +75,42 @@ export async function getPendingDemandsAction(branchId: string) {
       FROM stock_requests sr
       LEFT JOIN branches rb ON sr.requesting_branch_id = rb.id
       WHERE sr.status = 'Pending' AND sr.source_branch_id = ${branchId}
+    `)
+    const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
+    const data = Array.isArray(result) ? result : result.rows || []
+    return { data }
+  } catch (error) {
+    return { error: { message: String(error) } }
+  }
+}
+
+export async function getBranchStockRequestsAction(branchId: string) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return { error: { message: "Unauthorized" } }
+
+    const allowedBranches = await branchFilterFor(session, "inventory", "view")
+    if (allowedBranches !== null && !allowedBranches.includes(branchId)) {
+      return { error: { message: "Insufficient permission for this branch" } }
+    }
+
+    const res = await db.execute(sql`
+      SELECT sr.*, 
+        row_to_json(rb.*) as requesting_branch,
+        row_to_json(sb.*) as source_branch,
+        (SELECT json_agg(
+          json_build_object(
+            'id', sri.id,
+            'product_id', sri.product_id,
+            'quantity', sri.quantity,
+            'product', row_to_json(p.*)
+          )
+        ) FROM stock_request_items sri LEFT JOIN products p ON sri.product_id = p.id WHERE sri.request_id = sr.id) as items
+      FROM stock_requests sr
+      LEFT JOIN branches rb ON sr.requesting_branch_id = rb.id
+      LEFT JOIN branches sb ON sr.source_branch_id = sb.id
+      WHERE sr.requesting_branch_id = ${branchId} OR sr.source_branch_id = ${branchId}
+      ORDER BY sr.created_at DESC
     `)
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
     const data = Array.isArray(result) ? result : result.rows || []
