@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db/client"
-import { inventory, products, user_permissions, profiles } from "@/db/schema"
+import { inventory, products, user_permissions, profiles, stock_requests, stock_transfers } from "@/db/schema"
 import { eq, sql, and, ilike, or } from "drizzle-orm"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
@@ -258,10 +258,24 @@ export async function fulfillStockRequestAction(requestId: string, inventoryIds:
       return { error: { message: "Insufficient permission" } }
     }
 
+    const reqRes = await db.select().from(stock_requests).where(eq(stock_requests.id, requestId))
+    if (!reqRes.length || !reqRes[0]) return { error: { message: "Stock request not found" } }
+    
+    const req = reqRes[0]
+    if (!req.source_branch_id || !req.requesting_branch_id) {
+      return { error: { message: "Stock request missing branch information" } }
+    }
+
     const inventoryArr = `{${inventoryIds.join(',')}}`
-    const res = await db.execute(sql`SELECT fulfill_stock_request(${requestId}, ${inventoryArr}::uuid[])`)
-    const result = res as unknown as { rows?: { fulfill_stock_request: string }[] } | { fulfill_stock_request: string }[]
-    const transferNumber = Array.isArray(result) ? result[0]?.fulfill_stock_request : result.rows?.[0]?.fulfill_stock_request
+    const res = await db.execute(sql`SELECT process_stock_transfer_send(${req.source_branch_id}, ${req.requesting_branch_id}, ${inventoryArr}::uuid[], ${'Fulfilled request ' + req.request_number})`)
+    const result = res as unknown as { rows?: { process_stock_transfer_send: string }[] } | { process_stock_transfer_send: string }[]
+    const transferNumber = Array.isArray(result) ? result[0]?.process_stock_transfer_send : result.rows?.[0]?.process_stock_transfer_send
+
+    if (transferNumber) {
+      await db.update(stock_transfers).set({ stock_request_id: requestId }).where(eq(stock_transfers.transfer_number, transferNumber))
+      await db.update(stock_requests).set({ status: 'FULFILLED' }).where(eq(stock_requests.id, requestId))
+    }
+
     return { data: transferNumber }
   } catch (error) {
     return { error: { message: String(error) } }
