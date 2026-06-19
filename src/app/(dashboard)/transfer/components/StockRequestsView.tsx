@@ -251,13 +251,20 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
 
       const newRequest = data && Array.isArray(data) ? data[0] as Record<string, unknown> : null
       if (newRequest?.id) {
-        await Promise.all(requestCart.map(item =>
+        const itemResults = await Promise.all(requestCart.map(item =>
           import('@/app/actions/generics').then(m => m.insertData('stock_request_items', [{
             request_id: String(newRequest.id),
             product_id: item.product.id,
             quantity: item.quantity,
           }]))
         ))
+
+        const failedItems = itemResults.filter(r => r.error)
+        if (failedItems.length > 0) {
+          throw new Error(
+            `Request ${requestNumber} was created, but ${failedItems.length} of ${requestCart.length} item(s) failed to save: ${failedItems.map(f => f.error?.message).join('; ')}`
+          )
+        }
       }
 
       setIsCreating(false)
