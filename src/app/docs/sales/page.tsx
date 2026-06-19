@@ -76,7 +76,6 @@ export default function SalesDocs() {
           <li>Cashiers can enter a discount % per line item at the POS checkout.</li>
           <li>Discounts <code>&le; max_discount_pct</code> are auto-approved.</li>
           <li>Discounts <code>&gt; max_discount_pct</code> trigger a requirement for a manager PIN.</li>
-          <li>A sale price cannot drop below the <code>min_sell_price</code> (hard floor).</li>
           <li>All discounts are fully tracked for audits: amount, percentage, and the authorizing manager's ID.</li>
         </ul>
       </section>

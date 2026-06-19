@@ -103,7 +103,6 @@ export default function POSDocs() {
           <li>Discounts up to <code>max_discount_pct</code> (default 10%) are auto-approved.</li>
           <li>Discounts above the threshold require a manager PIN.</li>
           <li>The manager enters their POS PIN in the approval modal to authorize the discount.</li>
-          <li>Discount cannot push the price below <code>min_sell_price</code> (hard floor protecting margins).</li>
           <li>Approved discounts store the manager&apos;s ID for audit purposes.</li>
         </ul>
       </section>
