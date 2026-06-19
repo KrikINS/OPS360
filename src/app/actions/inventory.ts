@@ -7,13 +7,20 @@ import { db } from "@/db/client"
 import { inventory, products, branches, user_permissions } from "@/db/schema"
 import { eq, or, and, sql } from "drizzle-orm"
 
-export async function fetchInventoryDataAction(userId: string, branchId?: string) {
+export async function fetchInventoryDataAction(branchId?: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { data: [], branches: [], canExport: false, error: 'Unauthorized' }
+  }
+  if (!(await hasCapability("inventory", "view", session))) {
+    return { data: [], branches: [], canExport: false, error: 'Insufficient permission' }
+  }
   try {
     // Check export permission
     const permissions = await db.select()
       .from(user_permissions)
       .where(and(
-        eq(user_permissions.user_id, userId),
+        eq(user_permissions.user_id, session.user.id),
         eq(user_permissions.module, 'accounting'),
         eq(user_permissions.enabled, true)
       ))
@@ -73,6 +80,8 @@ export async function getInventoryForExportAction() {
 }
 
 export async function getLowStockCountAction() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { error: { message: 'Unauthorized' } }
   try {
     const res = await db.execute(sql`SELECT get_unique_low_stock_count() as count`)
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
@@ -84,6 +93,11 @@ export async function getLowStockCountAction() {
 }
 
 export async function searchProductsAction(searchTerm: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { error: { message: 'Unauthorized' } }
+  if (!(await hasCapability("inventory", "view", session))) {
+    return { error: { message: 'Insufficient permission' } }
+  }
   try {
     const data = await db.select().from(products).where(or(
       sql`${products.model_name} ILIKE ${'%' + searchTerm + '%'}`,

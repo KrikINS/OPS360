@@ -309,7 +309,7 @@ export async function getInventorySummary(input: { branchId: string }) {
     return { success: false as const, error: 'Insufficient permission' }
   }
 
-  const result = await fetchInventoryDataAction(session.user.id, input.branchId)
+  const result = await fetchInventoryDataAction(input.branchId)
   const rawItems = result.data ?? []
 
   // fetchInventoryDataAction returns one row per inventory unit.
@@ -331,54 +331,7 @@ export async function getInventorySummary(input: { branchId: string }) {
   return { success: true as const, products }
 }
 
-export async function allocateSerialNumber(input: {
-  productId: string
-  branchId: string
-  serialNumber: string
-  transactionId: string
-}): Promise<{ success: boolean; error?: string }> {
-  try {
-    return await db.transaction(async (tx) => {
-      // a) Find the serial number row
-      const rows = await tx.select()
-        .from(schema.serialNumbers)
-        .where(
-          and(
-            eq(schema.serialNumbers.serialNumber, input.serialNumber),
-            eq(schema.serialNumbers.productId, input.productId),
-            eq(schema.serialNumbers.branchId, input.branchId)
-          )
-        )
-        .limit(1)
-        .for('update')
 
-      // b) If not found
-      if (rows.length === 0) {
-        return { success: false, error: 'Serial number not found' }
-      }
-
-      const row = rows[0]
-
-      // c) If found but status != 'available'
-      if (row.status !== 'available') {
-        return { success: false, error: 'Serial number not available — already sold or reserved' }
-      }
-
-      // d) Update the row
-      await tx.update(schema.serialNumbers)
-        .set({
-          status: 'sold',
-          transactionId: input.transactionId,
-        })
-        .where(eq(schema.serialNumbers.id, row.id))
-
-      // e) Return success
-      return { success: true }
-    })
-  } catch (error) {
-    return { success: false, error: (error as Error).message }
-  }
-}
 
 export async function getInventoryRegistryAction() {
   const session = await getServerSession(authOptions)

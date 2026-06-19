@@ -22,7 +22,7 @@ import {
   completeStockTransfer,
   rejectStockTransfer,
   adjustStock,
-  allocateSerialNumber,
+
   getInventorySummary,
 } from '@/actions/inventory'
 import type { TestDb } from '@/test/db'
@@ -375,73 +375,4 @@ describe('adjustStock', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Serial number tracking
-// ---------------------------------------------------------------------------
 
-describe('allocateSerialNumber', () => {
-  it('allocates an available serial number to a transaction', async () => {
-    const branch = await seedBranch(db)
-    const product = await seedProduct(db, { branchId: branch.id, serialTracked: true })
-    await seedCounter(db, branch.id, 'INVOICE')
-
-    // Seed a serial number as available
-    const sn1 = crypto.randomUUID()
-    await db.insert(schema.serialNumbers).values({
-      id: sn1,
-      productId: product.id,
-      branchId: branch.id,
-      serialNumber: 'SN-ABC-001',
-      status: 'available',
-    })
-
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
-
-    const txId = crypto.randomUUID()
-    const result = await allocateSerialNumber({
-      productId: product.id,
-      branchId: branch.id,
-      serialNumber: 'SN-ABC-001',
-      transactionId: txId,
-    })
-
-    expect(result.success).toBe(true)
-
-    const sn = await db.query.serialNumbers.findFirst({
-      where: eq(schema.serialNumbers.serialNumber, 'SN-ABC-001'),
-    })
-    expect(sn?.status).toBe('sold')
-    expect(sn?.transactionId).toBe(txId)
-  })
-
-  it('rejects allocation of an already-sold serial number', async () => {
-    const branch = await seedBranch(db)
-    const product = await seedProduct(db, { branchId: branch.id, serialTracked: true })
-
-    const sn2 = crypto.randomUUID()
-    await db.insert(schema.serialNumbers).values({
-      id: sn2,
-      productId: product.id,
-      branchId: branch.id,
-      serialNumber: 'SN-ABC-002',
-      status: 'sold',
-      transactionId: crypto.randomUUID(),
-    })
-
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
-    })
-
-    const result = await allocateSerialNumber({
-      productId: product.id,
-      branchId: branch.id,
-      serialNumber: 'SN-ABC-002',
-      transactionId: crypto.randomUUID(),
-    })
-
-    expect(result.success).toBe(false)
-    expect(result.error).toMatch(/already sold|not available/i)
-  })
-})
