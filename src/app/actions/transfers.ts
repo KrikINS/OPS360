@@ -3,7 +3,7 @@
 import { db } from "@/db/client"
 import { inventory, products, user_permissions, profiles } from "@/db/schema"
 import { eq, sql, and, ilike, or } from "drizzle-orm"
-import { getServerSession } from "next-auth/next"
+import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { branchFilterFor, hasCapability } from "@/lib/access"
 

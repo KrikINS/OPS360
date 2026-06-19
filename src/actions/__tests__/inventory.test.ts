@@ -14,7 +14,7 @@ import { and, eq } from 'drizzle-orm'
 import * as schema from '@/db/schema'
 import {
   setupTestDb, cleanupTestDb, teardownTestDb,
-  seedBranch, seedProduct, seedInventoryUnits, seedCounter,
+  seedBranch, seedProduct, seedInventoryUnits, seedCounter, seedUser,
 } from '@/test/db'
 import {
   requestStockTransfer,
@@ -52,8 +52,9 @@ describe('stock transfer — full lifecycle', () => {
     await seedCounter(db, source.id, 'TRANSFER')
 
     // Step 1: source branch staff requests transfer
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000003', branchId: source.id, role: 'staff' },
+    const managerSrc = await seedUser(db, { branchId: source.id, role: 'manager', permissions: ['inventory'] })
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: managerSrc.id, branchId: source.id, role: 'manager' },
     })
     const request = await requestStockTransfer({
       fromBranchId: source.id,
@@ -61,21 +62,23 @@ describe('stock transfer — full lifecycle', () => {
       items: [{ productId: product.id, requestedQty: 8 }],
       notes: 'Urgent restock',
     })
+
     expect(request.success).toBe(true)
     if (!request.transfer) throw new Error('Transfer not created')
     expect(request.transfer.status).toBe('pending')
 
     // Step 2: destination branch manager approves
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000004', branchId: dest.id, role: 'manager' },
+    const managerDest = await seedUser(db, { branchId: dest.id, role: 'manager', permissions: ['inventory'] })
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: managerDest.id, branchId: dest.id, role: 'manager' },
     })
     const approved = await approveStockTransfer({ transferId: request.transfer.id })
     if (!approved.transfer) throw new Error('Transfer not approved')
     expect(approved.transfer.status).toBe('approved')
 
     // Step 3: source branch marks as dispatched / completed
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000003', branchId: source.id, role: 'staff' },
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: managerSrc.id, branchId: source.id, role: 'manager' },
     })
     const completed = await completeStockTransfer({ transferId: request.transfer.id })
     expect(completed.success).toBe(true)
@@ -106,8 +109,9 @@ describe('stock transfer — full lifecycle', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: source.id, count: 20 })
     await seedCounter(db, source.id, 'TRANSFER')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: source.id, role: 'staff' },
+    const managerSrc = await seedUser(db, { branchId: source.id, role: 'manager', permissions: ['inventory'] })
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: managerSrc.id, branchId: source.id, role: 'manager' },
     })
     const request = await requestStockTransfer({
       fromBranchId: source.id,
@@ -128,8 +132,9 @@ describe('stock transfer — full lifecycle', () => {
     expect(unitsAfterRequest.length).toBe(20)
 
     // Approve but don't complete
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000002', branchId: dest.id, role: 'manager' },
+    const managerDest = await seedUser(db, { branchId: dest.id, role: 'manager', permissions: ['inventory'] })
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: managerDest.id, branchId: dest.id, role: 'manager' },
     })
     await approveStockTransfer({ transferId: request.transfer.id })
 
@@ -150,8 +155,9 @@ describe('stock transfer — full lifecycle', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: source.id, count: 3 })
     await seedCounter(db, source.id, 'TRANSFER')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: source.id, role: 'staff' },
+    const managerSrc = await seedUser(db, { branchId: source.id, role: 'manager', permissions: ['inventory'] })
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: managerSrc.id, branchId: source.id, role: 'manager' },
     })
 
     const result = await requestStockTransfer({
@@ -172,8 +178,9 @@ describe('stock transfer — full lifecycle', () => {
     await seedInventoryUnits(db, { productId: product.id, branchId: source.id, count: 15 })
     await seedCounter(db, source.id, 'TRANSFER')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
-      user: { id: '00000000-0000-0000-0000-000000000001', branchId: source.id, role: 'staff' },
+    const managerSrc = await seedUser(db, { branchId: source.id, role: 'manager', permissions: ['inventory'] })
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: managerSrc.id, branchId: source.id, role: 'manager' },
     })
     const request = await requestStockTransfer({
       fromBranchId: source.id,
@@ -183,7 +190,7 @@ describe('stock transfer — full lifecycle', () => {
     })
     if (!request.transfer) throw new Error('Transfer not created')
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000002', branchId: dest.id, role: 'manager' },
     })
     const rejected = await rejectStockTransfer({
@@ -229,7 +236,7 @@ describe('getInventorySummary — branch scoping', () => {
       count: 3,
     })
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branchA.id, role: 'staff' },
     })
 
@@ -246,7 +253,7 @@ describe('getInventorySummary — branch scoping', () => {
     const branchA = await seedBranch(db, { name: 'Branch X', gstin: '27AAAAA0000A1Z5' })
     const branchB = await seedBranch(db, { name: 'Branch Y', gstin: '27BBBBB0000B1Z3' })
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branchA.id, role: 'staff' },
     })
 
@@ -267,7 +274,7 @@ describe('adjustStock', () => {
     const product = await seedProduct(db, { branchId: branch.id })
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
     })
 
@@ -293,7 +300,7 @@ describe('adjustStock', () => {
     const product = await seedProduct(db, { branchId: branch.id })
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
     })
 
@@ -319,7 +326,7 @@ describe('adjustStock', () => {
     const product = await seedProduct(db, { branchId: branch.id })
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 3 })
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
     })
 
@@ -339,7 +346,7 @@ describe('adjustStock', () => {
     const product = await seedProduct(db, { branchId: branch.id })
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'manager' },
     })
 
@@ -359,7 +366,7 @@ describe('adjustStock', () => {
     const product = await seedProduct(db, { branchId: branch.id })
     await seedInventoryUnits(db, { productId: product.id, branchId: branch.id, count: 10 })
 
-    vi.mocked(getServerSession).mockResolvedValueOnce({
+    vi.mocked(getServerSession).mockResolvedValue({
       user: { id: '00000000-0000-0000-0000-000000000001', branchId: branch.id, role: 'staff' },
     })
 
