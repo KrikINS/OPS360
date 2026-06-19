@@ -126,6 +126,7 @@ export const inventory = pgTable("inventory", {
     table.status,
     table.created_at
   ),
+  branchStatusIdx: index("inventory_branch_status_idx").on(table.branch_id, table.status),
 }));
 
 export const purchase_orders = pgTable("purchase_orders", {
@@ -173,7 +174,10 @@ export const vendor_payments = pgTable("vendor_payments", {
   journal_entry_id: uuid("journal_entry_id"),   // set after posting
   created_by:       uuid("created_by").notNull(),
   created_at:       timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  poIdIdx: index("vendor_payments_po_id_idx").on(table.po_id),
+  vendorIdIdx: index("vendor_payments_vendor_id_idx").on(table.vendor_id),
+}));
 
 export const discrepancies = pgTable("discrepancies", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -321,7 +325,10 @@ export const journal_entries = pgTable("journal_entries", {
   edited_by:        uuid("edited_by"),
   edit_reason:      text("edit_reason"),
   original_data:    jsonb("original_data"),
-})
+}, (table) => ({
+  statusDateIdx: index("journal_entries_status_date_idx").on(table.status, table.date),
+  referenceIdIdx: index("journal_entries_reference_id_idx").on(table.reference_id),
+}))
 
 export const journal_lines = pgTable("journal_lines", {
   id:               uuid("journal_line_id").primaryKey().defaultRandom(),
@@ -330,7 +337,10 @@ export const journal_lines = pgTable("journal_lines", {
   debit:            numeric("debit", { precision: 15, scale: 2 }).default("0"),
   credit:           numeric("credit", { precision: 15, scale: 2 }).default("0"),
   description:      text("description"),
-})
+}, (table) => ({
+  journalEntryIdIdx: index("journal_lines_journal_entry_id_idx").on(table.journal_entry_id),
+  accountIdIdx: index("journal_lines_account_id_idx").on(table.account_id),
+}))
 
 export const expense_records = pgTable("expense_records", {
   id:               uuid("id").primaryKey().defaultRandom(),
@@ -346,7 +356,9 @@ export const expense_records = pgTable("expense_records", {
   approved_at:      timestamp("approved_at"),
   journal_entry_id: uuid("journal_entry_id"),
   created_at:       timestamp("created_at").defaultNow(),
-})
+}, (table) => ({
+  branchStatusIdx: index("expense_records_branch_status_idx").on(table.branch_id, table.status),
+}))
 
 export const debit_notes = pgTable('debit_notes', {
   id:                 uuid('id').primaryKey().defaultRandom(),
@@ -397,7 +409,10 @@ export const sales_invoices = pgTable("sales_invoices", {
   sgst: numeric("sgst"),
   igst: numeric("igst"),
   status: text("status").default('active'),
-});
+}, (table) => ({
+  branchCreatedIdx: index("sales_invoices_branch_created_idx").on(table.branch_id, table.created_at),
+  customerIdIdx: index("sales_invoices_customer_id_idx").on(table.customer_id),
+}));
 
 export const invoice_items = pgTable("invoice_items", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -491,7 +506,9 @@ export const po_items = pgTable("po_items", {
   unit_cost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
   received_qty: integer("received_qty").default(0),
   created_at: timestamp("created_at").defaultNow(),
-})
+}, (table) => ({
+  poIdIdx: index("po_items_po_id_idx").on(table.po_id),
+}))
 
 export const grn_receipts = pgTable("grn_receipts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -516,7 +533,9 @@ export const grn_items = pgTable("grn_items", {
   landed_unit_cost: numeric("landed_unit_cost", { precision: 12, scale: 2 }).default('0'),
   inventory_ids: text("inventory_ids").array().default(sql`'{}'::text[]`),
   created_at: timestamp("created_at").defaultNow(),
-})
+}, (table) => ({
+  poItemIdIdx: index("grn_items_po_item_id_idx").on(table.po_item_id),
+}))
 
 export const attendance_records = pgTable("attendance_records", {
   id: uuid("id").primaryKey().defaultRandom(),
