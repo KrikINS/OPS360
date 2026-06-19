@@ -2,7 +2,7 @@
 
 import { db } from "@/db/client"
 import { inventory, products, user_permissions, profiles, stock_requests, stock_transfers } from "@/db/schema"
-import { eq, sql, and, ilike, or } from "drizzle-orm"
+import { eq, sql, and, ilike, or, inArray } from "drizzle-orm"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { branchFilterFor, hasCapability } from "@/lib/access"
@@ -244,6 +244,11 @@ export async function processStockTransferAction(sourceId: string, destId: strin
     const res = await db.execute(sql`SELECT process_stock_transfer_send(${sourceId}, ${destId}, ${inventoryArr}::uuid[], ${notes})`)
     const result = res as unknown as { rows?: { process_stock_transfer_send: string }[] } | { process_stock_transfer_send: string }[]
     const transferNumber = Array.isArray(result) ? result[0]?.process_stock_transfer_send : result.rows?.[0]?.process_stock_transfer_send
+    
+    if (transferNumber && inventoryIds.length > 0) {
+      await db.update(inventory).set({ status: 'In Transit' }).where(inArray(inventory.id, inventoryIds))
+    }
+
     return { data: transferNumber }
   } catch (error) {
     return { error: { message: String(error) } }
@@ -274,6 +279,10 @@ export async function fulfillStockRequestAction(requestId: string, inventoryIds:
     if (transferNumber) {
       await db.update(stock_transfers).set({ stock_request_id: requestId }).where(eq(stock_transfers.transfer_number, transferNumber))
       await db.update(stock_requests).set({ status: 'FULFILLED' }).where(eq(stock_requests.id, requestId))
+      
+      if (inventoryIds.length > 0) {
+        await db.update(inventory).set({ status: 'In Transit' }).where(inArray(inventory.id, inventoryIds))
+      }
     }
 
     return { data: transferNumber }
