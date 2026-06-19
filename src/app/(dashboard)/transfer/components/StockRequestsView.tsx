@@ -140,9 +140,12 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
         const access = allAccess && Array.isArray(allAccess) ? allAccess.filter(a => (a as Record<string, unknown>)['user_id'] === userId) : []
         
         if (access.length > 0) {
-          interface ACMResponse { branch_id: string; branches: Branch }
+          interface ACMResponse { branch_id: string }
           const typedAccess = access as unknown as ACMResponse[]
-          const uBranches = typedAccess.map((a) => a.branches)
+          const allBranchesArr = (branchData && Array.isArray(branchData)) ? branchData as Branch[] : []
+          const uBranches = typedAccess
+            .map((a) => allBranchesArr.find((b) => b.id === a.branch_id))
+            .filter((b): b is Branch => b !== undefined)
           setUserBranches(uBranches)
           const { data: profileData } = await import("@/app/actions/user").then(m => m.getUserProfileAction(userId))
           const profile = profileData as Record<string, unknown> | null
