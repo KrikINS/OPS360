@@ -157,6 +157,10 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
             setUserBranchId(uBranches[0].id)
           } else if (profile?.assigned_branch_id) {
             setUserBranchId(String(profile.assigned_branch_id))
+          } else if (uBranches.length > 1) {
+            setUserBranchId(uBranches[0].id)
+          } else {
+            setLoading(false)
           }
 
           // Check export permission
@@ -379,6 +383,22 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
           <p className="text-xs text-slate-500 font-medium">Manage internal logistics for branch-to-branch supply.</p>
         </div>
 
+        <div className="flex gap-2 items-center">
+          {userBranches.length > 1 && (
+            <Select value={userBranchId || ""} onValueChange={(val) => setUserBranchId(val || "")}>
+              <SelectTrigger className="h-10 border-slate-200 bg-white min-w-[180px]">
+                <SelectValue placeholder="Select Branch">
+                  {userBranches.find(b => b.id === userBranchId)?.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {userBranches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name} ({b.code})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {canExport && (
             <Button 
               onClick={handleExport} 
@@ -403,27 +423,10 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
           <DialogContent className="md:max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-2xl font-black">Create Demand Order</DialogTitle>
-              <DialogDescription>Specify the products and quantities needed from a target source.</DialogDescription>
+              <DialogDescription>Specify the products and quantities needed from a target source for {userBranches.find(b => b.id === userBranchId)?.name || 'your branch'}.</DialogDescription>
             </DialogHeader>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-              {userBranches.length > 1 && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400">My Requesting Branch</label>
-                  <Select value={userBranchId || ""} onValueChange={(val) => setUserBranchId(val || "")}>
-                    <SelectTrigger className="h-12 border-slate-200">
-                      <SelectValue placeholder="Select My Branch">
-                        {userBranches.find(b => b.id === userBranchId)?.name}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userBranches.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>{b.name} ({b.code})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-slate-400">Target Source Branch</label>
                 <Select 
@@ -596,6 +599,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
       </div>
 
       <Tabs defaultValue="my-requests" className="w-full">
