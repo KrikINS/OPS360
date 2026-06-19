@@ -322,8 +322,6 @@ CREATE OR REPLACE FUNCTION fulfill_stock_request(requestId uuid) RETURNS void LA
 -- Stub for get_unique_low_stock_count
 CREATE OR REPLACE FUNCTION get_unique_low_stock_count() RETURNS integer LANGUAGE plpgsql AS $$ BEGIN RETURN 0; END; $$;
 
--- Stub for get_user_pos_stats
-CREATE OR REPLACE FUNCTION get_user_pos_stats() RETURNS TABLE(stat text, value integer) LANGUAGE plpgsql AS $$ BEGIN RETURN QUERY SELECT 'sales'::text, 0; END; $$;
 
 -- Stub for get_admin_dashboard_metrics
 CREATE OR REPLACE FUNCTION get_admin_dashboard_metrics() RETURNS TABLE(metric text, value integer) LANGUAGE plpgsql AS $$ BEGIN RETURN QUERY SELECT 'users'::text, 0; END; $$;
