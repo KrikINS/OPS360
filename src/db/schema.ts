@@ -211,6 +211,18 @@ export const stock_requests = pgTable("stock_requests", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
+export const stock_request_items = pgTable("stock_request_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  request_id: uuid("request_id").notNull(),
+  product_id: uuid("product_id"),
+  quantity: integer("quantity").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    requestIdIdx: index("stock_request_items_request_id_idx").on(table.request_id),
+  }
+});
+
 export const stock_transfers = pgTable("stock_transfers", {
   id: uuid("id").primaryKey().defaultRandom(),
   transfer_number: text("transfer_number"),
