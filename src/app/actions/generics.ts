@@ -2,6 +2,15 @@
 
 import { db } from "@/db/client"
 import { sql } from "drizzle-orm"
+import * as schema from '@/db/schema'
+import { getTableColumns } from 'drizzle-orm'
+
+function getAllowedColumns(tableName: string): Set<string> {
+  const table = (schema as Record<string, any>)[tableName]
+  if (!table) return new Set()
+  const columns = getTableColumns(table)
+  return new Set(Object.keys(columns))
+}
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 
@@ -61,6 +70,11 @@ export async function insertData(tableName: string, payload: Record<string, Payl
     if (!session?.user) return { error: { message: 'Unauthorized' } }
     if (!ALLOWED_TABLES.has(tableName)) return { error: { message: `Table '${tableName}' is not accessible` } }
     const row = payload[0]
+    const allowedCols = getAllowedColumns(tableName)
+    const invalidKeys = Object.keys(row).filter(k => !allowedCols.has(k))
+    if (invalidKeys.length > 0) {
+      return { error: { message: `Invalid column(s): ${invalidKeys.join(', ')}` } }
+    }
     const keys = Object.keys(row).map(k => `"${k}"`).join(', ')
     const values = Object.values(row).map(escapeValue).join(', ')
     const res = await db.execute(sql.raw(`INSERT INTO "${tableName}" (${keys}) VALUES (${values}) RETURNING *`))
@@ -79,6 +93,11 @@ export async function updateData(tableName: string, payload: Record<string, Payl
     if (!ALLOWED_TABLES.has(tableName)) return { error: { message: `Table '${tableName}' is not accessible` } }
     const { id, ...rest } = payload
     if (!id) throw new Error('updateData: payload must contain an `id` field')
+    const allowedCols = getAllowedColumns(tableName)
+    const invalidKeys = Object.keys(rest).filter(k => !allowedCols.has(k))
+    if (invalidKeys.length > 0) {
+      return { error: { message: `Invalid column(s): ${invalidKeys.join(', ')}` } }
+    }
     const setClause = Object.entries(rest).map(([k, v]) => `"${k}" = ${escapeValue(v)}`).join(', ')
     const res = await db.execute(sql.raw(`UPDATE "${tableName}" SET ${setClause} WHERE id = ${escapeValue(id)} RETURNING *`))
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]

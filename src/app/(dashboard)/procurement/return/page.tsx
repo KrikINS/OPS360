@@ -347,7 +347,7 @@ export default function PurchaseReturn() {
           
           const { error: updateError } = await import("@/app/actions/generics").then(m => m.updateData('discrepancies', { 
              id: String(openMismatch.id),
-             detected_gap: newGap,
+             shortfall: newGap,
              admin_comment: newComment,
              status: isResolved ? 'Resolved' : 'Investigating'
           }))

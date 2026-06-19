@@ -191,6 +191,7 @@ export const discrepancies = pgTable("discrepancies", {
   ordered_qty: integer("ordered_qty"),
   received_qty: integer("received_qty"),
   shortfall: integer("shortfall"),
+  resolved_at: timestamp("resolved_at"),
 });
 
 export const app_settings = pgTable("app_settings", {
