@@ -40,8 +40,8 @@ export default function ComplianceDocs() {
           <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
             <Gavel className="h-5 w-5 text-emerald-600" />
           </div>
-          <h3 className="font-bold text-[#001529]">HSN Mandatory Rule</h3>
-          <p className="text-sm text-slate-600">Items cannot be received into inventory (GRN) without a valid 4-8 digit HSN code for tax categorization.</p>
+          <h3 className="font-bold text-[#001529]">HSN Mapping</h3>
+          <p className="text-sm text-slate-600">The system automatically associates HSN codes (4-8 digits) and their respective tax rates to inventory items for proper categorization.</p>
         </div>
       </div>
 
@@ -55,13 +55,9 @@ export default function ComplianceDocs() {
             All procurement variances are automatically logged to the <strong>Discrepancy Registry</strong>. This ensures a permanent audit paper trail for fiscal and physical mismatches.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-red-100/50 shadow-sm">
-              <h4 className="font-bold text-xs text-[#001529] mb-1">Fiscal Variances</h4>
-              <p className="text-[11px] text-slate-500">Price mismatches between PO and Vendor Bill &gt; ₹1 are flagged for management review.</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-red-100/50 shadow-sm">
+            <div className="bg-white p-4 rounded-xl border border-red-100/50 shadow-sm md:col-span-2">
               <h4 className="font-bold text-xs text-[#001529] mb-1">Stock Variances</h4>
-              <p className="text-[11px] text-slate-500">Shortfalls in GRN (received vs ordered) are tracked until resolved via Purchase Return or Manual Accept.</p>
+              <p className="text-[11px] text-slate-500">Shortfalls in GRN (received vs ordered) are tracked until resolved via subsequent GRNs or PO short-close.</p>
             </div>
           </div>
         </div>

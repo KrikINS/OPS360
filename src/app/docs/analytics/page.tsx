@@ -19,9 +19,9 @@ export default function AnalyticsDocs() {
             Track revenue growth and sales velocity across all dimensions:
           </p>
           <ul className="space-y-2 text-xs text-slate-500">
-            <li className="flex gap-2"><strong>Timeframe:</strong> Aggregates Daily, Weekly, and Monthly trends.</li>
-            <li className="flex gap-2"><strong>Geography:</strong> Performance split by Branch and Region.</li>
-            <li className="flex gap-2"><strong>Catalog:</strong> Identifying top-selling models vs slow-moving stock.</li>
+            <li className="flex gap-2"><strong>Timeframe:</strong> Filter by date ranges (This Month, Last Month, This FY).</li>
+            <li className="flex gap-2"><strong>Staff:</strong> View sales performance and generated revenue per staff member.</li>
+            <li className="flex gap-2"><strong>Catalog:</strong> Identify top-selling models vs slow-moving stock.</li>
           </ul>
         </div>
 
@@ -32,11 +32,11 @@ export default function AnalyticsDocs() {
             Inventory Aging & Turnover
           </h3>
           <p className="text-sm text-slate-600 mb-4">
-            Monitor asset liquidity with automated aging analysis:
+            Monitor asset liquidity with automated aging analysis (Located in the <strong>Inventory Registry</strong>):
           </p>
           <div className="flex gap-2 mb-4">
-            <div className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold">Optimal: 0-30d</div>
-            <div className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-[10px] font-bold">Warning: 30-60d</div>
+            <div className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold">Healthy</div>
+            <div className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-[10px] font-bold">Warning</div>
             <div className="bg-rose-50 text-rose-700 px-2 py-1 rounded text-[10px] font-bold">Critical: 60d+</div>
           </div>
         </div>
@@ -53,18 +53,14 @@ export default function AnalyticsDocs() {
             <p className="text-sm text-slate-300">Download raw datasets for external modeling.</p>
           </div>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+            <h4 className="text-xs font-black uppercase tracking-widest text-[#7FD1E3] mb-1">Print & PDF</h4>
+            <p className="text-[11px] text-slate-400">High-speed print layouts for Sales Reports, GST Summaries, and Stock Valuations.</p>
+          </div>
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
             <h4 className="text-xs font-black uppercase tracking-widest text-[#7FD1E3] mb-1">CSV/Excel</h4>
-            <p className="text-[11px] text-slate-400">High-speed exports for Sales Registries and Inventory manifests.</p>
-          </div>
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <h4 className="text-xs font-black uppercase tracking-widest text-[#7FD1E3] mb-1">Audit Logs</h4>
-            <p className="text-[11px] text-slate-400">Deterministic export of system changes for compliance verification.</p>
-          </div>
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <h4 className="text-xs font-black uppercase tracking-widest text-[#7FD1E3] mb-1">Live Feeds</h4>
-            <p className="text-[11px] text-slate-400">Real-time dashboard updates via WebSocket.</p>
+            <p className="text-[11px] text-slate-400">Export inventory manifests directly from the tables.</p>
           </div>
         </div>
       </section>
