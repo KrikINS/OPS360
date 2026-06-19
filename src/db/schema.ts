@@ -206,6 +206,7 @@ export const stock_requests = pgTable("stock_requests", {
   requesting_branch_id: uuid("requesting_branch_id"),
   request_number: text("request_number"),
   status: text("status"),
+  priority: text("priority").default('Low'),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
