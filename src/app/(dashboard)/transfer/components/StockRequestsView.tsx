@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -90,6 +90,8 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
   const [productSearch, setProductSearch] = useState("")
   const [productResults, setProductResults] = useState<Product[]>([])
   const [requestCart, setRequestCart] = useState<{product: Product, quantity: number}[]>([])
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchSeqRef = useRef(0)
   const [submitting, setSubmitting] = useState(false)
 
   // Fulfillment State
@@ -194,18 +196,22 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
     init()
   }, [fetchRequests, searchParams, branches, addToRequest])
 
-  const searchProducts = useCallback(async (term: string) => {
+  const searchProducts = useCallback((term: string) => {
     setProductSearch(term)
     if (term.length < 2 || !targetSourceId) {
       setProductResults([])
       return
     }
-    const { data, error } = await import('@/app/actions/transfers')
-      .then(m => m.searchProductsForTransferAction(term, targetSourceId))
 
-    if (!error && data) {
-      setProductResults(data as Product[])
-    }
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(async () => {
+      const mySeq = ++searchSeqRef.current
+      const { data, error } = await import('@/app/actions/transfers')
+        .then(m => m.searchProductsForTransferAction(term, targetSourceId))
+
+      if (mySeq !== searchSeqRef.current) return
+      if (!error && data) setProductResults(data as Product[])
+    }, 300)
   }, [targetSourceId])
 
   const updateCartQty = (id: string, qty: number) => {
@@ -424,6 +430,9 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
           <Dialog open={isCreating} onOpenChange={(open) => {
             if (open) setTargetSourceId("")
             setIsCreating(open)
+            setProductSearch("")
+            setProductResults([])
+            searchSeqRef.current++
           }}>
           <DialogTrigger 
             render={

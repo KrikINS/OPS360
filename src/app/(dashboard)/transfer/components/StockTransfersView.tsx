@@ -149,6 +149,8 @@ export function StockTransfersView({
   const [waybillData, setWaybillData] = useState<WaybillData | null>(null)
   const [printing, setPrinting] = useState(false)
   const [transferSearch, setTransferSearch] = useState("")
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchSeqRef = useRef(0)
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -290,10 +292,16 @@ export function StockTransfersView({
     }
 
     const branchToSearch = sourceId || userBranchId || ""
-    const { data } = await import('@/app/actions/transfers')
-      .then(m => m.searchProductsForTransferAction(term, branchToSearch))
 
-    if (data) setProductSearchResults(data as ProductWithStock[])
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(async () => {
+      const mySeq = ++searchSeqRef.current
+      const { data } = await import('@/app/actions/transfers')
+        .then(m => m.searchProductsForTransferAction(term, branchToSearch))
+
+      if (mySeq !== searchSeqRef.current) return // a newer search superseded this one
+      if (data) setProductSearchResults(data as ProductWithStock[])
+    }, 300)
   }
 
   const addSKUToTransfer = (p: ProductWithStock) => {
@@ -484,7 +492,12 @@ export function StockTransfersView({
             </Button>
           )}
 
-          <Dialog open={isCreating} onOpenChange={setIsCreating}>
+          <Dialog open={isCreating} onOpenChange={(open) => {
+            setIsCreating(open)
+            setInventorySearch("")
+            setProductSearchResults([])
+            searchSeqRef.current++ // invalidate any in-flight search
+          }}>
           <DialogTrigger 
             render={
               <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg font-black h-10 px-4 rounded-xl gap-2 flex items-center text-white text-xs">
