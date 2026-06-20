@@ -379,15 +379,21 @@ export function StockTransfersView({
 
     setSubmitting(true)
     try {
-      const rpcName = (selectedDemandId || prefillRequest) ? 'fulfill_stock_request' : 'process_stock_transfer_send'
-      const rpcParams = (selectedDemandId || prefillRequest)
-        ? { p_request_id: (selectedDemandId || prefillRequest?.id) as string, p_inventory_ids: allUnits.map((u: InventoryUnit) => u.id) }
-        : { p_source_branch_id: sourceId, p_destination_branch_id: destId, p_inventory_ids: allUnits.map((u: InventoryUnit) => u.id), p_notes: "" }
+      let transferNumber: string
 
-      const { data, error } = await import("@/app/actions/generics").then(m => m.rpcCall(rpcName, rpcParams))
-      const transferNumber = data as unknown as string
-      
-      if (error) throw error
+      if (selectedDemandId || prefillRequest) {
+        // UNCHANGED — fulfillment path, separate fix needed
+        const rpcParams = { p_request_id: (selectedDemandId || prefillRequest?.id) as string, p_inventory_ids: allUnits.map((u: InventoryUnit) => u.id) }
+        const { data, error } = await import("@/app/actions/generics").then(m => m.rpcCall('fulfill_stock_request', rpcParams))
+        if (error) throw error
+        transferNumber = data as unknown as string
+      } else {
+        // FIXED — route through the properly guarded, signature-correct action
+        const { data, error } = await import("@/app/actions/transfers")
+          .then(m => m.processStockTransferAction(sourceId, destId, allUnits.map((u: InventoryUnit) => u.id), ""))
+        if (error) throw new Error(error.message)
+        transferNumber = data as string
+      }
 
       setLastTransferNumber(transferNumber)
       alert((selectedDemandId || prefillRequest) ? `Request fulfilled. Waybill ${transferNumber} generated.` : `Transfer ${transferNumber} initiated.`)
