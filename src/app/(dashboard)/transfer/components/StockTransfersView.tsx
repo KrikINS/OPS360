@@ -162,15 +162,14 @@ export function StockTransfersView({
   const fetchAndPrintWaybill = async (transferNumber: string) => {
     setPrinting(true)
     try {
-      const { data, error } = await import("@/app/actions/generics").then(m => m.fetchData("waybills"))
-      if (error) throw error
-      const target = data && Array.isArray(data) ? (data as unknown as Record<string, unknown>[]).find((w) => w.waybill_number === transferNumber) : null
-      if (target) {
-        setWaybillData(target as unknown as WaybillData)
-        // Wait for state to update and template to render
-        setTimeout(() => {
-          handlePrint()
-        }, 300)
+      const { data, error } = await import("@/app/actions/transfers")
+        .then(m => m.getWaybillDataAction(transferNumber))
+      if (error) throw new Error(error.message)
+      if (data) {
+        setWaybillData(data as unknown as WaybillData)
+        setTimeout(() => { handlePrint() }, 300)
+      } else {
+        throw new Error("No waybill data found for this transfer")
       }
     } catch (err) {
       console.error("Failed to fetch waybill data", err)
