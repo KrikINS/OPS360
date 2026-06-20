@@ -37,7 +37,7 @@ export async function getStockTransfersAction() {
       SELECT st.*, 
         row_to_json(sb.*) as source_branch,
         row_to_json(db.*) as destination_branch,
-        (SELECT json_agg(w.*) FROM waybills w WHERE w.transfer_id = st.id) as waybill,
+        NULL as waybill,
         (SELECT json_agg(sti.*) FROM stock_transfer_items sti WHERE sti.transfer_id = st.id) as items
       FROM stock_transfers st
       LEFT JOIN branches sb ON st.source_branch_id = sb.id
