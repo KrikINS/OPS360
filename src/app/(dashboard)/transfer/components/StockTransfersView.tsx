@@ -895,18 +895,29 @@ export function StockTransfersView({
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right px-4">
-                          {isDestination ? (
-                            <Button 
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
                               size="sm"
-                              onClick={() => openReceiveVerification(tx)}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] h-8 rounded-lg shadow-sm px-4 gap-1.5"
+                              onClick={() => fetchAndPrintWaybill(tx.transfer_number)}
+                              disabled={printing}
+                              className="h-8 px-2"
                             >
-                              <ShieldIcon className="h-3 w-3" />
-                              RECEIVE
+                              <Printer className="h-3.5 w-3.5 text-slate-500 hover:text-slate-900" />
                             </Button>
-                          ) : (
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">IN TRANSIT</span>
-                          )}
+                            {isDestination ? (
+                              <Button 
+                                size="sm"
+                                onClick={() => openReceiveVerification(tx)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] h-8 rounded-lg shadow-sm px-4 gap-1.5"
+                              >
+                                <ShieldIcon className="h-3 w-3" />
+                                RECEIVE
+                              </Button>
+                            ) : (
+                              <span className="text-[9px] font-bold text-slate-400 uppercase">IN TRANSIT</span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -957,9 +968,20 @@ export function StockTransfersView({
                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">{tx.source_branch?.code} → {tx.destination_branch?.code}</span>
                     </TableCell>
                     <TableCell className="text-right px-4">
-                      <Badge className={cn("font-black text-[8px] h-6 px-3", getStatusColor(tx.status))}>
-                        {tx.status}
-                      </Badge>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => fetchAndPrintWaybill(tx.transfer_number)}
+                          disabled={printing}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Printer className="h-3.5 w-3.5 text-slate-400 hover:text-slate-800 transition-colors" />
+                        </Button>
+                        <Badge className={cn("font-black text-[8px] h-6 px-3", getStatusColor(tx.status))}>
+                          {tx.status}
+                        </Badge>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
