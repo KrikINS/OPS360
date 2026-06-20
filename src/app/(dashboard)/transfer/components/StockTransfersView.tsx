@@ -825,15 +825,14 @@ export function StockTransfersView({
 
         <TabsContent value="active">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-zinc-400">INCOMING TRANSFERS</h3>
+              <h3 className="text-sm font-semibold text-slate-400">INCOMING TRANSFERS</h3>
               <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                <input
-                  type="text"
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input 
                   placeholder="Search ST-Number..."
                   value={transferSearch}
                   onChange={(e) => setTransferSearch(e.target.value)}
-                  className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
+                  className="pl-10 h-9 border-slate-200 bg-white"
                 />
               </div>
             </div>
@@ -930,15 +929,14 @@ export function StockTransfersView({
 
         <TabsContent value="history">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-zinc-400">TRANSFER HISTORY</h3>
+            <h3 className="text-sm font-semibold text-slate-400">TRANSFER HISTORY</h3>
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <input
-                type="text"
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input 
                 placeholder="Search ST-Number..."
                 value={transferSearch}
                 onChange={(e) => setTransferSearch(e.target.value)}
-                className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
+                className="pl-10 h-9 border-slate-200 bg-white"
               />
             </div>
           </div>
