@@ -139,7 +139,6 @@ export default function VendorsClient({
   const [formStep, setFormStep] = useState(1)
   const [documents, setDocuments] = useState<VendorDocument[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
-  const [isUploading, setIsUploading] = useState(false)
   const [allBrands, setAllBrands] = useState<{label: string, value: string}[]>([])
   const [allCategories, setAllCategories] = useState<{label: string, value: string}[]>([])
   const [isEditingGeneral, setIsEditingGeneral] = useState(false)
@@ -255,28 +254,6 @@ export default function VendorsClient({
     }
   }, [selectedVendor, isDetailOpen, fetchVendorDocuments, fetchAuditLogs])
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file || !selectedVendor) return
-
-    setIsUploading(true)
-    try {
-
-
-
-      const { error } = await import("@/app/actions/generics").then(m => m.rpcCall("upload_doc", {}))
-
-      if (error) throw error
-
-      alert("File uploaded successfully")
-      fetchVendorDocuments(selectedVendor.id)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      alert("Error uploading file: " + errorMessage)
-    } finally {
-      setIsUploading(false)
-    }
-  }
 
   const getFileUrl = (path?: string) => {
     if (!path) return "#"
@@ -1093,27 +1070,9 @@ export default function VendorsClient({
 
                   <TabsContent value="documents" className="space-y-6 animate-in fade-in duration-300">
                     <div className="border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center bg-muted/10 relative">
-                      <input 
-                        type="file" 
-                        id="file-upload" 
-                        title="Document upload"
-                        className="hidden" 
-                        onChange={handleFileUpload}
-                        disabled={isUploading}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-                      <Upload className={`h-10 w-10 text-muted-foreground mb-4 ${isUploading ? 'animate-pulse text-primary' : 'opacity-20'}`} />
-                      <p className="text-sm font-medium">{isUploading ? 'Uploading...' : 'Upload Compliance Documents'}</p>
-                      <p className="text-xs text-muted-foreground mt-1 mb-4">PDF, JPG up to 5MB (GST Cert, Canceled Cheque)</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="gap-2" 
-                        onClick={() => document.getElementById('file-upload')?.click()}
-                        disabled={isUploading}
-                      >
-                        <Plus className="h-4 w-4" /> {isUploading ? 'Uploading...' : 'Select Files'}
-                      </Button>
+                      <Upload className="h-10 w-10 text-muted-foreground mb-4 opacity-20" />
+                      <p className="text-sm font-medium">Document upload isn't available yet. Check back soon.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Support for GST Certificates, canceled cheques, and compliance files is coming in a future update.</p>
                     </div>
                     
                     <div className="space-y-2">
