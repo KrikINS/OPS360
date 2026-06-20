@@ -102,7 +102,7 @@ describe('stock transfer — full lifecycle', () => {
     expect(dstAvailable.length).toBe(13)   // 5 + 8
   })
 
-  it('does not modify stock until transfer is completed', async () => {
+  it('locks requested units as In Transit but does not affect unrelated stock', async () => {
     const source = await seedBranch(db, { name: 'Mumbai', gstin: '27AAAAA0000A1Z5' })
     const dest   = await seedBranch(db, { name: 'Pune',   gstin: '27BBBBB0000B1Z3' })
     const product = await seedProduct(db, { branchId: source.id })
@@ -121,7 +121,7 @@ describe('stock transfer — full lifecycle', () => {
     })
     if (!request.transfer) throw new Error('Transfer not created')
 
-    // Stock must not change yet — transfer is still pending
+    // Stock should be marked as 'In Transit' (locking 5 units)
     const unitsAfterRequest = await db.select().from(schema.inventory).where(
       and(
         eq(schema.inventory.product_id, product.id),
@@ -129,7 +129,7 @@ describe('stock transfer — full lifecycle', () => {
         eq(schema.inventory.status, 'Available'),
       )
     )
-    expect(unitsAfterRequest.length).toBe(20)
+    expect(unitsAfterRequest.length).toBe(15)
 
     // Approve but don't complete
     const managerDest = await seedUser(db, { branchId: dest.id, role: 'manager', permissions: ['inventory'] })
@@ -145,7 +145,7 @@ describe('stock transfer — full lifecycle', () => {
         eq(schema.inventory.status, 'Available'),
       )
     )
-    expect(unitsAfterApproval.length).toBe(20)  // still unchanged
+    expect(unitsAfterApproval.length).toBe(15)  // remains locked In Transit
   })
 
   it('rejects transfer when source has insufficient stock', async () => {

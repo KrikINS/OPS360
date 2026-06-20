@@ -10,7 +10,7 @@ import {
 import { fetchInventoryDataAction } from '@/app/actions/inventory'
 import { db } from '@/db/client'
 import * as schema from '@/db/schema'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, inArray } from 'drizzle-orm'
 import crypto from 'crypto'
 import { getEffectiveBranchId } from '@/app/actions/_utils/branch'
 import { hasCapability, branchFilterFor } from '@/lib/access'
@@ -160,6 +160,18 @@ export async function rejectStockTransfer(input: {
   }
 
   try {
+    const items = await db.select({ inventory_id: schema.stock_transfer_items.inventory_id })
+      .from(schema.stock_transfer_items)
+      .where(eq(schema.stock_transfer_items.transfer_id, input.transferId))
+
+    const inventoryIds = items.map(i => i.inventory_id).filter((id): id is string => id !== null)
+
+    if (inventoryIds.length > 0) {
+      await db.update(schema.inventory)
+        .set({ status: 'Available' })
+        .where(inArray(schema.inventory.id, inventoryIds))
+    }
+
     await db
       .update(schema.stock_transfers)
       .set({ status: 'rejected' })
