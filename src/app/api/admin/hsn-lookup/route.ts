@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const { data, error } = await import("@/app/actions/hsn").then(m => m.searchHsnCodes(query))
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: typeof error === 'string' ? error : (error as any).message || 'Unknown error' }, { status: 500 })
   }
 
   return NextResponse.json({ data })
