@@ -69,6 +69,7 @@ type StockTransfer = {
   created_at: string
   completed_at?: string
   stock_request_id?: string
+  linked_request_number?: string | null
   source_branch?: { name: string, code: string }
   destination_branch?: { name: string, code: string }
   originator?: { full_name: string }
@@ -873,6 +874,11 @@ export function StockTransfersView({
                       <TableRow key={tx.id} className="hover:bg-white group transition-colors h-16 border-slate-100">
                         <TableCell className="px-4">
                           <span className="text-[10px] font-black text-slate-900">{tx.transfer_number}</span>
+                          {tx.linked_request_number && (
+                            <span className="text-[8px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full ml-2">
+                              Fulfilling {tx.linked_request_number}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -961,6 +967,11 @@ export function StockTransfersView({
                       <span className="text-[9px] font-black text-slate-600 font-mono uppercase">
                         {tx.waybill_number || tx.transfer_number}
                       </span>
+                      {tx.linked_request_number && (
+                        <span className="text-[8px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full ml-2">
+                          Fulfilling {tx.linked_request_number}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">{tx.source_branch?.code} → {tx.destination_branch?.code}</span>

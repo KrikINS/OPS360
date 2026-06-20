@@ -46,6 +46,7 @@ export type StockRequest = {
   request_number: string
   requesting_branch_id: string
   source_branch_id: string
+  linked_transfer_number?: string | null
   requesting_branch: { name: string, code: string }
   source_branch: { name: string, code: string }
   status: 'Pending' | 'In-Transit' | 'Fulfilled' | 'Cancelled'
@@ -671,6 +672,11 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
                           <span className="text-[10px] font-black tracking-tight text-slate-900 uppercase bg-slate-100 px-2 py-0.5 rounded">
                             {req.request_number}
                           </span>
+                          {(req.status === 'In-Transit' || req.status === 'Fulfilled') && req.linked_transfer_number && (
+                            <span className="text-[8px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full ml-1">
+                              via {req.linked_transfer_number}
+                            </span>
+                          )}
                           <Badge variant="outline" className={cn("text-[8px] font-black py-0", getPriorityColor(req.priority))}>
                             {req.priority}
                           </Badge>
@@ -738,6 +744,11 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
                     >
                       <TableCell className="px-4">
                         <span className="text-[10px] font-black text-slate-900">{req.request_number}</span>
+                        {(req.status === 'In-Transit' || req.status === 'Fulfilled') && req.linked_transfer_number && (
+                          <span className="text-[8px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full ml-2">
+                            via {req.linked_transfer_number}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <span className="text-xs font-black text-slate-700">{req.requesting_branch?.name}</span>

@@ -71,11 +71,13 @@ export async function getStockTransfersAction() {
     // we would need branches, waybills, items mapped, but doing a raw query is easier to match old UI structure
     const res = await db.execute(sql`
       SELECT st.*, 
+        req.request_number as linked_request_number,
         row_to_json(sb.*) as source_branch,
         row_to_json(db.*) as destination_branch,
         NULL as waybill,
         (SELECT json_agg(sti.*) FROM stock_transfer_items sti WHERE sti.transfer_id = st.id) as items
       FROM stock_transfers st
+      LEFT JOIN stock_requests req ON req.id = st.stock_request_id
       LEFT JOIN branches sb ON st.source_branch_id = sb.id
       LEFT JOIN branches db ON st.destination_branch_id = db.id
       ${allowed !== null ? sql`WHERE st.source_branch_id = ANY(${allowed}::uuid[]) OR st.destination_branch_id = ANY(${allowed}::uuid[])` : sql``}
@@ -125,6 +127,9 @@ export async function getPendingDemandsAction(branchId: string) {
 
     const res = await db.execute(sql`
       SELECT sr.*, 
+        (SELECT transfer_number FROM stock_transfers
+         WHERE stock_request_id = sr.id
+         ORDER BY created_at DESC LIMIT 1) as linked_transfer_number,
         row_to_json(rb.*) as requesting_branch,
         (SELECT json_agg(
           json_build_object(
@@ -158,6 +163,9 @@ export async function getBranchStockRequestsAction(branchId: string) {
 
     const res = await db.execute(sql`
       SELECT sr.*, 
+        (SELECT transfer_number FROM stock_transfers
+         WHERE stock_request_id = sr.id
+         ORDER BY created_at DESC LIMIT 1) as linked_transfer_number,
         row_to_json(rb.*) as requesting_branch,
         row_to_json(sb.*) as source_branch,
         (SELECT json_agg(

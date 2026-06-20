@@ -53,7 +53,7 @@ export default function TransferControlCenter() {
             <div>
               <h2 className="text-3xl font-black tracking-tight text-slate-900 mb-2">STOCK REQUESTS</h2>
               <p className="text-slate-500 font-medium leading-relaxed">
-                Source missing inventory from other branches. View incoming demands and manage fulfillment status.
+                Don't know who has stock? Broadcast a request — any branch with availability can step in and fulfill it.
               </p>
             </div>
             <div className="flex items-center gap-3 mt-4 text-[10px] font-black uppercase tracking-widest text-[#7FD1E3] bg-slate-900 w-fit px-4 py-2 rounded-full shadow-lg">
@@ -82,7 +82,7 @@ export default function TransferControlCenter() {
             <div>
               <h2 className="text-3xl font-black tracking-tight text-slate-900 mb-2">STOCK TRANSFERS</h2>
               <p className="text-slate-500 font-medium leading-relaxed">
-                Initiate physical stock movement between branches. Track waybills, pending shipments, and history.
+                Already know the source and destination? Send stock directly — no request needed.
               </p>
             </div>
             <div className="flex items-center gap-3 mt-4 text-[10px] font-black uppercase tracking-widest text-white bg-blue-600 w-fit px-4 py-2 rounded-full shadow-lg shadow-blue-500/20">
@@ -98,26 +98,33 @@ export default function TransferControlCenter() {
       </div>
 
       {/* ── Visual Context Cards (Optional but adds premium feel) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-8 border-t border-slate-100">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 pt-8 border-t border-slate-100">
         <Card className="bg-slate-50/50 border-none p-6 space-y-3">
-          <Badge className="bg-slate-900 text-[9px] font-black px-3">GUIDELINE</Badge>
+          <Badge className="bg-slate-900 text-white text-[9px] font-black px-3">GUIDELINE</Badge>
           <h4 className="font-black text-sm text-slate-800">Atomic Inventory Sync</h4>
           <p className="text-xs text-slate-500 font-medium leading-normal">
             Product serials are automatically updated across branch ledgers only upon physical verification at the destination.
           </p>
         </Card>
         <Card className="bg-slate-50/50 border-none p-6 space-y-3">
-          <Badge className="bg-blue-600 text-[9px] font-black px-3">EHA PROTOCOL</Badge>
+          <Badge className="bg-blue-600 text-white text-[9px] font-black px-3">EHA PROTOCOL</Badge>
           <h4 className="font-black text-sm text-slate-800">Waybill Generation</h4>
           <p className="text-xs text-slate-500 font-medium leading-normal">
             Every transfer generates a unique waybill (TX-ID) used for tracking through the &apos;Pending Shipments&apos; module.
           </p>
         </Card>
         <Card className="bg-slate-50/50 border-none p-6 space-y-3">
-          <Badge className="bg-emerald-600 text-[9px] font-black px-3">STATUS</Badge>
+          <Badge className="bg-emerald-600 text-white text-[9px] font-black px-3">STATUS</Badge>
           <h4 className="font-black text-sm text-slate-800">Verified Arrival</h4>
           <p className="text-xs text-slate-500 font-medium leading-normal">
             Branch Managers must manually report discrepancies if the physical manifest doesn&apos;t match the digital record.
+          </p>
+        </Card>
+        <Card className="bg-slate-50/50 border-none p-6 space-y-3">
+          <Badge className="bg-purple-600 text-white text-[9px] font-black px-3">HOW THEY CONNECT</Badge>
+          <h4 className="font-black text-sm text-slate-800">Requests Become Transfers</h4>
+          <p className="text-xs text-slate-500 font-medium leading-normal">
+            Fulfilling a request automatically creates a tracked transfer between the two branches — nothing is duplicated.
           </p>
         </Card>
       </div>
