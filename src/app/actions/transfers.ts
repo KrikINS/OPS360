@@ -278,7 +278,7 @@ export async function fulfillStockRequestAction(requestId: string, inventoryIds:
 
     if (transferNumber) {
       await db.update(stock_transfers).set({ stock_request_id: requestId }).where(eq(stock_transfers.transfer_number, transferNumber))
-      await db.update(stock_requests).set({ status: 'FULFILLED' }).where(eq(stock_requests.id, requestId))
+      await db.update(stock_requests).set({ status: 'In-Transit' }).where(eq(stock_requests.id, requestId))
       
       if (inventoryIds.length > 0) {
         await db.update(inventory).set({ status: 'In Transit' }).where(inArray(inventory.id, inventoryIds))
@@ -325,6 +325,15 @@ export async function confirmTransferReceiptAction(transferId: string, notes: st
     }
 
     await db.execute(sql`SELECT process_stock_transfer_receive(${transferId}, ${session.user.id}, ${notes})`)
+    
+    const linked = await db.select({ stockRequestId: stock_transfers.stock_request_id })
+      .from(stock_transfers).where(eq(stock_transfers.id, transferId))
+    if (linked[0]?.stockRequestId) {
+      await db.update(stock_requests)
+        .set({ status: 'Fulfilled' })
+        .where(eq(stock_requests.id, linked[0].stockRequestId))
+    }
+    
     return { success: true }
   } catch (error) {
     return { error: { message: String(error) } }

@@ -394,11 +394,13 @@ export function StockTransfersView({
       let transferNumber: string
 
       if (selectedDemandId || prefillRequest) {
-        // UNCHANGED — fulfillment path, separate fix needed
-        const rpcParams = { p_request_id: (selectedDemandId || prefillRequest?.id) as string, p_inventory_ids: allUnits.map((u: InventoryUnit) => u.id) }
-        const { data, error } = await import("@/app/actions/generics").then(m => m.rpcCall('fulfill_stock_request', rpcParams))
-        if (error) throw error
-        transferNumber = data as unknown as string
+        const { data, error } = await import("@/app/actions/transfers")
+          .then(m => m.fulfillStockRequestAction(
+            (selectedDemandId || prefillRequest?.id) as string,
+            allUnits.map((u: InventoryUnit) => u.id)
+          ))
+        if (error) throw new Error(error.message)
+        transferNumber = data as string
       } else {
         // FIXED — route through the properly guarded, signature-correct action
         const { data, error } = await import("@/app/actions/transfers")
