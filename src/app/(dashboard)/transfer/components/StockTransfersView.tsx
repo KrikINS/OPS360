@@ -155,7 +155,7 @@ export function StockTransfersView({
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Waybill-${lastTransferNumber}`,
+    documentTitle: `Waybill-${waybillData?.transfer_details?.number || 'Unknown'}`,
     onAfterPrint: () => setPrinting(false)
   })
 
