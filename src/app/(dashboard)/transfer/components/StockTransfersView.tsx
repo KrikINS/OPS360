@@ -127,6 +127,7 @@ export function StockTransfersView({
   const [exporting, setExporting] = useState(false)
   
   // Create Transfer State
+  const [userBranches, setUserBranches] = useState<Branch[]>([])
   const [userBranchId, setUserBranchId] = useState<string | null>(null)
   const [sourceId, setSourceId] = useState("")
   const [destId, setDestId] = useState("")
@@ -237,6 +238,17 @@ export function StockTransfersView({
         if (profileRecord?.['branch_id']) {
           setUserBranchId(String(profileRecord['branch_id']))
           setSourceId(String(profileRecord['branch_id']))
+        }
+
+        const { data: accessData } = await import("@/app/actions/generics").then(m => m.fetchData("user_branch_access"))
+        if (accessData && Array.isArray(accessData) && branchData && Array.isArray(branchData)) {
+          const allBranchesArr = branchData as Branch[]
+          const typedAccess = accessData as { user_id: string; branch_id: string }[]
+          const myAccess = typedAccess.filter(a => a.user_id === user.id)
+          const uBranches = myAccess
+            .map((a) => allBranchesArr.find((b) => b.id === a.branch_id))
+            .filter((b): b is Branch => b !== undefined)
+          if (uBranches.length > 0) setUserBranches(uBranches)
         }
 
         // Check export permission
@@ -491,6 +503,21 @@ export function StockTransfersView({
         </div>
 
         <div className="flex items-center gap-3">
+          {userBranches.length > 1 && (
+            <Select value={userBranchId || ""} onValueChange={(val) => setUserBranchId(val || "")}>
+              <SelectTrigger className="h-10 border-slate-200 bg-white min-w-[180px]">
+                <SelectValue placeholder="Viewing as">
+                  {userBranches.find(b => b.id === userBranchId)?.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {userBranches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name} ({b.code})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {canExport && (
             <Button 
               onClick={handleExport} 
