@@ -2,9 +2,12 @@ import type { NextAuthOptions, Session, User } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/db/client";
-import { users, user_branch_access, profiles } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { users, user_branch_access, profiles, login_attempts } from "@/db/schema";
+import { and, eq, gte } from "drizzle-orm";
 import bcrypt from "bcrypt";
+
+const RATE_LIMIT_WINDOW_MINUTES = 15;
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -32,12 +35,37 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000)
+        const recentFailures = await db.select({ id: login_attempts.id })
+          .from(login_attempts)
+          .where(and(
+            eq(login_attempts.email, credentials.email),
+            eq(login_attempts.success, false),
+            gte(login_attempts.attempted_at, windowStart)
+          ))
+
+        if (recentFailures.length >= RATE_LIMIT_MAX_ATTEMPTS) {
+          return null // same generic failure as wrong password — don't leak lockout state
+        }
+
         const userResult = await db.select().from(users).where(eq(users.email, credentials.email));
         const user = userResult[0];
 
-        if (!user || !user.password_hash) return null;
+        if (!user || !user.password_hash) {
+          await db.insert(login_attempts).values({
+            email: credentials.email,
+            success: false,
+          })
+          return null;
+        }
 
         const isValid = await bcrypt.compare(credentials.password, user.password_hash);
+        
+        await db.insert(login_attempts).values({
+          email: credentials.email,
+          success: isValid,
+        })
+
         if (!isValid) return null;
 
         const branchAccess = await db

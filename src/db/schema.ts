@@ -737,3 +737,14 @@ export const payslips = pgTable('payslips', {
   professional_tax:     numeric('professional_tax').notNull().default('0'),
   salary_structure_id:  uuid('salary_structure_id').references(() => employee_salary_structures.id),
 })
+
+export const login_attempts = pgTable("login_attempts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull(),
+  success: boolean("success").notNull(),
+  attempted_at: timestamp("attempted_at").defaultNow(),
+}, (table) => {
+  return {
+    emailTimeIdx: index("login_attempts_email_time_idx").on(table.email, table.attempted_at),
+  }
+});
