@@ -3,8 +3,12 @@
 import { db } from "@/db/client"
 import { hsn_codes } from "@/db/schema"
 import { ilike, or } from "drizzle-orm"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 
 export async function searchHsnCodes(searchTerm: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return { data: [], error: { message: "Unauthorized" } }
   try {
     if (!searchTerm || searchTerm.trim() === "") {
       return { data: [] };

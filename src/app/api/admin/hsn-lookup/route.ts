@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   
 
   // Search by code prefix, description keyword, or search_tags
-  const { data, error } = await import("@/app/actions/generics").then(m => m.rpcCall("hsn_search", { query }))
+  const { data, error } = await import("@/app/actions/hsn").then(m => m.searchHsnCodes(query))
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
