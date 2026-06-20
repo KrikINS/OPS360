@@ -441,13 +441,18 @@ export function StockTransfersView({
     if (!receivingTx) return
     setSubmitting(true)
     try {
-      const { error } = await import("@/app/actions/generics").then(m => m.rpcCall('process_stock_transfer_receive', {
-        p_transfer_id: receivingTx.id,
-        p_discrepancy_flag: discrepancyMode,
-        p_discrepancy_notes: discrepancyNotes
-      }))
+      const notesToSend = discrepancyMode ? discrepancyNotes : ""
+      const { error, success } = await import("@/app/actions/transfers")
+        .then(m => m.confirmTransferReceiptAction(receivingTx.id, notesToSend))
 
       if (error) throw error
+
+      if (discrepancyMode) {
+        const { error: updErr } = await import("@/app/actions/generics").then(m =>
+          m.updateData('stock_transfers', { id: receivingTx.id, status: 'DISCREPANCY' })
+        )
+        if (updErr) throw new Error(updErr.message)
+      }
 
       alert("Inventory synced successfully.")
       setReceivingTx(null)

@@ -233,6 +233,7 @@ export const stock_transfers = pgTable("stock_transfers", {
   source_branch_id: uuid("source_branch_id"),
   destination_branch_id: uuid("destination_branch_id"),
   originator_id: uuid("originator_id"),
+  received_by: uuid("received_by"),
   condition_notes: text("condition_notes"),
   stock_request_id: uuid("stock_request_id"),
   status: text("status"),
