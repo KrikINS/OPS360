@@ -223,14 +223,14 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Implementation for process_stock_transfer_send
-CREATE OR REPLACE FUNCTION process_stock_transfer_send(sourceId uuid, destId uuid, inventoryArr uuid[], notes text) RETURNS text LANGUAGE plpgsql SECURITY DEFINER AS $$
+CREATE OR REPLACE FUNCTION process_stock_transfer_send(sourceId uuid, destId uuid, inventoryArr uuid[], notes text, originatorId uuid) RETURNS text LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_transfer_id uuid := gen_random_uuid();
     v_inv_id uuid;
     v_product_id uuid;
 BEGIN
-    INSERT INTO stock_transfers (id, source_branch_id, destination_branch_id, status, transfer_number)
-    VALUES (v_transfer_id, sourceId, destId, 'IN_TRANSIT', 'TRN-' || upper(substr(v_transfer_id::text, 1, 6)));
+    INSERT INTO stock_transfers (id, source_branch_id, destination_branch_id, status, transfer_number, originator_id)
+    VALUES (v_transfer_id, sourceId, destId, 'IN_TRANSIT', 'TRN-' || upper(substr(v_transfer_id::text, 1, 6)), originatorId);
 
     IF array_length(inventoryArr, 1) > 0 THEN
         FOREACH v_inv_id IN ARRAY inventoryArr

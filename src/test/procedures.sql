@@ -233,14 +233,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Implementation for process_stock_transfer_send
-CREATE OR REPLACE FUNCTION process_stock_transfer_send(sourceId uuid, destId uuid, inventoryArr uuid[], notes text) RETURNS text LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION process_stock_transfer_send(sourceId uuid, destId uuid, inventoryArr uuid[], notes text, originatorId uuid) RETURNS text LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_transfer_id uuid := gen_random_uuid();
     v_inv_id uuid;
     v_product_id uuid;
 BEGIN
-    INSERT INTO stock_transfers (id, source_branch_id, destination_branch_id, status, transfer_number)
-    VALUES (v_transfer_id, sourceId, destId, 'pending', 'TRN-' || upper(substr(v_transfer_id::text, 1, 6)));
+    INSERT INTO stock_transfers (id, source_branch_id, destination_branch_id, status, transfer_number, originator_id)
+    VALUES (v_transfer_id, sourceId, destId, 'IN_TRANSIT', 'TRN-' || upper(substr(v_transfer_id::text, 1, 6)), originatorId);
 
     IF array_length(inventoryArr, 1) > 0 THEN
         FOREACH v_inv_id IN ARRAY inventoryArr
@@ -250,8 +250,6 @@ BEGIN
             INSERT INTO stock_transfer_items (transfer_id, inventory_id, product_id)
             VALUES (v_transfer_id, v_inv_id, v_product_id);
         END LOOP;
-        -- NOTE: inventory status is NOT changed here — stock stays 'Available'
-        -- until completeStockTransfer is called (process_stock_transfer_receive).
     END IF;
     
     RETURN v_transfer_id::text;
@@ -259,7 +257,7 @@ END;
 $$;
 
 -- Implementation for process_stock_transfer_receive
-CREATE OR REPLACE FUNCTION process_stock_transfer_receive(transferId uuid, userId uuid, notes text) RETURNS void LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION process_stock_transfer_receive(transferId uuid, userId uuid, notes text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_rec RECORD;
     v_dest_product_id uuid;
@@ -277,14 +275,13 @@ BEGIN
     SELECT destination_branch_id INTO v_dest_branch_id
     FROM stock_transfers WHERE id = transferId;
 
-    -- Create new 'Available' units in the destination branch.
-    -- The products table is global (no branch_id). Find the destination product by
-    -- looking for a product with the same product_code that already has inventory
-    -- in the destination branch. If not found, use the source product_id.
+    -- Loop through each specific inventory item being transferred to preserve serials/prices
     FOR v_rec IN
-        SELECT DISTINCT sti.product_id AS src_product_id, p.product_code
+        SELECT sti.inventory_id, sti.product_id AS src_product_id, p.product_code,
+               inv.serial_number, inv.price, inv.landed_cost
         FROM stock_transfer_items sti
         JOIN products p ON p.id = sti.product_id
+        JOIN inventory inv ON inv.id = sti.inventory_id
         WHERE sti.transfer_id = transferId
     LOOP
         -- Find a product_id that has existing inventory in the destination branch
@@ -302,16 +299,16 @@ BEGIN
             v_dest_product_id := v_rec.src_product_id;
         END IF;
 
-        -- Insert one new Available unit per transferred item for this product
-        INSERT INTO inventory (product_id, branch_id, status, created_at, updated_at)
-        SELECT v_dest_product_id, v_dest_branch_id, 'Available', now(), now()
-        FROM stock_transfer_items sti
-        WHERE sti.transfer_id = transferId
-          AND sti.product_id = v_rec.src_product_id;
+        -- Insert one new Available unit per transferred item, copying exact stats
+        INSERT INTO inventory (product_id, branch_id, status, serial_number, price, landed_cost, created_at, updated_at)
+        VALUES (v_dest_product_id, v_dest_branch_id, 'Available', v_rec.serial_number, v_rec.price, v_rec.landed_cost, now(), now());
     END LOOP;
 
+    -- Update transfer status, incorporating userId and notes
     UPDATE stock_transfers
-    SET status = 'completed'
+    SET status = 'RECEIVED',
+        received_by = userId,
+        condition_notes = notes
     WHERE id = transferId;
 END;
 $$;

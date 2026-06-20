@@ -14,7 +14,43 @@ export async function getWaybillDataAction(transferNumber: string) {
     if (!(await hasCapability("inventory", "view", session))) {
       return { error: { message: "Insufficient permission" } }
     }
-    const res = await db.execute(sql`SELECT * FROM waybills WHERE transfer_number = ${transferNumber}`)
+
+    const res = await db.execute(sql`
+      SELECT 
+          st.transfer_number as waybill_number,
+          json_build_object(
+              'number', st.transfer_number,
+              'created_at', st.created_at
+          ) as transfer_details,
+          json_build_object(
+              'name', sb.name,
+              'address', sb.full_address
+          ) as source_branch,
+          json_build_object(
+              'name', db.name,
+              'address', db.full_address
+          ) as destination_branch,
+          json_build_object(
+              'full_name', p.full_name
+          ) as originator,
+          COALESCE((
+              SELECT json_agg(json_build_object(
+                  'model_name', prod.model_name,
+                  'category', prod.category,
+                  'serial_number', inv.serial_number
+              ))
+              FROM stock_transfer_items sti
+              JOIN products prod ON sti.product_id = prod.id
+              LEFT JOIN inventory inv ON sti.inventory_id = inv.id
+              WHERE sti.transfer_id = st.id
+          ), '[]'::json) as items
+      FROM stock_transfers st
+      LEFT JOIN branches sb ON st.source_branch_id = sb.id
+      LEFT JOIN branches db ON st.destination_branch_id = db.id
+      LEFT JOIN profiles p ON st.originator_id = p.id
+      WHERE st.transfer_number = ${transferNumber}
+    `)
+
     const result = res as unknown as { rows?: Record<string, unknown>[] } | Record<string, unknown>[]
     const data = Array.isArray(result) ? result[0] : result.rows?.[0]
     return { data }
@@ -241,7 +277,7 @@ export async function processStockTransferAction(sourceId: string, destId: strin
     }
 
     const inventoryArr = `{${inventoryIds.join(',')}}`
-    const res = await db.execute(sql`SELECT process_stock_transfer_send(${sourceId}, ${destId}, ${inventoryArr}::uuid[], ${notes})`)
+    const res = await db.execute(sql`SELECT process_stock_transfer_send(${sourceId}, ${destId}, ${inventoryArr}::uuid[], ${notes}, ${session.user.id})`)
     const result = res as unknown as { rows?: { process_stock_transfer_send: string }[] } | { process_stock_transfer_send: string }[]
     const transferNumber = Array.isArray(result) ? result[0]?.process_stock_transfer_send : result.rows?.[0]?.process_stock_transfer_send
     
@@ -272,7 +308,7 @@ export async function fulfillStockRequestAction(requestId: string, inventoryIds:
     }
 
     const inventoryArr = `{${inventoryIds.join(',')}}`
-    const res = await db.execute(sql`SELECT process_stock_transfer_send(${req.source_branch_id}, ${req.requesting_branch_id}, ${inventoryArr}::uuid[], ${'Fulfilled request ' + req.request_number})`)
+    const res = await db.execute(sql`SELECT process_stock_transfer_send(${req.source_branch_id}, ${req.requesting_branch_id}, ${inventoryArr}::uuid[], ${'Fulfilled request ' + req.request_number}, ${session.user.id})`)
     const result = res as unknown as { rows?: { process_stock_transfer_send: string }[] } | { process_stock_transfer_send: string }[]
     const transferNumber = Array.isArray(result) ? result[0]?.process_stock_transfer_send : result.rows?.[0]?.process_stock_transfer_send
 
