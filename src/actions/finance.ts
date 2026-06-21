@@ -2320,7 +2320,7 @@ export async function getConsolidatedReport(input: {
           CASE WHEN sj.status = 'Completed'
             AND sj.created_at >= ${input.fromDate}::timestamp
             AND sj.created_at <= ${input.toDate}::timestamp
-          THEN sj.service_charge ELSE 0 END
+          THEN sj.actual_cost ELSE 0 END
         ), 0) AS total_service_revenue
       FROM branches b
       LEFT JOIN service_jobs sj ON sj.branch_id = b.id
