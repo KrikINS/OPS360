@@ -47,12 +47,12 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
 
   return (
     <GlobalProvider initialBranch={{ id: profile.branch_id, name: profile.branch_name || "Unknown Branch" }}>
-      <SidebarProvider>
+      <SidebarProvider open={false} onOpenChange={() => {}}>
         <AppSidebar permissions={permissions} profile={profile} />
         <SidebarInset className="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out">
-          <header className="h-14 flex items-center justify-between px-5 border-b border-white/10 bg-[#001529] text-white gap-4 shrink-0 z-50">
+          <header className="h-14 flex items-center justify-between px-5 border-b border-white/10 bg-[#001529] text-white gap-4 shrink-0 z-30">
             <div className="flex items-center gap-3">
-              <SidebarTrigger className="text-white/70 hover:text-white transition-colors" />
+              <SidebarTrigger className="text-white/70 hover:text-white transition-colors md:hidden" />
               <div className="h-5 w-[1px] bg-white/20" />
             </div>
             <div className="flex items-center gap-3">
