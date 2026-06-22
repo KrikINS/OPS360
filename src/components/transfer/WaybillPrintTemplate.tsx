@@ -28,6 +28,9 @@ interface WaybillPrintTemplateProps {
     originator: {
       full_name: string;
     };
+    receiver?: {
+      full_name: string | null;
+    };
     items: {
       model_name: string;
       category: string;
@@ -38,7 +41,7 @@ interface WaybillPrintTemplateProps {
 
 export const WaybillPrintTemplate = React.forwardRef<HTMLDivElement, WaybillPrintTemplateProps>(
   ({ data }, ref) => {
-    const { transfer_details, source_branch, destination_branch, originator, items } = data;
+    const { transfer_details, source_branch, destination_branch, originator, receiver, items } = data;
     const { companyName, logoUrl } = useBranding();
     
     const systemTimestamp = new Date().toLocaleString('en-IN', {
@@ -182,6 +185,15 @@ export const WaybillPrintTemplate = React.forwardRef<HTMLDivElement, WaybillPrin
                     </div>
 
                     <div className="flex flex-col justify-end">
+                      {receiver?.full_name && (
+                        <div className="flex items-center gap-3 mb-12">
+                          <User className="h-8 w-8 p-1.5 bg-slate-100 rounded-full" />
+                          <div>
+                            <p className="text-[8px] font-black uppercase text-slate-400 m-0">Received By</p>
+                            <p className="text-sm font-black m-0">{receiver.full_name}</p>
+                          </div>
+                        </div>
+                      )}
                       <div className="w-full border-t border-black pt-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-center">Received By Signature</p>
                         <p className="text-[7px] text-center text-slate-400 mt-1 uppercase tracking-tighter">Seal & Date</p>

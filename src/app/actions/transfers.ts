@@ -33,6 +33,9 @@ export async function getWaybillDataAction(transferNumber: string) {
           json_build_object(
               'full_name', p.full_name
           ) as originator,
+          json_build_object(
+              'full_name', r.full_name
+          ) as receiver,
           COALESCE((
               SELECT json_agg(json_build_object(
                   'model_name', prod.model_name,
@@ -48,6 +51,7 @@ export async function getWaybillDataAction(transferNumber: string) {
       LEFT JOIN branches sb ON st.source_branch_id = sb.id
       LEFT JOIN branches db ON st.destination_branch_id = db.id
       LEFT JOIN profiles p ON st.originator_id = p.id
+      LEFT JOIN profiles r ON st.received_by = r.id
       WHERE st.transfer_number = ${transferNumber}
     `)
 
