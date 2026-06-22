@@ -43,7 +43,7 @@ export async function GET() {
 
   // ── Sheet 1: Data Entry ─────────────────────────
   const headers = [
-    'Product Code (EHA)',
+    'Product Code (ITM)',
     'Product Name',
     'Brand',
     'Serial Number',

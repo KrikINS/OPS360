@@ -1,6 +1,6 @@
 /**
  * Generates a standardized product code.
- * Format: EHA-[CAT]-[BRN]-[SEQ]
+ * Format: ITM-[CAT]-[BRN]-[SEQ]
  * 
  * @param category - The product category
  * @param brand - The product brand
@@ -12,5 +12,5 @@ export function generateProductCode(category: string, brand: string, sequence: n
   const brn = (brand || "GEN").substring(0, 3).toUpperCase().padEnd(3, 'X');
   const seq = sequence.toString().padStart(3, '0');
   
-  return `EHA-${cat}-${brn}-${seq}`;
+  return `ITM-${cat}-${brn}-${seq}`;
 }

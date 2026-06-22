@@ -1,0 +1,19 @@
+rebrand: remove client-specific EHA prefix from generic code system
+
+- EHA was the original pilot client's name, inappropriately baked
+  into the generic item-coding convention, discrepancy IDs, UI
+  labels, filenames, and docs across the app
+- Renamed the coding convention to ITM (Item) prefix throughout —
+  code generation, UI labels, placeholders, export filenames, docs
+- Company branding (invoice logo/footer, error page fallback) now
+  pulls from the existing GlobalBrandingProvider/Admin Console
+  settings instead of hardcoding the client's name — InvoiceTemplate
+  already had the hook wired in for companyName but had two
+  hardcoded EHA strings sitting unconditionally in the active render
+  path regardless of live data
+- Default branding fallback changed from 'OPS360 ERP' to 'AppTerra'
+- global-error.tsx hardcodes 'AppTerra' specifically (confirmed this
+  boundary sits outside the provider tree and structurally cannot
+  read live branding data)
+- Full repo-wide case-sensitive search confirms zero remaining EHA
+  references anywhere

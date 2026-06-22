@@ -49,7 +49,7 @@ export async function toggleProductArchiveAction(id: string, isArchived: boolean
 export async function getNextSequenceAction(category: string, brand: string): Promise<number> {
   const cat = (category || "MISC").substring(0, 3).toUpperCase().padEnd(3, "X");
   const brn = (brand || "GEN").substring(0, 3).toUpperCase().padEnd(3, "X");
-  const prefix = `EHA-${cat}-${brn}-`;
+  const prefix = `ITM-${cat}-${brn}-`;
 
   const data = await db.select({ product_code: products.product_code })
     .from(products)

@@ -199,7 +199,7 @@ export default function ProductsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[#001529]">Product Master</h1>
-          <p className="text-slate-500 text-xs mt-1">Centralized EHA Protocol & Global Stock Assets</p>
+          <p className="text-slate-500 text-xs mt-1">Centralized ITM Protocol & Global Stock Assets</p>
         </div>
         
         {/* Toast Notification Container */}
@@ -360,7 +360,7 @@ export default function ProductsPage() {
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Model Name</th>
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Brand</th>
                   <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Category</th>
-                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">EHA & HSN</th>
+                  <th className="text-left py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Item Code & HSN</th>
                   <th className="text-center py-2.5 px-1 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Tax</th>
                   <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">MRP</th>
                   <th className="text-right py-2.5 px-4 font-bold text-slate-400 tracking-wider text-[9px] border-r border-slate-100">Dealer Rate</th>

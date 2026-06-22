@@ -317,7 +317,7 @@ export default function DiscrepancyReportPage() {
                 {filteredDiscrepancies.map((item: Discrepancy) => (
                   <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0 text-[11px]">
                     <TableCell className="py-4 px-3 font-black text-[#001529] font-mono border-r border-slate-100/50">
-                      {`EHA-DR-${(allSortedDiscrepancies.findIndex(d => d.id === item.id) + 1).toString().padStart(4, '0')}`}
+                      {`ITM-DR-${(allSortedDiscrepancies.findIndex(d => d.id === item.id) + 1).toString().padStart(4, '0')}`}
                     </TableCell>
                     <TableCell className="py-4 px-2 font-bold text-[#001529] font-mono border-r border-slate-100/50">
                       <div className="flex flex-col gap-0.5">

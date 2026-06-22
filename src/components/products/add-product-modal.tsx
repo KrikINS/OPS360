@@ -74,7 +74,7 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
     fetchMasters()
   }, [open])
 
-  // Update EHA Code whenever category or brand changes
+  // Update ITM Code whenever category or brand changes
   useEffect(() => {
     async function updateCode() {
       if (formData.category && formData.brand) {
@@ -210,9 +210,9 @@ export function AddProductModal({ open, onOpenChange, onSuccess }: AddProductMod
           </div>
 
           <div className="space-y-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-            <Label className="text-blue-700 font-semibold">Generated EHA Code</Label>
+            <Label className="text-blue-700 font-semibold">Generated ITM Code</Label>
             <div className="text-xl font-mono font-bold text-blue-900 uppercase">
-              {generatedCode || "EHA-[CAT]-[BRN]-[SEQ]"}
+              {generatedCode || "ITM-[CAT]-[BRN]-[SEQ]"}
             </div>
             <p className="text-[10px] text-blue-600">This code is auto-generated based on Category and Brand.</p>
           </div>

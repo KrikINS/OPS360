@@ -499,7 +499,7 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                  placeholder="Search Product Model or EHA Code..."
+                  placeholder="Search Product Model or Item Code..."
                   className="pl-10 h-12 bg-slate-50 border-none shadow-inner"
                   value={productSearch}
                   onChange={(e) => searchProducts(e.target.value)}

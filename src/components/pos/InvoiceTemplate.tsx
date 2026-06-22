@@ -16,7 +16,7 @@ interface InvoiceTemplateProps {
 
 export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ invoiceId, initialData, onReady }, ref) => {
   const posContext = useContext(PosContext)
-  const { companyName } = useBranding()
+  const { companyName, logoUrl } = useBranding()
   
   // Local state for archival/re-print mode
   const [archivalData, setArchivalData] = useState<{
@@ -176,7 +176,13 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             isThermal && "flex-col gap-4 text-center items-center pb-2 mb-4"
           )}>
             <div className={cn("flex items-center gap-4", isThermal && "flex-col")}>
-              <div className="h-12 w-12 bg-slate-900 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg">EHA</div>
+              {logoUrl ? (
+                <img src={logoUrl} alt={companyName} className="h-12 w-12 rounded-xl object-contain" />
+              ) : (
+                <div className="h-12 w-12 bg-slate-900 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg">
+                  {companyName.slice(0, 3).toUpperCase()}
+                </div>
+              )}
               <div className={cn("space-y-0.5", isThermal && "text-center")}>
                 <h1 className={cn("text-2xl font-black tracking-tight text-slate-900 uppercase", isThermal && "text-lg")}>{companyName}</h1>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight">
@@ -346,7 +352,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
               </div>
             </div>
             <div className={cn("mt-6 text-center py-3 bg-slate-900 rounded-lg", isThermal && "mt-4 py-2")}>
-              <p className="text-white text-[8px] font-black uppercase tracking-[0.2em]">Thank you for shopping with EHA</p>
+              <p className="text-white text-[8px] font-black uppercase tracking-[0.2em]">Thank you for shopping with {companyName}</p>
             </div>
 
             {/* Loyalty points earned */}

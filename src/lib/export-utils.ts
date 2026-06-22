@@ -16,9 +16,9 @@ export const exportToExcel = (data: Array<Record<string, unknown>>, moduleName: 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
 
-  // Format filename: EHA_[ModuleName]_YYYY-MM-DD.xlsx
+  // Format filename: ITM_[ModuleName]_YYYY-MM-DD.xlsx
   const timestamp = new Date().toISOString().split('T')[0];
-  const filename = `EHA_${moduleName}_${timestamp}.xlsx`;
+  const filename = `ITM_${moduleName}_${timestamp}.xlsx`;
 
   // Process data for export
   XLSX.writeFile(workbook, filename);

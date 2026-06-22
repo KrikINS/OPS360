@@ -69,7 +69,7 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
       'Min_Stock_Level', 'Description'
     ]
     const sample = [
-      'Samsung 55" 4K TV', 'Samsung', 'Television', 'EHA-TV-SAM-001',
+      'Samsung 55" 4K TV', 'Samsung', 'Television', 'ITM-TV-SAM-001',
       82000, 75000, 62000, '8528', 18, 12, 'serial', 2,
       'QLED Smart TV with voice control'
     ]
@@ -77,7 +77,7 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
     // Column widths
     ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 16) }))
     XLSX.utils.book_append_sheet(wb, ws, 'Products')
-    XLSX.writeFile(wb, 'EHA_Product_Import_Template.xlsx')
+    XLSX.writeFile(wb, 'ITM_Product_Import_Template.xlsx')
   }
 
   const downloadErrorReport = () => {
@@ -85,7 +85,7 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
     const ws = XLSX.utils.json_to_sheet(results.errors)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, "Import_Errors")
-    XLSX.writeFile(wb, `EHA_Import_Errors_${new Date().toISOString().split('T')[0]}.xlsx`)
+    XLSX.writeFile(wb, `ITM_Import_Errors_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
   const handleDrag = (e: React.DragEvent) => {
@@ -308,7 +308,7 @@ export function BulkImportModal({ open, onOpenChange, onSuccess }: BulkImportMod
                   </div>
                   <div>
                     <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Need the structure?</p>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Download the standard EHA Template</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Download the standard ITM Template</p>
                   </div>
                 </div>
                 <Button 

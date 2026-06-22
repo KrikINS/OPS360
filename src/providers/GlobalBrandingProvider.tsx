@@ -11,7 +11,7 @@ type BrandingSettings = {
 }
 
 const defaultBranding: BrandingSettings = {
-  companyName: "OPS360 ERP",
+  companyName: "AppTerra",
   logoUrl: "/AppTerra Logo.PNG",
   primaryColor: "#0b3256",
   supportEmail: "info@myappterra.com",

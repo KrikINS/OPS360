@@ -27,7 +27,7 @@ export default function InventoryDocs() {
             <div className="bg-slate-50 border rounded-lg p-4 flex-1">
               <h4 className="font-bold text-sm text-[#001529] mb-2">Step 2: Fill Data</h4>
               <p className="text-xs text-slate-600">
-                Fill in one row per unit with the 10 standard columns: Product Code (EHA), Product Name, Brand, Serial Number, Branch Name, Landed Cost (₹), Selling Price / MRP (₹), Dealer Price (₹), Max Discount (%), and Condition Notes.
+                Fill in one row per unit with the 10 standard columns: Product Code (ITM), Product Name, Brand, Serial Number, Branch Name, Landed Cost (₹), Selling Price / MRP (₹), Dealer Price (₹), Max Discount (%), and Condition Notes.
               </p>
             </div>
             <div className="bg-slate-50 border rounded-lg p-4 flex-1">
@@ -51,7 +51,7 @@ export default function InventoryDocs() {
         </h3>
         <ul className="space-y-3 text-sm text-slate-600 list-disc pl-5">
           <li><strong>Available Inventory:</strong> Shows all active stock grouped by product.</li>
-          <li><strong>Columns:</strong> Brand, EHA Code, Item Name, Network Stock, Category, Distribution, Status, Avg Value (LC).</li>
+          <li><strong>Columns:</strong> Brand, Item Code, Item Name, Network Stock, Category, Distribution, Status, Avg Value (LC).</li>
           <li><strong>Drill-down:</strong> Expand a row to see branch-level breakdown, and expand further to see individual serial numbers.</li>
           <li><strong>Transfer Stock:</strong> Click the red arrow button on low-stock items to open the Transfer Control Center pre-filled.</li>
           <li><strong>Dispositions:</strong> Switch tabs to view historical Sold or Returned serial numbers.</li>

@@ -18,7 +18,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
       <body style={{ margin: 0, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px' }}>
         <div style={{ textAlign: 'center', maxWidth: '400px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '80px', width: '80px', borderRadius: '16px', background: '#001529', color: 'white', fontSize: '28px', fontWeight: 900, marginBottom: '24px' }}>
-            EHA
+            AppTerra
           </div>
           <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 8px' }}>Critical Error</h1>
           <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 8px' }}>

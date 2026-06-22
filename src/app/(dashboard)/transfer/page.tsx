@@ -107,7 +107,7 @@ export default function TransferControlCenter() {
           </p>
         </Card>
         <Card className="bg-slate-50/50 border-none p-6 space-y-3">
-          <Badge className="bg-blue-600 text-white text-[9px] font-black px-3">EHA PROTOCOL</Badge>
+          <Badge className="bg-blue-600 text-white text-[9px] font-black px-3">ITM PROTOCOL</Badge>
           <h4 className="font-black text-sm text-slate-800">Waybill Generation</h4>
           <p className="text-xs text-slate-500 font-medium leading-normal">
             Every transfer generates a unique waybill (TX-ID) used for tracking through the &apos;Pending Shipments&apos; module.
