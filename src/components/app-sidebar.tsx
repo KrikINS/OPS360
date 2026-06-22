@@ -346,7 +346,10 @@ function NavigationContent({
                             {showLabels && (
                               <>
                                 <span className="flex-1 text-left whitespace-nowrap tracking-tight leading-none">{group.title}</span>
-                                <ChevronRight className="h-3 w-3 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-slate-600" />
+                                <ChevronRight className={cn(
+                                  "h-3 w-3 shrink-0 transition-transform duration-200 text-slate-600",
+                                  (openGroupIds[group.id] ?? true) && "rotate-90"
+                                )} />
                               </>
                             )}
                           </div>
