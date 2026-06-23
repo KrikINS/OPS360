@@ -65,6 +65,15 @@ export async function GET() {
           FROM vendor_payments vp
           WHERE vp.po_id = po.id
         ) AS paid_amount,
+        (
+          SELECT COALESCE(SUM(jl.credit) - SUM(jl.debit), 0)
+          FROM journal_lines jl
+          JOIN journal_entries je ON jl.journal_entry_id = je.id
+          JOIN accounts a ON jl.account_id = a.id
+          WHERE je.reference_id = po.id
+            AND je.status = 'posted'
+            AND a.code = '2010'
+        ) AS outstanding_ap,
         COALESCE((
           SELECT json_agg(
             json_build_object(
@@ -87,6 +96,12 @@ export async function GET() {
               'has_discrepancy',   gr.has_discrepancy,
               'total_landed_cost', gr.total_landed_cost,
               'created_at',        gr.created_at,
+              'total_freight', (
+                SELECT COALESCE(SUM((gi.landed_unit_cost - pi.unit_cost) * gi.received_qty), 0)
+                FROM grn_items gi
+                JOIN po_items pi ON gi.po_item_id = pi.id
+                WHERE gi.grn_id = gr.id
+              ),
               'grn_items', (
                 SELECT json_agg(
                   json_build_object(

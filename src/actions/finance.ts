@@ -130,12 +130,13 @@ export async function postGRNJournal(input: {
   branchId: string
   createdBy: string
   totalLandedCost: number
+  freightAmount: number
   totalCGST: number
   totalSGST: number
   totalIGST: number
 }) {
   const totalGST = input.totalCGST + input.totalSGST + input.totalIGST
-  const totalPayable = input.totalLandedCost + totalGST
+  const totalPayableWithoutFreight = input.totalLandedCost - input.freightAmount + totalGST
 
   const [grn] = await db
     .select({ grnNumber: grn_receipts.grn_number })
@@ -191,9 +192,17 @@ export async function postGRNJournal(input: {
 
   lines.push({
     accountCode: '2010',
-    credit: totalPayable,
+    credit: totalPayableWithoutFreight,
     description: `Payable to vendor — ${poRef}`,
   })
+
+  if (input.freightAmount > 0) {
+    lines.push({
+      accountCode: '2010',
+      credit: input.freightAmount,
+      description: `Vendor Freight — ${grnRef}`,
+    })
+  }
 
   await createJournalEntry({
     description: `GRN: ${grnRef} (against ${poRef}) — ₹${input.totalLandedCost.toLocaleString('en-IN')} + GST ₹${totalGST.toLocaleString('en-IN')}`,

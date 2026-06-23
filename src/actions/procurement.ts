@@ -601,6 +601,7 @@ export async function createGRN(input: {
       branchId: input.branchId,
       createdBy: session.user.id,
       totalLandedCost: totalInventoryValueRounded,
+      freightAmount: totalLandedCost, // totalLandedCost from input is just the freight amount
       totalCGST,
       totalSGST,
       totalIGST,

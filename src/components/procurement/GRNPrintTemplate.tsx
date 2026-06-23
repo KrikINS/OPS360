@@ -25,6 +25,7 @@ interface GRNPrintTemplateProps {
     grn_number: string;
     created_at: string;
     condition_notes?: string;
+    total_freight?: number;
     po_number: string;
     originator_name?: string;
     approver_email?: string;
@@ -247,6 +248,15 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                       </table>
                     </div>
                   </div>
+                  
+                  {grn.total_freight !== undefined && grn.total_freight > 0 && (
+                    <div className="mt-2 border-t-2 border-slate-100 pt-3 flex justify-end">
+                      <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg">
+                        <span className="font-bold text-[10px] text-slate-500 uppercase tracking-widest">Inbound Vendor Freight:</span>
+                        <span className="font-black text-sm text-[#001529]">₹{grn.total_freight.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  )}
 
                 </div>
               </td>

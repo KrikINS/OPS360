@@ -162,6 +162,8 @@ type PurchaseOrder = {
   branch_id: string
   status: 'draft' | 'pending_approval' | 'needs_revision' | 'approved' | 'received' | 'partially_received' | 'cancelled' | 'PARTIALLY_RETURNED' | 'RETURNED' | 'SHORT_CLOSED'
   total_amount: number
+  paid_amount?: number
+  outstanding_ap?: number
   cgst_amount: number
   sgst_amount: number
   igst_amount: number
@@ -175,7 +177,6 @@ type PurchaseOrder = {
   debit_notes?: { id: string, status: string, amount: number }[]
   discrepancies?: { id: string, status: string }[]
   grns?: { id: string, grn_number: string, grn_items?: { freight_value: number }[] }[]
-  paid_amount?: number
   payments?: { amount: number, payment_date: string, payment_method: string, reference_number: string, notes: string }[]
   requester_name?: string
   approver_name?: string
@@ -212,6 +213,7 @@ type PurchaseOrder = {
   po_number: string
   po_id: string
   created_at: string
+  total_freight?: number
   originator_name: string
   approver_email?: string
   condition_notes: string
@@ -3622,23 +3624,22 @@ Are you sure you want to proceed?`)) return;
                 <p><span className="font-medium">Vendor:</span> {paymentPO.vendor?.name ?? '—'}</p>
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
                   {(() => {
-                    const invoiceTotal = paymentPO.items?.length 
-                      ? paymentPO.items.reduce((acc, item) => acc + (Number(item.unit_price) * item.quantity * (1 + (Number(item.tax_rate) || 0) / 100)), 0)
-                      : Number(paymentPO.total_amount ?? 0);
-                    const balance = invoiceTotal - Number(paymentPO.paid_amount ?? 0)
+                    const balance = Number(paymentPO.outstanding_ap ?? 0)
+                    const paid = Number(paymentPO.paid_amount ?? 0)
+                    const totalCharged = balance + paid
                     return (
                       <>
                         <div className="text-center">
-                          <p className="text-xs text-slate-500 uppercase tracking-wider">Total</p>
-                          <p className="font-semibold text-slate-800">₹{invoiceTotal.toLocaleString('en-IN')}</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">Total Charged</p>
+                          <p className="font-semibold text-slate-800">₹{totalCharged.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-slate-500 uppercase tracking-wider">Paid</p>
-                          <p className="font-semibold text-green-600">₹{Number(paymentPO.paid_amount ?? 0).toLocaleString('en-IN')}</p>
+                          <p className="font-semibold text-green-600">₹{paid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-slate-500 uppercase tracking-wider">Balance</p>
-                          <p className="font-semibold text-red-600">₹{balance.toLocaleString('en-IN')}</p>
+                          <p className="font-semibold text-red-600">₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                         </div>
                       </>
                     )
@@ -3676,7 +3677,7 @@ Are you sure you want to proceed?`)) return;
                   value={payAmount}
                   onChange={e => setPayAmount(e.target.value)}
                   placeholder="0.00"
-                  max={Number((paymentPO.items?.length ? paymentPO.items.reduce((acc: any, item: any) => acc + (Number(item.unit_price) * item.quantity * (1 + (Number(item.tax_rate) || 0) / 100)), 0) : Number(paymentPO.total_amount ?? 0)) - Number(paymentPO.paid_amount ?? 0)).toFixed(2)}
+                  max={Number(paymentPO.outstanding_ap ?? 0).toFixed(2)}
                 />
               </div>
 
