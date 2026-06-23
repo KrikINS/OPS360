@@ -3676,7 +3676,7 @@ Are you sure you want to proceed?`)) return;
                   value={payAmount}
                   onChange={e => setPayAmount(e.target.value)}
                   placeholder="0.00"
-                  max={Number((paymentPO.total_amount ?? 0) - (paymentPO.paid_amount ?? 0)).toFixed(2)}
+                  max={Number((paymentPO.items?.length ? paymentPO.items.reduce((acc: any, item: any) => acc + (Number(item.unit_price) * item.quantity * (1 + (Number(item.tax_rate) || 0) / 100)), 0) : Number(paymentPO.total_amount ?? 0)) - Number(paymentPO.paid_amount ?? 0)).toFixed(2)}
                 />
               </div>
 
