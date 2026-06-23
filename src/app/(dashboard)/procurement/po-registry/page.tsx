@@ -162,6 +162,9 @@ type PurchaseOrder = {
   branch_id: string
   status: 'draft' | 'pending_approval' | 'needs_revision' | 'approved' | 'received' | 'partially_received' | 'cancelled' | 'PARTIALLY_RETURNED' | 'RETURNED' | 'SHORT_CLOSED'
   total_amount: number
+  cgst_amount: number
+  sgst_amount: number
+  igst_amount: number
   created_at: string
   vendor: { name: string, state: string, payment_terms?: string }
   branch: { name: string, state?: string, gstin?: string }
@@ -3616,18 +3619,30 @@ Are you sure you want to proceed?`)) return;
                 <p><span className="font-medium">PO:</span> {paymentPO.po_number}</p>
                 <p><span className="font-medium">Vendor:</span> {paymentPO.vendor?.name ?? '—'}</p>
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
-                  <div className="text-center">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Total</p>
-                    <p className="font-semibold text-slate-800">₹{Number(paymentPO.total_amount ?? 0).toLocaleString('en-IN')}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Paid</p>
-                    <p className="font-semibold text-green-600">₹{Number(paymentPO.paid_amount ?? 0).toLocaleString('en-IN')}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Balance</p>
-                    <p className="font-semibold text-red-600">₹{Number((paymentPO.total_amount ?? 0) - (paymentPO.paid_amount ?? 0)).toLocaleString('en-IN')}</p>
-                  </div>
+                  {(() => {
+                    const base = Number(paymentPO.total_amount ?? 0)
+                    const cgst = Number(paymentPO.cgst_amount ?? 0)
+                    const sgst = Number(paymentPO.sgst_amount ?? 0)
+                    const igst = Number(paymentPO.igst_amount ?? 0)
+                    const invoiceTotal = base + cgst + sgst + igst
+                    const balance = invoiceTotal - Number(paymentPO.paid_amount ?? 0)
+                    return (
+                      <>
+                        <div className="text-center">
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">Total</p>
+                          <p className="font-semibold text-slate-800">₹{invoiceTotal.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">Paid</p>
+                          <p className="font-semibold text-green-600">₹{Number(paymentPO.paid_amount ?? 0).toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">Balance</p>
+                          <p className="font-semibold text-red-600">₹{balance.toLocaleString('en-IN')}</p>
+                        </div>
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
 
