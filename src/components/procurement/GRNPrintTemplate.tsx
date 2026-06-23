@@ -14,6 +14,9 @@ interface Branch {
   name: string;
   full_address?: string;
   gstin?: string;
+  city?: string;
+  state?: string;
+  phone?: string;
 }
 
 interface GRNPrintTemplateProps {
@@ -40,7 +43,7 @@ interface GRNPrintTemplateProps {
 
 export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplateProps>(
   ({ grn, branch }, ref) => {
-    const { companyName, logoUrl, supportEmail, billingAddress } = useBranding();
+    const { companyName, logoUrl, supportEmail } = useBranding();
     const systemTimestamp = new Date().toLocaleString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -139,10 +142,10 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                   {/* HQ Address Section - Matches PO Body First Block */}
                   <div className="py-6 px-10 flex justify-between items-start bg-slate-50 border border-slate-200 rounded-xl">
                     <div className="space-y-0.5 text-[10px] font-bold text-black uppercase tracking-tight">
-                      <p className="m-0">{billingAddress}</p>
-                      <p className="m-0">Minzta Hotel, Vazhappilly Tower, Koratty</p>
-                      <p className="m-0">Thrissur, Kerala</p>
-                      <p className="m-0">Contact No: 9747552277 | Email: {supportEmail}</p>
+                      <p className="m-0">{companyName}</p>
+                      <p className="m-0">{branch?.full_address || 'Address not configured'}</p>
+                      <p className="m-0">{branch?.city}{branch?.city && branch?.state ? ', ' : ''}{branch?.state}</p>
+                      <p className="m-0">Contact No: {branch?.phone || 'N/A'} | Email: {supportEmail}</p>
                     </div>
                     <div className="text-right text-[10px] font-bold text-black">
                       <p className="m-0 uppercase tracking-widest text-slate-500">Receipt Reference</p>
@@ -165,7 +168,7 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                         <p className="text-[10px] text-black mt-1 m-0">{branch?.full_address || 'Address verification pending'}</p>
                         <p className="text-[9px] font-black text-black mt-1 m-0 uppercase flex items-center gap-2">
                            <span className="opacity-50 tracking-tighter">GSTIN:</span> 
-                           {branch?.gstin || '32BBBBB0000B1Z5'}
+                           {branch?.gstin || 'GSTIN Not Configured'}
                         </p>
                       </div>
                     </div>
@@ -206,34 +209,39 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                         </thead>
                         <tbody className="text-[11px] text-black">
                           {grn.items.map((item, idx) => (
-                            <tr key={idx} className="border-b border-slate-100">
-                              <td className="p-4 text-center align-top font-bold text-black border-r border-slate-100">{idx + 1}</td>
-                              <td className="p-4 align-top">
-                                <div className="font-bold text-black text-sm whitespace-normal break-words leading-tight">{item.product.model_name}</div>
-                                <div className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter mt-1">SKU: {item.product.product_code}</div>
-                                
-                                {item.serial_numbers && item.serial_numbers.length > 0 && (
-                                  <div className="mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 leading-none">Registered Serial Inventory</p>
-                                    <div className="grid grid-cols-4 gap-2">
-                                      {item.serial_numbers.map((sn, snIdx) => (
-                                        <div key={snIdx} className="bg-white border border-slate-200 px-2 py-1 rounded font-mono text-[9px] font-bold text-center">
-                                          {sn}
-                                        </div>
-                                      ))}
+                            <React.Fragment key={idx}>
+                              <tr className={`border-slate-100 ${item.serial_numbers && item.serial_numbers.length > 0 ? '' : 'border-b'}`}>
+                                <td className="p-4 text-center align-top font-bold text-black border-r border-slate-100">{idx + 1}</td>
+                                <td className="p-4 align-top">
+                                  <div className="font-bold text-black text-sm whitespace-normal break-words leading-tight">{item.product.model_name}</div>
+                                  <div className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter mt-1">SKU: {item.product.product_code}</div>
+                                </td>
+                                <td className="p-4 align-top text-black font-mono text-[10px] font-bold tracking-tighter">
+                                  {item.product.hsn_code}
+                                </td>
+                                <td className="p-4 text-center align-top">
+                                  <span className="bg-[#064E3B] text-white font-black px-3 py-1 rounded text-xs">
+                                    {item.quantity} Units
+                                  </span>
+                                </td>
+                              </tr>
+                              {item.serial_numbers && item.serial_numbers.length > 0 && (
+                                <tr className="border-b border-slate-100">
+                                  <td colSpan={4} className="px-4 pb-4 pt-1">
+                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 leading-none">Registered Serial Inventory</p>
+                                      <div className="grid grid-cols-8 gap-2">
+                                        {item.serial_numbers.map((sn, snIdx) => (
+                                          <div key={snIdx} className="bg-white border border-slate-200 px-2 py-1 rounded font-mono text-[9px] font-bold text-center break-all">
+                                            {sn}
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
-                              </td>
-                              <td className="p-4 align-top text-black font-mono text-[10px] font-bold tracking-tighter">
-                                {item.product.hsn_code}
-                              </td>
-                              <td className="p-4 text-center align-top">
-                                <span className="bg-[#064E3B] text-white font-black px-3 py-1 rounded text-xs">
-                                  {item.quantity} Units
-                                </span>
-                              </td>
-                            </tr>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>
