@@ -138,9 +138,9 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
           <tbody>
             <tr>
               <td>
-                <div className="px-10 space-y-10 py-6">
+                <div className="px-10 space-y-6 py-4">
                   {/* HQ Address Section - Matches PO Body First Block */}
-                  <div className="py-6 px-10 flex justify-between items-start bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="py-4 px-8 flex justify-between items-start bg-slate-50 border border-slate-200 rounded-xl">
                     <div className="space-y-0.5 text-[10px] font-bold text-black uppercase tracking-tight">
                       <p className="m-0">{companyName}</p>
                       <p className="m-0">{branch?.full_address || 'Address not configured'}</p>
@@ -156,7 +156,7 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                   </div>
 
                   {/* Metadata Grid (Receiving Branch & Audit) */}
-                  <div className="grid grid-cols-2 gap-8 p-8 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="grid grid-cols-2 gap-6 p-6 rounded-2xl bg-slate-50 border border-slate-100">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-[#001529]">
                         <Building2 className="h-5 w-5" />
@@ -248,13 +248,6 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                     </div>
                   </div>
 
-                  {/* Certification Block */}
-                  <div className="flex justify-end pt-6">
-                    <div className="text-center w-full max-w-[240px] border-t-2 pt-6 border-black">
-                       <p className="text-[10px] font-black uppercase tracking-[0.2em] m-0 text-black">Inbound Verifier</p>
-                       <p className="text-[7px] font-bold text-slate-500 mt-1 uppercase m-0 tracking-[0.3em]">Electronically Validated Stage 1</p>
-                    </div>
-                  </div>
                 </div>
               </td>
             </tr>
@@ -271,26 +264,26 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
         {/* Standardized Footer */}
         <div className="w-full px-10 py-6 border-t font-bold text-black uppercase tracking-widest shrink-0 bg-white print-footer">
           <div className="flex justify-between items-end w-full">
-            <div className="w-[45%] flex flex-col gap-1">
-              <p className="m-0 text-black font-black text-[9px]">DOCUMENT VERIFICATION: OPS360 ENTERPRISE ERP</p>
-              <p className="text-[7px] opacity-100 m-0 leading-tight font-bold uppercase tracking-wider">This is an electronically generated document. No physical signature is required.</p>
+            <div className="w-[45%]">
+              <p className="text-[7px] opacity-100 m-0 leading-tight font-bold uppercase tracking-wider text-slate-500">
+                This is an electronically generated document. No physical signature is required.
+              </p>
             </div>
             
-            <div className="w-[55%] text-right flex flex-row items-end justify-end gap-6 text-[8px]">
-              <div className="flex flex-col gap-1">
-                <p className="m-0 uppercase tracking-tighter">Receipt Timestamp: {systemTimestamp}</p>
-                <p className="text-[7px] opacity-100 m-0 uppercase flex items-center gap-1 justify-end font-black text-[#064E3B]">
-                   <CheckCircle2 className="h-2 w-2" /> Authenticated Hub Entry
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[7px] font-black text-black uppercase tracking-widest">Scan to Verify<br/>Authenticity</span>
-                <div className="bg-white p-1 border border-black h-12 w-12 flex items-center justify-center">
+            <div className="w-[55%] flex justify-end">
+              <div className="flex items-center gap-4 border-2 border-black p-2 bg-slate-50">
+                <div className="flex flex-col text-right gap-1 pr-4 border-r-2 border-black">
+                  <p className="m-0 text-[8px] uppercase tracking-tighter">Timestamp: {systemTimestamp}</p>
+                  <p className="text-[7px] m-0 uppercase flex items-center gap-1 justify-end font-black text-[#064E3B]">
+                     <CheckCircle2 className="h-3 w-3" /> Authenticated Hub Entry
+                  </p>
+                </div>
+                <div className="bg-white p-1 h-12 w-12 flex items-center justify-center shrink-0 border border-slate-200">
                   <Image 
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-GRN-${grn.grn_number}`)}`} 
                     alt="QR Code" 
-                    width={48}
-                    height={48}
+                    width={40}
+                    height={40}
                     unoptimized
                     className="h-full w-full object-contain grayscale"
                   />

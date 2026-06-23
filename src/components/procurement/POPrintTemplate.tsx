@@ -277,9 +277,40 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </table>
             </div>
 
-            {/* Financial Summary Block */}
-            <div className="flex justify-end pt-4">
-              <div className="w-[320px] space-y-2 p-6 border-2 border-black">
+            {/* Financial Summary Block & Audit */}
+            <div className="flex justify-between items-start pt-4">
+              <div className="w-[320px] space-y-6">
+                 <div className="p-6 text-black relative border-2 border-black bg-white">
+                    <div className="absolute top-0 right-0 p-2 opacity-10">
+                      <ShieldAlert className="h-20 w-20" />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 m-0">Security Compliance Audit</h4>
+                    <div className="grid grid-cols-2 gap-4 relative z-10">
+                      <div className="space-y-0.5">
+                        <p className="text-[8px] text-slate-600 font-bold uppercase m-0">Originator</p>
+                        <p className="text-xs font-black m-0">{po.requester_name || 'System Auto-Gen'}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[8px] text-slate-600 font-bold uppercase m-0">Certification</p>
+                        <p className="text-xs font-black text-black m-0">
+                          {po.approver_name ? 'Certified Approved' : 'Awaiting Review'}
+                        </p>
+                        {po.approver_email && (
+                          <p className="text-[8px] font-mono text-slate-600 truncate">{po.approver_email}</p>
+                        )}
+                      </div>
+                    </div>
+                 </div>
+
+                 <div className="flex justify-start pt-4">
+                  <div className="text-center w-full max-w-[200px] border-t-2 pt-4 border-black">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] m-0 text-black">Authorized Signatory</p>
+                    <p className="text-[7px] font-bold text-slate-600 mt-1 uppercase m-0 tracking-widest">Validated Digital Document</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-[320px] space-y-2 p-6 border-2 border-black bg-white">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-black uppercase tracking-tight">Net Taxable Value</span>
                   <span className="font-black text-black">{formatCurrency(netTaxableValue)}</span>
@@ -309,8 +340,8 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
             </div>
           </div>
 
-          {/* Amount in Words & Terms */}
-          <div className="grid grid-cols-2 gap-10">
+          {/* Contractual Terms & Conditions */}
+          <div className="mt-8">
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2 m-0">
                 <ShieldAlert className="h-4 w-4" />
@@ -318,38 +349,6 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
               </h4>
               <div className="text-[10px] text-slate-600 leading-relaxed font-medium whitespace-pre-wrap p-5 rounded-xl border border-slate-100 bg-slate-50/50 italic">
                 {po.terms_content || `1. Supply as per agreed specifications and delivery schedule.\n2. Invoices must mention the PO Number and GSTIN of both parties.\n3. Subject to ${branch.city || branch.state || 'Registered'} Jurisdiction.`}
-              </div>
-
-            </div>
-
-            <div className="space-y-6">
-               <div className="p-6 text-black relative border-2 border-black">
-                  <div className="absolute top-0 right-0 p-2 opacity-10">
-                    <ShieldAlert className="h-20 w-20" />
-                  </div>
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 m-0">Security Compliance Audit</h4>
-                  <div className="grid grid-cols-2 gap-4 relative z-10">
-                    <div className="space-y-0.5">
-                      <p className="text-[8px] text-slate-600 font-bold uppercase m-0">Originator</p>
-                      <p className="text-xs font-black m-0">{po.requester_name || 'System Auto-Gen'}</p>
-                    </div>
-                    <div className="space-y-0.5">
-                      <p className="text-[8px] text-slate-600 font-bold uppercase m-0">Certification</p>
-                      <p className="text-xs font-black text-black m-0">
-                        {po.status === 'approved' && po.approver_name ? 'Certified Approved' : 'Awaiting Review'}
-                      </p>
-                      {po.approver_email && (
-                        <p className="text-[8px] font-mono text-slate-600 truncate">{po.approver_email}</p>
-                      )}
-                    </div>
-                  </div>
-               </div>
-
-               <div className="flex justify-end pt-4">
-                <div className="text-center w-full max-w-[200px] border-t-2 pt-4 border-black">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] m-0 text-black">Authorized Signatory</p>
-                  <p className="text-[7px] font-bold text-slate-600 mt-1 uppercase m-0 tracking-widest">Validated Digital Document</p>
-                </div>
               </div>
             </div>
           </div>
@@ -360,40 +359,34 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
           <tfoot>
             <tr>
               <td>
-                <div className="h-[30mm]"></div> {/* Matches fixed footer height + extra visual padding */}
+                <div className="h-[30mm]"></div>
               </td>
             </tr>
           </tfoot>
         </table>
-
-        <div 
-          className="w-full px-10 py-6 border-t font-bold text-black uppercase tracking-widest shrink-0 bg-white print-footer"
-        >
+        {/* Standardized Footer */}
+        <div className="w-full px-10 py-6 border-t font-bold text-black uppercase tracking-widest shrink-0 bg-white print-footer">
           <div className="flex justify-between items-end w-full">
-            <div className="w-[45%] flex flex-col gap-1">
-              <p className="m-0 text-black font-black text-[9px]">DOCUMENT VERIFICATION: OPS360 ENTERPRISE ERP</p>
-              <p className="text-[7px] opacity-100 m-0 leading-tight font-bold uppercase tracking-wider">This is an electronically generated document. No physical signature is required.</p>
+            <div className="w-[45%]">
+              <p className="text-[7px] opacity-100 m-0 leading-tight font-bold uppercase tracking-wider text-slate-500">
+                This is an electronically generated document. No physical signature is required.
+              </p>
             </div>
             
-            <div className="text-center">
-              {/* Page numbers handled by browser */}
-            </div>
-
-            <div className="w-[55%] text-right flex flex-row items-end justify-end gap-6 text-[8px]">
-              <div className="flex flex-col gap-1">
-                <p className="m-0 uppercase tracking-tighter">Generated: {systemTimestamp}</p>
-                <p className="text-[7px] opacity-100 m-0 uppercase flex items-center gap-1 justify-end font-black text-black">
-                   <CheckCircle2 className="h-2 w-2" /> Verified Digital Asset
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[7px] font-black text-black uppercase tracking-widest">Scan to Verify<br/>Authenticity</span>
-                <div className="bg-white p-1 border border-black h-12 w-12 flex items-center justify-center">
+            <div className="w-[55%] flex justify-end">
+              <div className="flex items-center gap-4 border-2 border-black p-2 bg-slate-50">
+                <div className="flex flex-col text-right gap-1 pr-4 border-r-2 border-black">
+                  <p className="m-0 text-[8px] uppercase tracking-tighter">Timestamp: {systemTimestamp}</p>
+                  <p className="text-[7px] m-0 uppercase flex items-center gap-1 justify-end font-black text-[#064E3B]">
+                     <CheckCircle2 className="h-3 w-3" /> Authenticated Hub Entry
+                  </p>
+                </div>
+                <div className="bg-white p-1 h-12 w-12 flex items-center justify-center shrink-0 border border-slate-200">
                   <Image 
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`OPS360-PO-${po.po_number}`)}`} 
                     alt="QR Code" 
-                    width={48}
-                    height={48}
+                    width={40}
+                    height={40}
                     unoptimized
                     className="h-full w-full object-contain grayscale"
                   />
