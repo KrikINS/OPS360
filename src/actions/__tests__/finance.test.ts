@@ -130,6 +130,7 @@ describe('postGRNJournal', () => {
       totalCGST: 4500,
       totalSGST: 4500,
       totalIGST: 0,
+      freightAmount: 0,
     })
 
     const entries = await db
