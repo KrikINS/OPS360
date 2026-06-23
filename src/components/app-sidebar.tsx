@@ -45,14 +45,7 @@ import {
 } from "@/components/ui/collapsible"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+
 import { can, type Module } from "@/lib/rbac"
 
 const GROUP_TO_MODULE: Record<string, Module> = {
@@ -251,73 +244,7 @@ function NavigationContent({
                 )
               }
 
-              if (!showLabels && hasItems) {
-                return (
-                  <SidebarMenuItem key={group.id}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={(props) => (
-                          <SidebarMenuButton
-                            {...props}
-                            isActive={isGroupActive}
-                            tooltip={group.title}
-                            className={cn(
-                              "h-7 w-full flex items-center justify-center px-0 transition-all duration-150 relative tracking-tight group-data-[state=collapsed]:justify-center text-xs",
-                              isGroupActive ? "text-white bg-[#7FD1E3]/05" : "text-slate-300 hover:text-white hover:bg-white/5",
-                              props.className
-                            )}
-                          >
-                            <group.icon className={cn("h-4 w-4 shrink-0", isGroupActive ? "text-[#7FD1E3]" : "text-slate-400")} />
-                          </SidebarMenuButton>
-                        )}
-                      />
-                      <DropdownMenuContent 
-                        side="right" 
-                        align="start" 
-                        sideOffset={12}
-                        className="w-64 bg-[#0F172A] border border-white/10 text-slate-300 z-[100] p-1 shadow-2xl backdrop-blur-xl"
-                      >
-                        <DropdownMenuGroup>
-                          <DropdownMenuLabel className="text-[#7FD1E3] font-bold text-[10px] uppercase tracking-widest px-3 py-3 border-b border-white/5 mb-1">
-                            {group.title}
-                          </DropdownMenuLabel>
-                          {group.items.map((item) => {
-                            const isActive = currentUrl === item.url || pathname === item.url.split('?')[0];
-                            return (
-                              <DropdownMenuItem
-                                key={item.title}
-                                render={(props) => (
-                                  <Link
-                                    {...props}
-                                    href={item.url}
-                                    onClick={() => {
-                                      setNavigatingTo(item.url);
-                                    }}
-                                    className={cn(
-                                      "flex items-center gap-2 px-2 py-1.5 rounded-md text-[9px] uppercase tracking-wider transition-all duration-150 cursor-pointer outline-none w-full",
-                                      isActive 
-                                        ? "text-white bg-[#7FD1E3]/10 font-bold" 
-                                        : "hover:bg-white/5 hover:text-white",
-                                      props.className
-                                    )}
-                                  >
-                                    {navigatingTo === item.url ? (
-                                      <ModernOrbitSpinner />
-                                    ) : (
-                                      <item.icon className={cn("h-3 w-3 shrink-0", isActive ? "text-[#7FD1E3]" : "text-slate-400")} />
-                                    )}
-                                    <span className="flex-1 truncate">{item.title}</span>
-                                  </Link>
-                                )}
-                              />
-                            );
-                          })}
-                        </DropdownMenuGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </SidebarMenuItem>
-                );
-              }
+
 
               return (
                 <Collapsible
