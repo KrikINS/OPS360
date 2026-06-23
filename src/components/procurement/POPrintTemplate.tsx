@@ -17,6 +17,9 @@ interface Branch {
   name: string;
   full_address?: string; // Corrected column name
   gstin?: string;
+  city?: string;
+  state?: string;
+  phone?: string;
 }
 
 interface POPrintTemplateProps {
@@ -52,7 +55,7 @@ interface POPrintTemplateProps {
 
 export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateProps>(
   ({ po, vendor, branch }, ref) => {
-    const { companyName, logoUrl, supportEmail, billingAddress } = useBranding();
+    const { companyName, logoUrl, supportEmail } = useBranding();
     const systemTimestamp = new Date().toLocaleString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -166,10 +169,11 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
           {/* HQ Address + Reference — first body section (was second header strip) */}
           <div className="py-6 px-10 flex justify-between items-start bg-slate-50 border border-slate-200 rounded-xl">
             <div className="space-y-0.5 text-[10px] font-bold text-black uppercase tracking-tight">
-              <p className="m-0">{billingAddress}</p>
-              <p className="m-0">Minzta Hotel, Vazhappilly Tower, Koratty</p>
-              <p className="m-0">Thrissur, Kerala</p>
-              <p className="m-0">Contact No: 9747552277 | Email: {supportEmail}</p>
+              <p className="m-0">{companyName}</p>
+              <p className="m-0">{branch.full_address || 'Address not configured'}</p>
+              <p className="m-0">{branch.city}{branch.city && branch.state ? ', ' : ''}{branch.state}</p>
+              <p className="m-0">Contact No: {branch.phone || 'N/A'} | Email: {supportEmail}</p>
+              <p className="m-0 mt-1 uppercase">GSTIN: {branch.gstin || 'GSTIN Not Configured'}</p>
             </div>
             <div className="text-right text-[10px] font-bold text-black">
               <p className="m-0 uppercase tracking-widest text-slate-500">Reference Number</p>
@@ -190,7 +194,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                 <p className="text-[10px] text-black mt-1 m-0">{branch?.full_address || 'Site delivery as per instructions'}</p>
                 <p className="text-[9px] font-black text-black mt-1 m-0 uppercase flex items-center gap-2">
                    <span className="opacity-50 tracking-tighter">GSTIN:</span> 
-                   {branch?.gstin || '32BBBBB0000B1Z5'}
+                   {branch?.gstin || 'GSTIN Not Configured'}
                 </p>
               </div>
             </div>
@@ -313,7 +317,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                 Contractual Terms & Conditions
               </h4>
               <div className="text-[10px] text-slate-600 leading-relaxed font-medium whitespace-pre-wrap p-5 rounded-xl border border-slate-100 bg-slate-50/50 italic">
-                {po.terms_content || "1. Supply as per agreed specifications and delivery schedule.\n2. Invoices must mention the PO Number and GSTIN of both parties.\n3. Subject to Ernakulam/Kochi Jurisdiction."}
+                {po.terms_content || `1. Supply as per agreed specifications and delivery schedule.\n2. Invoices must mention the PO Number and GSTIN of both parties.\n3. Subject to ${branch.city || branch.state || 'Registered'} Jurisdiction.`}
               </div>
 
             </div>
