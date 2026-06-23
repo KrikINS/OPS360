@@ -245,23 +245,23 @@ export function OrganizationTab() {
                           <p className="text-sm font-semibold text-slate-900 leading-relaxed">{selectedBranch.full_address || 'N/A'}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-[10px] text-slate-400 font-bold uppercase">City</p>
-                            <p className="text-sm font-semibold text-slate-900">{selectedBranch.city || 'N/A'}</p>
+                            <p className="text-sm font-semibold text-slate-900 break-words">{selectedBranch.city || 'N/A'}</p>
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-[10px] text-slate-400 font-bold uppercase">Pincode</p>
-                            <p className="text-sm font-semibold text-slate-900">{selectedBranch.pincode || 'N/A'}</p>
+                            <p className="text-sm font-semibold text-slate-900 break-words">{selectedBranch.pincode || 'N/A'}</p>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-[10px] text-slate-400 font-bold uppercase">State</p>
-                            <p className="text-sm font-semibold text-slate-900">{selectedBranch.state}</p>
+                            <p className="text-sm font-semibold text-slate-900 break-words">{selectedBranch.state}</p>
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-[10px] text-slate-400 font-bold uppercase">State Code</p>
-                            <p className="text-sm font-semibold text-slate-900">{selectedBranch.state_code}</p>
+                            <p className="text-sm font-semibold text-slate-900 break-words">{selectedBranch.state_code}</p>
                           </div>
                         </div>
                       </div>

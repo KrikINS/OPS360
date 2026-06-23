@@ -101,6 +101,7 @@ import { getGRNReceiptsAction } from '@/app/actions/procurement'
 import ProcessReturns from "../return/page"
 import DiscrepancyReportPage from "../../discrepancy-report/page"
 import { settleVendorPayment, getVendorPayments } from '@/actions/finance'
+import { useBranding } from "@/providers/GlobalBrandingProvider"
 
 // Types
 type Vendor = {
@@ -248,6 +249,7 @@ type GRNRawData = {
 }
 
 export default function ProcurementGRNPage() {
+  const { companyName, logoUrl } = useBranding()
   const [isCreatingPO, setIsCreatingPO] = useState(false)
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -2772,11 +2774,11 @@ Are you sure you want to proceed?`)) return;
                 <div className="text-right flex flex-col items-end gap-3">
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-xl font-black text-white m-0 uppercase tracking-tighter">Ethan Home Appliances</p>
+                      <p className="text-xl font-black text-white m-0 uppercase tracking-tighter">{companyName}</p>
                       <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
                     </div>
                     <div className="bg-white p-2 rounded-lg">
-                       <Image src="/appterra-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
+                       <Image src={logoUrl || "/appterra-logo.png"} alt="Company Logo" width={40} height={40} className="h-10 w-auto object-contain" />
                     </div>
                   </div>
                   
@@ -2823,7 +2825,7 @@ Are you sure you want to proceed?`)) return;
                     <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Corporate Headquarters</Label>
                   </div>
                   <div className="pl-6 border-l-2 border-slate-200">
-                    <p className="font-bold text-lg text-slate-900">Ethan Home Appliances</p>
+                    <p className="font-bold text-lg text-slate-900">{companyName}</p>
                     <p className="text-xs text-slate-500 font-medium">Ops360 Governance Hub</p>
                     <p className="text-[10px] text-slate-400 mt-1 italic">Authorized Central Registry</p>
                   </div>
@@ -3058,18 +3060,23 @@ Are you sure you want to proceed?`)) return;
                 <div className="text-right flex flex-col items-end gap-3">
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-xl font-black text-white m-0 uppercase tracking-tighter">Ethan Home Appliances</p>
+                      <p className="text-xl font-black text-white m-0 uppercase tracking-tighter">{companyName}</p>
                       <p className="text-[10px] uppercase tracking-[0.3em] font-black m-0 text-[#7FD1E3]">Ops360 Enterprise ERP</p>
                     </div>
                     <div className="bg-white p-2 rounded-lg">
-                       <Image src="/appterra-logo.png" alt="Ethan Logo" width={40} height={40} className="h-10 w-auto object-contain" />
+                       <Image src={logoUrl || "/appterra-logo.png"} alt="Company Logo" width={40} height={40} className="h-10 w-auto object-contain" />
                     </div>
                   </div>
-                  <div className="text-[10px] text-slate-400 font-bold max-w-[280px] leading-tight mt-1 italic">
-                    <p className="m-0 uppercase tracking-widest text-[#7FD1E3] mb-0.5">Corporate Headquarters</p>
-                    <p className="m-0 mb-0.5 whitespace-nowrap">Minzta Hotel, Vazhappilly Tower, Koratty, Thrissur, Kerala</p>
-                    <p className="m-0 uppercase tracking-widest font-black">GSTIN: 32BBBBB0000B1Z5</p>
-                  </div>
+                  {(() => {
+                    const corporateHQ = branches.find(b => b.name === "Corporate Headquarters") || branches[0];
+                    return (
+                      <div className="text-[10px] text-slate-400 font-bold max-w-[280px] leading-tight mt-1 italic">
+                        <p className="m-0 uppercase tracking-widest text-[#7FD1E3] mb-0.5">Corporate Headquarters</p>
+                        <p className="m-0 mb-0.5 whitespace-nowrap">{corporateHQ?.full_address || 'Address not configured'}</p>
+                        <p className="m-0 uppercase tracking-widest font-black">GSTIN: {corporateHQ?.gstin || 'Not Configured'}</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </DialogHeader>
