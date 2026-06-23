@@ -252,10 +252,11 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
                               className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // Generate Invoice
+                                triggerPrint(sale.sale_id);
                               }}
+                              disabled={printingId === sale.sale_id}
                             >
-                              <FileText className="h-4 w-4" />
+                              {printingId === sale.sale_id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                             </Button>
                           } />
                           <TooltipContent side="left">Generate Invoice</TooltipContent>
