@@ -120,7 +120,7 @@ export async function createPurchaseOrder(input: {
         vendor_id: input.vendorId,
         branch_id: input.branchId,
         created_by: session.user.id,
-        total_amount: String(totalAmount),
+        total_amount: String(Math.round((totalAmount + totalCgst + totalSgst + totalIgst) * 100) / 100),
         cgst_amount: String(totalCgst),
         sgst_amount: String(totalSgst),
         igst_amount: String(totalIgst),

@@ -928,8 +928,10 @@ Are you sure you want to proceed?`)) return;
       // ────────────────────────────────────────────────────────────────────────
       // DISCREPANCY AUDIT: Detect Variances & Log to Report (Factor in Returns)
       // ────────────────────────────────────────────────────────────────────────
-      // Use stored total_amount as source of truth for Ordered Value
-      const poTotal = uploadBillPO.total_amount; 
+      // Use dynamically calculated total as source of truth for Ordered Value
+      const poTotal = uploadBillPO.items?.length 
+        ? uploadBillPO.items.reduce((acc, item) => acc + (Number(item.unit_price) * item.quantity * (1 + (Number(item.tax_rate) || 0) / 100)), 0)
+        : Number(uploadBillPO.total_amount ?? 0);
       
       const currentBillAmount = Number(billAmount);
       // Sum previous bills records + this current one
@@ -3620,11 +3622,9 @@ Are you sure you want to proceed?`)) return;
                 <p><span className="font-medium">Vendor:</span> {paymentPO.vendor?.name ?? '—'}</p>
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
                   {(() => {
-                    const base = Number(paymentPO.total_amount ?? 0)
-                    const cgst = Number(paymentPO.cgst_amount ?? 0)
-                    const sgst = Number(paymentPO.sgst_amount ?? 0)
-                    const igst = Number(paymentPO.igst_amount ?? 0)
-                    const invoiceTotal = base + cgst + sgst + igst
+                    const invoiceTotal = paymentPO.items?.length 
+                      ? paymentPO.items.reduce((acc, item) => acc + (Number(item.unit_price) * item.quantity * (1 + (Number(item.tax_rate) || 0) / 100)), 0)
+                      : Number(paymentPO.total_amount ?? 0);
                     const balance = invoiceTotal - Number(paymentPO.paid_amount ?? 0)
                     return (
                       <>
