@@ -63,7 +63,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
                   render={<Link href="/admin" />}
                   nativeButton={false}
                   size="sm"
-                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
+                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] hover:text-[#001529] gap-1.5 shadow-sm font-semibold"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   <span className="hidden sm:inline">
@@ -77,7 +77,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
                   render={<Link href="/accounting?tab=dashboard" />}
                   nativeButton={false}
                   size="sm"
-                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-1.5 shadow-sm font-semibold"
+                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] hover:text-[#001529] gap-1.5 shadow-sm font-semibold"
                 >
                   <Receipt className="h-4 w-4" />
                   <span className="hidden sm:inline">
@@ -90,7 +90,7 @@ export function DashboardShell({ children, profile, permissions }: DashboardShel
                   render={<Link href="/pos" />}
                   nativeButton={false}
                   size="sm"
-                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] gap-2 shadow-sm font-semibold"
+                  className="bg-[#7FD1E3] hover:bg-[#6BC1D3] text-[#001529] hover:text-[#001529] gap-2 shadow-sm font-semibold"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   <span className="hidden sm:inline">POS Terminal</span>
