@@ -1116,8 +1116,10 @@ export async function getJournalLines(input: { journalEntryId: string }) {
       description: (r.description ?? '') as string,
     }))
     return { success: true as const, lines }
-  } catch (error) {
-    return { success: false as const, error: (error as Error).message }
+  } catch (error: any) {
+    const errorMsg = error?.message || String(error)
+    console.error('getJournalLines DB Error:', errorMsg, error)
+    return { success: false as const, error: errorMsg }
   }
 }
 

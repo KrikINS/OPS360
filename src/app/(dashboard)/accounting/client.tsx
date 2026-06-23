@@ -2305,10 +2305,10 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
         if (res.success) {
           setLines(res.lines)
         } else {
-          setError(res.error ?? 'Failed to load journal lines')
+          setError(res.error ?? 'Failed to load journal lines: Unknown server error')
         }
-      } catch {
-        setError('Failed to load journal lines')
+      } catch (e: any) {
+        setError('Failed to load journal lines: ' + (e?.message || String(e)))
       } finally {
         setLoading(false)
       }
