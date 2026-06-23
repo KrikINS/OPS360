@@ -336,7 +336,7 @@ export const POPrintTemplate = React.forwardRef<HTMLDivElement, POPrintTemplateP
                     <div className="space-y-0.5">
                       <p className="text-[8px] text-slate-600 font-bold uppercase m-0">Certification</p>
                       <p className="text-xs font-black text-black m-0">
-                        {po.approver_name ? 'Certified Approved' : 'Awaiting Review'}
+                        {po.status === 'approved' && po.approver_name ? 'Certified Approved' : 'Awaiting Review'}
                       </p>
                       {po.approver_email && (
                         <p className="text-[8px] font-mono text-slate-600 truncate">{po.approver_email}</p>

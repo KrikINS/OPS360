@@ -1,8 +1,9 @@
 "use server"
 
 import { db } from "@/db/client"
-import { purchase_orders } from "@/db/schema"
-import { desc, sql, inArray } from "drizzle-orm"
+import { purchase_orders, profiles } from "@/db/schema"
+import { desc, sql, inArray, eq, getTableColumns } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { hasCapability, branchFilterFor } from "@/lib/access"
@@ -16,9 +17,19 @@ export async function getPurchaseOrdersAction() {
   const allowed = await branchFilterFor(session, "procurement", "view")
 
   try {
+    const req = alias(profiles, "req")
+    const appr = alias(profiles, "appr")
+
     const data = await db
-      .select()
+      .select({
+        ...getTableColumns(purchase_orders),
+        requester_name: req.full_name,
+        approver_name: appr.full_name,
+        approver_email: appr.email,
+      })
       .from(purchase_orders)
+      .leftJoin(req, eq(purchase_orders.created_by, req.id))
+      .leftJoin(appr, eq(purchase_orders.approved_by, appr.id))
       .where(allowed !== null ? inArray(purchase_orders.branch_id, allowed) : undefined)
       .orderBy(desc(purchase_orders.created_at))
     return { data }
