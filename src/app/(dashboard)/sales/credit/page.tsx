@@ -101,34 +101,57 @@ export default function ARManagementPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <DollarSign className="h-8 w-8 text-purple-500" />
-            <div>
-              <p className="text-2xl font-black text-purple-700">{fmtINR(totalOutstanding)}</p>
-              <p className="text-xs font-bold uppercase text-slate-400">Total Outstanding</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+        {/* Card 1: Total Outstanding */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <DollarSign className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Total Outstanding</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="border-red-100">
-          <CardContent className="p-4 flex items-center gap-3">
-            <AlertTriangle className="h-8 w-8 text-red-500" />
-            <div>
-              <p className="text-2xl font-black text-red-600">{overdueCount}</p>
-              <p className="text-xs font-bold uppercase text-slate-400">Overdue Invoices</p>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors">
+              {fmtINR(totalOutstanding)}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">Network total</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
+
+        {/* Card 2: Overdue Invoices */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-red-400/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <AlertTriangle className="w-16 h-16 text-red-500 -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Overdue Invoices</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle2 className="h-8 w-8 text-slate-400" />
-            <div>
-              <p className="text-2xl font-black">{invoices.length}</p>
-              <p className="text-xs font-bold uppercase text-slate-400">Open Invoices</p>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-red-400 transition-colors">
+              {overdueCount}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">Past due date</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
+
+        {/* Card 3: Open Invoices */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-amber-400/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <CheckCircle2 className="w-16 h-16 text-amber-500 -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Open Invoices</p>
             </div>
-          </CardContent>
-        </Card>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-amber-400 transition-colors">
+              {invoices.length}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">Awaiting payment</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
       </div>
 
       {/* AR Table */}

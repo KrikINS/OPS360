@@ -212,25 +212,57 @@ export default function StockAlertsPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="border-red-100">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-red-50 rounded-lg"><Package className="h-6 w-6 text-red-500" /></div>
-            <div><p className="text-2xl font-black text-red-600">{outOfStock.length}</p><p className="text-xs font-bold uppercase text-slate-400">Out of Stock</p></div>
-          </CardContent>
-        </Card>
-        <Card className="border-amber-100">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-amber-50 rounded-lg"><AlertTriangle className="h-6 w-6 text-amber-500" /></div>
-            <div><p className="text-2xl font-black text-amber-600">{criticalStock.length}</p><p className="text-xs font-bold uppercase text-slate-400">Critical Low</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-slate-50 rounded-lg"><ShoppingCart className="h-6 w-6 text-slate-500" /></div>
-            <div><p className="text-2xl font-black">{noVendor.length}</p><p className="text-xs font-bold uppercase text-slate-400">No Vendor Assigned</p></div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+        {/* Card 1: Out of Stock */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-rose-400/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Package className="w-16 h-16 text-rose-500 -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Out of Stock</p>
+            </div>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-rose-400 transition-colors">
+              {outOfStock.length}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">Zero inventory lines</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
+
+        {/* Card 2: Critical Low */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-amber-400/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <AlertTriangle className="w-16 h-16 text-amber-500 -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Critical Low</p>
+            </div>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-amber-400 transition-colors">
+              {criticalStock.length}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">Below threshold level</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
+
+        {/* Card 3: No Vendor Assigned */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <ShoppingCart className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">No Vendor Assigned</p>
+            </div>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors">
+              {noVendor.length}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">Sourcing required</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
       </div>
 
       {/* ── ALERTS TAB ── */}

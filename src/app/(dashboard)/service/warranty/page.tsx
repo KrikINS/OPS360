@@ -153,25 +153,57 @@ export default function WarrantyManagementPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilter('all')}>
-          <CardContent className="p-4 flex items-center gap-3">
-            <ShieldCheck className="h-8 w-8 text-slate-400" />
-            <div><p className="text-2xl font-black">{registrations.length}</p><p className="text-xs text-slate-500 uppercase font-bold tracking-wide">Total Registered</p></div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow border-emerald-100" onClick={() => setFilter('active')}>
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-            <div><p className="text-2xl font-black text-emerald-700">{activeCount}</p><p className="text-xs text-emerald-600 uppercase font-bold tracking-wide">Active Warranties</p></div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow border-red-100" onClick={() => setFilter('expired')}>
-          <CardContent className="p-4 flex items-center gap-3">
-            <XCircle className="h-8 w-8 text-red-400" />
-            <div><p className="text-2xl font-black text-red-600">{expiredCount}</p><p className="text-xs text-red-500 uppercase font-bold tracking-wide">Expired</p></div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+        {/* Card 1: Total Registered */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl cursor-pointer" onClick={() => setFilter('all')}>
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <ShieldCheck className="w-16 h-16 text-[#7FD1E3] -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Total Registered</p>
+            </div>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors">
+              {registrations.length}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">All time</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
+
+        {/* Card 2: Active Warranties */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-emerald-400/30 transition-all duration-500 shadow-xl cursor-pointer" onClick={() => setFilter('active')}>
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <CheckCircle2 className="w-16 h-16 text-emerald-500 -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Active Warranties</p>
+            </div>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-emerald-400 transition-colors">
+              {activeCount}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">Currently covered</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
+
+        {/* Card 3: Expired */}
+        <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-xl p-5 hover:border-red-400/30 transition-all duration-500 shadow-xl cursor-pointer" onClick={() => setFilter('expired')}>
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <XCircle className="w-16 h-16 text-red-500 -mt-2 -mr-2" />
+          </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 truncate">Expired</p>
+            </div>
+            <h3 className="text-2xl lg:text-3xl font-black tracking-tight text-white group-hover:text-red-400 transition-colors">
+              {expiredCount}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-tight truncate">Out of warranty</p>
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+        </div>
       </div>
 
       {/* Search + Filter */}
