@@ -70,7 +70,7 @@ export async function GET() {
           FROM journal_lines jl
           JOIN journal_entries je ON jl.journal_entry_id = je.id
           JOIN accounts a ON jl.account_id = a.id
-          WHERE je.reference_id = po.id
+          WHERE je.reference_id = po.id::text
             AND je.status = 'posted'
             AND a.code = '2010'
         ) AS outstanding_ap,
