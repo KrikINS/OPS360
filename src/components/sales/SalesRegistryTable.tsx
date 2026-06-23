@@ -287,11 +287,11 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
       />
 
       <div className="fixed top-[-10000px] left-[-10000px] opacity-0 pointer-events-none z-[-100]">
-        {printId && (
-          <InvoiceTemplate 
-            ref={printRef} 
-            invoiceId={printId} 
-            onReady={() => {
+        <div ref={printRef}>
+          {printId && (
+            <InvoiceTemplate 
+              invoiceId={printId} 
+              onReady={() => {
               handlePrint()
               setTimeout(() => {
                 setPrintId(null)
@@ -299,7 +299,8 @@ export function SalesRegistryTable({ sales, onPrint, onExport, canExport, export
               }, 1000)
             }} 
           />
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

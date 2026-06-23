@@ -760,7 +760,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
         finalizeCreditCheckout({
           invoiceId:  String(resData.id ?? ''),
           branchId:   selectedBranch ?? '',
-          createdBy:  session?.user?.id ?? '',
+          createdBy:  sessionUser.id || '00000000-0000-0000-0000-000000000001',
           saleTotal:  Number((resData as any).total_amount ?? resData.grandTotal ?? 0),
           subtotal:   Number((resData as any).subtotal ?? 0),
           cgst:       Number((resData as any).cgst ?? ((resData as any).tax_amount != null ? Number((resData as any).tax_amount ?? 0) / 2 : 0)),
@@ -777,7 +777,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
           await postSalesJournal({
             invoiceId:            String(resData.id ?? ''),
             branchId:             selectedBranch ?? '',
-            createdBy:            session?.user?.id ?? '',
+            createdBy:            sessionUser.id || '00000000-0000-0000-0000-000000000001',
             saleTotal:            Number((resData as any).total_amount ?? resData.grandTotal ?? 0),
             subtotal:             Number((resData as any).subtotal ?? 0),
             cgst:                 Number((resData as any).cgst ?? ((resData as any).tax_amount != null ? Number((resData as any).tax_amount ?? 0) / 2 : 0)),
@@ -802,7 +802,7 @@ export function PosProvider({ children, initialBranchId }: { children: React.Rea
             customerId: selectedCustomer.id,
             invoiceId: String(resData.id),
             saleAmount: Math.max(0, (Number(resData.grandTotal) || 0) - loyaltyRedeem),
-            createdBy: session?.user?.id || '',
+            createdBy: sessionUser.id || '00000000-0000-0000-0000-000000000001',
           })
           if (!earnRes?.success) {
             console.error('LOYALTY EARN FAILED:', earnRes?.error)

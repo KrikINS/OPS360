@@ -132,7 +132,8 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
       const timer = setTimeout(() => onReady?.(), 200)
       return () => clearTimeout(timer)
     }
-  }, [isReady, loading, initialData?.id, onReady])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, loading, initialData?.id])
 
   // Use either context or archival data
   const cart = (invoiceId ? archivalData?.cart : posContext?.cart) || []
