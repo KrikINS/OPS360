@@ -58,7 +58,7 @@ describe('createPurchaseOrder', () => {
     console.error('DEBUG PROCUREMENT:', result)
     expect(result.success).toBe(true)
     expect(result.po.status).toBe('draft')
-    expect(result.po.subtotal).toBe(5000)
+    expect(result.po.totalAmount).toBe(5900)
     expect(result.po.poNumber).toMatch(/^PO\//)
   })
 

@@ -152,7 +152,7 @@ export async function createPurchaseOrder(input: {
       id: rawPo.id,
       poNumber: rawPo.po_number,
       status: rawPo.status,
-      subtotal: rawPo.total_amount ? Number(rawPo.total_amount) : 0,
+      totalAmount: rawPo.total_amount ? Number(rawPo.total_amount) : 0,
       cgst: rawPo.cgst_amount ? Number(rawPo.cgst_amount) : 0,
       sgst: rawPo.sgst_amount ? Number(rawPo.sgst_amount) : 0,
       igst: rawPo.igst_amount ? Number(rawPo.igst_amount) : 0,
