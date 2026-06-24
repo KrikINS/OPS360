@@ -126,22 +126,24 @@ export default function CustomerManagementPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => router.push(`/sales/customers?tab=${v}`)} className="w-full space-y-6">
-        <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent gap-2">
-          <TabsTrigger 
-            value="registry"
-            className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-t-lg rounded-b-none px-6 py-2.5 text-xs font-bold uppercase tracking-wider gap-2"
-          >
-            <UserSquare className="h-4 w-4" />
-            Customer Registry
-          </TabsTrigger>
-          <TabsTrigger 
-            value="loyalty"
-            className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-t-lg rounded-b-none px-6 py-2.5 text-xs font-bold uppercase tracking-wider gap-2"
-          >
-            <Star className="h-4 w-4" />
-            Loyalty Points
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1">
+          <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
+            <TabsTrigger 
+              value="registry"
+              className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
+            >
+              <UserSquare className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
+              Customer Registry
+            </TabsTrigger>
+            <TabsTrigger 
+              value="loyalty"
+              className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group relative border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
+            >
+              <Star className="h-3.5 w-3.5 group-data-active:text-amber-400 transition-colors" />
+              Loyalty Points
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="registry" className="mt-0 outline-none space-y-4">
           {loading ? (

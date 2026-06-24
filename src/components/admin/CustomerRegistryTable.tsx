@@ -68,12 +68,14 @@ export function CustomerRegistryTable({ customers, onAddClick, onEditClick, onHi
         </div>
 
         <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full sm:w-auto">
-          <TabsList className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12">
-            <TabsTrigger value="all" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">All</TabsTrigger>
-            <TabsTrigger value="walk_in" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Walk-in</TabsTrigger>
-            <TabsTrigger value="retail" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Retail</TabsTrigger>
-            <TabsTrigger value="distributor" className="text-xs font-bold uppercase tracking-wider rounded-lg h-full px-4">Distributor</TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1">
+            <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
+              <TabsTrigger value="all" className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-[state=active]:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">All</TabsTrigger>
+              <TabsTrigger value="walk_in" className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-[state=active]:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">Walk-in</TabsTrigger>
+              <TabsTrigger value="retail" className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-[state=active]:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">Retail</TabsTrigger>
+              <TabsTrigger value="distributor" className="data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-[state=active]:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">Distributor</TabsTrigger>
+            </TabsList>
+          </div>
         </Tabs>
 
         <Button 

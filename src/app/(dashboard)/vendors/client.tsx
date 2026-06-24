@@ -805,16 +805,16 @@ export default function VendorsClient({
 
               <div className="flex-1 overflow-y-auto p-6">
                 <Tabs defaultValue="details" className="w-full">
-                  <div className="overflow-x-auto pb-1 scrollbar-hide">
-                    <TabsList className="inline-flex w-auto min-w-full mb-6">
-                      <TabsTrigger value="details" className="gap-2 px-6">
-                        <FileText className="h-4 w-4" /> Details
+                  <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1 mb-6">
+                    <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
+                      <TabsTrigger value="details" className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">
+                        <FileText className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" /> Details
                       </TabsTrigger>
-                      <TabsTrigger value="documents" className="gap-2 px-6">
-                        <Upload className="h-4 w-4" /> Documents
+                      <TabsTrigger value="documents" className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">
+                        <Upload className="h-3.5 w-3.5 group-data-active:text-blue-400 transition-colors" /> Documents
                       </TabsTrigger>
-                      <TabsTrigger value="performance" className="gap-2 px-6">
-                        <TrendingUp className="h-4 w-4" /> Performance
+                      <TabsTrigger value="performance" className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">
+                        <TrendingUp className="h-3.5 w-3.5 group-data-active:text-emerald-400 transition-colors" /> Performance
                       </TabsTrigger>
                     </TabsList>
                   </div>

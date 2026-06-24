@@ -94,7 +94,7 @@ type Payslip = {
   notes: string | null
 }
 
-const TAB_CLASS = "data-[state=active]:bg-[#001529] data-[state=active]:text-white data-[state=active]:shadow-md rounded-t-lg rounded-b-none px-6 py-2.5 text-xs font-bold uppercase tracking-wider gap-2"
+const TAB_CLASS = "data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80"
 
 export default function StaffClient({
   isAdmin = false,
@@ -423,7 +423,8 @@ export default function StaffClient({
         }}
         className="w-full space-y-6"
       >
-        <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent gap-2">
+        <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1">
+          <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
           <TabsTrigger value="registry" className={TAB_CLASS}>
             <Users className="h-4 w-4" />
             Directory
@@ -453,6 +454,7 @@ export default function StaffClient({
             </TabsTrigger>
           )}
         </TabsList>
+        </div>
 
         {/* ── Directory ─────────────────────────────── */}
         <TabsContent value="registry" className="mt-0 outline-none">

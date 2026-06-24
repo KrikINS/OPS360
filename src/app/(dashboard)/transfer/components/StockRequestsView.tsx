@@ -631,16 +631,18 @@ export function StockRequestsView({ onFulfill }: { onFulfill?: (req: StockReques
       </div>
 
       <Tabs defaultValue="my-requests" className="w-full">
-        <TabsList className="mb-6 bg-slate-100/50 p-1 rounded-xl h-12 w-full max-w-md">
-          <TabsTrigger value="my-requests" className="flex-1 rounded-lg px-6 font-black text-[10px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
-            <Send className="h-3.5 w-3.5 mr-2" />
-            MY REQUESTS
-          </TabsTrigger>
-          <TabsTrigger value="incoming" className="flex-1 rounded-lg px-6 font-black text-[10px] uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
-            <ArrowRight className="h-3.5 w-3.5 mr-2" />
-            INCOMING DEMANDS
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-slate-200/60 bg-slate-50/50 p-1 mb-6">
+          <TabsList className="h-auto p-0 bg-transparent flex w-max min-w-full rounded-none border-none gap-1">
+            <TabsTrigger value="my-requests" className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">
+              <Send className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
+              MY REQUESTS
+            </TabsTrigger>
+            <TabsTrigger value="incoming" className="data-active:bg-[#001529] data-active:text-white data-active:shadow-md rounded-lg px-3 py-2 transition-all duration-300 gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-tight group border border-slate-200 data-active:border-transparent hover:bg-white hover:text-[#001529] shadow-sm bg-slate-100/80">
+              <ArrowRight className="h-3.5 w-3.5 group-data-active:text-[#7FD1E3] transition-colors" />
+              INCOMING DEMANDS
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="my-requests" className="space-y-4">
           <div className="grid gap-4">
