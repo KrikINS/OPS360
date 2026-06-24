@@ -100,7 +100,7 @@ export default function SalesRegistryPage() {
   }, [fetchSales])
 
   return (
-    <div className="p-8 pb-0 space-y-8 animate-in fade-in duration-500">
+    <div className="p-8 pb-0 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900">Sales Registry</h1>
