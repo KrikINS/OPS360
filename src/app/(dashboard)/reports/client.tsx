@@ -151,23 +151,58 @@ export default function ReportsClient({
         {activeTab === 'sales' && salesData?.success && (
           <div className="space-y-6">
             {/* Summary KPI cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total Revenue</p>
-                <p className="text-2xl font-black text-emerald-700">{fmtINR(Number(salesData.summary.total_revenue ?? 0))}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Invoices</p>
-                <p className="text-2xl font-black">{Number(salesData.summary.total_invoices ?? 0)}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">GST Collected</p>
-                <p className="text-2xl font-black text-amber-700">{fmtINR(Number(salesData.summary.total_cgst ?? 0) + Number(salesData.summary.total_sgst ?? 0) + Number(salesData.summary.total_igst ?? 0))}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Customers</p>
-                <p className="text-2xl font-black">{Number(salesData.summary.unique_customers ?? 0)}</p>
-              </CardContent></Card>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-1 sm:gap-2 lg:gap-4">
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Total Revenue</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {fmtINR(Number(salesData.summary.total_revenue ?? 0))}
+                  </h3>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
+
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <FileText className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Invoices</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {Number(salesData.summary.total_invoices ?? 0)}
+                  </h3>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
+
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <BarChart3 className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">GST Collected</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {fmtINR(Number(salesData.summary.total_cgst ?? 0) + Number(salesData.summary.total_sgst ?? 0) + Number(salesData.summary.total_igst ?? 0))}
+                  </h3>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
+
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Customers</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {Number(salesData.summary.unique_customers ?? 0)}
+                  </h3>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
             </div>
 
             {/* Sales by product */}
@@ -332,19 +367,45 @@ export default function ReportsClient({
         {/* ── STOCK VALUATION ── */}
         {activeTab === 'stock' && stockData?.success && (
           <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total Units</p>
-                <p className="text-2xl font-black">{stockData.totalUnits}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Cost Value</p>
-                <p className="text-2xl font-black text-blue-700">{fmtINR(stockData.totalCostValue)}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">MRP Value</p>
-                <p className="text-2xl font-black text-emerald-700">{fmtINR(stockData.totalMrpValue)}</p>
-              </CardContent></Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <Package className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Total Units</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {stockData.totalUnits}
+                  </h3>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
+
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <ShoppingBag className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Cost Value</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {fmtINR(stockData.totalCostValue)}
+                  </h3>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
+
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">MRP Value</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {fmtINR(stockData.totalMrpValue)}
+                  </h3>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
             </div>
             <Card>
               <CardHeader className="bg-muted/30 border-b py-3">

@@ -1999,27 +1999,70 @@ export default function AccountingClient({
           {/* Consolidated KPI summary */}
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Consolidated Totals � All Branches</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total Revenue</p>
-                <p className="text-2xl font-black text-emerald-700">{fmtINR(consolidatedData.totals.totalRevenue)}</p>
-                <p className="text-xs text-slate-400 mt-1">{consolidatedData.totals.totalInvoices} invoices</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total GST Collected</p>
-                <p className="text-2xl font-black text-amber-700">{fmtINR(consolidatedData.totals.totalGST)}</p>
-                <p className="text-xs text-slate-400 mt-1">{consolidatedData.totals.totalCustomers} customers</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Stock Value</p>
-                <p className="text-2xl font-black text-blue-700">{fmtINR(consolidatedData.totals.totalStockValue)}</p>
-                <p className="text-xs text-slate-400 mt-1">{consolidatedData.totals.totalStockUnits} units</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Open Service Jobs</p>
-                <p className="text-2xl font-black text-purple-700">{consolidatedData.totals.totalOpenJobs}</p>
-                <p className="text-xs text-slate-400 mt-1">across all branches</p>
-              </CardContent></Card>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-1 sm:gap-2 lg:gap-4">
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Total Revenue</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {fmtINR(consolidatedData.totals.totalRevenue)}
+                  </h3>
+                  <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                    {consolidatedData.totals.totalInvoices} invoices
+                  </p>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
+
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <Receipt className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Total GST Collected</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {fmtINR(consolidatedData.totals.totalGST)}
+                  </h3>
+                  <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                    {consolidatedData.totals.totalCustomers} customers
+                  </p>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
+
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <Package className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Stock Value</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {fmtINR(consolidatedData.totals.totalStockValue)}
+                  </h3>
+                  <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                    {consolidatedData.totals.totalStockUnits} units
+                  </p>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
+
+              <div className="relative overflow-hidden group bg-[#001529] border border-transparent rounded-lg sm:rounded-xl p-2 sm:p-3 lg:p-5 hover:border-[#7FD1E3]/30 transition-all duration-500 shadow-xl">
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity hidden sm:block">
+                  <Wrench className="w-8 h-8 sm:w-10 sm:h-10 lg:w-16 lg:h-16 text-[#7FD1E3] -mt-1 -mr-1 lg:-mt-2 lg:-mr-2" />
+                </div>
+                <div className="relative z-10 flex flex-col h-full justify-center">
+                  <p className="text-[8px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-widest text-white/40 truncate mb-1 lg:mb-2">Open Service Jobs</p>
+                  <h3 className="text-xs sm:text-base lg:text-2xl xl:text-3xl font-black tracking-tight text-white group-hover:text-[#7FD1E3] transition-colors truncate">
+                    {consolidatedData.totals.totalOpenJobs}
+                  </h3>
+                  <p className="text-[7px] sm:text-[8px] lg:text-[9px] font-bold text-[#7FD1E3] mt-0.5 lg:mt-1 uppercase tracking-tight truncate">
+                    across all branches
+                  </p>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              </div>
             </div>
           </div>
 
