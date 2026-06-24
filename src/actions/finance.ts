@@ -784,7 +784,7 @@ export async function getProfitAndLoss(input: {
       LEFT JOIN journal_entries je ON je.id = jl.journal_entry_id
         AND je.status = 'posted'
         AND je.date >= ${input.fromDate}::timestamp
-        AND je.date <= ${input.toDate}::timestamp
+        AND je.date <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
         ${input.branchId ? sql`AND je.branch_id = ${input.branchId}::uuid` : sql``}
       WHERE a.type IN ('Revenue', 'Expense')
       GROUP BY a.code, a.name, a.type
@@ -923,7 +923,7 @@ export async function getGSTSummary(input: { branchId?: string; fromDate: string
       LEFT JOIN journal_entries je ON je.id = jl.journal_entry_id
         AND je.status = 'posted'
         AND je.date >= ${input.fromDate}::timestamp
-        AND je.date <= ${input.toDate}::timestamp
+        AND je.date <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
         ${input.branchId ? sql`AND je.branch_id = ${input.branchId}::uuid` : sql``}
       WHERE a.type = 'Tax'
       GROUP BY a.code, a.name
@@ -1243,7 +1243,7 @@ export async function getMarginReport(input: {
       JOIN sales_invoices si ON si.id = ii.invoice_id
       JOIN products p ON p.id = ii.product_id
       WHERE si.created_at >= ${input.fromDate}::timestamp
-        AND si.created_at <= ${input.toDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
         ${input.branchId
           ? sql`AND si.branch_id = ${input.branchId}::uuid`
           : sql``}
@@ -1845,7 +1845,7 @@ export async function getSalesReport(input: {
         COUNT(DISTINCT si.customer_id)  AS unique_customers
       FROM sales_invoices si
       WHERE si.created_at >= ${input.fromDate}::timestamp
-        AND si.created_at <= ${input.toDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
         ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}
     `))
     const summary = summaryRows[0] ?? {}
@@ -1865,7 +1865,7 @@ export async function getSalesReport(input: {
       JOIN sales_invoices si ON si.id = ii.invoice_id
       JOIN products p ON p.id = ii.product_id
       WHERE si.created_at >= ${input.fromDate}::timestamp
-        AND si.created_at <= ${input.toDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
         ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}
       GROUP BY p.model_name, p.brand
       ORDER BY total_revenue DESC
@@ -1883,7 +1883,7 @@ export async function getSalesReport(input: {
       FROM sales_invoices si
       LEFT JOIN profiles pr ON pr.id = si.user_id
       WHERE si.created_at >= ${input.fromDate}::timestamp
-        AND si.created_at <= ${input.toDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
         ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}
       GROUP BY pr.full_name
       ORDER BY total_revenue DESC
@@ -1899,7 +1899,7 @@ export async function getSalesReport(input: {
         COALESCE(SUM(si.total_amount),0) AS revenue
       FROM sales_invoices si
       WHERE si.created_at >= ${input.fromDate}::timestamp
-        AND si.created_at <= ${input.toDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
         ${input.branchId ? sql`AND si.branch_id = ${input.branchId}::uuid` : sql``}
       GROUP BY DATE(si.created_at)
       ORDER BY sale_date ASC
@@ -2316,7 +2316,7 @@ export async function getConsolidatedReport(input: {
       LEFT JOIN sales_invoices si
         ON si.branch_id = b.id
         AND si.created_at >= ${input.fromDate}::timestamp
-        AND si.created_at <= ${input.toDate}::timestamp
+        AND si.created_at <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
       GROUP BY b.id, b.name
       ORDER BY total_revenue DESC
     `))
@@ -2350,7 +2350,7 @@ export async function getConsolidatedReport(input: {
         COALESCE(SUM(
           CASE WHEN sj.status = 'Completed'
             AND sj.created_at >= ${input.fromDate}::timestamp
-            AND sj.created_at <= ${input.toDate}::timestamp
+            AND sj.created_at <= ${input.toDate}::timestamp + interval '1 day' - interval '1 second'
           THEN sj.actual_cost ELSE 0 END
         ), 0) AS total_service_revenue
       FROM branches b
