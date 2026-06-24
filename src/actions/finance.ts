@@ -160,11 +160,24 @@ export async function postGRNJournal(input: {
     description: string
   }> = []
 
-  lines.push({
-    accountCode: '1040',
-    debit: input.totalLandedCost,
-    description: `Inventory received — ${grnRef}`,
-  })
+  if (input.freightAmount > 0) {
+    lines.push({
+      accountCode: '1040',
+      debit: Number((input.totalLandedCost - input.freightAmount).toFixed(2)),
+      description: `Inventory received (Goods value) — ${grnRef}`,
+    })
+    lines.push({
+      accountCode: '1040',
+      debit: input.freightAmount,
+      description: `Vendor Freight — ${grnRef}`,
+    })
+  } else {
+    lines.push({
+      accountCode: '1040',
+      debit: input.totalLandedCost,
+      description: `Inventory received — ${grnRef}`,
+    })
+  }
 
   if (input.totalCGST > 0) {
     lines.push({

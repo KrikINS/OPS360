@@ -26,6 +26,7 @@ interface GRNPrintTemplateProps {
     created_at: string;
     condition_notes?: string;
     total_freight?: number;
+    total_landed_cost?: number;
     po_number: string;
     originator_name?: string;
     approver_email?: string;
@@ -249,11 +250,21 @@ export const GRNPrintTemplate = React.forwardRef<HTMLDivElement, GRNPrintTemplat
                     </div>
                   </div>
                   
-                  {grn.total_freight !== undefined && grn.total_freight > 0 && (
-                    <div className="mt-2 border-t-2 border-slate-100 pt-3 flex justify-end">
-                      <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg">
-                        <span className="font-bold text-[10px] text-slate-500 uppercase tracking-widest">Inbound Vendor Freight:</span>
-                        <span className="font-black text-sm text-[#001529]">₹{grn.total_freight.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  {((grn.total_freight !== undefined && grn.total_freight > 0) || grn.total_landed_cost !== undefined) && (
+                    <div className="mt-4 flex justify-end">
+                      <div className="w-64 space-y-2 bg-slate-50 border border-slate-200 p-4 rounded-lg">
+                        {grn.total_freight !== undefined && grn.total_freight > 0 && (
+                          <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
+                            <span className="uppercase tracking-widest">Vendor Freight</span>
+                            <span>₹{grn.total_freight.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
+                        {grn.total_landed_cost !== undefined && (
+                          <div className="flex justify-between items-center text-xs font-black text-[#001529] border-t border-slate-200 pt-2">
+                            <span className="uppercase tracking-widest">Total Landed Value</span>
+                            <span>₹{Number(grn.total_landed_cost).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

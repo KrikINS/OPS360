@@ -214,6 +214,7 @@ type PurchaseOrder = {
   po_id: string
   created_at: string
   total_freight?: number
+  total_landed_cost?: number
   originator_name: string
   approver_email?: string
   condition_notes: string
@@ -1970,10 +1971,8 @@ Are you sure you want to proceed?`)) return;
                                           <DropdownMenuItem 
                                             onClick={() => {
                                               setPaymentPO(po)
-                                              const total = po.total_amount ?? 0
-                                              const paid = po.paid_amount ?? 0
-                                              const bal = Number((total - paid).toFixed(2))
-                                              setPayAmount(String(bal > 0 ? bal : 0))
+                                              const bal = Number(po.outstanding_ap ?? 0)
+                                              setPayAmount(String(bal > 0 ? bal.toFixed(2) : '0'))
                                               setPayError('')
                                             }}
                                             className="text-purple-700 focus:text-purple-700 cursor-pointer font-bold text-[10px] uppercase tracking-wider"
@@ -3159,6 +3158,18 @@ Are you sure you want to proceed?`)) return;
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+                <div className="bg-slate-50 border-t border-slate-100 p-4 px-6 flex justify-end">
+                  <div className="w-64 space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
+                      <span className="uppercase tracking-widest">Vendor Freight</span>
+                      <span>₹{Number(viewingGRN.total_freight ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs font-black text-slate-900 border-t border-slate-200 pt-2">
+                      <span className="uppercase tracking-widest">Total Landed Value</span>
+                      <span>₹{Number(viewingGRN.total_landed_cost ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
