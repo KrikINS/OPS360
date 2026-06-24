@@ -2215,6 +2215,9 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
   // Edit Modal State
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editReason, setEditReason] = useState('')
+  const [editDate, setEditDate] = useState(
+    entry.date instanceof Date ? entry.date.toISOString().slice(0, 10) : String(entry.date).slice(0, 10)
+  )
   const [editDescription, setEditDescription] = useState(entry.description)
   const [editLines, setEditLines] = useState<JournalLine[]>([])
   const [editing, setEditing] = useState(false)
@@ -2222,6 +2225,7 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
   const [editAccounts, setEditAccounts] = useState<Array<{code: string; name: string; type: string}> | null>(null)
 
   async function handleOpenEdit() {
+    setEditDate(entry.date instanceof Date ? entry.date.toISOString().slice(0, 10) : String(entry.date).slice(0, 10))
     setEditDescription(entry.description)
     setEditReason('')
     setEditError('')
@@ -2267,6 +2271,7 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
     try {
       const payload = {
         id: entry.id,
+        date: editDate,
         description: editDescription,
         editReason,
         lines: editLines.map(l => ({
@@ -2466,16 +2471,25 @@ function JournalEntryRow({ entry, isAdmin, onSuccess }: { entry: JournalEntry; i
           <div className="flex-1 overflow-y-auto
             px-6 py-5 space-y-5">
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold
-                text-slate-600">Description</Label>
-              <Input
-                value={editDescription}
-                onChange={e =>
-                  setEditDescription(e.target.value)}
-                className="h-10 text-sm"
-              />
+            {/* Date & Description */}
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-4 space-y-2">
+                <Label className="text-sm font-semibold text-slate-600">Date</Label>
+                <Input
+                  type="date"
+                  value={editDate}
+                  onChange={e => setEditDate(e.target.value)}
+                  className="h-10 text-sm w-full"
+                />
+              </div>
+              <div className="col-span-8 space-y-2">
+                <Label className="text-sm font-semibold text-slate-600">Description</Label>
+                <Input
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value)}
+                  className="h-10 text-sm"
+                />
+              </div>
             </div>
 
             {/* Journal Lines */}

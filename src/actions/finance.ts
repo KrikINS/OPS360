@@ -1712,6 +1712,7 @@ export async function getAPAgeing(input?: {
 // ── editJournalEntry (Secure Audit Edit) ────────────
 export async function editJournalEntry(input: {
   id: string
+  date?: string | Date
   description: string
   editReason: string
   lines: Array<{
@@ -1767,14 +1768,20 @@ export async function editJournalEntry(input: {
       }
 
       // 4. Update Header
+      const updateData: any = {
+        description: input.description,
+        edited_at: new Date(),
+        edited_by: session.user.id,
+        edit_reason: input.editReason,
+        original_data: snapshot,
+      }
+      
+      if (input.date) {
+        updateData.date = new Date(input.date)
+      }
+
       await tx.update(journal_entries)
-        .set({
-          description: input.description,
-          edited_at: new Date(),
-          edited_by: session.user.id,
-          edit_reason: input.editReason,
-          original_data: snapshot,
-        })
+        .set(updateData)
         .where(eq(journal_entries.id, input.id))
 
       // 5. Delete old lines
